@@ -3,141 +3,25 @@ import { Link } from 'react-router-dom';
 import { 
   Search, CreditCard, Check, X, Upload, Copy, Info, 
   RefreshCw, CheckCircle, AlertCircle, ArrowUpRight, Activity, Eye,
-  Bell, BellOff, Clock, Calendar, Lock, ChevronDown
+  Bell, BellOff, Clock, Calendar, Lock, ChevronDown, Trash2
 } from 'lucide-react';
 import { getOrders, updateOrderStatus } from '../api/orders';
 import { Toast } from '../components/Toast';
 import { getApiDomain } from '../../utils/apiConfig';
+import {
+  getManualVerifications as fetchManualVerifications,
+  getBankDetails as fetchBankDetails,
+  getUpiDetails as fetchUpiDetails,
+  getQrConfig as fetchQrConfig,
+  updateQrConfig,
+  updateBankDetails,
+  updateUpiDetails,
+  updateManualVerificationStatus,
+  deleteManualVerification,
+  reconcileSms as reconcileSmsOnServer
+} from '../../services/paymentService';
 import './PaymentHistory.css';
 
-const formatDateDisplay = (dateStr) => {
-  if (!dateStr || dateStr === 'TBD') return 'TBD';
-  const cleanStr = String(dateStr).trim();
-
-  // If YYYY-MM-DD format (or ISO timestamp)
-  if (/^\d{4}-\d{2}-\d{2}/.test(cleanStr)) {
-    const parts = cleanStr.slice(0, 10).split('-');
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
-  }
-
-  // If DD/MM/YYYY or DD-MM-YYYY format
-  if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}/.test(cleanStr)) {
-    const parts = cleanStr.slice(0, 10).split(/[\/\-]/);
-    return `${parts[0]}-${parts[1]}-${parts[2]}`;
-  }
-
-  const parsed = new Date(cleanStr);
-  if (!isNaN(parsed.getTime())) {
-    const yyyy = parsed.getFullYear();
-    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
-    const dd = String(parsed.getDate()).padStart(2, '0');
-    return `${dd}-${mm}-${yyyy}`;
-  }
-
-  return cleanStr.slice(0, 10);
-};
-
-const BASE_PAYMENT_URL = `${getApiDomain()}/api/Payment`;
-const HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json'
-};
-
-const fetchManualVerifications = async (search = '') => {
-  const url = search 
-    ? `${BASE_PAYMENT_URL}/manual-verifications?search=${encodeURIComponent(search)}` 
-    : `${BASE_PAYMENT_URL}/manual-verifications`;
-  const response = await fetch(url, { headers: HEADERS });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const fetchBankDetails = async () => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/bank-details`, { headers: HEADERS });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const fetchUpiDetails = async () => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/upi-details`, { headers: HEADERS });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const fetchQrConfig = async () => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/qr-config`, { headers: HEADERS });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const updateQrConfig = async (formData) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/qr-config`, {
-    method: 'PUT',
-    headers: {
-      'ngrok-skip-browser-warning': 'true'
-    },
-    body: formData
-  });
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.message || `HTTP error! status: ${response.status}`);
-  }
-  return await response.json();
-};
-
-const updateBankDetails = async (details) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/bank-details`, {
-    method: 'PUT',
-    headers: HEADERS,
-    body: JSON.stringify(details)
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const updateUpiDetails = async (details) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/upi-details`, {
-    method: 'PUT',
-    headers: HEADERS,
-    body: JSON.stringify(details)
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const updateManualVerificationStatus = async (id, status) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/verify-manual/${id}/status`, {
-    method: 'PUT',
-    headers: HEADERS,
-    body: JSON.stringify({ status })
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-// eslint-disable-next-line no-unused-vars
-const deleteManualVerification = async (id) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/verify-manual/${id}`, {
-    method: 'DELETE',
-    headers: HEADERS
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const reconcileSmsOnServer = async (smsText) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/reconcile-sms`, {
-    method: 'POST',
-    headers: HEADERS,
-    body: JSON.stringify({ smsPayload: smsText })
-  });
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.message || `HTTP error! status: ${response.status}`);
-  }
-  return await response.json();
-};
 
 
 const PaymentHistory = () => {
@@ -436,6 +320,21 @@ const PaymentHistory = () => {
       loadOrdersList();
     } catch (e) {
       showBannerStatus('error', `Failed to reject payment: ${e.message}`);
+    }
+  };
+
+  const handleDeleteVerification = async (verificationId, orderId) => {
+    if (!window.confirm(`Are you sure you want to delete manual verification record for Order #${orderId}?`)) return;
+    try {
+      const res = await deleteManualVerification(verificationId);
+      if (res && res.success !== false) {
+        showBannerStatus('success', `Manual verification record deleted successfully.`);
+        loadOrdersList();
+      } else {
+        showBannerStatus('error', res?.message || 'Failed to delete manual verification record.');
+      }
+    } catch (e) {
+      showBannerStatus('error', `Failed to delete manual verification: ${e.message}`);
     }
   };
 
@@ -917,27 +816,38 @@ const PaymentHistory = () => {
                               )}
                             </td>
                             <td>
-                              <div className="actions-cell">
-                                {isPending ? (
-                                  <div className="action-buttons-group">
-                                    <button 
-                                      className="action-btn verify-btn"
-                                      title="Approve this payment"
-                                      onClick={() => {
-                                        handleVerifyPayment(payment.orderId, payment.totalAmount || payment.amountPaid || 0, payment.realOrderId, payment.verificationRecordId);
-                                      }}
+                                <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {isPending ? (
+                                    <div className="action-buttons-group">
+                                      <button 
+                                        className="action-btn verify-btn"
+                                        title="Approve this payment"
+                                        onClick={() => {
+                                          handleVerifyPayment(payment.orderId, payment.totalAmount || payment.amountPaid || 0, payment.realOrderId, payment.verificationRecordId);
+                                        }}
+                                      >
+                                        <Check size={12} /> Verify Success
+                                      </button>
+                                    </div>
+                                  ) : isRejected ? (
+                                    <span className="action-text-rejected">Rejected</span>
+                                  ) : isVerified ? (
+                                    <span className="action-text-completed">Completed</span>
+                                  ) : (
+                                    <span className="action-text-muted">-</span>
+                                  )}
+                                  {payment.verificationRecordId && (
+                                    <button
+                                      type="button"
+                                      className="action-btn delete-btn"
+                                      title="Delete manual verification record"
+                                      style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                                      onClick={() => handleDeleteVerification(payment.verificationRecordId, payment.orderId)}
                                     >
-                                      <Check size={12} /> Verify Success
+                                      <Trash2 size={12} />
                                     </button>
-                                  </div>
-                                ) : isRejected ? (
-                                  <span className="action-text-rejected">Rejected</span>
-                                ) : isVerified ? (
-                                  <span className="action-text-completed">Completed</span>
-                                ) : (
-                                  <span className="action-text-muted">-</span>
-                                )}
-                              </div>
+                                  )}
+                                </div>
                             </td>
                           </tr>
                         );
