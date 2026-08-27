@@ -163,11 +163,8 @@ export const updateSupplier = async (id, supplierData) => {
 
 // DELETE /api/Suppliers/{id}
 export const deleteSupplier = async (id) => {
-  try {
-    await api.delete(`/api/Suppliers/${id}`);
-  } catch (err) {
-    console.warn(`[suppliersApi] Backend delete call for supplier #${id} failed:`, err.message);
-  }
+  const response = await api.delete(`/api/Suppliers/${id}`);
+  return response?.data;
 };
 
 // POST /api/Suppliers/register (User Become-Seller Screen)
