@@ -220,7 +220,7 @@ const PaymentHistory = () => {
   // IFSC Auto-fetch branch details from Razorpay API
   useEffect(() => {
     const fetchBranchDetails = async () => {
-      const formattedIfsc = bankDetails.ifscCode.toUpperCase().trim();
+      const formattedIfsc = (bankDetails?.ifscCode || '').toUpperCase().trim();
       if (formattedIfsc.length !== 11) {
         setIfscStatus({ type: '', message: '' });
         setFetchedBankInfo({ bankName: '', branch: '' });
@@ -507,11 +507,15 @@ const PaymentHistory = () => {
   const combinedPayments = useMemo(() => {
     const list = [];
     const matchedOrderIds = new Set();
+    const safeVerifications = Array.isArray(manualVerifications) ? manualVerifications : [];
+    const safeOrders = Array.isArray(orders) ? orders : [];
     
     // First, process manual verification submissions from server
-    manualVerifications.forEach(mv => {
+    safeVerifications.forEach(mv => {
+      if (!mv) return;
       const mvDigits = String(mv.orderId || '').replace(/\D/g, '');
-      const o = orders.find(ord => {
+      const o = safeOrders.find(ord => {
+        if (!ord) return false;
         const ordIdDigits = String(ord.id || ord.orderId || '').replace(/\D/g, '');
         const ordNumDigits = String(ord.orderNumber || '').replace(/\D/g, '');
         return (mvDigits && (mvDigits === ordIdDigits || mvDigits === ordNumDigits)) ||
@@ -524,18 +528,18 @@ const PaymentHistory = () => {
       }
       
       list.push({
-        id: mv.orderId,
+        id: mv.orderId || mv.id || 'N/A',
         verificationRecordId: mv.id,
-        orderId: mv.orderId,
+        orderId: mv.orderId || mv.id || 'N/A',
         customerName: mv.customerName || (o ? (o.customerName || o.customer) : 'Unknown'),
         phone: mv.mobileNumber || (o ? o.phone : ''),
-        utr: mv.utrNumber,
+        utr: mv.utrNumber || '',
         paymentDate: mv.paymentDate || (o ? o.orderDate : 'TBD'),
         totalAmount: o ? (o.totalAmount || o.total || o.finalAmount) : mv.amountPaid,
         amountPaid: mv.amountPaid,
         paymentStatus: o ? (o.paymentStatus || o.status) : (mv.verificationStatus === 'Pending' ? 'Pending Verification' : mv.verificationStatus),
-        screenshotUrl: mv.screenshotUrl,
-        remarks: mv.remarks,
+        screenshotUrl: mv.screenshotUrl || null,
+        remarks: mv.remarks || null,
         isVerificationRecord: true,
         smsVerified: mv.smsVerified === true,
         verifiedUtr: mv.verifiedUtr || null,
@@ -544,18 +548,18 @@ const PaymentHistory = () => {
     });
     
     // Add remaining manual payment orders that don't have server verification details
-    orders.forEach(o => {
-      if (o.paymentMethod === 'UPI / Bank Transfer' && !matchedOrderIds.has(String(o.id || o.orderId))) {
+    safeOrders.forEach(o => {
+      if (o && o.paymentMethod === 'UPI / Bank Transfer' && !matchedOrderIds.has(String(o.id || o.orderId))) {
         list.push({
-          id: o.id || o.orderId,
-          orderId: o.id || o.orderId,
+          id: o.id || o.orderId || 'N/A',
+          orderId: o.id || o.orderId || 'N/A',
           customerName: o.customerName || o.customer || 'Unknown',
           phone: o.phone || '',
           utr: o.utr || '',
-          paymentDate: o.orderDate ? o.orderDate.slice(0, 10) : 'TBD',
+          paymentDate: o.orderDate ? String(o.orderDate).slice(0, 10) : 'TBD',
           totalAmount: o.totalAmount || o.total || 0,
           amountPaid: o.paidAmount || 0,
-          paymentStatus: o.paymentStatus || o.status,
+          paymentStatus: o.paymentStatus || o.status || 'Pending',
           screenshotUrl: null,
           remarks: null,
           isVerificationRecord: false,
@@ -568,25 +572,28 @@ const PaymentHistory = () => {
   }, [manualVerifications, orders]);
 
   // Filtered Payments List
-  const filteredPayments = combinedPayments.filter(p => {
-    const search = searchTerm.toLowerCase().trim();
-    const matchesSearch = 
-      String(p.orderId).toLowerCase().includes(search) || 
-      String(p.customerName).toLowerCase().includes(search) ||
-      String(p.utr).toLowerCase().includes(search);
-    
-    let matchesFilter = true;
-    const status = p.paymentStatus;
-    if (statusFilter === 'Pending') {
-      matchesFilter = status === 'Pending Verification' || status === 'Pending' || status === 'PendingVerification' || status === 'Processing';
-    } else if (statusFilter === 'Verified') {
-      matchesFilter = status === 'Paid' || status === 'Verified' || status === 'Approved';
-    } else if (statusFilter === 'Rejected') {
-      matchesFilter = status === 'Rejected' || status === 'Cancelled';
-    }
-    
-    return matchesSearch && matchesFilter;
-  });
+  const filteredPayments = useMemo(() => {
+    return (combinedPayments || []).filter(p => {
+      if (!p) return false;
+      const search = (searchTerm || '').toLowerCase().trim();
+      const matchesSearch = 
+        String(p.orderId || '').toLowerCase().includes(search) || 
+        String(p.customerName || '').toLowerCase().includes(search) ||
+        String(p.utr || '').toLowerCase().includes(search);
+      
+      let matchesFilter = true;
+      const status = p.paymentStatus;
+      if (statusFilter === 'Pending') {
+        matchesFilter = status === 'Pending Verification' || status === 'Pending' || status === 'PendingVerification' || status === 'Processing';
+      } else if (statusFilter === 'Verified') {
+        matchesFilter = status === 'Paid' || status === 'Verified' || status === 'Approved';
+      } else if (statusFilter === 'Rejected') {
+        matchesFilter = status === 'Rejected' || status === 'Cancelled';
+      }
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [combinedPayments, searchTerm, statusFilter]);
 
   return (
     <div className="payment-history-container">
