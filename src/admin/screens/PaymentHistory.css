@@ -567,3 +567,185 @@
   color: #cbd5e1;
   margin-bottom: 12px;
 }
+
+/* QR Code Configuration Tab Styles */
+.qr-config-section {
+  max-width: 900px;
+}
+
+.qr-config-header {
+  margin-bottom: 20px;
+}
+
+.qr-config-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.qr-config-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.qr-config-grid {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .qr-config-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.qr-preview-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.qr-preview-box {
+  width: 200px;
+  height: 200px;
+  background-color: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 12px;
+  position: relative;
+  padding: 8px;
+}
+
+.qr-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.qr-no-code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  text-align: center;
+}
+
+.qr-no-code span {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.qr-preview-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+}
+
+.qr-upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.qr-form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.qr-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 120px;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 10px;
+  background-color: #f8fafc;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 16px;
+}
+
+.qr-dropzone:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+.qr-upload-icon {
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.qr-dropzone-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  margin: 0;
+}
+
+.qr-dropzone-sub {
+  font-size: 11px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.qr-url-input {
+  width: 100%;
+  padding: 9px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  background: #ffffff;
+  transition: border-color 0.15s ease;
+}
+
+.qr-url-input:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+}
+
+.qr-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #059669;
+  color: #ffffff;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.qr-submit-btn:hover {
+  background-color: #047857;
+}
+
+.qr-form-note {
+  font-size: 11px;
+  color: #64748b;
+  margin: 6px 0 0 0;
+}

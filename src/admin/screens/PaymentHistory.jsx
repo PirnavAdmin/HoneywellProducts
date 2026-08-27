@@ -903,36 +903,34 @@ const PaymentHistory = () => {
 
         {/* Module 2: QR Code Settings */}
         {activeTab === 'qr-code' && (
-          <div className="max-w-4xl">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-slate-800">QR Code Configurations</h3>
-              <p className="text-sm text-slate-500 mt-1">Upload a QR code for user phase checkout payments. Customers scan this QR to pay during checkout.</p>
+          <div className="qr-config-section">
+            <div className="qr-config-header">
+              <h3 className="qr-config-title">QR Code Configurations</h3>
+              <p className="qr-config-subtitle">Upload a QR code for user phase checkout payments. Customers scan this QR to pay during checkout.</p>
             </div>
 
-            <form onSubmit={saveQrSettings} className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8 items-start">
-              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 flex flex-col items-center text-center">
-                <div className="w-48 h-48 bg-white border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center overflow-hidden mb-4 relative">
+            <form onSubmit={saveQrSettings} className="qr-config-grid">
+              <div className="qr-preview-card">
+                <div className="qr-preview-box">
                   {qrPreview ? (
-                    <img src={qrPreview} alt="Payment QR Code Preview" className="w-full h-full object-contain" />
+                    <img src={qrPreview} alt="Payment QR Code Preview" className="qr-preview-img" />
                   ) : (
-                    <div className="flex flex-col items-center text-slate-400">
-                      <CreditCard size={32} className="mb-2" />
-                      <span className="text-xs font-medium">No QR Code</span>
+                    <div className="qr-no-code">
+                      <CreditCard size={32} />
+                      <span>Payment QR Code Preview</span>
                     </div>
                   )}
                 </div>
-                <span className="text-xs font-semibold text-slate-600">User Phase QR Preview</span>
+                <span className="qr-preview-label">User Phase QR Preview</span>
               </div>
 
-              <div className="flex flex-col gap-5">
+              <div className="qr-upload-form">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Select QR Image File</label>
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload size={24} className="text-slate-400 mb-2" />
-                      <p className="text-sm font-medium text-slate-600">Click to upload image</p>
-                      <p className="text-xs text-slate-500 mt-1">PNG, JPG, JPEG, SVG up to 2MB</p>
-                    </div>
+                  <label className="qr-form-label">Select QR Image File</label>
+                  <label className="qr-dropzone">
+                    <Upload size={22} className="qr-upload-icon" />
+                    <p className="qr-dropzone-text">Click to upload image</p>
+                    <p className="qr-dropzone-sub">PNG, JPG, JPEG, SVG up to 2MB</p>
                     <input 
                       type="file" 
                       accept="image/*" 
@@ -943,21 +941,21 @@ const PaymentHistory = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Or Paste QR Image URL</label>
+                  <label className="qr-form-label">Or Paste QR Image URL</label>
                   <input 
                     type="url"
-                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-shadow"
+                    className="qr-url-input"
                     placeholder="https://example.com/payment-qr.png"
                     value={qrPreview && qrPreview.startsWith('http') ? qrPreview : ''}
                     onChange={(e) => setQrPreview(e.target.value)}
                   />
                 </div>
 
-                <div className="pt-2">
-                  <button type="submit" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm">
+                <div>
+                  <button type="submit" className="qr-submit-btn">
                     <Check size={16} /> Update QR Code
                   </button>
-                  <p className="text-[11px] text-slate-500 mt-2">
+                  <p className="qr-form-note">
                     Note: QR Code settings will be stored in your browser session for client-side override.
                   </p>
                 </div>
