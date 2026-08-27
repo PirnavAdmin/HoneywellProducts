@@ -289,24 +289,19 @@ const PaymentHistory = () => {
     try {
       // 1. Approve manual verification record if present (validates UTR match against bank records first)
       if (verificationRecordId) {
-        const res = await fetch(`${BASE_PAYMENT_URL}/verify-manual/${verificationRecordId}/status`, {
-          method: 'PUT',
-          headers: HEADERS,
-          body: JSON.stringify({ status: 'Approved' })
-        });
+        const res = await updateManualVerificationStatus(verificationRecordId, 'Approved');
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
+        if (res && res.success === false) {
           // 422 = UTR not SMS-verified yet
           if (res.status === 422) {
-            const utr = errData.utrNumber || errData.UtrNumber || '';
+            const utr = res.data?.utrNumber || res.data?.UtrNumber || '';
             showBannerStatus('error',
               `⚠️ Cannot approve — UTR not matched against bank records.` +
               (utr ? ` Expected UTR: ${utr}.` : '') +
               ` Paste the bank credit SMS in the "Auto-Verification Sandbox" tab first.`
             );
           } else {
-            showBannerStatus('error', errData.message || errData.Message || `Server error (${res.status}).`);
+            showBannerStatus('error', res.message || `Server error (${res.status || 'unknown'}).`);
           }
           return; // stop — do not update order status or refresh
         }
