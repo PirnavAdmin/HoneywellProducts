@@ -22,7 +22,32 @@ import {
 } from '../../services/paymentService';
 import './PaymentHistory.css';
 
+const formatDateDisplay = (dateStr) => {
+  if (!dateStr || dateStr === 'TBD') return 'TBD';
+  const cleanStr = String(dateStr).trim();
 
+  // If YYYY-MM-DD format (or ISO timestamp)
+  if (/^\d{4}-\d{2}-\d{2}/.test(cleanStr)) {
+    const parts = cleanStr.slice(0, 10).split('-');
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+
+  // If DD/MM/YYYY or DD-MM-YYYY format
+  if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}/.test(cleanStr)) {
+    const parts = cleanStr.slice(0, 10).split(/[\/\-]/);
+    return `${parts[0]}-${parts[1]}-${parts[2]}`;
+  }
+
+  const parsed = new Date(cleanStr);
+  if (!isNaN(parsed.getTime())) {
+    const yyyy = parsed.getFullYear();
+    const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+    const dd = String(parsed.getDate()).padStart(2, '0');
+    return `${dd}-${mm}-${yyyy}`;
+  }
+
+  return cleanStr.slice(0, 10);
+};
 
 const PaymentHistory = () => {
   const [activeTab, setActiveTab] = useState('payments-list');
