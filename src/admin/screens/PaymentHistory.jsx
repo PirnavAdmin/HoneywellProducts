@@ -978,33 +978,35 @@ const PaymentHistory = () => {
 
         {/* Module 3: Bank Details Settings */}
         {activeTab === 'bank-details' && (
-          <div className="max-w-2xl">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-slate-800">Bank Transfer Credentials</h3>
-              <p className="text-sm text-slate-500 mt-1">Edit bank account details displayed to farmers/dealers who choose direct bank wire transfers.</p>
+          <div className="bank-config-section">
+            <div className="bank-config-header">
+              <h3 className="bank-config-title">Bank Transfer Credentials</h3>
+              <p className="bank-config-subtitle">Edit bank account details displayed to farmers/dealers who choose direct bank wire transfers.</p>
             </div>
 
-            <form onSubmit={saveBankSettings} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">IFSC Code *</label>
+            <form onSubmit={saveBankSettings} className="bank-config-form">
+              <div className="bank-form-group">
+                <label className="bank-form-label">IFSC Code *</label>
                 {(() => {
                   const ifscVal = (bankDetails.ifscCode || '').trim();
                   const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
                   const isFormatInvalid = ifscVal.length > 0 && ifscVal.length < 11;
                   const isPatternInvalid = ifscVal.length === 11 && !ifscRegex.test(ifscVal);
                   const showRedBorder = isFormatInvalid || isPatternInvalid || ifscStatus.type === 'error';
+                  const isVerified = ifscStatus.type === 'success' || (fetchedBankInfo.bankName && ifscVal.length === 11);
+                  
                   return (
                     <>
                       <input 
                         type="text" 
-                        className={`w-full px-4 py-2.5 rounded-lg border text-sm uppercase outline-none transition-shadow ${
+                        className={`bank-input ${
                           showRedBorder
-                            ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-400'
-                            : ifscStatus.type === 'success'
-                            ? 'border-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-400'
-                            : 'border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+                            ? 'border-rose-400 focus:border-rose-500'
+                            : isVerified
+                            ? 'ifsc-verified'
+                            : ''
                         }`}
-                        placeholder="e.g. SBIN0000001"
+                        placeholder="e.g. HDFC0000001"
                         required
                         maxLength={11}
                         value={bankDetails.ifscCode}
@@ -1012,98 +1014,72 @@ const PaymentHistory = () => {
                       />
                       {/* Inline format hint while typing */}
                       {isFormatInvalid && !ifscStatus.message && (
-                        <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-amber-600">
+                        <div className="bank-error-msg">
                           <AlertCircle size={12} />
-                          <span>IFSC must be 11 characters: 4 letters + <strong>0</strong> + 6 alphanumeric (e.g. SBIN<strong>0</strong>000001).</span>
-                        </div>
-                      )}
-                      {/* Pattern invalid at exactly 11 chars but wrong format */}
-                      {isPatternInvalid && !ifscStatus.message && (
-                        <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-rose-600">
-                          <AlertCircle size={12} />
-                          <span>Invalid IFSC format. Expected: 4 letters + <strong>0</strong> + 6 alphanumeric (e.g. UBIN<strong>0</strong>802948).</span>
+                          <span>IFSC must be 11 characters: 4 letters + 0 + 6 alphanumeric (e.g. HDFC0000001).</span>
                         </div>
                       )}
                       {/* API response feedback (loading / success / error) */}
-                      {ifscStatus.message && (
-                        <div className={`flex items-center gap-1.5 mt-2 text-xs font-medium ${ifscStatus.type === 'error' ? 'text-rose-600' : ifscStatus.type === 'success' ? 'text-emerald-600' : 'text-slate-500'}`}>
+                      {ifscStatus.message ? (
+                        <div className={ifscStatus.type === 'error' ? 'bank-error-msg' : 'bank-verified-msg'}>
                           {ifscStatus.type === 'loading' && <RefreshCw size={12} className="animate-spin" />}
-                          {ifscStatus.type === 'success' && <CheckCircle size={12} />}
+                          {ifscStatus.type === 'success' && <CheckCircle size={14} />}
                           {ifscStatus.type === 'error' && <AlertCircle size={12} />}
                           <span>{ifscStatus.message}</span>
                         </div>
-                      )}
+                      ) : isVerified && fetchedBankInfo.bankName ? (
+                        <div className="bank-verified-msg">
+                          <CheckCircle size={14} />
+                          <span>Verified: {fetchedBankInfo.bankName} — {fetchedBankInfo.branch}</span>
+                        </div>
+                      ) : null}
                     </>
                   );
                 })()}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Bank Name *</span>
-                  {fetchedBankInfo.bankName && (
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={11} /> Auto-verified from IFSC
-                    </span>
-                  )}
-                </label>
+              <div className="bank-form-group">
+                <div className="bank-form-label-row">
+                  <span className="bank-form-label">Bank Name *</span>
+                  <span className="bank-lock-tag">
+                    <Lock size={12} /> Auto-verified from IFSC
+                  </span>
+                </div>
                 <input 
                   type="text" 
-                  className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none transition-shadow ${
-                    fetchedBankInfo.bankName
-                      ? 'bg-slate-100 text-slate-700 border-slate-300 font-semibold cursor-not-allowed'
-                      : 'border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
-                  }`}
-                  placeholder="e.g. State Bank of India"
+                  className="bank-input read-only"
+                  placeholder="e.g. HDFC Bank"
                   required
-                  readOnly={Boolean(fetchedBankInfo.bankName)}
-                  value={bankDetails.bankName}
+                  readOnly
+                  value={bankDetails.bankName || fetchedBankInfo.bankName || ''}
                   onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
                 />
-                {fetchedBankInfo.bankName && bankDetails.bankName.trim().toLowerCase() !== fetchedBankInfo.bankName.trim().toLowerCase() && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '12px', fontWeight: 600, color: '#e11d48' }}>
-                    <AlertCircle size={12} />
-                    <span>Mismatch! IFSC '{bankDetails.ifscCode}' belongs to '{fetchedBankInfo.bankName}'.</span>
-                  </div>
-                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Bank Branch *</span>
-                  {fetchedBankInfo.branch && (
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={11} /> Auto-filled from IFSC
-                    </span>
-                  )}
-                </label>
+              <div className="bank-form-group">
+                <div className="bank-form-label-row">
+                  <span className="bank-form-label">Bank Branch *</span>
+                  <span className="bank-lock-tag">
+                    <Lock size={12} /> Auto-filled from IFSC
+                  </span>
+                </div>
                 <input 
                   type="text" 
-                  className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none transition-shadow ${
-                    fetchedBankInfo.branch
-                      ? 'bg-slate-100 text-slate-700 border-slate-300 font-semibold cursor-not-allowed'
-                      : 'border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
-                  }`}
-                  placeholder="e.g. Nagpur Main Branch"
+                  className="bank-input read-only"
+                  placeholder="e.g. TULSIANI CHMBRS - NARIMAN PT"
                   required
-                  readOnly={Boolean(fetchedBankInfo.branch)}
-                  value={bankDetails.bankBranch}
+                  readOnly
+                  value={bankDetails.bankBranch || fetchedBankInfo.branch || ''}
                   onChange={(e) => setBankDetails({ ...bankDetails, bankBranch: e.target.value })}
                 />
-                {fetchedBankInfo.branch && bankDetails.bankBranch.trim().toLowerCase() !== fetchedBankInfo.branch.trim().toLowerCase() && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '12px', fontWeight: 600, color: '#e11d48' }}>
-                    <AlertCircle size={12} />
-                    <span>Mismatch! IFSC '{bankDetails.ifscCode}' belongs to '{fetchedBankInfo.branch}' branch.</span>
-                  </div>
-                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Account Number *</label>
+              <div className="bank-form-group">
+                <label className="bank-form-label">Account Number *</label>
                 <input 
                   type="text" 
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-shadow"
-                  placeholder="e.g. 38190012934 (9 to 18 digits)"
+                  className="bank-input"
+                  placeholder="50100012345678"
                   required
                   maxLength={18}
                   value={bankDetails.accountNumber}
@@ -1113,34 +1089,34 @@ const PaymentHistory = () => {
                   }}
                 />
                 {bankDetails.accountNumber && (bankDetails.accountNumber.length < 9 || bankDetails.accountNumber.length > 18) && (
-                  <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-rose-600">
+                  <div className="bank-error-msg">
                     <AlertCircle size={12} />
                     <span>Account Number must be between 9 and 18 numeric digits.</span>
                   </div>
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Account Holder Name *</label>
+              <div className="bank-form-group">
+                <label className="bank-form-label">Account Holder Name *</label>
                 <input 
                   type="text" 
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-shadow"
-                  placeholder="e.g. SHYAM AGRO TOOLS PRIVATE LIMITED"
+                  className="bank-input"
+                  placeholder="Shyam Agro"
                   required
                   value={bankDetails.accountHolderName}
                   onChange={(e) => setBankDetails({ ...bankDetails, accountHolderName: e.target.value })}
                 />
               </div>
 
-              <div className="pt-2">
+              <div>
                 <button 
                   type="submit" 
                   disabled={!isBankFormValid(bankDetails)}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:bg-slate-300 disabled:hover:bg-slate-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                  className="bank-submit-btn"
                 >
                   <Check size={16} /> Save Bank details
                 </button>
-                <p className="text-[11px] text-slate-500 mt-2">
+                <p className="bank-form-note">
                   Note: Bank details are initialized from the server on load, and saved to your browser session for client-side override.
                 </p>
               </div>
