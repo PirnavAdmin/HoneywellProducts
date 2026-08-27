@@ -1126,29 +1126,25 @@ const PaymentHistory = () => {
 
         {/* Module 4: UPI ID Settings */}
         {activeTab === 'upi-id' && (
-          <div className="max-w-2xl">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-slate-800">UPI ID Settings</h3>
-              <p className="text-sm text-slate-500 mt-1">Configure the merchant UPI handle shown to customers on the checkout payments screen.</p>
+          <div className="upi-config-section">
+            <div className="upi-config-header">
+              <h3 className="upi-config-title">UPI ID Settings</h3>
+              <p className="upi-config-subtitle">Configure the merchant UPI handle shown to customers on the checkout payments screen.</p>
             </div>
 
-            <form onSubmit={saveUpiSettings} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Business UPI ID / VPA *</label>
+            <form onSubmit={saveUpiSettings} className="upi-config-form">
+              <div className="upi-form-group">
+                <label className="upi-form-label">Business UPI ID / VPA *</label>
                 <input 
                   type="text" 
-                  className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none transition-shadow ${
-                    upiId && !isUpiValid(upiId)
-                      ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-400'
-                      : 'border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
-                  }`}
+                  className={`upi-input ${upiId && !isUpiValid(upiId) ? 'error' : ''}`}
                   placeholder="e.g. shyamagro@ybl"
                   required
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value.trim())}
                 />
                 {upiId && !isUpiValid(upiId) ? (
-                  <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-rose-600">
+                  <div className="upi-error-msg">
                     <AlertCircle size={12} />
                     {isUpiFormatOkButUnknownHandle(upiId) ? (
                       <span>
@@ -1159,22 +1155,22 @@ const PaymentHistory = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-                    <Info size={12} />
-                    <span>Format: <strong>yourname@bankhandle</strong> — handle must be a recognized UPI PSP (e.g. @ybl, @paytm, @oksbi).</span>
+                  <div className="upi-hint-text">
+                    <Info size={13} />
+                    <span>Format: yourname@bankhandle — handle must be a recognized UPI PSP (e.g. @ybl, @paytm, @oksbi).</span>
                   </div>
                 )}
               </div>
 
-              <div className="pt-2">
+              <div>
                 <button 
                   type="submit" 
                   disabled={!isUpiValid(upiId)}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:bg-slate-300 disabled:hover:bg-slate-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                  className="upi-submit-btn"
                 >
                   <Check size={16} /> Update UPI ID
                 </button>
-                <p className="text-[11px] text-slate-500 mt-2">
+                <p className="upi-form-note">
                   Note: Merchant UPI VPA is initialized from the server on load, and saved to your browser session for client-side override.
                 </p>
               </div>

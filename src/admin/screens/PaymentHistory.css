@@ -929,3 +929,115 @@
   color: #64748b;
   margin: 10px 0 0 0;
 }
+
+/* UPI ID Configurations Tab Styles */
+.upi-config-section {
+  max-width: 620px;
+}
+
+.upi-config-header {
+  margin-bottom: 24px;
+}
+
+.upi-config-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+}
+
+.upi-config-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.upi-config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.upi-form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.upi-form-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.upi-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.upi-input:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+}
+
+.upi-input.error {
+  border-color: #fb7185;
+}
+
+.upi-hint-text {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.upi-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #e11d48;
+}
+
+.upi-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #059669;
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  margin-top: 4px;
+}
+
+.upi-submit-btn:hover {
+  background-color: #047857;
+}
+
+.upi-submit-btn:disabled {
+  opacity: 0.45;
+  background-color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.upi-form-note {
+  font-size: 11px;
+  color: #64748b;
+  margin: 10px 0 0 0;
+}
