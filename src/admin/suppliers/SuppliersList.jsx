@@ -29,110 +29,7 @@ export const supplierCategories = [
   'Packaging'
 ];
 
-export const suppliers = [
-  {
-    id: 'SUP-001',
-    name: 'KisanKraft Ltd.',
-    category: 'Farm Tools',
-    contactPerson: 'Amit Sharma',
-    email: 'procurement@kisankraft.in',
-    phone: '+91 80411-23456',
-    city: 'Bengaluru, Karnataka',
-    status: 'Verified',
-    leadTime: '4-6 days',
-    rating: 4.8,
-    activePo: 7,
-    monthlySpend: 286000,
-    lastSupply: '2026-05-27',
-    terms: 'Net 15',
-    products: 'Tillers, pruning tools, crop cutters'
-  },
-  {
-    id: 'SUP-002',
-    name: 'AgroEquip Co.',
-    category: 'Irrigation',
-    contactPerson: 'Neha Patel',
-    email: 'orders@agroequip.co.in',
-    phone: '+91 98250-88221',
-    city: 'Ahmedabad, Gujarat',
-    status: 'Verified',
-    leadTime: '3-5 days',
-    rating: 4.6,
-    activePo: 4,
-    monthlySpend: 174500,
-    lastSupply: '2026-05-24',
-    terms: 'Advance 30%',
-    products: 'Drip kits, pumps, hose connectors'
-  },
-  {
-    id: 'SUP-003',
-    name: 'Bharat Agro Machinery',
-    category: 'Machinery',
-    contactPerson: 'Rakesh Verma',
-    email: 'sales@bharatagromachinery.com',
-    phone: '+91 98110-77144',
-    city: 'Ludhiana, Punjab',
-    status: 'Review',
-    leadTime: '8-12 days',
-    rating: 4.1,
-    activePo: 2,
-    monthlySpend: 412000,
-    lastSupply: '2026-05-18',
-    terms: 'Net 30',
-    products: 'Brush cutters, seed drill attachments'
-  },
-  {
-    id: 'SUP-004',
-    name: 'GreenSafe Protective Works',
-    category: 'Safety Gear',
-    contactPerson: 'Farhan Khan',
-    email: 'dispatch@greensafe.in',
-    phone: '+91 99888-44112',
-    city: 'Delhi NCR',
-    status: 'Verified',
-    leadTime: '2-4 days',
-    rating: 4.7,
-    activePo: 3,
-    monthlySpend: 68400,
-    lastSupply: '2026-05-29',
-    terms: 'Net 7',
-    products: 'Farm gloves, masks, eye protection'
-  },
-  {
-    id: 'SUP-005',
-    name: 'Krishi Seed & Inputs',
-    category: 'Seeds & Inputs',
-    contactPerson: 'Sandeep Rao',
-    email: 'hello@krishiinputs.in',
-    phone: '+91 99002-66718',
-    city: 'Hyderabad, Telangana',
-    status: 'Pending',
-    leadTime: '5-7 days',
-    rating: 3.9,
-    activePo: 1,
-    monthlySpend: 92000,
-    lastSupply: '2026-05-11',
-    terms: 'Advance 50%',
-    products: 'Hybrid seeds, soil additives'
-  },
-  {
-    id: 'SUP-006',
-    name: 'PackRight Rural Logistics',
-    category: 'Packaging',
-    contactPerson: 'Meera Iyer',
-    email: 'support@packright.in',
-    phone: '+91 94444-21890',
-    city: 'Chennai, Tamil Nadu',
-    status: 'Inactive',
-    leadTime: '6-9 days',
-    rating: 3.5,
-    activePo: 0,
-    monthlySpend: 18500,
-    lastSupply: '2026-04-30',
-    terms: 'COD',
-    products: 'Cartons, tapes, woven sacks'
-  }
-];
+export const suppliers = [];
 
 export const formatSupplierCurrency = (amount) => `INR ${Number(amount || 0).toLocaleString('en-IN')}`;
 
@@ -204,10 +101,10 @@ const SuppliersList = () => {
     if (!window.confirm('Are you sure you want to delete this supplier?')) return;
     try {
       await deleteSupplier(id);
-    } catch (err) {
-      console.warn('Backend delete error, removing locally:', err);
-    } finally {
       setSuppliersList(prev => prev.filter(s => String(s.id) !== String(id)));
+    } catch (err) {
+      console.error('Backend delete error:', err);
+      alert('Failed to delete supplier from server: ' + (err.message || 'Unknown error'));
     }
   };
 
