@@ -5,7 +5,7 @@ import {
   RefreshCw, CheckCircle, AlertCircle, ArrowUpRight, Activity, Eye,
   Bell, BellOff, Clock, Calendar, Lock, ChevronDown, Trash2
 } from 'lucide-react';
-import { getOrders, updateOrderStatus } from '../api/orders';
+import { getOrders, updateOrderStatus, updateOrderPaymentStatus } from '../api/orders';
 import { Toast } from '../components/Toast';
 import { getApiDomain } from '../../utils/apiConfig';
 import {
@@ -284,15 +284,14 @@ const PaymentHistory = () => {
   }, [bankDetails.ifscCode]);
 
   const handleVerifyPayment = async (orderId, totalAmount, realOrderId, verificationRecordId) => {
-    if (!window.confirm(`Verify payment of INR ${Number(totalAmount || 0).toLocaleString('en-IN')} for Order #${orderId || ''}?\n\nThis will mark the order as Processing.`)) return;
+    if (!window.confirm(`Verify payment of INR ${Number(totalAmount || 0).toLocaleString('en-IN')} for Order #${orderId || ''}?\n\nThis will mark the order as Verified.`)) return;
     
     try {
-      // 1. Approve manual verification record if present (validates UTR match against bank records first)
+      // 1. Approve manual verification record if present
       if (verificationRecordId) {
         const res = await updateManualVerificationStatus(verificationRecordId, 'Approved');
 
         if (res && res.success === false) {
-          // 422 = UTR not SMS-verified yet
           if (res.status === 422) {
             const utr = res.data?.utrNumber || res.data?.UtrNumber || '';
             showBannerStatus('error',
@@ -303,17 +302,27 @@ const PaymentHistory = () => {
           } else {
             showBannerStatus('error', res.message || `Server error (${res.status || 'unknown'}).`);
           }
-          return; // stop — do not update order status or refresh
+          return;
         }
+
+        // Dynamically update local manualVerifications state
+        setManualVerifications(prev => (Array.isArray(prev) ? prev : []).map(mv => mv.id === verificationRecordId ? { ...mv, verificationStatus: 'Approved', smsVerified: true } : mv));
       }
 
-      // 2. Update order status to Processing on the server only after successful verification approval
-      const isNumericId = /^\d+$/.test(String(realOrderId));
-      if (isNumericId) {
-        await updateOrderStatus(Number(realOrderId), 'Processing');
+      // 2. Update order payment status and order status on server (supports string & numeric IDs)
+      if (realOrderId) {
+        try {
+          await updateOrderPaymentStatus(realOrderId, 'Verified', totalAmount);
+          await updateOrderStatus(realOrderId, 'Processing');
+        } catch (err) {
+          console.warn("Order endpoint update warning:", err);
+        }
+
+        // Dynamically update local orders state
+        setOrders(prev => (Array.isArray(prev) ? prev : []).map(o => String(o.id || o.orderId) === String(realOrderId) ? { ...o, paymentStatus: 'Verified', status: 'Processing' } : o));
       }
       
-      showBannerStatus('success', `Payment for Order #${orderId} verified successfully.${isNumericId ? ' Order status updated to Processing.' : ''}`);
+      showBannerStatus('success', `Payment for Order #${orderId} verified successfully.`);
       loadOrdersList();
     } catch (e) {
       showBannerStatus('error', `Failed to verify payment: ${e.message}`);
@@ -325,18 +334,22 @@ const PaymentHistory = () => {
     if (!window.confirm(`Reject payment details for Order #${orderId}?`)) return;
     
     try {
-      const isNumericId = /^\d+$/.test(String(realOrderId));
-      if (isNumericId) {
-        // 1. Cancel order status on the server
-        await updateOrderStatus(Number(realOrderId), 'Cancelled');
-      }
-
-      // 2. Reject manual verification record if present
       if (verificationRecordId) {
         await updateManualVerificationStatus(verificationRecordId, 'Rejected');
+        setManualVerifications(prev => (Array.isArray(prev) ? prev : []).map(mv => mv.id === verificationRecordId ? { ...mv, verificationStatus: 'Rejected' } : mv));
+      }
+
+      if (realOrderId) {
+        try {
+          await updateOrderPaymentStatus(realOrderId, 'Rejected', 0);
+          await updateOrderStatus(realOrderId, 'Cancelled');
+        } catch (err) {
+          console.warn("Order endpoint update warning:", err);
+        }
+        setOrders(prev => (Array.isArray(prev) ? prev : []).map(o => String(o.id || o.orderId) === String(realOrderId) ? { ...o, paymentStatus: 'Rejected', status: 'Cancelled' } : o));
       }
       
-      showBannerStatus('success', `Payment for Order #${orderId} rejected.${isNumericId ? ' Order status updated to Cancelled.' : ''}`);
+      showBannerStatus('success', `Payment for Order #${orderId} rejected.`);
       loadOrdersList();
     } catch (e) {
       showBannerStatus('error', `Failed to reject payment: ${e.message}`);
@@ -348,6 +361,7 @@ const PaymentHistory = () => {
     try {
       const res = await deleteManualVerification(verificationId);
       if (res && res.success !== false) {
+        setManualVerifications(prev => (Array.isArray(prev) ? prev : []).filter(mv => mv.id !== verificationId));
         showBannerStatus('success', `Manual verification record deleted successfully.`);
         loadOrdersList();
       } else {
