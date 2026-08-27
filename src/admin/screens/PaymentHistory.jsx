@@ -946,7 +946,7 @@ const PaymentHistory = () => {
                     <input 
                       type="file" 
                       accept="image/*" 
-                      className="hidden"
+                      style={{ display: 'none' }}
                       onChange={handleQrUpload} 
                     />
                   </label>
