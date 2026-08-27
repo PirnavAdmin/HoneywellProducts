@@ -81,9 +81,53 @@ const PaymentHistory = () => {
   const [ifscStatus, setIfscStatus] = useState({ type: '', message: '' });
   const [fetchedBankInfo, setFetchedBankInfo] = useState({ bankName: '', branch: '' });
   
-  // Simulator States
+  // Simulator & Reconciliation States
   const [smsText, setSmsText] = useState('');
-  const [simulationResult, setSimulationResult] = useState(null);
+  const [isReconciling, setIsReconciling] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState(null);
+
+  const handleReconcileSmsSubmit = async (e) => {
+    e.preventDefault();
+    if (!smsText || !smsText.trim() || smsText.trim() === 'string') {
+      showBannerStatus('error', 'Please enter a valid bank credit SMS payload.');
+      return;
+    }
+    
+    setIsReconciling(true);
+    setReconcileResult(null);
+
+    try {
+      const res = await reconcileSmsOnServer(smsText.trim());
+      setIsReconciling(false);
+
+      if (res && res.success !== false) {
+        const utr = res.utrNumber || res.UtrNumber || res.utr || res.data?.utrNumber || '';
+        const amount = res.amount || res.Amount || res.data?.amount || '';
+        setReconcileResult({
+          success: true,
+          message: res.message || `Successfully parsed bank credit SMS!${utr ? ` UTR: ${utr}.` : ''}${amount ? ` Amount: INR ${amount}.` : ''}`,
+          data: { utrNumber: utr, amount: amount, matchedOrderId: res.orderId || res.OrderId || res.data?.orderId }
+        });
+        showBannerStatus('success', 'SMS parsed and reconciled successfully.');
+        loadOrdersList();
+      } else {
+        const errMsg = res?.message || 'Could not parse UTR or Amount from the SMS payload.';
+        setReconcileResult({
+          success: false,
+          message: errMsg
+        });
+        showBannerStatus('error', errMsg);
+      }
+    } catch (err) {
+      setIsReconciling(false);
+      const errMsg = err.message || 'Could not parse UTR or Amount from the SMS payload.';
+      setReconcileResult({
+        success: false,
+        message: errMsg
+      });
+      showBannerStatus('error', errMsg);
+    }
+  };
 
   // Scrollbar synchronization
   const topScrollRef = React.useRef(null);
@@ -102,37 +146,16 @@ const PaymentHistory = () => {
   };
 
   // Load configured settings on component mount
+  // Load configured settings on component mount directly from backend APIs
   useEffect(() => {
-    const savedQr = localStorage.getItem('shyam_agro_qr_code') || '';
-    const savedUpi = localStorage.getItem('shyam_agro_upi_id') || 'shyamagro@upi';
-    const savedBank = localStorage.getItem('shyam_agro_bank_details');
-    
-    setQrPreview(savedQr);
-    setUpiId(savedUpi);
-    
-    if (savedBank) {
-      try {
-        setBankDetails(JSON.parse(savedBank));
-      } catch (e) {
-        console.error("Failed to parse bank details from local storage");
-      }
-    } else {
-      setBankDetails({
-        bankName: '',
-        accountNumber: '',
-        accountHolderName: '',
-        ifscCode: '',
-        bankBranch: ''
-      });
-    }
-
     const loadServerSettings = async () => {
       try {
         const serverQr = await fetchQrConfig();
-        if (serverQr && serverQr.qrImageUrl) {
-          const fullQrUrl = serverQr.qrImageUrl.startsWith('/') 
-            ? `${getApiDomain()}${serverQr.qrImageUrl}` 
-            : serverQr.qrImageUrl;
+        if (serverQr && (serverQr.qrImageUrl || serverQr.url)) {
+          const rawUrl = serverQr.qrImageUrl || serverQr.url;
+          const fullQrUrl = rawUrl.startsWith('/') 
+            ? `${getApiDomain()}${rawUrl}` 
+            : rawUrl;
           setQrPreview(fullQrUrl);
         }
       } catch (e) {
@@ -141,17 +164,17 @@ const PaymentHistory = () => {
 
       try {
         const serverBank = await fetchBankDetails();
-        if (serverBank && serverBank.bankName) {
+        if (serverBank && (serverBank.bankName || serverBank.ifscCode)) {
           setBankDetails({
-            bankName: serverBank.bankName,
-            accountNumber: serverBank.accountNumber,
-            accountHolderName: serverBank.accountHolderName,
-            ifscCode: serverBank.ifscCode,
+            bankName: serverBank.bankName || '',
+            accountNumber: serverBank.accountNumber || '',
+            accountHolderName: serverBank.accountHolderName || '',
+            ifscCode: serverBank.ifscCode || '',
             bankBranch: serverBank.branch || serverBank.bankBranch || ''
           });
         }
       } catch (e) {
-        console.warn("Failed to load live bank details from server, using local data:", e);
+        console.warn("Failed to load live bank details from server:", e);
       }
 
       try {
@@ -163,7 +186,7 @@ const PaymentHistory = () => {
           }
         }
       } catch (e) {
-        console.warn("Failed to load live UPI details from server, using local data:", e);
+        console.warn("Failed to load live UPI details from server:", e);
       }
     };
     
@@ -405,7 +428,6 @@ const PaymentHistory = () => {
       showBannerStatus('error', 'Please upload or preview a QR Code before saving.');
       return;
     }
-    localStorage.setItem('shyam_agro_qr_code', qrPreview);
     
     try {
       const fd = new FormData();
@@ -415,15 +437,17 @@ const PaymentHistory = () => {
         fd.append('qrImageUrl', qrPreview);
       }
       const response = await updateQrConfig(fd);
-      if (response && response.success) {
+      if (response && response.success !== false) {
         showBannerStatus('success', 'QR Code configurations saved to server successfully.');
         setQrFile(null);
+        if (response.qrImageUrl || response.url) {
+          setQrPreview(response.qrImageUrl || response.url);
+        }
       } else {
-        showBannerStatus('success', 'QR Code saved locally only.');
+        showBannerStatus('error', response?.message || 'Failed to update QR Code configuration on server.');
       }
     } catch (err) {
-      console.warn("Failed to update QR config on server, saved locally:", err);
-      showBannerStatus('success', 'QR Code updated locally (Server offline).');
+      showBannerStatus('error', `Failed to update QR Code configuration: ${err.message}`);
     }
   };
 
@@ -454,20 +478,32 @@ const PaymentHistory = () => {
       showBannerStatus('error', 'Please fill in all mandatory bank details with valid input before saving.');
       return;
     }
-    localStorage.setItem('shyam_agro_bank_details', JSON.stringify(bankDetails));
     
     try {
-      await updateBankDetails({
+      const response = await updateBankDetails({
         bankName: bankDetails.bankName,
         accountNumber: bankDetails.accountNumber,
         accountHolderName: bankDetails.accountHolderName,
         ifscCode: bankDetails.ifscCode,
         branch: bankDetails.bankBranch
       });
-      showBannerStatus('success', 'Bank Account details saved to server successfully.');
+
+      if (response && response.success !== false) {
+        showBannerStatus('success', 'Bank Account details saved to server successfully.');
+        if (response.bankName || response.accountNumber) {
+          setBankDetails({
+            bankName: response.bankName || bankDetails.bankName,
+            accountNumber: response.accountNumber || bankDetails.accountNumber,
+            accountHolderName: response.accountHolderName || bankDetails.accountHolderName,
+            ifscCode: response.ifscCode || bankDetails.ifscCode,
+            bankBranch: response.branch || response.bankBranch || bankDetails.bankBranch
+          });
+        }
+      } else {
+        showBannerStatus('error', response?.message || 'Failed to update Bank Account details on server.');
+      }
     } catch (err) {
-      console.warn("Failed to save bank details to server:", err);
-      showBannerStatus('success', 'Bank Account details saved locally (Server offline).');
+      showBannerStatus('error', `Failed to update Bank Account details: ${err.message}`);
     }
   };
 
@@ -519,19 +555,25 @@ const PaymentHistory = () => {
       showBannerStatus('error', 'Invalid UPI ID. Format must be: yourname@bankhandle (e.g. shyamagro@ybl).');
       return;
     }
-    localStorage.setItem('shyam_agro_upi_id', upiId);
     
     try {
-      await updateUpiDetails({
+      const response = await updateUpiDetails({
         merchantName: originalUpiDetails.merchantName || 'Shyam Agro Tools',
         merchantUpiId: upiId,
         bankDisplayName: originalUpiDetails.bankDisplayName || 'Bank Account',
         currency: originalUpiDetails.currency || 'INR'
       });
-      showBannerStatus('success', 'UPI ID details saved to server successfully.');
+
+      if (response && response.success !== false) {
+        showBannerStatus('success', 'UPI ID details saved to server successfully.');
+        if (response.merchantUpiId) {
+          setUpiId(response.merchantUpiId);
+        }
+      } else {
+        showBannerStatus('error', response?.message || 'Failed to update UPI ID details on server.');
+      }
     } catch (err) {
-      console.warn("Failed to save UPI ID to server:", err);
-      showBannerStatus('success', 'UPI ID details saved locally (Server offline).');
+      showBannerStatus('error', `Failed to update UPI ID details: ${err.message}`);
     }
   };
 
