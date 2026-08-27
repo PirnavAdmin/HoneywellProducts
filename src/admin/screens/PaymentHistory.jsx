@@ -60,6 +60,11 @@ const PaymentHistory = () => {
   // Settings States
   const [qrPreview, setQrPreview] = useState('');
   const [qrFile, setQrFile] = useState(null);
+  const [qrImgError, setQrImgError] = useState(false);
+
+  useEffect(() => {
+    setQrImgError(false);
+  }, [qrPreview]);
   const [bankDetails, setBankDetails] = useState({
     bankName: '',
     accountNumber: '',
@@ -912,12 +917,19 @@ const PaymentHistory = () => {
             <form onSubmit={saveQrSettings} className="qr-config-grid">
               <div className="qr-preview-card">
                 <div className="qr-preview-box">
-                  {qrPreview ? (
-                    <img src={qrPreview} alt="Payment QR Code Preview" className="qr-preview-img" />
+                  {qrPreview && !qrImgError ? (
+                    <img 
+                      src={qrPreview} 
+                      alt="Payment QR Code Preview" 
+                      className="qr-preview-img" 
+                      onError={() => setQrImgError(true)} 
+                    />
                   ) : (
-                    <div className="qr-no-code">
-                      <CreditCard size={32} />
-                      <span>Payment QR Code Preview</span>
+                    <div className="qr-dashed-placeholder">
+                      <div className="qr-placeholder-inner">
+                        <Upload size={22} className="qr-broken-icon" />
+                        <span className="qr-placeholder-text">Payment QR Code Preview</span>
+                      </div>
                     </div>
                   )}
                 </div>
