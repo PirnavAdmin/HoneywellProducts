@@ -45,9 +45,8 @@ const unwrapItem = (response) => {
 
 // Mapper: Standardize backend data structures for suppliers components
 export const mapSupplierFromApi = (raw = {}) => {
-  // Support both camelCase (client) and PascalCase (ASP.NET) field names
   const category = raw.category || raw.Category || raw.productCategory || raw.ProductCategory || '';
-  const contactPerson = raw.contactPerson || raw.ContactPerson || raw.name || raw.Name || '';
+  const contactPerson = raw.contactPerson || raw.ContactPerson || raw.fullName || raw.FullName || raw.name || raw.Name || '';
   const rating = Number(raw.rating ?? raw.Rating ?? raw.performanceRating ?? raw.PerformanceRating ?? 4.5);
   const terms = raw.paymentTerms || raw.terms || raw.commercialTerms || raw.CommercialTerms || 'Net 15';
   const city = raw.city || raw.City || '';
@@ -58,11 +57,9 @@ export const mapSupplierFromApi = (raw = {}) => {
   const lastSupplyRaw = raw.lastSupply || raw.LastSupply || raw.lastSupplyDate || raw.LastSupplyDate || '';
   const lastSupply = lastSupplyRaw ? String(lastSupplyRaw).slice(0, 10) : new Date().toISOString().slice(0, 10);
 
-  // Normalize status: backend 'Approved' => UI 'Verified'
+  // Normalize status: backend 'Approved' / 'Active' => UI 'Verified'
   const rawStatus = raw.status || raw.Status || 'Pending';
-  const normalizedStatus = rawStatus === 'Approved' ? 'Verified' :
-                           rawStatus === 'Active' ? 'Verified' :
-                           rawStatus;
+  const normalizedStatus = (rawStatus === 'Approved' || rawStatus === 'Active') ? 'Verified' : rawStatus;
 
   return {
     id: String(raw.id ?? raw.Id ?? ''),
@@ -72,8 +69,8 @@ export const mapSupplierFromApi = (raw = {}) => {
     category,
     status: normalizedStatus,
     email: raw.email || raw.Email || '',
-    phone: raw.phone || raw.Phone || raw.mobile || raw.Mobile || '',
-    mobile: raw.mobile || raw.Mobile || raw.phone || raw.Phone || '',
+    phone: raw.phone || raw.Phone || raw.mobile || raw.Mobile || raw.mobileNumber || raw.MobileNumber || '',
+    mobile: raw.mobile || raw.Mobile || raw.phone || raw.Phone || raw.mobileNumber || raw.MobileNumber || '',
     city,
     address: raw.address || raw.Address || '',
     gstin: raw.gstin || raw.Gstin || '',
@@ -86,6 +83,7 @@ export const mapSupplierFromApi = (raw = {}) => {
     paymentTerms: terms,
     products,
     productLines: products,
+    trackingId: raw.trackingId || raw.TrackingId || null,
     submittedAt: raw.submittedAt || raw.SubmittedAt || raw.createdAt || raw.CreatedAt || new Date().toISOString()
   };
 };
@@ -104,7 +102,6 @@ export const fetchSupplier = async (id) => {
     const response = await api.get(`/api/Suppliers/${id}`);
     return mapSupplierFromApi(unwrapItem(response));
   } catch (err) {
-    // Fall back to scanning the general list if direct lookup fails
     const all = await fetchSuppliers();
     const found = all.find((s) => String(s.id) === String(id));
     if (found) return found;
@@ -139,7 +136,7 @@ export const createSupplier = async (supplierData) => {
 // PUT /api/Suppliers/{id}
 export const updateSupplier = async (id, supplierData) => {
   const payload = {
-    id: parseInt(id, 10),
+    id: parseInt(id, 10) || id,
     name: supplierData.name || supplierData.businessName || '',
     contactPerson: supplierData.contactPerson || '',
     productCategory: supplierData.category || supplierData.productCategory || '',
@@ -158,6 +155,9 @@ export const updateSupplier = async (id, supplierData) => {
   };
 
   const response = await api.put(`/api/Suppliers/${id}`, payload);
+  if (response.status === 204 || !response.data) {
+    return mapSupplierFromApi(payload);
+  }
   return mapSupplierFromApi(unwrapItem(response));
 };
 
@@ -173,26 +173,28 @@ export const deleteSupplier = async (id) => {
 // POST /api/Suppliers/register (User Become-Seller Screen)
 export const registerSupplier = async (formData) => {
   const payload = {
-    name: formData.businessName || formData.name || '',
-    contactPerson: formData.name || '',
-    category: formData.category || '',
-    phone: formData.mobile || '',
+    fullName: formData.contactPerson || formData.name || formData.fullName || '',
+    businessName: formData.businessName || formData.name || '',
+    mobileNumber: formData.mobile || formData.phone || formData.mobileNumber || '',
     email: formData.email || '',
+    category: formData.category || '',
     gstin: formData.gstin || '',
     address: formData.address || '',
-    city: '',
+    city: formData.city || '',
     status: 'Pending'
   };
 
   const response = await api.post('/api/Suppliers/register', payload);
-  return mapSupplierFromApi(unwrapItem(response));
+  return response?.data || mapSupplierFromApi(unwrapItem(response));
 };
 
 // PUT /api/Suppliers/{id}/status (Review Approvals/Rejections)
 export const updateSupplierStatus = async (id, status) => {
   const response = await api.put(`/api/Suppliers/${id}/status`, { status }, {
-    params: { status } // Send in both query param and body to support varied backend bindings
+    params: { status }
   });
+  if (response.status === 204 || !response.data) {
+    return { id, status };
+  }
   return mapSupplierFromApi(unwrapItem(response));
 };
-
