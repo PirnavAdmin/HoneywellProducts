@@ -39,7 +39,7 @@ const ShippingOrder = lazy(() => import('./admin/orders/ShippingOrder'));
 const AdminReturns = lazy(() => import('./admin/returns/AdminReturns'));
 const InvoicesList = lazy(() => import('./admin/invoices/InvoicesList'));
 const AddInvoice = lazy(() => import('./admin/invoices/AddInvoice'));
-const PaymentHistory = lazy(() => import('./admin/screens/PaymentHistory'));
+import PaymentHistory from './admin/screens/PaymentHistory';
 const StockUpdates = lazy(() => import('./admin/stock/StockUpdates'));
 const BannersList = lazy(() => import('./admin/marketing/BannersList'));
 const BannerForm = lazy(() => import('./admin/marketing/BannerForm'));

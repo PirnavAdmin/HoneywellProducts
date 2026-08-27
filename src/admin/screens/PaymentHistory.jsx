@@ -202,11 +202,11 @@ const PaymentHistory = () => {
             
             if (Notification.permission === 'granted') {
               new Notification('New Payment Submitted', {
-                body: `Order #${item.orderId} from ${item.customerName} (₹${item.amountPaid.toLocaleString('en-IN')}) requires manual verification.`,
+                body: `Order #${item.orderId || ''} from ${item.customerName || 'Customer'} (₹${Number(item.amountPaid || 0).toLocaleString('en-IN')}) requires manual verification.`,
                 icon: '/favicon.ico'
               });
             }
-            showBannerStatus('success', `New Payment Submitted! Order #${item.orderId} (₹${item.amountPaid.toLocaleString('en-IN')}) requires verification.`);
+            showBannerStatus('success', `New Payment Submitted! Order #${item.orderId || ''} (₹${Number(item.amountPaid || 0).toLocaleString('en-IN')}) requires verification.`);
           }
         }
       } catch (err) {
@@ -259,7 +259,7 @@ const PaymentHistory = () => {
   }, [bankDetails.ifscCode]);
 
   const handleVerifyPayment = async (orderId, totalAmount, realOrderId, verificationRecordId) => {
-    if (!window.confirm(`Verify payment of INR ${totalAmount.toLocaleString('en-IN')} for Order #${orderId}?\n\nThis will mark the order as Processing.`)) return;
+    if (!window.confirm(`Verify payment of INR ${Number(totalAmount || 0).toLocaleString('en-IN')} for Order #${orderId || ''}?\n\nThis will mark the order as Processing.`)) return;
     
     try {
       // 1. Approve manual verification record if present (validates UTR match against bank records first)
@@ -786,9 +786,9 @@ const PaymentHistory = () => {
                             <td>
                               <div className="amount-cell">
                                 <span className="amount-main">₹{(payment.totalAmount || 0).toLocaleString('en-IN')}</span>
-                                {payment.amountPaid !== undefined && payment.amountPaid !== payment.totalAmount && (
+                                {payment.amountPaid !== undefined && payment.amountPaid !== null && payment.amountPaid !== payment.totalAmount && (
                                   <span className="amount-paid-sub">
-                                    Paid: ₹{payment.amountPaid.toLocaleString('en-IN')}
+                                    Paid: ₹{Number(payment.amountPaid || 0).toLocaleString('en-IN')}
                                   </span>
                                 )}
                               </div>
