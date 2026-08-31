@@ -233,25 +233,29 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .search-results small { color: var(--grey-700); text-transform: uppercase; letter-spacing: .08em; }
 
 /* Modals and forms */
-.modal-backdrop { position: fixed; z-index: 150; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(9,11,14,.7); backdrop-filter: blur(5px); animation: fadeIn .2s; }
-.modal { width: min(720px, 100%); max-height: calc(100vh - 48px); overflow-y: auto; background: #fff; padding: 46px; position: relative; box-shadow: var(--shadow-lg); animation: modalIn .25s ease; }
-.modal-close { position: absolute; top: 20px; right: 20px; border: 0; width: 40px; height: 40px; display: grid; place-items: center; background: var(--grey-100); cursor: pointer; }
-.modal h2 { margin: 0 0 28px; padding-right: 30px; font: 600 clamp(28px, 4vw, 42px)/1.08 'Manrope'; letter-spacing: -.04em; }
-.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.field { display: grid; gap: 8px; }
+.modal-backdrop { position: fixed; z-index: 150; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(9,11,14,.7); backdrop-filter: blur(5px); animation: fadeIn .2s; }
+.modal { width: min(760px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; background: #fff; padding: 26px 32px; border-radius: 8px; position: relative; box-shadow: var(--shadow-lg); animation: modalIn .25s ease; }
+.modal-close { position: absolute; top: 18px; right: 18px; border: 0; width: 34px; height: 34px; border-radius: 4px; display: grid; place-items: center; background: var(--grey-100); cursor: pointer; transition: background .15s; }
+.modal-close:hover { background: var(--grey-200); }
+.modal .eyebrow { margin: 0 0 4px; font-size: 11px !important; }
+.modal h2 { margin: 0 0 16px; padding-right: 30px; font: 600 clamp(20px, 2.5vw, 24px)/1.2 'Manrope'; letter-spacing: -.03em; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 14px; }
+.field { display: grid; gap: 4px; }
 .field.full, .full { grid-column: 1 / -1; }
-.field > span { font-size: 12px; font-weight: 700; color: #4b4e53; }
-.field input, .field select, .field textarea { min-width: 0; width: 100%; border: 1px solid var(--grey-300); border-radius: 0; background: #fff; padding: 13px 14px; color: var(--ink); outline: none; }
-.field input, .field select { height: 49px; }
-.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(180,20,27,.09); }
+.field > span { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: .03em; }
+.field input, .field select, .field textarea { min-width: 0; width: 100%; border: 1px solid var(--grey-300); border-radius: 4px; background: #fff; padding: 8px 11px; color: var(--ink); font-size: 13px; outline: none; transition: border-color .15s, box-shadow .15s; }
+.field input, .field select { height: 38px; }
+.field textarea { min-height: 54px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--red); box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.12); }
 .field input[readonly] { background: var(--grey-100); color: var(--grey-700); }
-.field small, .check-field small { color: #a50910; font-size: 11px; }
+.field small, .check-field small { color: #dc2626; font-size: 11px; font-weight: 500; margin-top: 1px; }
+.modal .button.full { min-height: 42px; margin-top: 4px; font-size: 13px; border-radius: 4px; }
 .check-field { display: grid; grid-template-columns: 18px 1fr; gap: 10px; color: var(--grey-700); font-size: 13px; }
 .check-field small { grid-column: 2; }
 .check-field input { width: 17px; height: 17px; accent-color: var(--red); }
-.success-state { min-height: 260px; display: grid; place-items: center; align-content: center; text-align: center; }
-.success-state > span { width: 60px; height: 60px; display: grid; place-items: center; border-radius: 50%; background: #e5f4ea; color: #147638; font-size: 28px; }
-.success-state p { max-width: 480px; color: var(--grey-700); line-height: 1.7; }
+.success-state { min-height: 220px; display: grid; place-items: center; align-content: center; text-align: center; }
+.success-state > span { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: #e5f4ea; color: #147638; font-size: 24px; }
+.success-state p { max-width: 480px; color: var(--grey-700); line-height: 1.6; font-size: 13.5px; }
 @keyframes fadeIn { from { opacity: 0; } }
 @keyframes modalIn { from { opacity: 0; transform: translateY(18px); } }
 

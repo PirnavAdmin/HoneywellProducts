@@ -85,12 +85,12 @@ export default function BulkQuoteModal() {
         <form className="form-grid" onSubmit={submit} noValidate>
           <label className="field">
             <span>Name *</span>
-            <input name="name" value={form.name} onChange={change} aria-invalid={!!errors.name} />
+            <input name="name" placeholder="Enter your full name" value={form.name} onChange={change} aria-invalid={!!errors.name} />
             {errors.name && <small>{errors.name}</small>}
           </label>
           <label className="field">
             <span>Company Name *</span>
-            <input name="companyName" value={form.companyName} onChange={change} aria-invalid={!!errors.companyName} />
+            <input name="companyName" placeholder="Enter company name" value={form.companyName} onChange={change} aria-invalid={!!errors.companyName} />
             {errors.companyName && <small>{errors.companyName}</small>}
           </label>
           <label className="field">
@@ -98,7 +98,7 @@ export default function BulkQuoteModal() {
             <input
               name="gstin"
               maxLength="15"
-              placeholder="Enter 15-character GSTIN"
+              placeholder="15-digit GSTIN (Optional)"
               value={form.gstin}
               onChange={change}
               aria-invalid={!!errors.gstin}
@@ -107,17 +107,17 @@ export default function BulkQuoteModal() {
           </label>
           <label className="field">
             <span>Mobile *</span>
-            <input name="mobile" inputMode="numeric" maxLength="10" value={form.mobile} onChange={change} aria-invalid={!!errors.mobile} />
+            <input name="mobile" placeholder="10-digit mobile number" inputMode="numeric" maxLength="10" value={form.mobile} onChange={change} aria-invalid={!!errors.mobile} />
             {errors.mobile && <small>{errors.mobile}</small>}
           </label>
           <label className="field">
             <span>Email *</span>
-            <input name="email" type="email" value={form.email} onChange={change} aria-invalid={!!errors.email} />
+            <input name="email" type="email" placeholder="name@company.com" value={form.email} onChange={change} aria-invalid={!!errors.email} />
             {errors.email && <small>{errors.email}</small>}
           </label>
           <label className="field">
             <span>Location *</span>
-            <input name="location" value={form.location} onChange={change} aria-invalid={!!errors.location} />
+            <input name="location" placeholder="City / Project location" value={form.location} onChange={change} aria-invalid={!!errors.location} />
             {errors.location && <small>{errors.location}</small>}
           </label>
           <label className="field">
@@ -126,12 +126,12 @@ export default function BulkQuoteModal() {
           </label>
           <label className="field">
             <span>Quantity *</span>
-            <input name="quantity" type="number" min="1" value={form.quantity} onChange={change} aria-invalid={!!errors.quantity} />
+            <input name="quantity" type="number" min="1" placeholder="Quantity" value={form.quantity} onChange={change} aria-invalid={!!errors.quantity} />
             {errors.quantity && <small>{errors.quantity}</small>}
           </label>
           <label className="field full">
             <span>Requirement *</span>
-            <textarea name="requirement" rows="4" value={form.requirement} onChange={change} aria-invalid={!!errors.requirement} />
+            <textarea name="requirement" rows="2" placeholder="Describe your bulk requirement, specifications, or timeline..." value={form.requirement} onChange={change} aria-invalid={!!errors.requirement} />
             {errors.requirement && <small>{errors.requirement}</small>}
           </label>
           <button className="button full" disabled={status === 'loading'}>
