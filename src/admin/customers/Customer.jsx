@@ -642,9 +642,11 @@ const Customer = () => {
 
       {/* Edit Customer Profile Modal */}
       {showEditModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 50 }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px 28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '20px' }}>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 999999 }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxWidth: '640px', width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            
+            {/* STICKY HEADER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#064e3b', margin: 0 }}>Edit Customer Profile</h3>
               <button
                 type="button"
@@ -655,190 +657,193 @@ const Customer = () => {
               </button>
             </div>
 
-            <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* BASIC INFORMATION */}
-              <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0' }}>BASIC INFORMATION</h4>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                    Full Name <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.name}
-                    onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                    Phone Number <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.phone}
-                    onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={editForm.email}
-                    onChange={e => setEditForm({ ...editForm, email: e.target.value.toLowerCase() })}
-                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                    Status
-                  </label>
-                  <select
-                    value={editForm.status}
-                    onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* ADDRESS DETAILS */}
-              <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '8px 0 0 0' }}>ADDRESS DETAILS</h4>
-              
+            {/* SCROLLABLE BODY */}
+            <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', padding: '24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                    Street Address <span style={{ color: '#ef4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.address}
-                    placeholder="e.g. 12 Main St, Pune, Maharashtra"
-                    onChange={e => {
-                      const addr = e.target.value;
-                      setEditForm(prev => {
-                        const updated = { ...prev, address: addr };
-                        if (addr) {
-                          const parts = addr.split(',').map(p => p.trim()).filter(Boolean);
-                          if (parts.length >= 2) {
-                            const lastPart = parts[parts.length - 1];
-                            const secondLastPart = parts[parts.length - 2];
-                            const statesList = [
-                              'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-                              'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-                              'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
-                              'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
-                              'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
-                            ];
-                            const matchedState = statesList.find(s => s.toLowerCase() === lastPart.toLowerCase());
-                            if (matchedState) {
-                              updated.state = matchedState;
-                            }
-                            if (secondLastPart && parts.length > 2) {
-                              updated.district = secondLastPart;
-                            } else if (secondLastPart && parts.length === 2 && !matchedState) {
-                              updated.district = secondLastPart;
-                            }
-                          }
-                        }
-                        return updated;
-                      });
-                    }}
-                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                  />
-                </div>
-
+                {/* BASIC INFORMATION */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0' }}>BASIC INFORMATION</h4>
+                
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                      District <span style={{ color: '#ef4444' }}>*</span>
+                      Full Name <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
-                      value={editForm.district}
-                      onChange={e => setEditForm({ ...editForm, district: e.target.value })}
+                      required
+                      value={editForm.name}
+                      onChange={e => setEditForm({ ...editForm, name: e.target.value })}
                       style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
                   </div>
+
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                      State <span style={{ color: '#ef4444' }}>*</span>
+                      Phone Number <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
                       type="text"
-                      value={editForm.state}
-                      onChange={e => setEditForm({ ...editForm, state: e.target.value })}
+                      required
+                      value={editForm.phone}
+                      onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
                       style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      onChange={e => setEditForm({ ...editForm, email: e.target.value.toLowerCase() })}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      Status
+                    </label>
+                    <select
+                      value={editForm.status}
+                      onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ADDRESS DETAILS */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '12px 0 0 0' }}>ADDRESS DETAILS</h4>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      Street Address <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.address}
+                      placeholder="e.g. 12 Main St, Pune, Maharashtra"
+                      onChange={e => {
+                        const addr = e.target.value;
+                        setEditForm(prev => {
+                          const updated = { ...prev, address: addr };
+                          if (addr) {
+                            const parts = addr.split(',').map(p => p.trim()).filter(Boolean);
+                            if (parts.length >= 2) {
+                              const lastPart = parts[parts.length - 1];
+                              const secondLastPart = parts[parts.length - 2];
+                              const statesList = [
+                                'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
+                                'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
+                                'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
+                                'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
+                                'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
+                              ];
+                              const matchedState = statesList.find(s => s.toLowerCase() === lastPart.toLowerCase());
+                              if (matchedState) {
+                                updated.state = matchedState;
+                              }
+                              if (secondLastPart && parts.length > 2) {
+                                updated.district = secondLastPart;
+                              } else if (secondLastPart && parts.length === 2 && !matchedState) {
+                                updated.district = secondLastPart;
+                              }
+                            }
+                          }
+                          return updated;
+                        });
+                      }}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                        District <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.district}
+                        onChange={e => setEditForm({ ...editForm, district: e.target.value })}
+                        style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                        State <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={editForm.state}
+                        onChange={e => setEditForm({ ...editForm, state: e.target.value })}
+                        style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* AGRARIAN DETAILS */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '12px 0 0 0' }}>AGRARIAN DETAILS</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      Soil Type
+                    </label>
+                    <select
+                      value={editForm.soilType}
+                      onChange={e => setEditForm({ ...editForm, soilType: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    >
+                      <option value="Red Sandy">Red Sandy</option>
+                      <option value="Black Clayey">Black Clayey</option>
+                      <option value="Alluvial">Alluvial</option>
+                      <option value="Loamy">Loamy</option>
+                      <option value="Laterite">Laterite</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      Farm Size (Acres)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={editForm.farmSizeAcres}
+                      onChange={e => setEditForm({ ...editForm, farmSizeAcres: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      Irrigation Source
+                    </label>
+                    <select
+                      value={editForm.irrigationSource}
+                      onChange={e => setEditForm({ ...editForm, irrigationSource: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    >
+                      <option value="Borewell">Borewell</option>
+                      <option value="Drip">Drip Irrigation</option>
+                      <option value="Canal">Canal Water</option>
+                      <option value="Rainfed">Rainfed</option>
+                      <option value="Sprinkler">Sprinklers</option>
+                    </select>
                   </div>
                 </div>
               </div>
 
-              {/* AGRARIAN DETAILS */}
-              <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '8px 0 0 0' }}>AGRARIAN DETAILS</h4>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                    Soil Type
-                  </label>
-                  <select
-                    value={editForm.soilType}
-                    onChange={e => setEditForm({ ...editForm, soilType: e.target.value })}
-                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                  >
-                    <option value="Red Sandy">Red Sandy</option>
-                    <option value="Black Clayey">Black Clayey</option>
-                    <option value="Alluvial">Alluvial</option>
-                    <option value="Loamy">Loamy</option>
-                    <option value="Laterite">Laterite</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                    Farm Size (Acres)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={editForm.farmSizeAcres}
-                    onChange={e => setEditForm({ ...editForm, farmSizeAcres: e.target.value })}
-                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
-                    Irrigation Source
-                  </label>
-                  <select
-                    value={editForm.irrigationSource}
-                    onChange={e => setEditForm({ ...editForm, irrigationSource: e.target.value })}
-                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                  >
-                    <option value="Borewell">Borewell</option>
-                    <option value="Drip">Drip Irrigation</option>
-                    <option value="Canal">Canal Water</option>
-                    <option value="Rainfed">Rainfed</option>
-                    <option value="Sprinkler">Sprinklers</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* FOOTER BUTTONS */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '16px' }}>
+              {/* STICKY FOOTER */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '24px', backgroundColor: '#ffffff' }}>
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
