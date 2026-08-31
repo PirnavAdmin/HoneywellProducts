@@ -748,6 +748,9 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .filter-dropdown summary::-webkit-details-marker { display: none; }
 .filter-dropdown summary:hover { color: var(--red); background: #f7fafc; }
 .filter-dropdown summary:focus-visible { outline: 3px solid rgb(18 104 165 / 18%); outline-offset: -3px; }
+.filter-dropdown.disabled summary { color: #93a1aa; background: #f8fafb; cursor: not-allowed; }
+.filter-dropdown.disabled .filter-dropdown-meta small { background: #edf1f3; color: #788892; }
+.filter-dropdown.disabled .filter-dropdown-meta svg { opacity: .45; }
 .filter-dropdown[open] > summary { color: #123f5b; background: #f7fafc; }
 .filter-dropdown-meta { margin-left: auto; display: inline-flex; align-items: center; gap: 9px; color: #71838e; }
 .filter-dropdown-meta small { padding: 4px 7px; border-radius: 999px; background: #e4f1fa; color: #0c609a; font-size: 9px; font-weight: 700; white-space: nowrap; }
@@ -765,6 +768,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .filter-option input:focus-visible + .filter-checkbox { outline: 3px solid rgb(18 104 165 / 18%); outline-offset: 2px; }
 .filter-option input:checked ~ .filter-option-label { color: #143b53; font-weight: 700; }
 .filter-option-label { line-height: 1.35; }
+.filter-options-empty { margin: 4px 8px 0; color: #788892; font-size: 11px; line-height: 1.45; }
 .filter-apply { display: none; width: 100%; margin-top: 18px; }
 .detail-subtitle { margin: 28px 0 8px; font: 600 15px 'Manrope'; text-transform: uppercase; letter-spacing: .08em; }
 .detail-enquiry-actions { margin-top: 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
