@@ -375,8 +375,8 @@ const BrandForm = () => {
       )}
 
       {/* Top Header Row with Actions */}
-      <section className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-        <div className="flex items-center gap-3">
+      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', backgroundColor: '#ffffff', padding: '24px 32px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200" to="/admin/brands/list">
             <ArrowLeft size={18} />
           </Link>
@@ -386,11 +386,11 @@ const BrandForm = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link to="/admin/brands/list" style={{ backgroundColor: '#ef4444', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '8px 18px', borderRadius: '8px', textDecoration: 'none' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
+          <Link to="/admin/brands/list" style={{ backgroundColor: '#ef4444', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 20px', borderRadius: '10px', textDecoration: 'none' }}>
             Cancel
           </Link>
-          <button onClick={handleSubmit} disabled={isSaving} style={{ backgroundColor: '#059669', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '8px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={handleSubmit} disabled={isSaving} style={{ backgroundColor: '#059669', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
             <Save size={16} />
             {isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Brand' : 'Save Brand')}
           </button>

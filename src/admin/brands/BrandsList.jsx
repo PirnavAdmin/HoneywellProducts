@@ -190,14 +190,14 @@ const BrandsList = () => {
       )}
 
       {/* Top Page Header */}
-      <div className="flex justify-between items-center bg-white border border-slate-200 shadow-sm" style={{ padding: '24px 32px', borderRadius: '20px' }}>
+      <div className="brands-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderLeft: 'none', borderRadius: '20px', padding: '24px 32px', boxShadow: 'none' }}>
         <div>
           <span className="catalog-kicker" style={{ fontSize: '11px', textTransform: 'uppercase', color: '#059669', fontWeight: 800, display: 'block', letterSpacing: '0.05em', marginBottom: '6px' }}>CATALOG SETTINGS</span>
           <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Brands Directory</h1>
           <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Manage manufacturers and brands assigned to products.</p>
         </div>
-        <div>
-          <Link to="/admin/brands/form" style={{ backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '12px 24px', borderRadius: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 1px 3px rgba(37,99,235,0.25)' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <Link to="/admin/brands/form" style={{ backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '12px 24px', borderRadius: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxShadow: '0 1px 3px rgba(37,99,235,0.25)' }}>
             <Plus size={16} /> Add Brand
           </Link>
         </div>
