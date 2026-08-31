@@ -139,18 +139,18 @@ const SubcategoriesList = () => {
 
   return (
     <div className="catalog-page" style={{ padding: '0px', maxWidth: '100%', margin: '0px' }}>
-      <section className="catalog-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '24px 28px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #1d4ed8', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', marginBottom: '20px' }}>
+      <section className="catalog-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '24px 28px', borderRadius: '16px', border: '1px solid #D9E2EC', borderLeft: '4px solid #0057B8', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', marginBottom: '20px' }}>
         <div className="catalog-title-wrap">
-          <span className="catalog-kicker" style={{ fontSize: '11px', textTransform: 'uppercase', color: '#1d4ed8', fontWeight: 800, display: 'block', letterSpacing: '0.05em', marginBottom: '6px' }}>STEP 2 OF 3</span>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Subcategories</h1>
+          <span className="catalog-kicker" style={{ fontSize: '11px', textTransform: 'uppercase', color: '#0057B8', fontWeight: 800, display: 'block', letterSpacing: '0.05em', marginBottom: '6px' }}>STEP 2 OF 3</span>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#1E293B', margin: 0, letterSpacing: '-0.02em' }}>Subcategories</h1>
           <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Manage subcategories that sit under categories.</p>
         </div>
 
         <div className="catalog-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto', flexWrap: 'nowrap' }}>
-          <Link to="/admin/catalog/categories" style={{ backgroundColor: '#2d8a54', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', border: 'none' }}>
+          <Link to="/admin/catalog/categories" style={{ backgroundColor: '#EAF3FF', color: '#0057B8', border: '1px solid #0057B8', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
             View Categories
           </Link>
-          <Link to="/admin/catalog/subcategory" style={{ backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxShadow: '0 1px 2px rgba(37,99,235,0.2)' }}>
+          <Link to="/admin/catalog/subcategory" style={{ backgroundColor: '#0057B8', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxShadow: '0 1px 2px rgba(0,87,184,0.2)' }}>
             <Plus size={16} /> Add Subcategory
           </Link>
         </div>

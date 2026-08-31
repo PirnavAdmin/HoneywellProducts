@@ -118,20 +118,20 @@
   justify-content: center;
   gap: 8px;
   margin-bottom: 16px;
-  color: #1268a5;
+  color: #0057B8;
   font-family: 'Inter', 'Poppins', sans-serif;
   text-transform: uppercase;
 }
 
 .otp-timer-label {
-  color: #777f87;
+  color: #64748B;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.8px;
 }
 
 .otp-timer-value {
-  color: #1268a5;
+  color: #0057B8;
   font-size: 19px;
   font-weight: 800;
   letter-spacing: 1px;
@@ -155,10 +155,10 @@
 .admin-otp-box {
   width: 43px;
   height: 50px;
-  border: 1px solid #cfd1d4;
+  border: 1px solid #D9E2EC;
   border-radius: 0;
   background: #ffffff;
-  color: #111820;
+  color: #1E293B;
   text-align: center;
   font-family: 'Inter', 'Poppins', sans-serif;
   font-size: 20px;
@@ -168,8 +168,8 @@
 }
 
 .admin-otp-box:focus {
-  border-color: #1268a5;
-  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.13);
+  border-color: #0057B8;
+  box-shadow: 0 0 0 3px rgba(0, 87, 184, 0.13);
 }
 
 .otp-box-expired {
@@ -181,7 +181,7 @@
 }
 
 .admin-otp-timer {
-  color: #858b92;
+  color: #64748B;
   margin-bottom: 17px;
   font-size: 11px;
   letter-spacing: 0.7px;
@@ -190,7 +190,7 @@
 
 .admin-otp-timer strong,
 .resend-active {
-  color: #1268a5;
+  color: #0057B8;
   font-weight: 800;
 }
 
@@ -203,7 +203,7 @@
   height: 50px;
   border: 0;
   border-radius: 25px;
-  background: #1268a5;
+  background: #0057B8;
   color: #ffffff;
   display: inline-flex;
   align-items: center;
@@ -218,8 +218,8 @@
 }
 
 .admin-premium-btn:hover {
-  background: #0a4d7c;
-  box-shadow: 0 10px 22px rgba(18, 104, 165, 0.25);
+  background: #003B7A;
+  box-shadow: 0 10px 22px rgba(0, 87, 184, 0.25);
 }
 
 .admin-premium-btn:disabled {

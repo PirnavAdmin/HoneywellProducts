@@ -21,7 +21,7 @@
   justify-content: space-between;
   gap: 18px;
   padding: 22px;
-  border-left: 4px solid var(--ems-primary, #1268a5);
+  border-left: 4px solid var(--ems-primary, #0057B8);
 }
 
 .catalog-title-wrap {
@@ -31,7 +31,7 @@
 .catalog-kicker {
   display: block;
   margin-bottom: 7px;
-  color: var(--ems-primary, #1268a5);
+  color: var(--ems-primary, #0057B8);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
@@ -115,14 +115,14 @@
 
 .catalog-btn--primary {
   color: #ffffff;
-  background: var(--ems-primary, #1268a5);
-  border-color: var(--ems-primary, #1268a5);
+  background: var(--ems-primary, #0057B8);
+  border-color: var(--ems-primary, #0057B8);
 }
 
 .catalog-btn--primary:hover {
   color: #ffffff;
-  background: var(--ems-primary-light, #0a4d7c);
-  border-color: var(--ems-primary-light, #0a4d7c);
+  background: var(--ems-primary-light, #003B7A);
+  border-color: var(--ems-primary-light, #003B7A);
 }
 
 .catalog-btn--danger {
@@ -166,13 +166,13 @@
 }
 
 .action-icon-btn--view:hover {
-  color: var(--ems-primary, #1268a5);
-  background: var(--ems-active-pill, #eaf4fb);
+  color: var(--ems-primary, #0057B8);
+  background: var(--ems-active-pill, #EAF3FF);
 }
 
 .action-icon-btn--edit:hover {
-  color: var(--ems-primary, #1268a5);
-  background: var(--ems-active-pill, #eaf4fb);
+  color: var(--ems-primary, #0057B8);
+  background: var(--ems-active-pill, #EAF3FF);
 }
 
 .action-icon-btn--delete {

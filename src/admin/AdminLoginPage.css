@@ -64,8 +64,8 @@
 }
 
 .admin-auth-close:hover {
-  border-color: #1268a5;
-  color: #1268a5;
+  border-color: #0057B8;
+  color: #0057B8;
   transform: rotate(90deg);
 }
 
@@ -80,7 +80,7 @@
 }
 
 .admin-login-right h2 {
-  color: #111820;
+  color: #1E293B;
   margin: 0 0 16px;
   font-size: 25px;
   font-weight: 800;
@@ -90,7 +90,7 @@
 }
 
 .admin-login-right p {
-  color: #5e6670;
+  color: #64748B;
   margin: 0 0 30px;
   max-width: 285px;
   font-size: 14px;
@@ -105,11 +105,11 @@
 .admin-premium-input {
   width: 100%;
   height: 50px;
-  border: 1px solid #cfd1d4;
+  border: 1px solid #D9E2EC;
   background: #ffffff;
   padding: 0 19px;
   margin-bottom: 19px;
-  color: #111820;
+  color: #1E293B;
   font-family: 'Inter', 'Poppins', sans-serif;
   font-size: 13px;
   outline: none;
@@ -119,8 +119,8 @@
 }
 
 .admin-premium-input:focus {
-  border-color: #1268a5;
-  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.13);
+  border-color: #0057B8;
+  box-shadow: 0 0 0 3px rgba(0, 87, 184, 0.13);
 }
 
 .admin-premium-input::placeholder {
@@ -135,7 +135,7 @@
   height: 50px;
   border: 0;
   border-radius: 25px;
-  background: #1268a5;
+  background: #0057B8;
   color: #ffffff;
   font-size: 14px;
   font-weight: 800;
@@ -147,9 +147,9 @@
 }
 
 .admin-premium-btn:hover {
-  background: #0a4d7c;
+  background: #003B7A;
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(18, 104, 165, 0.25);
+  box-shadow: 0 10px 22px rgba(0, 87, 184, 0.25);
 }
 
 .admin-premium-btn:disabled {

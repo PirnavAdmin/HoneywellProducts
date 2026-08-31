@@ -27,7 +27,7 @@ input[type="password"]::-ms-clear {
 .staff-kicker {
   font-size: 10px;
   text-transform: uppercase;
-  color: var(--ems-primary, #1268a5);
+  color: var(--ems-primary, #0057B8);
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -35,7 +35,7 @@ input[type="password"]::-ms-clear {
 .header-title {
   font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
+  color: #1E293B;
   margin: 0;
 }
 
@@ -67,14 +67,14 @@ input[type="password"]::-ms-clear {
   padding: 8px 16px;
   border-radius: 8px;
   border: none;
-  background: var(--ems-primary, #1268a5);
+  background: var(--ems-primary, #0057B8);
   cursor: pointer;
   transition: background-color 0.15s;
-  box-shadow: 0 1px 2px rgba(18, 104, 165, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 87, 184, 0.2);
 }
 
 .staff-save-btn:hover {
-  background: var(--ems-primary-light, #0a4d7c);
+  background: var(--ems-primary-light, #003B7A);
 }
 
 /* Two-column layout grid */

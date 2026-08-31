@@ -1,11 +1,11 @@
 /* Premium Styles for Analytics & Reports Screen */
 
 .admin-layout {
-  --primary-color: var(--ems-primary, #1268a5);
-  --primary-hover: var(--ems-primary-light, #0a4d7c);
+  --primary-color: var(--ems-primary, #0057B8);
+  --primary-hover: var(--ems-primary-light, #003B7A);
   --bg-card: #ffffff;
-  --border-color: #e2e8f0;
-  --text-main: #0f172a;
+  --border-color: #D9E2EC;
+  --text-main: #1E293B;
   --text-muted: #64748b;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);

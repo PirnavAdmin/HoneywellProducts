@@ -62,7 +62,7 @@
 .stroyka-brand {
   font-size: 14px;
   font-weight: 800;
-  color: var(--ems-primary, #1268A5);
+  color: var(--ems-primary, #0057B8);
   margin: 0;
   letter-spacing: 0.5px;
   line-height: 1.2;
@@ -71,7 +71,7 @@
 .stroyka-brand-sub {
   font-size: 11px;
   font-weight: 700;
-  color: #111827; /* Black */
+  color: var(--ems-text-dark, #2F343A);
   letter-spacing: 0.5px;
 }
 
@@ -90,17 +90,17 @@
 }
 
 .sidebar-scrollable::-webkit-scrollbar-track {
-  background: #EAF4FB;
+  background: var(--ems-active-pill, #EAF3FF);
   border-radius: 4px;
 }
 
 .sidebar-scrollable::-webkit-scrollbar-thumb {
-  background: #8B8F95;
+  background: var(--ems-border, #D9E2EC);
   border-radius: 4px;
 }
 
 .sidebar-scrollable::-webkit-scrollbar-thumb:hover {
-  background: var(--ems-primary, #1268A5);
+  background: var(--ems-primary, #0057B8);
 }
 
 /* ── Menu Groups ── */
@@ -110,7 +110,7 @@
 
 .menu-label {
   font-size: 10px;
-  color: var(--ems-text-muted, #5F6369);
+  color: var(--ems-text-muted, #64748B);
   padding: 8px 12px 4px;
   font-weight: 700;
   letter-spacing: 1.5px;
@@ -159,12 +159,12 @@
   min-width: 38px;
   background: #FFFFFF;
   border-radius: 12px;
-  border: 1px solid var(--ems-border, #CFD1D4);
+  border: 1px solid var(--ems-border, #D9E2EC);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ems-text-dark, #102735);
-  box-shadow: 0 1px 4px rgba(16, 39, 53, 0.03);
+  color: var(--ems-text-dark, #2F343A);
+  box-shadow: 0 1px 4px rgba(0, 87, 184, 0.03);
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
@@ -180,36 +180,36 @@
 
 /* Hover State */
 .stroyka-nav-link:hover {
-  background: var(--ems-active-pill, #EAF4FB);
+  background: var(--ems-active-pill, #EAF3FF);
 }
 
 .stroyka-nav-link:hover .icon-box {
-  border-color: var(--ems-primary-light, #0A4D7C);
-  color: var(--ems-primary, #1268A5);
+  border-color: var(--ems-primary-light, #003B7A);
+  color: var(--ems-primary, #0057B8);
 }
 
 /* Active Item State */
 .stroyka-nav-link.active,
 .active-parent {
-  background: var(--ems-active-pill, #EAF4FB) !important;
-  color: var(--ems-text-dark, #102735) !important;
-  border-left: 4px solid var(--ems-primary, #1268A5) !important;
+  background: var(--ems-active-pill, #EAF3FF) !important;
+  color: var(--ems-primary, #0057B8) !important;
+  border-left: 4px solid var(--ems-primary, #0057B8) !important;
   border-top-left-radius: 4px !important;
   border-bottom-left-radius: 4px !important;
-  box-shadow: 0 2px 8px rgba(18, 104, 165, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 87, 184, 0.08);
 }
 
 .stroyka-nav-link.active .icon-box,
 .active-parent .icon-box {
   background: #FFFFFF !important;
-  border-color: var(--ems-primary, #1268A5) !important;
-  color: var(--ems-primary, #1268A5) !important;
-  box-shadow: 0 2px 6px rgba(18, 104, 165, 0.12);
+  border-color: var(--ems-primary, #0057B8) !important;
+  color: var(--ems-primary, #0057B8) !important;
+  box-shadow: 0 2px 6px rgba(0, 87, 184, 0.12);
 }
 
 .stroyka-nav-link.active .nav-label-text,
 .active-parent .nav-label-text {
-  color: var(--ems-text-dark, #102735) !important;
+  color: var(--ems-primary, #0057B8) !important;
   font-weight: 700 !important;
 }
 

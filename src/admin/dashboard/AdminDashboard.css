@@ -1,21 +1,21 @@
 .admin-dashboard {
-  --dashboard-bg: #F4F7F9;
+  --dashboard-bg: #F6F8FB;
   --dashboard-surface: #ffffff;
   --dashboard-surface-soft: #F8FAFC;
-  --dashboard-border: #CFD1D4;
-  --dashboard-border-strong: #0A4D7C;
-  --dashboard-text: #102735;
-  --dashboard-muted: #5F6369;
+  --dashboard-border: #D9E2EC;
+  --dashboard-border-strong: #003B7A;
+  --dashboard-text: #1E293B;
+  --dashboard-muted: #64748B;
   --dashboard-faint: #8B8F95;
-  --dashboard-green: #1268A5;
-  --dashboard-green-soft: #EAF4FB;
-  --dashboard-blue: #1268A5;
-  --dashboard-blue-soft: #EAF4FB;
-  --dashboard-amber: #92580A;
-  --dashboard-amber-soft: #fff7df;
-  --dashboard-red: #b91c1c;
+  --dashboard-green: #0057B8;
+  --dashboard-green-soft: #EAF3FF;
+  --dashboard-blue: #0057B8;
+  --dashboard-blue-soft: #EAF3FF;
+  --dashboard-amber: #FF7A00;
+  --dashboard-amber-soft: #FFF2E6;
+  --dashboard-red: #DC2626;
   --dashboard-red-soft: #fff1f2;
-  --dashboard-shadow: 0 18px 45px rgba(16, 39, 53, 0.05);
+  --dashboard-shadow: 0 18px 45px rgba(0, 59, 122, 0.05);
   --dashboard-radius: 18px;
   min-height: 100%;
   display: flex;
@@ -39,7 +39,7 @@
   background: var(--dashboard-surface);
   border: 1px solid var(--dashboard-border);
   border-radius: var(--dashboard-radius);
-  box-shadow: 0 2px 12px rgba(16, 39, 53, 0.03);
+  box-shadow: 0 2px 12px rgba(0, 59, 122, 0.03);
 }
 
 .dashboard-hero {
@@ -48,8 +48,8 @@
   justify-content: space-between;
   gap: 24px;
   padding: 24px;
-  border-left: 4px solid #1268A5;
-  background: linear-gradient(90deg, #EAF4FB 0%, #ffffff 60%);
+  border-left: 4px solid #0057B8;
+  background: linear-gradient(90deg, #EAF3FF 0%, #ffffff 60%);
   border-radius: 20px;
 }
 
@@ -61,7 +61,7 @@
 .section-kicker {
   display: block;
   margin-bottom: 6px;
-  color: #1268A5;
+  color: #0057B8;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.2px;
@@ -71,7 +71,7 @@
 
 .dashboard-heading h1 {
   margin: 0;
-  color: var(--dashboard-text, #102735);
+  color: var(--dashboard-text, #1E293B);
   font-size: 36px;
   font-weight: 800;
   line-height: 1.15;
@@ -80,7 +80,7 @@
 
 .dashboard-heading p {
   margin: 10px 0 0;
-  color: #5F6369;
+  color: #64748B;
   font-size: 15px;
   line-height: 1.6;
 }
