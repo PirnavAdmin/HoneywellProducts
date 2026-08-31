@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Phone, Search, Plus, Calendar, AlertCircle, RefreshCw, Star, X, Edit2, Trash2, Clock, UserCheck, MessageSquare, ChevronDown } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
 import { AnimatedEditButton, OutlookDeleteButton } from '../components/ActionButtons';
@@ -875,75 +876,88 @@ const CallHistoryScreen = () => {
       </section>
 
       {/* Add / Edit Call Log Modal */}
-      {isModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '520px', border: '1px solid #e2e8f0', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
-            <div style={{ padding: '18px 24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, color: '#0f172a' }}>
+      {isModalOpen && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 999999 }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.3)', maxWidth: '580px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 'auto' }}>
+            
+            {/* MODAL HEADER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#064e3b', margin: 0, letterSpacing: '-0.01em' }}>
                 {editingId ? 'Edit CRM Call Log' : 'Log New Customer Interaction'}
-              </h2>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X size={20} />
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.color = '#64748b'; }}
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleLogCallSubmit} style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {formError && <div className="catalog-alert catalog-alert--danger" style={{ margin: 0 }}>{formError}</div>}
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleLogCallSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', padding: '24px', gap: '16px' }}>
+              {formError && (
+                <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '13px', fontWeight: 600 }}>
+                  {formError}
+                </div>
+              )}
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Customer Name *</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Customer Name <span style={{ color: '#ef4444' }}>*</span></label>
                   <input 
                     type="text" 
                     name="customerName" 
                     value={formData.customerName} 
                     onChange={handleInputChange} 
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px' }} 
+                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff' }} 
                     required 
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Customer Phone *</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Customer Phone <span style={{ color: '#ef4444' }}>*</span></label>
                   <input 
                     type="text" 
                     name="customerPhone" 
                     value={formData.customerPhone} 
                     onChange={handleInputChange} 
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px' }} 
+                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff' }} 
                     required 
                   />
                 </div>
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Customer Email</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Customer Email</label>
                 <input 
                   type="email" 
                   name="customerEmail" 
                   value={formData.customerEmail} 
                   onChange={handleInputChange} 
-                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px' }} 
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff' }} 
                 />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Sales Representative</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Sales Representative</label>
                   <input 
                     type="text" 
                     name="calledByRep" 
                     value={formData.calledByRep} 
                     onChange={handleInputChange} 
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px' }} 
+                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff' }} 
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Priority Level</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Priority Level</label>
                   <select 
                     name="priority" 
                     value={formData.priority} 
                     onChange={handleInputChange} 
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: `1px solid ${formData.priority === 'High' ? '#f97316' : '#cbd5e1'}`, borderRadius: '10px', background: '#fff', fontWeight: formData.priority === 'High' ? '700' : '400', color: formData.priority === 'High' ? '#ea580c' : 'inherit' }}
+                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: `1px solid ${formData.priority === 'High' ? '#ea580c' : '#cbd5e1'}`, borderRadius: '10px', backgroundColor: '#ffffff', fontWeight: formData.priority === 'High' ? '700' : '400', color: formData.priority === 'High' ? '#ea580c' : '#0f172a', outline: 'none' }}
                   >
                     <option value="Low">Low</option>
                     <option value="Medium">Medium</option>
@@ -965,14 +979,14 @@ const CallHistoryScreen = () => {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Interaction Status</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Interaction Status</label>
                   <select 
                     name="status" 
                     value={formData.status} 
                     onChange={handleInputChange} 
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px', background: '#fff' }}
+                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none' }}
                   >
                     <option value="Completed">Completed</option>
                     <option value="Follow-Up">Follow-Up Needed</option>
@@ -981,39 +995,39 @@ const CallHistoryScreen = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Callback Schedule (Optional)</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Callback Schedule (Optional)</label>
                   <input 
                     type="datetime-local" 
                     name="callbackTime" 
                     value={formData.callbackTime} 
                     onChange={handleInputChange} 
                     min={new Date().toISOString().slice(0, 16)}
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px' }} 
+                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff' }} 
                   />
                 </div>
               </div>
 
               {editingId && (
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Last Call Time</label>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Last Call Time</label>
                   <input 
                     type="datetime-local" 
                     name="lastCallTime" 
                     value={formData.lastCallTime} 
                     onChange={handleInputChange} 
-                    style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px' }} 
+                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff' }} 
                   />
                 </div>
               )}
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: '#f8fafc', padding: '12px 16px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                 <input 
                   type="checkbox" 
                   name="isQualifiedLead" 
                   id="isQualifiedLead" 
                   checked={formData.isQualifiedLead} 
                   onChange={handleInputChange} 
-                  style={{ width: '16px', height: '16px', cursor: 'pointer' }} 
+                  style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#059669' }} 
                 />
                 <label htmlFor="isQualifiedLead" style={{ fontSize: '13px', fontWeight: '600', color: '#334155', cursor: 'pointer' }}>
                   Mark client as a Qualified Lead
@@ -1021,27 +1035,37 @@ const CallHistoryScreen = () => {
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569', display: 'block', marginBottom: '6px' }}>Notes & Detail Summary</label>
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Notes & Detail Summary</label>
                 <textarea 
                   name="notesSummary" 
                   value={formData.notesSummary} 
                   onChange={handleInputChange} 
-                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px', minHeight: '80px', resize: 'vertical' }} 
+                  style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', minHeight: '84px', resize: 'vertical', outline: 'none', backgroundColor: '#ffffff' }} 
                   placeholder="Enter interaction notes, product inquiries, or follow-up topics..."
                 />
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="catalog-btn" style={{ padding: '8px 16px', borderRadius: '10px' }}>
+              {/* FOOTER ACTION BUTTONS */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '20px', marginTop: '12px', backgroundColor: '#ffffff' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)} 
+                  style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 24px', fontSize: '13px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="catalog-btn catalog-btn--primary" style={{ padding: '8px 18px', borderRadius: '10px', fontWeight: '700' }} disabled={submitting}>
+                <button 
+                  type="submit" 
+                  style={{ backgroundColor: '#059669', color: '#ffffff', borderRadius: '10px', padding: '10px 26px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5,150,105,0.25)' }}
+                  disabled={submitting}
+                >
                   {submitting ? 'Saving...' : (editingId ? 'Update Log' : 'Save Log')}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>
