@@ -16,7 +16,7 @@ const FormSettings = () => {
   const [isSaved, setIsSaved] = useState(false);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 3000);
   };
@@ -30,161 +30,240 @@ const FormSettings = () => {
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-100 pb-5 mb-6">
-        <div className="flex items-center gap-3">
-          <button
-            aria-label="Go back"
-            onClick={() => navigate(-1)}
-            className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200"
-          >
-            <ArrowLeft size={16} />
-          </button>
-          <div>
-            <h2 className="text-xl font-bold text-slate-800">System Preferences & Settings</h2>
-            <p className="text-slate-500 text-xs">Configure tax limits, flat shipping rates, and advisory verification rules.</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          {isSaved ? (
-            <span className="flex items-center gap-1 text-emerald-600 font-semibold text-sm bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100 animate-pulse">
-              <CheckCircle size={16} /> Saved Settings
-            </span>
-          ) : (
-            <button 
-              type="submit" 
-              onClick={handleSubmit} 
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2.5 rounded-lg shadow-sm transition-colors text-sm"
+    <div style={{ padding: '16px 20px', width: '100%', boxSizing: 'border-box' }}>
+      <div
+        style={{
+          background: '#ffffff',
+          border: '1px solid #e2e8f0',
+          borderRadius: '14px',
+          padding: '24px 28px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          maxWidth: '860px',
+          margin: '0 auto',
+          boxSizing: 'border-box'
+        }}
+      >
+        {/* Header Bar */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '22px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <button
+              aria-label="Go back"
+              type="button"
+              onClick={() => navigate(-1)}
+              style={{
+                width: '36px',
+                height: '36px',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#475569',
+                background: '#ffffff',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
             >
-              <Save size={16} /> Update Settings
+              <ArrowLeft size={18} />
             </button>
-          )}
-        </div>
-      </div>
+            <div>
+              <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0' }}>
+                System Preferences & Settings
+              </h1>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                Configure tax limits, flat shipping rates, and advisory verification rules.
+              </p>
+            </div>
+          </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Shipping & Currency */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Flat Shipping Fee (₹)</label>
+            {isSaved ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontWeight: 700, fontSize: '12.5px', padding: '0 16px', height: '38px', borderRadius: '8px' }}>
+                <CheckCircle size={16} /> Saved Settings
+              </span>
+            ) : (
+              <button 
+                type="button" 
+                onClick={handleSubmit} 
+                style={{
+                  background: '#059669',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  height: '38px',
+                  padding: '0 18px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  transition: 'background 0.15s ease'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.background = '#047857')}
+                onMouseOut={(e) => (e.currentTarget.style.background = '#059669')}
+              >
+                <Save size={15} />
+                <span>Update Settings</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          
+          {/* Row 1: Shipping Fee & Base Currency */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                Flat Shipping Fee (₹)
+              </label>
+              <input
+                type="number"
+                name="shippingFlat"
+                value={formData.shippingFlat}
+                onChange={handleInputChange}
+                style={{ width: '100%', height: '40px', padding: '0 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                required
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                Platform Base Currency
+              </label>
+              <select
+                name="platformCurrency"
+                value={formData.platformCurrency}
+                onChange={handleInputChange}
+                style={{ width: '100%', height: '40px', padding: '0 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff', cursor: 'pointer' }}
+              >
+                <option value="INR">Indian Rupee (₹)</option>
+                <option value="USD">US Dollar ($)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Section 1: GST TAX LEVELS (%) Card */}
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>
+              <Settings size={16} style={{ color: '#059669' }} />
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                GST TAX LEVELS (%)
+              </h3>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                  Seeds & propagation tax rate
+                </label>
+                <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', background: '#ffffff', height: '40px' }}>
+                  <input
+                    type="number"
+                    name="seedsGst"
+                    value={formData.seedsGst}
+                    onChange={handleInputChange}
+                    style={{ flex: 1, padding: '0 14px', border: 'none', fontSize: '13px', color: '#0f172a', outline: 'none', background: 'transparent' }}
+                    min="0"
+                    max="100"
+                  />
+                  <span style={{ display: 'flex', alignItems: 'center', padding: '0 14px', background: '#f1f5f9', borderLeft: '1px solid #cbd5e1', fontWeight: 700, fontSize: '12.5px', color: '#64748b', userSelect: 'none' }}>
+                    %
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                  Heavy farming machinery tax rate
+                </label>
+                <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', background: '#ffffff', height: '40px' }}>
+                  <input
+                    type="number"
+                    name="machineryGst"
+                    value={formData.machineryGst}
+                    onChange={handleInputChange}
+                    style={{ flex: 1, padding: '0 14px', border: 'none', fontSize: '13px', color: '#0f172a', outline: 'none', background: 'transparent' }}
+                    min="0"
+                    max="100"
+                  />
+                  <span style={{ display: 'flex', alignItems: 'center', padding: '0 14px', background: '#f1f5f9', borderLeft: '1px solid #cbd5e1', fontWeight: 700, fontSize: '12.5px', color: '#64748b', userSelect: 'none' }}>
+                    %
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: GROWER ADVISORY POLICIES */}
+          <div>
+            <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                GROWER ADVISORY POLICIES
+              </h3>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Verification workflow
+                </label>
+                <select
+                  name="farmerVerification"
+                  value={formData.farmerVerification}
+                  onChange={handleInputChange}
+                  style={{ width: '100%', height: '40px', padding: '0 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff', cursor: 'pointer' }}
+                >
+                  <option value="Auto-Verify">Auto-Verify with Mobile OTP</option>
+                  <option value="Manual">Manual Land Doc Review</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Advisory premium level required
+                </label>
+                <select
+                  name="minAdvisoryLevel"
+                  value={formData.minAdvisoryLevel}
+                  onChange={handleInputChange}
+                  style={{ width: '100%', height: '40px', padding: '0 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff', cursor: 'pointer' }}
+                >
+                  <option value="Free Tier">All Registered Accounts</option>
+                  <option value="Active Grower">Active Growers only</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Checkbox Card */}
+          <div
+            style={{
+              background: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '14px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px'
+            }}
+          >
             <input
-              type="number"
-              name="shippingFlat"
-              value={formData.shippingFlat}
+              type="checkbox"
+              name="allowCreditTerms"
+              checked={formData.allowCreditTerms}
               onChange={handleInputChange}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition-colors"
-              required
+              id="allowCreditTerms"
+              style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
             />
+            <label htmlFor="allowCreditTerms" style={{ fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', margin: 0 }}>
+              Allow credit settlement terms for Wholesalers (supports up to ₹50,000 credit limit defaults)
+            </label>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1.5">Platform Base Currency</label>
-            <select
-              name="platformCurrency"
-              value={formData.platformCurrency}
-              onChange={handleInputChange}
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer bg-white"
-            >
-              <option value="INR">Indian Rupee (₹)</option>
-              <option value="USD">US Dollar ($)</option>
-            </select>
-          </div>
-        </div>
 
-        {/* GST / Taxes settings */}
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-200 pb-2 mb-2">
-            <Settings className="text-emerald-600 animate-spin-slow" size={16} />
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider">GST tax levels (%)</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Seeds & propagation tax rate</label>
-              <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
-                <input
-                  type="number"
-                  name="seedsGst"
-                  value={formData.seedsGst}
-                  onChange={handleInputChange}
-                  className="focus:outline-none focus:border-emerald-500 transition-colors text-slate-700"
-                  style={{ flex: 1, padding: '8px 12px', border: 'none', fontSize: '14px', background: 'transparent', minWidth: 0 }}
-                  min="0"
-                  max="100"
-                />
-                <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px', background: '#f1f5f9', borderLeft: '1px solid #e2e8f0', fontWeight: 700, fontSize: '13px', color: '#475569', userSelect: 'none' }}>
-                  %
-                </span>
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 mb-1">Heavy farming machinery tax rate</label>
-              <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', background: '#fff' }}>
-                <input
-                  type="number"
-                  name="machineryGst"
-                  value={formData.machineryGst}
-                  onChange={handleInputChange}
-                  className="focus:outline-none focus:border-emerald-500 transition-colors text-slate-700"
-                  style={{ flex: 1, padding: '8px 12px', border: 'none', fontSize: '14px', background: 'transparent', minWidth: 0 }}
-                  min="0"
-                  max="100"
-                />
-                <span style={{ display: 'flex', alignItems: 'center', padding: '0 12px', background: '#f1f5f9', borderLeft: '1px solid #e2e8f0', fontWeight: 700, fontSize: '13px', color: '#475569', userSelect: 'none' }}>
-                  %
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Advisory Policies */}
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wider border-b border-slate-100 pb-2">
-            Grower advisory policies
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Verification workflow</label>
-              <select
-                name="farmerVerification"
-                value={formData.farmerVerification}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer bg-white"
-              >
-                <option value="Auto-Verify">Auto-Verify with Mobile OTP</option>
-                <option value="Manual">Manual Land Doc Review</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Advisory premium level required</label>
-              <select
-                name="minAdvisoryLevel"
-                value={formData.minAdvisoryLevel}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-emerald-500 transition-colors cursor-pointer bg-white"
-              >
-                <option value="Free Tier">All Registered Accounts</option>
-                <option value="Active Grower">Active Growers only</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Checkbox fields */}
-        <div className="flex items-center gap-3 border border-slate-100 p-4 rounded-xl hover:bg-slate-50/50 transition-colors">
-          <input
-            type="checkbox"
-            name="allowCreditTerms"
-            checked={formData.allowCreditTerms}
-            onChange={handleInputChange}
-            id="allowCreditTerms"
-            className="w-4.5 h-4.5 rounded border-slate-200 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-          />
-          <label htmlFor="allowCreditTerms" className="text-xs font-semibold text-slate-700 cursor-pointer leading-relaxed">
-            Allow credit settlement terms for Wholesalers (supports up to ₹50,000 credit limit defaults)
-          </label>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 };
