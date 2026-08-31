@@ -25,20 +25,20 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
     const s = String(status || '').toLowerCase();
     if (s === 'approved' || s === 'verified') {
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
           <CheckCircle2 size={11} /> Approved
         </span>
       );
     }
     if (s.includes('reject')) {
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
           <XCircle size={11} /> Rejected
         </span>
       );
     }
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
         <Clock size={11} /> Pending
       </span>
     );
@@ -59,71 +59,64 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '20px',
         boxSizing: 'border-box'
       }}
     >
-      <style>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
       <div 
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '14px',
-          maxWidth: '780px',
+          borderRadius: '16px',
+          maxWidth: '740px',
           width: '100%',
-          maxHeight: 'calc(100vh - 40px)',
+          padding: '24px',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          border: '1px solid #e2e8f0',
+          position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-          position: 'relative'
+          gap: '18px',
+          maxHeight: '90vh',
+          overflowY: 'auto'
         }}
       >
-        {/* Header Banner */}
-        <div style={{
-          background: 'linear-gradient(135deg, #047857 0%, #0f766e 100%)',
-          padding: '14px 20px',
-          color: '#ffffff',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0
-        }}>
+        {/* Modal Top Row: Header & Close Button */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <span style={{
-              fontSize: '9.5px',
+              fontSize: '10px',
               textTransform: 'uppercase',
               fontWeight: 800,
               letterSpacing: '0.05em',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              padding: '2px 8px',
+              backgroundColor: '#ecfdf5',
+              color: '#047857',
+              padding: '3px 10px',
               borderRadius: '9999px',
-              display: 'inline-block'
+              border: '1px solid #a7f3d0',
+              display: 'inline-block',
+              marginBottom: '6px'
             }}>
               Registration Ticket Review
             </span>
-            <h2 style={{ fontSize: '17px', fontWeight: 800, margin: '4px 0 0 0' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
               {registration.businessName || 'Business Registration'}
             </h2>
           </div>
+
           <button 
             onClick={onClose} 
             style={{
-              padding: '5px',
-              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              padding: '6px',
+              backgroundColor: '#f1f5f9',
               border: 'none',
-              borderRadius: '6px',
-              color: '#ffffff',
+              borderRadius: '8px',
+              color: '#64748b',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              transition: 'background 0.15s ease'
+              transition: 'all 0.15s ease'
             }}
             title="Close"
           >
@@ -131,23 +124,11 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
           </button>
         </div>
 
-        {/* Content Body with hidden scrollbar */}
-        <div 
-          className="hide-scrollbar"
-          style={{ 
-            padding: '16px 20px', 
-            overflowY: 'auto', 
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            flex: 1, 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
-            gap: '16px' 
-          }}
-        >
+        {/* Content Body Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '18px' }}>
           
           {/* Left Column: Tracking Card & Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'space-between' }}>
             {/* Tracking ID visual box */}
             <div style={{ backgroundColor: '#ecfdf5', border: '1px dashed #6ee7b7', borderRadius: '10px', padding: '14px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ color: '#64748b', fontWeight: 600, fontSize: '11px', display: 'block', marginBottom: '2px' }}>
@@ -225,7 +206,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
               {/* Owner Details */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <FileText size={13} style={{ color: '#059669' }} /> Owner Details
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
@@ -250,7 +231,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
 
               {/* Business Info */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Building size={13} style={{ color: '#059669' }} /> Business Details
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
@@ -274,7 +255,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
 
             {/* Business Address & Timestamp */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <MapPin size={13} style={{ color: '#059669' }} /> Location &amp; Timestamp
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -298,22 +279,14 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
 
         </div>
 
-        {/* Footer */}
-        <div style={{
-          backgroundColor: '#f8fafc',
-          padding: '10px 20px',
-          borderTop: '1px solid #e2e8f0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexShrink: 0
-        }}>
+        {/* Modal Bottom Row: Actions & Close */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {registration.status !== 'Approved' && registration.status !== 'Verified' && (
               <button 
                 onClick={() => onStatusChange && onStatusChange(registration.id, 'Approved')} 
                 style={{
-                  padding: '6px 14px',
+                  padding: '7px 14px',
                   backgroundColor: '#059669',
                   color: '#ffffff',
                   border: 'none',
@@ -334,7 +307,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
               <button 
                 onClick={() => onStatusChange && onStatusChange(registration.id, 'Rejected')} 
                 style={{
-                  padding: '6px 14px',
+                  padding: '7px 14px',
                   backgroundColor: '#dc2626',
                   color: '#ffffff',
                   border: 'none',
@@ -355,20 +328,21 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
           <button 
             onClick={onClose} 
             style={{
-              padding: '7px 18px',
-              backgroundColor: '#e2e8f0',
-              border: 'none',
+              padding: '9px 22px',
+              backgroundColor: '#f1f5f9',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
               color: '#334155',
               fontWeight: 700,
-              fontSize: '12px',
+              fontSize: '12.5px',
               cursor: 'pointer',
-              transition: 'background 0.15s ease'
+              transition: 'all 0.15s ease'
             }}
           >
             Close Profile
           </button>
         </div>
+
       </div>
     </div>
   );
