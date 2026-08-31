@@ -1,9 +1,9 @@
 /* Custom styling for redesigned admin orders module */
 
 .admin-layout {
-  --primary-rgb: 16, 185, 129; /* Emerald */
-  --primary-color: #10b981;
-  --primary-hover: #059669;
+  --primary-rgb: 18, 104, 165;
+  --primary-color: var(--ems-primary, #1268a5);
+  --primary-hover: var(--ems-primary-light, #0a4d7c);
   --secondary-color: #6366f1; /* Indigo for shipping */
   --bg-card: #ffffff;
   --border-color: #e2e8f0;
@@ -159,7 +159,7 @@
 
 .orders-search-input:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.15);
 }
 
 .orders-filters-wrapper {
@@ -182,9 +182,9 @@
 }
 
 .date-preset-btn.active {
-  background: #10b981;
+  background: var(--ems-primary, #1268a5);
   color: white;
-  border-color: #10b981;
+  border-color: var(--ems-primary, #1268a5);
 }
 
 .date-preset-btn:hover:not(.active) {

@@ -637,7 +637,7 @@ const ProductsForm = () => {
     return (
       <div className="catalog-page">
         <section className="catalog-empty-state">
-          <RefreshCw className="animate-spin" size={34} style={{ color: '#005F53' }} />
+          <RefreshCw className="animate-spin" size={34} style={{ color: '#1268a5' }} />
           <h3>Loading catalog options...</h3>
           <p>Please wait while we fetch category and subcategory options from the API.</p>
         </section>

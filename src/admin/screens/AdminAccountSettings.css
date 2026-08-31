@@ -49,7 +49,7 @@
 .settings-kicker {
   font-size: 10px;
   text-transform: uppercase;
-  color: #10b981;
+  color: var(--ems-primary, #1268a5);
   font-weight: 700;
   letter-spacing: 1px;
 }
@@ -65,7 +65,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: #10b981;
+  background: var(--ems-primary, #1268a5);
   color: white;
   border: none;
   font-size: 12px;
@@ -74,11 +74,11 @@
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.15s;
-  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 1px 2px rgba(18, 104, 165, 0.2);
 }
 
 .save-settings-btn:hover {
-  background: #059669;
+  background: var(--ems-primary-light, #0a4d7c);
 }
 
 /* Card Form Container */
@@ -158,9 +158,9 @@
 }
 
 .form-field input:focus {
-  border-color: #10b981;
+  border-color: var(--ems-primary, #1268a5);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.15);
 }
 
 .disabled-input {
@@ -225,7 +225,7 @@
 }
 
 .save-btn {
-  background: #10b981;
+  background: var(--ems-primary, #1268a5);
   color: white;
   border: none;
   font-size: 13px;
@@ -237,6 +237,6 @@
 }
 
 .save-btn:hover {
-  background: #059669;
+  background: var(--ems-primary-light, #0a4d7c);
 }
 

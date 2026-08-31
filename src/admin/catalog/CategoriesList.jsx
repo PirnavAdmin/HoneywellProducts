@@ -209,7 +209,7 @@ const CategoriesList = () => {
                   <td style={{ padding: '10px 16px', fontWeight: '600', color: '#1e293b' }}>
                     {category.name}
                   </td>
-                  <td style={{ padding: '10px 16px', fontWeight: '700', color: '#005F53' }}>
+                  <td style={{ padding: '10px 16px', fontWeight: '700', color: '#1268a5' }}>
                     {category.displayOrder || 0}
                   </td>
                   <td className="catalog-path" style={{ padding: '10px 16px', color: '#2563eb' }}>

@@ -215,7 +215,7 @@ const TestimonialsList = () => {
                                   style={{
                                     background: 'none',
                                     border: 'none',
-                                    color: '#005F53',
+                                    color: '#1268a5',
                                     cursor: 'pointer',
                                     fontWeight: 700,
                                     fontSize: '11px',

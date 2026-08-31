@@ -21,7 +21,7 @@
   justify-content: space-between;
   gap: 18px;
   padding: 22px;
-  border-left: 4px solid #2636b6;
+  border-left: 4px solid var(--ems-primary, #1268a5);
 }
 
 .catalog-title-wrap {
@@ -31,7 +31,7 @@
 .catalog-kicker {
   display: block;
   margin-bottom: 7px;
-  color: #2636b6;
+  color: var(--ems-primary, #1268a5);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
@@ -115,14 +115,14 @@
 
 .catalog-btn--primary {
   color: #ffffff;
-  background: #2636b6;
-  border-color: #2636b6;
+  background: var(--ems-primary, #1268a5);
+  border-color: var(--ems-primary, #1268a5);
 }
 
 .catalog-btn--primary:hover {
   color: #ffffff;
-  background: #276c49;
-  border-color: #276c49;
+  background: var(--ems-primary-light, #0a4d7c);
+  border-color: var(--ems-primary-light, #0a4d7c);
 }
 
 .catalog-btn--danger {
@@ -166,13 +166,13 @@
 }
 
 .action-icon-btn--view:hover {
-  color: #2636b6;
-  background: #eef2ff;
+  color: var(--ems-primary, #1268a5);
+  background: var(--ems-active-pill, #eaf4fb);
 }
 
 .action-icon-btn--edit:hover {
-  color: #2636b6;
-  background: #eef2ff;
+  color: var(--ems-primary, #1268a5);
+  background: var(--ems-active-pill, #eaf4fb);
 }
 
 .action-icon-btn--delete {
@@ -267,8 +267,8 @@
 .catalog-field textarea:focus,
 .catalog-search input:focus,
 .catalog-filter select:focus {
-  border-color: #2636b6;
-  box-shadow: 0 0 0 3px rgba(47, 133, 90, 0.14);
+  border-color: var(--ems-primary, #1268a5);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.14);
 }
 
 .catalog-field small {
@@ -628,8 +628,8 @@
   min-height: 40px;
   padding: 9px 14px;
   color: #ffffff;
-  background: #2636b6;
-  border: 1px solid #2636b6;
+  background: var(--ems-primary, #1268a5);
+  border: 1px solid var(--ems-primary, #1268a5);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 800;
@@ -735,7 +735,7 @@
 }
 
 .order-details-hero {
-  border-left-color: linear-gradient(135deg, #2636b6 0%, #151f86 100%);
+  border-left-color: var(--ems-primary, #1268a5);
 }
 
 .orders-back-link {
@@ -786,8 +786,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #2636b6;
-  background: #e8f5ee;
+  color: var(--ems-primary, #1268a5);
+  background: var(--ems-active-pill, #eaf4fb);
   border-radius: 8px;
 }
 
@@ -854,8 +854,8 @@
 }
 
 .order-timeline__row.is-done .order-timeline__dot {
-  background: #2636b6;
-  box-shadow: 0 0 0 1px #86efac;
+  background: var(--ems-primary, #1268a5);
+  box-shadow: 0 0 0 1px #bfd9ee;
 }
 
 .order-timeline__row strong {
@@ -1063,7 +1063,7 @@
 .supplier-form-score div span {
   display: block;
   height: 100%;
-  background: #2636b6;
+  background: var(--ems-primary, #1268a5);
   border-radius: inherit;
   transition: width 180ms ease;
 }
@@ -1093,7 +1093,7 @@
 
 .supplier-preview-list svg {
   flex: 0 0 auto;
-  color: #2636b6;
+  color: var(--ems-primary, #1268a5);
 }
 
 .supplier-preview-list span {
@@ -1308,7 +1308,7 @@
 }
 
 .coins-toggle input:checked + span {
-  background: #2636b6;
+  background: var(--ems-primary, #1268a5);
 }
 
 .coins-toggle input:checked + span::after {
@@ -1330,9 +1330,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #2636b6;
-  background: linear-gradient(135deg, #ecfdf5 0%, #fffbeb 100%);
-  border: 1px solid #bbf7d0;
+  color: var(--ems-primary, #1268a5);
+  background: linear-gradient(135deg, #eaf4fb 0%, #ffffff 100%);
+  border: 1px solid #cbd1d8;
   border-radius: 8px;
 }
 
@@ -1390,7 +1390,7 @@
 
 .coins-policy-list svg {
   flex: 0 0 auto;
-  color: #2636b6;
+  color: var(--ems-primary, #1268a5);
 }
 
 .coins-actions {
@@ -1779,8 +1779,8 @@
 
 .coupon-edit-form .catalog-field input:focus,
 .coupon-edit-form .catalog-field select:focus {
-  border-color: #2636b6;
-  box-shadow: 0 0 0 3px rgba(38, 54, 182, 0.12);
+  border-color: var(--ems-primary, #1268a5);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.12);
 }
 
 .coupon-edit-form .catalog-field textarea {
@@ -1797,8 +1797,8 @@
 }
 
 .coupon-edit-form .catalog-field textarea:focus {
-  border-color: #2636b6;
-  box-shadow: 0 0 0 3px rgba(38, 54, 182, 0.12);
+  border-color: var(--ems-primary, #1268a5);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.12);
 }
 
 .coupon-modal__actions {
@@ -1829,8 +1829,8 @@
 }
 
 .coupon-modal__actions .save-btn {
-  background: #2636b6;
-  border: 1px solid #2636b6;
+  background: var(--ems-primary, #1268a5);
+  border: 1px solid var(--ems-primary, #1268a5);
   color: #ffffff;
   font-weight: 600;
   border-radius: 6px;
@@ -1840,8 +1840,8 @@
 }
 
 .coupon-modal__actions .save-btn:hover {
-  background: #226040;
-  border-color: #226040;
+  background: var(--ems-primary-light, #0a4d7c);
+  border-color: var(--ems-primary-light, #0a4d7c);
 }
 
 .coupon-back-link {
@@ -2231,8 +2231,8 @@
 }
 
 .admin-pagination__page--active {
-  background: #2636b6;
-  border-color: #2636b6;
+  background: var(--ems-primary, #1268a5);
+  border-color: var(--ems-primary, #1268a5);
   color: #fff;
 }
 

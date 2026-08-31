@@ -7,13 +7,13 @@
 .stroyka-sidebar {
   width: 100%;
   height: 100vh;
-  background: var(--ems-bg, #F0F8F6);
+  background: var(--ems-bg, #F4F7F9);
   display: flex;
   flex-direction: column;
   font-family: 'Outfit', 'Inter', sans-serif;
   overflow: hidden;
-  border-right: 2px solid #005F53;
-  box-shadow: 2px 0 12px rgba(0, 95, 83, 0.04);
+  border-right: 1px solid var(--ems-border, #CFD1D4);
+  box-shadow: 2px 0 12px rgba(16, 39, 53, 0.04);
   transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -26,42 +26,43 @@
 .sidebar-brand-inner {
   background: #FFFFFF;
   border-radius: 16px;
-  border: 1px solid var(--ems-border, #D6EAE5);
-  padding: 10px 14px;
+  border: 1px solid var(--ems-border, #CFD1D4);
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  box-shadow: 0 2px 8px rgba(0, 95, 83, 0.03);
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(16, 39, 53, 0.03);
   transition: all 0.25s ease;
   overflow: hidden;
+  min-height: 54px;
 }
 
 .sidebar-collapsed .sidebar-brand-inner {
-  padding: 8px;
+  padding: 6px;
   justify-content: center;
   border-radius: 12px;
+  min-height: 46px;
 }
 
-.sidebar-brand-logo {
-  height: 56px;
-  max-width: 65px;
+.sidebar-brand-logo-full {
+  height: 44px;
+  width: 100%;
+  max-width: 100%;
   object-fit: contain;
-  flex-shrink: 0;
-  transform: scale(1.2);
-  transform-origin: center center;
+  display: block;
 }
 
-.sidebar-brand-info {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  white-space: nowrap;
+.sidebar-brand-logo-collapsed {
+  height: 34px;
+  width: 34px;
+  object-fit: contain;
+  display: block;
 }
 
 .stroyka-brand {
   font-size: 14px;
   font-weight: 800;
-  color: var(--ems-primary-light, #0D9488); /* Logo Teal-Green */
+  color: var(--ems-primary, #1268A5);
   margin: 0;
   letter-spacing: 0.5px;
   line-height: 1.2;
@@ -82,24 +83,24 @@
   padding: 8px 10px 24px 8px;
 }
 
-/* Sleek Scrollbar Track matching PIRNAV EMS Screenshot */
+/* Sleek Scrollbar Track matching Theme */
 .sidebar-scrollable::-webkit-scrollbar {
   width: 5px;
   display: block;
 }
 
 .sidebar-scrollable::-webkit-scrollbar-track {
-  background: #E4F2EF;
+  background: #EAF4FB;
   border-radius: 4px;
 }
 
 .sidebar-scrollable::-webkit-scrollbar-thumb {
-  background: #466D64;
+  background: #8B8F95;
   border-radius: 4px;
 }
 
 .sidebar-scrollable::-webkit-scrollbar-thumb:hover {
-  background: var(--ems-primary, #005F53);
+  background: var(--ems-primary, #1268A5);
 }
 
 /* ── Menu Groups ── */
@@ -109,7 +110,7 @@
 
 .menu-label {
   font-size: 10px;
-  color: var(--ems-text-muted, #527870);
+  color: var(--ems-text-muted, #5F6369);
   padding: 8px 12px 4px;
   font-weight: 700;
   letter-spacing: 1.5px;
@@ -158,12 +159,12 @@
   min-width: 38px;
   background: #FFFFFF;
   border-radius: 12px;
-  border: 1px solid var(--ems-border, #D6EAE5);
+  border: 1px solid var(--ems-border, #CFD1D4);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--ems-text-dark, #0A3832);
-  box-shadow: 0 1px 4px rgba(0, 95, 83, 0.03);
+  color: var(--ems-text-dark, #102735);
+  box-shadow: 0 1px 4px rgba(16, 39, 53, 0.03);
   transition: all 0.2s ease;
   flex-shrink: 0;
 }
@@ -179,42 +180,42 @@
 
 /* Hover State */
 .stroyka-nav-link:hover {
-  background: rgba(216, 239, 234, 0.6);
+  background: var(--ems-active-pill, #EAF4FB);
 }
 
 .stroyka-nav-link:hover .icon-box {
-  border-color: var(--ems-primary-light, #0D9488);
-  color: var(--ems-primary, #005F53);
+  border-color: var(--ems-primary-light, #0A4D7C);
+  color: var(--ems-primary, #1268A5);
 }
 
-/* Active Item State (PIRNAV Pill Accent) */
+/* Active Item State */
 .stroyka-nav-link.active,
 .active-parent {
-  background: var(--ems-active-pill, #D8EFEA) !important;
-  color: var(--ems-text-dark, #0A3832) !important;
-  border-left: 4px solid var(--ems-primary, #005F53) !important;
+  background: var(--ems-active-pill, #EAF4FB) !important;
+  color: var(--ems-text-dark, #102735) !important;
+  border-left: 4px solid var(--ems-primary, #1268A5) !important;
   border-top-left-radius: 4px !important;
   border-bottom-left-radius: 4px !important;
-  box-shadow: 0 2px 8px rgba(0, 95, 83, 0.06);
+  box-shadow: 0 2px 8px rgba(18, 104, 165, 0.06);
 }
 
 .stroyka-nav-link.active .icon-box,
 .active-parent .icon-box {
   background: #FFFFFF !important;
-  border-color: var(--ems-primary, #005F53) !important;
-  color: var(--ems-primary, #005F53) !important;
-  box-shadow: 0 2px 6px rgba(0, 95, 83, 0.12);
+  border-color: var(--ems-primary, #1268A5) !important;
+  color: var(--ems-primary, #1268A5) !important;
+  box-shadow: 0 2px 6px rgba(18, 104, 165, 0.12);
 }
 
 .stroyka-nav-link.active .nav-label-text,
 .active-parent .nav-label-text {
-  color: var(--ems-text-dark, #0A3832) !important;
+  color: var(--ems-text-dark, #102735) !important;
   font-weight: 700 !important;
 }
 
 /* Chevrons */
 .nav-arrow {
-  color: var(--ems-text-muted, #527870);
+  color: var(--ems-text-muted, #5F6369);
   transition: transform 0.2s ease;
   flex-shrink: 0;
 }
@@ -246,12 +247,12 @@
 }
 
 .submenu-link:hover {
-  background: var(--ems-active-pill, #D8EFEA);
-  color: var(--ems-text-dark, #0A3832);
+  background: var(--ems-active-pill, #EAF4FB);
+  color: var(--ems-text-dark, #102735);
 }
 
 .submenu-link.active {
-  color: var(--ems-primary, #005F53);
+  color: var(--ems-primary, #1268A5);
   font-weight: 700;
   background: #FFFFFF;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
@@ -274,7 +275,7 @@
 }
 
 .sidebar-collapsed .stroyka-nav-link.active {
-  background: var(--ems-active-pill, #D8EFEA) !important;
+  background: var(--ems-active-pill, #EAF4FB) !important;
   border-radius: 12px !important;
 }
 

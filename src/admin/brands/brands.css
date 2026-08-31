@@ -30,7 +30,7 @@
   padding: 24px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-left: 5px solid #2636b6;
+  border-left: 5px solid var(--ems-primary, #1268a5);
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
@@ -94,8 +94,8 @@
 
 .brands-search input:focus {
   background: #ffffff;
-  border-color: #2636b6;
-  box-shadow: 0 0 0 3px rgba(38, 54, 182, 0.12);
+  border-color: var(--ems-primary, #1268a5);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.12);
 }
 
 .brands-count {
@@ -298,8 +298,8 @@
 }
 
 .brand-form-group input[type="text"]:focus {
-  border-color: #2636b6;
-  box-shadow: 0 0 0 3px rgba(38, 54, 182, 0.12);
+  border-color: var(--ems-primary, #1268a5);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.12);
 }
 
 .brand-form-group input[type="text"]:disabled {
@@ -311,7 +311,7 @@
 
 /* Image Upload Zone */
 .brand-image-upload {
-  border: 2px dashed #c7d0f4;
+  border: 2px dashed #bfd9ee;
   border-radius: 12px;
   padding: 24px;
   display: flex;
@@ -325,8 +325,8 @@
 }
 
 .brand-image-upload:hover {
-  border-color: #2636b6;
-  background: #f0f4ff;
+  border-color: var(--ems-primary, #1268a5);
+  background: #eaf4fb;
 }
 
 .brand-image-upload__content {
@@ -346,8 +346,8 @@
 }
 
 .brand-image-upload:hover .brand-image-upload__icon {
-  color: #2f855a;
-  background: #dcfce7;
+  color: var(--ems-primary, #1268a5);
+  background: #eaf4fb;
 }
 
 .brand-image-upload__text strong {
@@ -408,7 +408,7 @@
 
 /* Adjust button hover for premium feel */
 .catalog-btn {
-  background: #2f855a;
+  background: var(--ems-primary, #1268a5);
   color: #ffffff;
   border: none;
   border-radius: 8px;
@@ -417,13 +417,19 @@
   transition: background 0.2s ease;
 }
 .catalog-btn:hover {
-  background: #1e2ea6;
+  background: var(--ems-primary-light, #0a4d7c);
 }
 .catalog-btn.catalog-btn--primary {
-  background: #2563eb;
+  background: var(--ems-primary, #1268a5);
 }
 .catalog-btn.catalog-btn--primary:hover {
-  background: #1e2ea6;
+  background: var(--ems-primary-light, #0a4d7c);
+}
+.catalog-btn.catalog-btn--danger {
+  background: #dc2626;
+}
+.catalog-btn.catalog-btn--danger:hover {
+  background: #b91c1c;
 }
 .catalog-btn.catalog-btn--danger {
   background: #dc2626;

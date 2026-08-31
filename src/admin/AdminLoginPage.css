@@ -22,7 +22,7 @@
 
 .admin-login-left {
   min-height: 430px;
-  background: #ecf3df;
+  background: #eaf4fb;
   overflow: hidden;
 }
 
@@ -64,8 +64,8 @@
 }
 
 .admin-auth-close:hover {
-  border-color: #69c72c;
-  color: #69c72c;
+  border-color: #1268a5;
+  color: #1268a5;
   transform: rotate(90deg);
 }
 
@@ -105,7 +105,7 @@
 .admin-premium-input {
   width: 100%;
   height: 50px;
-  border: 1px solid #69c72c;
+  border: 1px solid #cfd1d4;
   background: #ffffff;
   padding: 0 19px;
   margin-bottom: 19px;
@@ -119,8 +119,8 @@
 }
 
 .admin-premium-input:focus {
-  border-color: #5fbe2b;
-  box-shadow: 0 0 0 3px rgba(105, 199, 44, 0.13);
+  border-color: #1268a5;
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.13);
 }
 
 .admin-premium-input::placeholder {
@@ -135,7 +135,7 @@
   height: 50px;
   border: 0;
   border-radius: 25px;
-  background: #69c72c;
+  background: #1268a5;
   color: #ffffff;
   font-size: 14px;
   font-weight: 800;
@@ -147,9 +147,9 @@
 }
 
 .admin-premium-btn:hover {
-  background: #59b821;
+  background: #0a4d7c;
   transform: translateY(-1px);
-  box-shadow: 0 10px 22px rgba(105, 199, 44, 0.25);
+  box-shadow: 0 10px 22px rgba(18, 104, 165, 0.25);
 }
 
 .admin-premium-btn:disabled {
@@ -177,7 +177,7 @@
 }
 
 .admin-footer-links span:hover {
-  color: #69c72c;
+  color: #1268a5;
 }
 
 @keyframes authFadeIn {

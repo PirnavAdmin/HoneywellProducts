@@ -15,9 +15,9 @@
 }
 
 .filter-search-input:focus {
-  border-color: #0b2e13;
+  border-color: var(--ems-primary, #1268a5);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(11, 46, 19, 0.08);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.08);
 }
 
 .filter-dropdown {
@@ -33,7 +33,7 @@
 }
 
 .filter-dropdown:focus {
-  border-color: #0b2e13;
+  border-color: var(--ems-primary, #1268a5);
   outline: none;
 }
 
@@ -76,14 +76,14 @@
 }
 
 .row-selected {
-  background-color: #f0fdf4 !important;
+  background-color: #eaf4fb !important;
 }
 
 .table-action-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background-color: #0b2e13;
+  background-color: var(--ems-primary, #1268a5);
   color: white;
   font-weight: 700;
   font-size: 0.725rem;
@@ -93,7 +93,7 @@
 }
 
 .table-action-btn:hover {
-  background-color: #154c25;
+  background-color: var(--ems-primary-light, #0a4d7c);
 }
 
 /* Admin Badges */
@@ -173,12 +173,12 @@
 }
 
 .v-step.active .v-circle {
-  background-color: #0b2e13;
-  border-color: #0b2e13;
+  background-color: var(--ems-primary, #1268a5);
+  border-color: var(--ems-primary, #1268a5);
 }
 
 .v-step.active .v-content strong {
-  color: #0b2e13;
+  color: var(--ems-primary, #1268a5);
 }
 
 /* Admin Modals */
@@ -251,13 +251,13 @@
 }
 
 .modal-form-control:focus {
-  border-color: #0b2e13;
+  border-color: var(--ems-primary, #1268a5);
   outline: none;
 }
 
 /* Form Helper Buttons */
 .btn-primary {
-  background-color: #0b2e13;
+  background-color: var(--ems-primary, #1268a5);
   color: white;
   font-weight: 700;
   padding: 0.55rem 1.25rem;
@@ -266,7 +266,7 @@
 }
 
 .btn-primary:hover {
-  background-color: #154c25;
+  background-color: var(--ems-primary-light, #0a4d7c);
 }
 
 .btn-secondary {
@@ -306,7 +306,7 @@
   width: 28px;
   height: 28px;
   border: 3px solid #e2e8f0;
-  border-top-color: #0b2e13;
+  border-top-color: var(--ems-primary, #1268a5);
   border-radius: 50%;
   animation: tableSpin 0.8s linear infinite;
 }

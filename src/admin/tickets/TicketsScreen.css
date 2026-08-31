@@ -1,8 +1,8 @@
 /* Custom styles for Tickets Management Console */
 
 .admin-layout {
-  --primary-color: #10b981;
-  --primary-hover: #059669;
+  --primary-color: var(--ems-primary, #1268a5);
+  --primary-hover: var(--ems-primary-light, #0a4d7c);
   --bg-card: #ffffff;
   --border-color: #e2e8f0;
   --text-main: #0f172a;
@@ -154,7 +154,7 @@
 
 .tickets-search-input:focus {
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.15);
 }
 
 .tickets-filters-wrapper {

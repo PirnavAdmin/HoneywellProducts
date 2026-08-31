@@ -343,7 +343,7 @@ const AdminVerifyOTP = () => {
           </button>
 
           <div className="admin-logo-mini">
-            <img src="/honeywell-products-logo.png" alt="Honeywell Products logo" />
+            <img src="/admin-logo.png" alt="Honeywell Products logo" />
           </div>
 
           <h2>VERIFY YOUR OTP.</h2>

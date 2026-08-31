@@ -1,8 +1,8 @@
 /* Premium Styles for Analytics & Reports Screen */
 
 .admin-layout {
-  --primary-color: #10b981;
-  --primary-hover: #059669;
+  --primary-color: var(--ems-primary, #1268a5);
+  --primary-hover: var(--ems-primary-light, #0a4d7c);
   --bg-card: #ffffff;
   --border-color: #e2e8f0;
   --text-main: #0f172a;
@@ -220,15 +220,15 @@
 .reports-stat-card-clickable:hover {
   transform: translateY(-3px) scale(1.015);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  border-color: #10b981;
+  border-color: var(--ems-primary, #1268a5);
 }
 
 .stat-drilldown-badge {
   font-size: 10px;
   font-weight: 700;
-  color: #10b981;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
+  color: var(--ems-primary, #1268a5);
+  background: #eaf4fb;
+  border: 1px solid #bfd9ee;
   padding: 2px 7px;
   border-radius: 999px;
   transition: all 0.2s ease;
@@ -247,9 +247,9 @@
 }
 
 .reports-stat-card-clickable:hover .stat-drilldown-badge {
-  background: #10b981;
+  background: var(--ems-primary, #1268a5);
   color: #ffffff;
-  border-color: #10b981;
+  border-color: var(--ems-primary, #1268a5);
 }
 
 .stat-icon {
@@ -262,7 +262,7 @@
 }
 
 .stat-icon.revenue { background: #eff6ff; color: #2563eb; }
-.stat-icon.orders { background: #ecfdf5; color: #10b981; }
+.stat-icon.orders { background: #eaf4fb; color: var(--ems-primary, #1268a5); }
 .stat-icon.aov { background: #f5f3ff; color: #8b5cf6; }
 .stat-icon.pending { background: #fffbeb; color: #d97706; }
 .stat-icon.catalog { background: #fdf2f8; color: #db2777; }

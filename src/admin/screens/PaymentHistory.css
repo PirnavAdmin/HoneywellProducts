@@ -125,7 +125,7 @@
 }
 
 .module-select:focus {
-  border-color: #059669;
+  border-color: var(--ems-primary, #1268a5);
 }
 
 .module-select-arrow {
@@ -199,8 +199,8 @@
 }
 
 .search-input:focus {
-  border-color: #059669;
-  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+  border-color: var(--ems-primary, #1268a5);
+  box-shadow: 0 0 0 2px rgba(18, 104, 165, 0.1);
 }
 
 .search-input::placeholder {
@@ -237,9 +237,9 @@
 }
 
 .segmented-filter-btn.active {
-  background-color: #ecfdf5;
-  color: #047857;
-  border-color: #a7f3d0;
+  background-color: #eaf4fb;
+  color: var(--ems-primary, #1268a5);
+  border-color: #bfd9ee;
   font-weight: 600;
 }
 
@@ -256,7 +256,7 @@
 .accent-progress-active {
   width: 82%;
   height: 100%;
-  background-color: #059669;
+  background-color: var(--ems-primary, #1268a5);
   border-radius: 9999px;
 }
 
@@ -301,7 +301,7 @@
 
 .top-scrollbar-bar::-webkit-scrollbar-thumb,
 .bottom-table-scroll::-webkit-scrollbar-thumb {
-  background: #059669;
+  background: var(--ems-primary, #1268a5);
   border-radius: 3px;
 }
 
@@ -343,9 +343,13 @@
 .order-id-link {
   font-size: 12px;
   font-weight: 700;
-  color: #059669;
+  color: var(--ems-primary, #1268a5);
   text-decoration: none;
   white-space: nowrap;
+}
+
+.order-id-link:hover {
+  text-decoration: underline;
 }
 
 .order-id-link:hover {

@@ -117,13 +117,13 @@
 }
 
 /* Colour variants */
-.stock-metric-card--blue::before   { background: #2636b6; }
+.stock-metric-card--blue::before   { background: var(--ems-primary, #1268a5); }
 .stock-metric-card--green::before  { background: #16a34a; }
 .stock-metric-card--amber::before  { background: #d97706; }
 .stock-metric-card--red::before    { background: #dc2626; }
 .stock-metric-card--indigo::before { background: #6366f1; }
 
-.stock-metric-card--blue   .stock-metric-card__icon { background: #eef2ff; color: #2636b6; }
+.stock-metric-card--blue   .stock-metric-card__icon { background: #eaf4fb; color: var(--ems-primary, #1268a5); }
 .stock-metric-card--green  .stock-metric-card__icon { background: #dcfce7; color: #16a34a; }
 .stock-metric-card--amber  .stock-metric-card__icon { background: #fef3c7; color: #d97706; }
 .stock-metric-card--red    .stock-metric-card__icon { background: #fee2e2; color: #dc2626; }
@@ -273,16 +273,16 @@
 
 /* ── Adjust Button ── */
 .stock-adjust-btn {
-  color: #2636b6;
-  background: #eef2ff;
-  border-color: #c7d2fe;
+  color: var(--ems-primary, #1268a5);
+  background: #eaf4fb;
+  border-color: #bfd9ee;
   transition: all 0.18s ease;
 }
 
 .stock-adjust-btn:hover {
   color: #ffffff;
-  background: #2636b6;
-  border-color: #2636b6;
+  background: var(--ems-primary, #1268a5);
+  border-color: var(--ems-primary, #1268a5);
 }
 
 /* ── Modal Overlay ── */
@@ -341,7 +341,7 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: #2636b6;
+  color: var(--ems-primary, #1268a5);
   margin: 0 0 5px;
 }
 
@@ -558,7 +558,7 @@
 }
 
 .stock-form-section__title svg {
-  color: #2636b6;
+  color: var(--ems-primary, #1268a5);
 }
 
 .stock-field-row {
@@ -585,20 +585,20 @@
 
 .sku-gen-btn {
   padding: 0 14px;
-  background: #eef2ff;
-  border: 1.5px dashed #c7d2fe;
+  background: #eaf4fb;
+  border: 1.5px dashed #bfd9ee;
   border-radius: 8px;
   font-size: 12px;
   font-weight: 800;
-  color: #2636b6;
+  color: var(--ems-primary, #1268a5);
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .sku-gen-btn:hover {
-  background: #2636b6;
-  border-color: #2636b6;
+  background: var(--ems-primary, #1268a5);
+  border-color: var(--ems-primary, #1268a5);
   color: #ffffff;
 }
 

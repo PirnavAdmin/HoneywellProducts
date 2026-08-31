@@ -116,17 +116,18 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       {/* Brand Header Card */}
       <div className="sidebar-logo-card">
         <div className="sidebar-brand-inner">
-          <img
-            src="/honeywell-products-logo.png"
-            alt="Honeywell Products Admin"
-            className="sidebar-brand-logo"
-            onError={(e) => { e.currentTarget.hidden = true; }}
-          />
-          {expanded && (
-            <div className="sidebar-brand-info">
-              <h2 className="stroyka-brand">Honeywell Products</h2>
-              <span className="stroyka-brand-sub">(Admin)</span>
-            </div>
+          {expanded ? (
+            <img
+              src="/admin-logo.png"
+              alt="Honeywell Products Admin"
+              className="sidebar-brand-logo-full"
+            />
+          ) : (
+            <img
+              src="/admin-favicon.png"
+              alt="Honeywell Products Admin"
+              className="sidebar-brand-logo-collapsed"
+            />
           )}
         </div>
       </div>
