@@ -689,18 +689,67 @@ const ProductsForm = () => {
 
   return (
     <div className="catalog-page product-form-page">
-      <section className="catalog-header">
-        <div className="catalog-title-wrap">
-          <span className="catalog-kicker">Step 3 of 3</span>
-          <h1>{isEditing ? 'Edit Product' : 'Create Product'}</h1>
-          <p>Add the product information shown on the customer product page, including discounts, specs, features, and rating summary.</p>
+      {/* Top Header Card matching media_1788172687104.png */}
+      <section style={{
+        backgroundColor: '#ffffff',
+        padding: '24px 28px',
+        borderRadius: '16px',
+        border: '1px solid #e2e8f0',
+        borderLeft: '4px solid #1d4ed8',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '24px',
+        flexWrap: 'wrap',
+        gap: '16px'
+      }}>
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <span style={{ fontSize: '11px', fontWeight: 800, color: '#1d4ed8', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '4px', display: 'block' }}>
+            STEP 3 OF 3
+          </span>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>
+            {isEditing ? 'Edit Product' : 'Create Product'}
+          </h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+            Add the product information shown on the customer product page, including discounts, specs, features, and rating summary.
+          </p>
         </div>
 
-        <div className="catalog-header__actions">
-          <Link to="/admin/catalog/products" className="catalog-btn">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <Link
+            to="/admin/catalog/products"
+            style={{
+              backgroundColor: '#2d8a54',
+              color: '#ffffff',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontWeight: 700,
+              fontSize: '13px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              textDecoration: 'none',
+              transition: 'all 0.15s ease'
+            }}
+          >
             <ArrowLeft size={16} /> Products List
           </Link>
-          <button type="button" className="catalog-btn catalog-btn--primary" onClick={() => navigate('/admin/catalog/products')}>
+          <button
+            type="button"
+            onClick={() => navigate('/admin/catalog/products')}
+            style={{
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              borderRadius: '8px',
+              padding: '10px 20px',
+              fontWeight: 700,
+              fontSize: '13px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease'
+            }}
+          >
             View Products
           </button>
         </div>
