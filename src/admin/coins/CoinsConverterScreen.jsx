@@ -17,6 +17,7 @@ import { getApiDomain } from '../../utils/apiConfig';
 import '../catalog/adminModule.css';
 
 const initialSettings = {
+  id: 1,
   rupeesPerCoin: 20,
   newUserBonus: 25,
   minimumOrderValue: 100,
@@ -49,6 +50,19 @@ const StatCard = ({ icon: Icon, label, value, detail }) => (
 
 const API_URL = `${getApiDomain()}/api/Coins`;
 
+const getHeaders = () => {
+  const token = localStorage.getItem('adminToken');
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
 const CoinsConverterScreen = () => {
   const [settings, setSettings] = useState(initialSettings);
   const [savedMessage, setSavedMessage] = useState('');
@@ -63,7 +77,7 @@ const CoinsConverterScreen = () => {
         setIsLoading(true);
         setError('');
         const res = await fetch(API_URL, {
-          headers: { 'ngrok-skip-browser-warning': 'true' }
+          headers: getHeaders()
         });
         if (!res.ok) throw new Error(`Failed to fetch coins settings: ${res.status}`);
         const data = await res.json();
@@ -72,10 +86,15 @@ const CoinsConverterScreen = () => {
           setSettings((prev) => ({
             ...prev,
             id: data.id || 1,
-            rupeesPerCoin: data.earnRate ? Math.round(1 / data.earnRate) : prev.rupeesPerCoin,
-            conversionRate: data.conversionRate || 1.0,
-            minRedeemableCoins: data.minRedeemableCoins || 100,
-            maxRedeemableCoins: data.maxRedeemableCoins || 5000,
+            rupeesPerCoin: data.rupeesRequiredForOneCoin ?? (data.earnRate ? Math.round(1 / data.earnRate) : prev.rupeesPerCoin),
+            conversionRate: data.conversionRate ?? 1.0,
+            minRedeemableCoins: data.minRedeemableCoins ?? 100,
+            maxRedeemableCoins: data.maxRedeemableCoins ?? 5000,
+            minimumOrderValue: data.minimumOrderValue ?? 100,
+            maxRedeemPercent: data.maxCartRedeemPercent ?? 20,
+            newUserBonus: data.welcomeBonusCoins ?? 25,
+            expiryDays: data.coinValidityDays ?? 180,
+            bonusEnabled: data.isWelcomeBonusEnabled ?? true,
           }));
         }
       } catch (err) {
@@ -121,16 +140,20 @@ const CoinsConverterScreen = () => {
         id: settings.id || 1,
         conversionRate: Number(settings.conversionRate || 1.0),
         earnRate: settings.rupeesPerCoin ? (1 / Number(settings.rupeesPerCoin)) : 0.05,
+        rupeesRequiredForOneCoin: Number(settings.rupeesPerCoin || 20),
         minRedeemableCoins: Number(settings.minRedeemableCoins || 100),
-        maxRedeemableCoins: Number(settings.maxRedeemableCoins || 5000)
+        maxRedeemableCoins: Number(settings.maxRedeemableCoins || 5000),
+        minimumOrderValue: Number(settings.minimumOrderValue || 100),
+        maxCartRedeemPercent: Number(settings.maxRedeemPercent || 20),
+        welcomeBonusCoins: Number(settings.newUserBonus || 25),
+        coinValidityDays: Number(settings.expiryDays || 180),
+        isWelcomeBonusEnabled: Boolean(settings.bonusEnabled),
+        isActive: true,
       };
 
       const res = await fetch(API_URL, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
+        headers: getHeaders(),
         body: JSON.stringify(payload)
       });
 
@@ -212,7 +235,7 @@ const CoinsConverterScreen = () => {
           icon={ShieldCheck}
           label="Redeem Limit"
           value={`${settings.maxRedeemPercent}% of cart`}
-          detail="Cart integration will be handled later."
+          detail="Maximum cart discount allowed with coins."
         />
         <StatCard
           icon={TrendingUp}
@@ -382,7 +405,7 @@ const CoinsConverterScreen = () => {
                   value={settings.maxRedeemPercent}
                   onChange={handleChange}
                 />
-                <small>Reserved for final cart redemption step later.</small>
+                <small>Maximum percentage of cart total that can be paid using coins.</small>
               </div>
             </div>
 
@@ -409,7 +432,7 @@ const CoinsConverterScreen = () => {
               <WalletCards size={56} />
             </div>
             <h2>Wallet Flow</h2>
-              <p>Successful order &rarr; coins added to user wallet &rarr; coins redeemed only during future purchases.</p>
+            <p>Successful order &rarr; coins added to user wallet &rarr; coins redeemed only during future purchases.</p>
           </section>
 
           <section className="catalog-card">
@@ -453,7 +476,7 @@ const CoinsConverterScreen = () => {
               </div>
               <div>
                 <Info size={17} />
-                <span>Cart redemption will be connected in the final checkout step later.</span>
+                <span>Cart redemption is integrated into checkout step.</span>
               </div>
             </div>
           </section>

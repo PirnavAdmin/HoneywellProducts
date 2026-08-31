@@ -142,26 +142,24 @@ const NotificationsDropdown = () => {
     };
   };
 
-  // Fetch unread count
+  // GET /api/Notifications/unread-count
   const fetchUnreadCount = async () => {
     try {
       const count = await getUnreadCount();
       setUnreadCount(count || 0);
     } catch (err) {
-      // Backend restarting / offline
+      // Ignore background poll errors
     }
   };
 
-  // Fetch full notifications list
+  // GET /api/Notifications
   const fetchNotifications = async (showLoading = true) => {
     if (showLoading) setLoading(true);
     setError(null);
     try {
       const data = await getNotifications();
-      // Sort notifications by ID desc (or date desc) so newest are at the top
       const sortedData = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
       setNotifications(sortedData);
-      // Recalculate unread count from fetched list
       const count = sortedData.filter(n => !n.isRead).length;
       setUnreadCount(count);
     } catch (err) {
@@ -171,14 +169,14 @@ const NotificationsDropdown = () => {
     }
   };
 
-  // Initial load and polling for unread count
+  // Initial load and 30s poll
   useEffect(() => {
     fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000); // poll every 30s
+    const interval = setInterval(fetchUnreadCount, 30000);
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch notifications when dropdown opens
+  // Fetch when dropdown opens
   useEffect(() => {
     if (isOpen) {
       fetchNotifications();
@@ -201,12 +199,11 @@ const NotificationsDropdown = () => {
     setIsOpen(!isOpen);
   };
 
+  // PUT /api/Notifications/{id}/read
   const handleMarkAsRead = async (id) => {
-    // Find the item in state
     const notif = notifications.find(n => n.id === id);
     if (!notif || notif.isRead) return;
 
-    // Optimistic update
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
 
@@ -214,15 +211,14 @@ const NotificationsDropdown = () => {
       await markAsRead(id);
     } catch (err) {
       console.error(`Failed to mark notification ${id} as read:`, err);
-      // Revert on failure
       fetchNotifications(false);
     }
   };
 
+  // PUT /api/Notifications/mark-all-read
   const handleMarkAllRead = async () => {
     if (unreadCount === 0) return;
 
-    // Optimistic update
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     setUnreadCount(0);
 
@@ -234,12 +230,11 @@ const NotificationsDropdown = () => {
     }
   };
 
+  // DELETE /api/Notifications/{id}
   const handleDelete = async (id) => {
-    // Find if the deleted item was unread to adjust count
     const notif = notifications.find(n => n.id === id);
     const wasUnread = notif && !notif.isRead;
 
-    // Optimistic update
     setNotifications(prev => prev.filter(n => n.id !== id));
     if (wasUnread) {
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -253,10 +248,10 @@ const NotificationsDropdown = () => {
     }
   };
 
+  // DELETE /api/Notifications/clear-all
   const handleClearAll = async () => {
     if (notifications.length === 0) return;
 
-    // Optimistic update
     setNotifications([]);
     setUnreadCount(0);
 
@@ -391,4 +386,3 @@ const NotificationsDropdown = () => {
 };
 
 export default NotificationsDropdown;
-

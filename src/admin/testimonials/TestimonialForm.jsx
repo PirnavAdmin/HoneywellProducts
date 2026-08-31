@@ -1,40 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Upload } from 'lucide-react';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getTestimonialById, createTestimonial, updateTestimonial, resolveImageUrl } from '../../services/testimonialsApi';
 import '../catalog/adminModule.css';
 import { Toast } from '../components/Toast';
-
-const API_BASE = `${getApiDomain()}/api/Testimonials`;
-
-const getHeaders = () => {
-  const headers = {
-    'ngrok-skip-browser-warning': 'true',
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-};
 
 const emptyForm = {
   name: '',
   role: '',
   text: '',
-};
-
-const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('data:')) return url;
-  if (url.includes('/uploads/')) {
-    const uploadPath = url.slice(url.indexOf('/uploads/'));
-    return `${getApiDomain()}${uploadPath}`;
-  }
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${getApiDomain()}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
 const TestimonialForm = () => {
@@ -56,19 +30,13 @@ const TestimonialForm = () => {
   useEffect(() => {
     if (!testimonialId) return;
     setLoading(true);
-    fetch(`${API_BASE}/${testimonialId}`, {
-      headers: getHeaders()
-    })
-      .then(res => {
-        if (!res.ok) throw new Error(`Server returned code: ${res.status}`);
-        return res.json();
-      })
+    getTestimonialById(testimonialId)
       .then(data => {
         setExistingRecord(data);
         setFormData({
           name: data.name || '',
           role: data.role || '',
-          text: data.text || '',
+          text: data.text || data.quote || '',
         });
         setImagePreview(data.imageUrl || data.image || '');
       })
@@ -131,10 +99,6 @@ const TestimonialForm = () => {
     setToastMessage('');
 
     try {
-      const url = isEditing ? `${API_BASE}/${testimonialId}` : API_BASE;
-      const method = isEditing ? 'PUT' : 'POST';
-
-      let res;
       if (selectedFile) {
         const fd = new FormData();
         fd.append('name', formData.name.trim());
@@ -145,21 +109,17 @@ const TestimonialForm = () => {
         fd.append('sortOrder', String(existingRecord?.sortOrder ?? 1));
         fd.append('imageFile', selectedFile);
 
-        const token = localStorage.getItem('adminToken');
-        const headers = { 'ngrok-skip-browser-warning': 'true' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        res = await fetch(url, {
-          method,
-          headers,
-          body: fd,
-        });
+        if (isEditing) {
+          await updateTestimonial(testimonialId, fd);
+        } else {
+          await createTestimonial(fd);
+        }
       } else {
         const payload = {
           name: formData.name.trim(),
           role: formData.role.trim(),
           text: formData.text.trim(),
-          imageUrl: imagePreview || 'https://randomuser.me/api/portraits/lego/1.jpg',
+          imageUrl: imagePreview || '',
           rating: existingRecord?.rating ?? 5,
           isActive: existingRecord?.isActive ?? true,
           sortOrder: existingRecord?.sortOrder ?? 1,
@@ -167,18 +127,10 @@ const TestimonialForm = () => {
 
         if (isEditing) {
           payload.id = parseInt(testimonialId, 10);
+          await updateTestimonial(testimonialId, payload);
+        } else {
+          await createTestimonial(payload);
         }
-
-        res = await fetch(url, {
-          method,
-          headers: getHeaders(),
-          body: JSON.stringify(payload),
-        });
-      }
-
-      if (!res.ok) {
-        const errorText = await res.text().catch(() => '');
-        throw new Error(errorText || `Request failed with code ${res.status}`);
       }
 
       setToastMessage(`Testimonial ${isEditing ? 'updated' : 'saved'} successfully!`);
@@ -244,7 +196,7 @@ const TestimonialForm = () => {
                         e.target.onerror = null;
                         e.target.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(formData.name || 'Client') + '&background=e2e8f0&color=64748b';
                       }}
-                      style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #22c55e' }}
+                      style={{ width: '80px', height: '80px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #005F53' }}
                     />
                   ) : (
                     <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#f1f5f9', border: '2px dashed #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontSize: '12px' }}>
@@ -340,4 +292,3 @@ const TestimonialForm = () => {
 };
 
 export default TestimonialForm;
-

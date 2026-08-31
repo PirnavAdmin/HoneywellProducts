@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Printer, Trash2, CheckCircle2, AlertCircle, RefreshCw, X, Plus } from 'lucide-react';
+import { Search, Printer, Trash2, CheckCircle2, AlertCircle, RefreshCw, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getInvoices, getInvoiceById, updateInvoice, deleteInvoice } from '../../services/invoicesApi';
 import './invoices.css';
 
 const normalizeInvoiceId = (raw) => {
@@ -26,23 +26,11 @@ const InvoicesList = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const fetchInvoices = async (search = '') => {
+  const fetchInvoicesData = async (search = '') => {
     setLoading(true);
     setError('');
     try {
-      const apiDomain = getApiDomain();
-      const url = search 
-        ? `${apiDomain}/api/Invoices?search=${encodeURIComponent(search)}`
-        : `${apiDomain}/api/Invoices`;
-      
-      const response = await fetch(url, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'Accept': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      const data = await getInvoices(search);
       
       const normalizedList = (data.invoices || []).map(inv => ({
         ...inv,
@@ -64,7 +52,7 @@ const InvoicesList = () => {
 
   useEffect(() => {
     const delayDebounce = setTimeout(() => {
-      fetchInvoices(searchTerm);
+      fetchInvoicesData(searchTerm);
     }, 450);
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
@@ -73,16 +61,8 @@ const InvoicesList = () => {
     if (!window.confirm(`This invoice is currently ${currentStatus.toUpperCase()}. Are you sure you want to mark it as ${nextStatus.toUpperCase()}?`)) return;
 
     try {
-      const response = await fetch(`${getApiDomain()}/api/Invoices/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({ status: nextStatus })
-      });
-      if (!response.ok) throw new Error('Failed to update invoice status.');
-      fetchInvoices(searchTerm);
+      await updateInvoice(id, { status: nextStatus });
+      fetchInvoicesData(searchTerm);
     } catch (err) {
       alert(`Error: ${err.message}`);
     }
@@ -92,14 +72,8 @@ const InvoicesList = () => {
     if (!window.confirm('Are you sure you want to cancel/delete this invoice?')) return;
 
     try {
-      const response = await fetch(`${getApiDomain()}/api/Invoices/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to cancel invoice.');
-      fetchInvoices(searchTerm);
+      await deleteInvoice(id);
+      fetchInvoicesData(searchTerm);
     } catch (err) {
       alert(`Error: ${err.message}`);
     }
@@ -107,14 +81,7 @@ const InvoicesList = () => {
 
   const handlePrintInvoice = async (id) => {
     try {
-      const response = await fetch(`${getApiDomain()}/api/Invoices/${id}`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'Accept': 'application/json'
-        }
-      });
-      if (!response.ok) throw new Error('Failed to fetch invoice details.');
-      const order = await response.json();
+      const order = await getInvoiceById(id);
 
       const parseCurrencyValue = (val) => {
         if (typeof val === 'number') return val;

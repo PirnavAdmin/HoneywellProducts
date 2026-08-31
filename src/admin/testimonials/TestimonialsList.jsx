@@ -1,35 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, User, MessageSquare, RefreshCw } from 'lucide-react';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getTestimonials, deleteTestimonial, resolveImageUrl } from '../../services/testimonialsApi';
 import '../catalog/adminModule.css';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
-
-const API_BASE = `${getApiDomain()}/api/Testimonials`;
-
-const getHeaders = () => {
-  const headers = {
-    'ngrok-skip-browser-warning': 'true',
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-};
-
-const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (url.startsWith('data:')) return url;
-  if (url.includes('/uploads/')) {
-    const uploadPath = url.slice(url.indexOf('/uploads/'));
-    return `${getApiDomain()}${uploadPath}`;
-  }
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${getApiDomain()}${url.startsWith('/') ? '' : '/'}${url}`;
-};
 
 const TestimonialsList = () => {
   const [testimonials, setTestimonials] = useState([]);
@@ -50,14 +24,10 @@ const TestimonialsList = () => {
   const loadTestimonials = async () => {
     setLoading(true);
     try {
-      const res = await fetch(API_BASE, {
-        headers: getHeaders()
-      });
-      if (!res.ok) throw new Error(`Server returned code: ${res.status}`);
-      const data = await res.json();
+      const data = await getTestimonials();
       setTestimonials(Array.isArray(data) ? data : []);
     } catch (e) {
-      console.error('Error loading testimonials from API', e);
+      console.error('Error loading testimonials from API:', e);
       setTestimonials([]);
     } finally {
       setLoading(false);
@@ -72,12 +42,7 @@ const TestimonialsList = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this testimonial permanently?')) return;
     try {
-      const res = await fetch(`${API_BASE}/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
-      
+      await deleteTestimonial(id);
       setTestimonials(prev => prev.filter(t => t.id !== id));
     } catch (e) {
       alert('Failed to delete testimonial: ' + e.message);
@@ -91,7 +56,7 @@ const TestimonialsList = () => {
       return (
         (t.name || '').toLowerCase().includes(q) ||
         (t.role || '').toLowerCase().includes(q) ||
-        (t.text || '').toLowerCase().includes(q)
+        (t.text || t.quote || '').toLowerCase().includes(q)
       );
     });
   }, [testimonials, searchTerm]);
@@ -198,7 +163,7 @@ const TestimonialsList = () => {
                         <MessageSquare size={13} color="#94a3b8" style={{ marginTop: 2, flexShrink: 0 }} />
                         <div style={{ fontSize: '12px', lineHeight: '1.5', wordBreak: 'break-word' }}>
                           {(() => {
-                            const text = t.text || '—';
+                            const text = t.text || t.quote || '—';
                             const isLong = text.length > 90;
                             const isExpanded = Boolean(expandedItems[t.id]);
 
@@ -272,4 +237,3 @@ const TestimonialsList = () => {
 };
 
 export default TestimonialsList;
-

@@ -1,32 +1,134 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Settings, CheckCircle } from 'lucide-react';
+import { Save, ArrowLeft, Settings, CheckCircle, RefreshCw, CreditCard, Phone, RotateCcw } from 'lucide-react';
+import { 
+  getBankDetails, updateBankDetails,
+  getUpiDetails, updateUpiDetails,
+  getSupportConfig, updateSupportConfig,
+  getReturnsConfig
+} from '../../services/settingsApi';
 
 const FormSettings = () => {
-  const [formData, setFormData] = useState({
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [error, setError] = useState('');
+
+  // Bank & UPI State
+  const [bankData, setBankData] = useState({
+    accountHolderName: '',
+    bankName: '',
+    accountNumber: '',
+    ifscCode: '',
+    branch: ''
+  });
+
+  const [upiData, setUpiData] = useState({
+    merchantName: '',
+    merchantUpiId: '',
+    bankDisplayName: '',
+    currency: 'INR'
+  });
+
+  // Support State
+  const [supportData, setSupportData] = useState({
+    supportPhoneNumber: '',
+    workTimings: '',
+    supportEmail: ''
+  });
+
+  // Returns Policy Window
+  const [returnsWindow, setReturnsWindow] = useState(7);
+
+  // System Preference State
+  const [systemPrefs, setSystemPrefs] = useState({
     shippingFlat: '250',
     seedsGst: '5',
     machineryGst: '12',
     minAdvisoryLevel: 'Active Grower',
     allowCreditTerms: true,
-    platformCurrency: 'INR',
     farmerVerification: 'Auto-Verify'
   });
-  const navigate = useNavigate();
-  const [isSaved, setIsSaved] = useState(false);
 
-  const handleSubmit = (e) => {
-    if (e) e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 3000);
+  // Load configuration from APIs on mount
+  useEffect(() => {
+    async function loadAllSettings() {
+      setLoading(true);
+      setError('');
+      try {
+        const [bankRes, upiRes, supportRes, returnsRes] = await Promise.allSettled([
+          getBankDetails(),
+          getUpiDetails(),
+          getSupportConfig(),
+          getReturnsConfig()
+        ]);
+
+        if (bankRes.status === 'fulfilled' && bankRes.value) {
+          setBankData(prev => ({ ...prev, ...bankRes.value }));
+        }
+        if (upiRes.status === 'fulfilled' && upiRes.value) {
+          setUpiData(prev => ({ ...prev, ...upiRes.value }));
+        }
+        if (supportRes.status === 'fulfilled' && supportRes.value) {
+          setSupportData(prev => ({ ...prev, ...supportRes.value }));
+        }
+        if (returnsRes.status === 'fulfilled' && returnsRes.value) {
+          setReturnsWindow(returnsRes.value.returnWindowDays ?? 7);
+        }
+      } catch (err) {
+        console.error('Error loading settings:', err);
+        setError('Some settings failed to load from API.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadAllSettings();
+  }, []);
+
+  const handleBankChange = (e) => {
+    const { name, value } = e.target;
+    setBankData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleInputChange = (e) => {
+  const handleUpiChange = (e) => {
+    const { name, value } = e.target;
+    setUpiData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSupportChange = (e) => {
+    const { name, value } = e.target;
+    setSupportData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handlePrefsChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({ 
-      ...formData, 
-      [name]: type === 'checkbox' ? checked : value 
-    });
+    setSystemPrefs(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
+    setSaving(true);
+    setError('');
+
+    try {
+      await Promise.all([
+        updateBankDetails(bankData).catch(err => console.warn('Bank save error:', err)),
+        updateUpiDetails(upiData).catch(err => console.warn('UPI save error:', err)),
+        updateSupportConfig(supportData).catch(err => console.warn('Support save error:', err))
+      ]);
+
+      setIsSaved(true);
+      setTimeout(() => setIsSaved(false), 3000);
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      setError(err.message || 'Failed to save settings.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -38,7 +140,7 @@ const FormSettings = () => {
           borderRadius: '14px',
           padding: '24px 28px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-          maxWidth: '860px',
+          maxWidth: '900px',
           margin: '0 auto',
           boxSizing: 'border-box'
         }}
@@ -68,10 +170,10 @@ const FormSettings = () => {
             </button>
             <div>
               <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0' }}>
-                System Preferences & Settings
+                System Preferences & Payment Settings
               </h1>
               <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
-                Configure tax limits, flat shipping rates, and advisory verification rules.
+                Configure bank payment accounts, UPI merchant keys, support contacts, and return policies.
               </p>
             </div>
           </div>
@@ -79,12 +181,13 @@ const FormSettings = () => {
           <div>
             {isSaved ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontWeight: 700, fontSize: '12.5px', padding: '0 16px', height: '38px', borderRadius: '8px' }}>
-                <CheckCircle size={16} /> Saved Settings
+                <CheckCircle size={16} /> Settings Updated
               </span>
             ) : (
               <button 
                 type="button" 
                 onClick={handleSubmit} 
+                disabled={saving || loading}
                 style={{
                   background: '#059669',
                   color: '#ffffff',
@@ -94,179 +197,192 @@ const FormSettings = () => {
                   padding: '0 18px',
                   fontSize: '13px',
                   fontWeight: 700,
-                  cursor: 'pointer',
+                  cursor: saving ? 'not-allowed' : 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                   transition: 'background 0.15s ease'
                 }}
-                onMouseOver={(e) => (e.currentTarget.style.background = '#047857')}
-                onMouseOut={(e) => (e.currentTarget.style.background = '#059669')}
               >
-                <Save size={15} />
-                <span>Update Settings</span>
+                {saving ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
+                <span>{saving ? 'Updating...' : 'Update Settings'}</span>
               </button>
             )}
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
-          
-          {/* Row 1: Shipping Fee & Base Currency */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                Flat Shipping Fee (₹)
-              </label>
-              <input
-                type="number"
-                name="shippingFlat"
-                value={formData.shippingFlat}
-                onChange={handleInputChange}
-                style={{ width: '100%', height: '40px', padding: '0 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
-                required
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                Platform Base Currency
-              </label>
-              <select
-                name="platformCurrency"
-                value={formData.platformCurrency}
-                onChange={handleInputChange}
-                style={{ width: '100%', height: '40px', padding: '0 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff', cursor: 'pointer' }}
-              >
-                <option value="INR">Indian Rupee (₹)</option>
-                <option value="USD">US Dollar ($)</option>
-              </select>
-            </div>
+        {error && (
+          <div style={{ padding: '12px 16px', borderRadius: '8px', background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', fontSize: '13px', marginBottom: '20px' }}>
+            {error}
           </div>
+        )}
 
-          {/* Section 1: GST TAX LEVELS (%) Card */}
-          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>
-              <Settings size={16} style={{ color: '#059669' }} />
-              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                GST TAX LEVELS (%)
-              </h3>
-            </div>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
+            <RefreshCw size={20} className="spin" style={{ display: 'block', margin: '0 auto 8px' }} />
+            Loading live settings from API...
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                  Seeds & propagation tax rate
-                </label>
-                <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', background: '#ffffff', height: '40px' }}>
+            {/* Section 1: BANK ACCOUNT PAYMENT SETTINGS */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>
+                <CreditCard size={16} style={{ color: '#059669' }} />
+                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                  BANK ACCOUNT PAYMENT SETTINGS
+                </h3>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Account Holder Name
+                  </label>
                   <input
-                    type="number"
-                    name="seedsGst"
-                    value={formData.seedsGst}
-                    onChange={handleInputChange}
-                    style={{ flex: 1, padding: '0 14px', border: 'none', fontSize: '13px', color: '#0f172a', outline: 'none', background: 'transparent' }}
-                    min="0"
-                    max="100"
+                    type="text"
+                    name="accountHolderName"
+                    value={bankData.accountHolderName}
+                    onChange={handleBankChange}
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                   />
-                  <span style={{ display: 'flex', alignItems: 'center', padding: '0 14px', background: '#f1f5f9', borderLeft: '1px solid #cbd5e1', fontWeight: 700, fontSize: '12.5px', color: '#64748b', userSelect: 'none' }}>
-                    %
-                  </span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Bank Name
+                  </label>
+                  <input
+                    type="text"
+                    name="bankName"
+                    value={bankData.bankName}
+                    onChange={handleBankChange}
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Account Number
+                  </label>
+                  <input
+                    type="text"
+                    name="accountNumber"
+                    value={bankData.accountNumber}
+                    onChange={handleBankChange}
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    IFSC Code
+                  </label>
+                  <input
+                    type="text"
+                    name="ifscCode"
+                    value={bankData.ifscCode}
+                    onChange={handleBankChange}
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                  />
                 </div>
               </div>
+            </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
-                  Heavy farming machinery tax rate
-                </label>
-                <div style={{ display: 'flex', alignItems: 'stretch', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', background: '#ffffff', height: '40px' }}>
+            {/* Section 2: UPI MERCHANT CONFIGURATION */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>
+                <Settings size={16} style={{ color: '#0284c7' }} />
+                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                  UPI MERCHANT CONFIGURATION
+                </h3>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Merchant Name
+                  </label>
                   <input
-                    type="number"
-                    name="machineryGst"
-                    value={formData.machineryGst}
-                    onChange={handleInputChange}
-                    style={{ flex: 1, padding: '0 14px', border: 'none', fontSize: '13px', color: '#0f172a', outline: 'none', background: 'transparent' }}
-                    min="0"
-                    max="100"
+                    type="text"
+                    name="merchantName"
+                    value={upiData.merchantName}
+                    onChange={handleUpiChange}
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
                   />
-                  <span style={{ display: 'flex', alignItems: 'center', padding: '0 14px', background: '#f1f5f9', borderLeft: '1px solid #cbd5e1', fontWeight: 700, fontSize: '12.5px', color: '#64748b', userSelect: 'none' }}>
-                    %
-                  </span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Merchant UPI VPA ID
+                  </label>
+                  <input
+                    type="text"
+                    name="merchantUpiId"
+                    value={upiData.merchantUpiId}
+                    onChange={handleUpiChange}
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                  />
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Section 2: GROWER ADVISORY POLICIES */}
-          <div>
-            <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
-                GROWER ADVISORY POLICIES
-              </h3>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Verification workflow
-                </label>
-                <select
-                  name="farmerVerification"
-                  value={formData.farmerVerification}
-                  onChange={handleInputChange}
-                  style={{ width: '100%', height: '40px', padding: '0 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff', cursor: 'pointer' }}
-                >
-                  <option value="Auto-Verify">Auto-Verify with Mobile OTP</option>
-                  <option value="Manual">Manual Land Doc Review</option>
-                </select>
+            {/* Section 3: CUSTOMER SUPPORT & RETURNS POLICY */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>
+                <Phone size={16} style={{ color: '#7c3aed' }} />
+                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                  CUSTOMER SUPPORT & RETURNS WINDOW
+                </h3>
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  Advisory premium level required
-                </label>
-                <select
-                  name="minAdvisoryLevel"
-                  value={formData.minAdvisoryLevel}
-                  onChange={handleInputChange}
-                  style={{ width: '100%', height: '40px', padding: '0 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff', cursor: 'pointer' }}
-                >
-                  <option value="Free Tier">All Registered Accounts</option>
-                  <option value="Active Grower">Active Growers only</option>
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Support Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    name="supportPhoneNumber"
+                    value={supportData.supportPhoneNumber}
+                    onChange={handleSupportChange}
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Work Timings
+                  </label>
+                  <input
+                    type="text"
+                    name="workTimings"
+                    value={supportData.workTimings}
+                    onChange={handleSupportChange}
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Returns Window (Days)
+                  </label>
+                  <input
+                    type="number"
+                    value={returnsWindow}
+                    readOnly
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#475569', background: '#e2e8f0', cursor: 'default' }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Bottom Checkbox Card */}
-          <div
-            style={{
-              background: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '14px 18px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px'
-            }}
-          >
-            <input
-              type="checkbox"
-              name="allowCreditTerms"
-              checked={formData.allowCreditTerms}
-              onChange={handleInputChange}
-              id="allowCreditTerms"
-              style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
-            />
-            <label htmlFor="allowCreditTerms" style={{ fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', margin: 0 }}>
-              Allow credit settlement terms for Wholesalers (supports up to ₹50,000 credit limit defaults)
-            </label>
-          </div>
-
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );
 };
 
 export default FormSettings;
-

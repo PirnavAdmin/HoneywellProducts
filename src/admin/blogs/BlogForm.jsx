@@ -1,16 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, RefreshCw } from 'lucide-react';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getBlogById, createBlog, updateBlog, resolveBlogImageUrl } from '../../services/blogApi';
 import '../catalog/adminModule.css';
 import { Toast } from '../components/Toast';
-
-const API_BASE   = `${getApiDomain()}/api/Blog`;
-const IMG_BASE   = getApiDomain();
-const GET_HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-};
 
 const emptyForm = {
   title:       '',
@@ -32,7 +25,6 @@ const BlogForm = () => {
   const [formData, setFormData]     = useState(emptyForm);
   const [imageFile, setImageFile]   = useState(null);           // new file chosen
   const [imagePreview, setImagePreview] = useState('');         // preview URL
-  const [existingImg, setExistingImg]   = useState('');         // current server image path
 
   const [loading, setLoading]   = useState(isEditing);
   const [saving, setSaving]     = useState(false);
@@ -53,11 +45,7 @@ const BlogForm = () => {
     setLoading(true);
     setToastMessage('');
 
-    fetch(`${API_BASE}/${blogId}`, { headers: GET_HEADERS })
-      .then(res => {
-        if (!res.ok) throw new Error(`Server error: ${res.status}`);
-        return res.json();
-      })
+    getBlogById(blogId)
       .then(data => {
         setFormData({
           title:       data.title       || '',
@@ -67,11 +55,8 @@ const BlogForm = () => {
           summary:     data.summary     || '',
           description: data.description || '',
         });
-        if (data.coverImage) {
-          const src = data.coverImage.startsWith('http')
-            ? data.coverImage
-            : `${IMG_BASE}${data.coverImage}`;
-          setExistingImg(src);
+        if (data.coverImage || data.image) {
+          const src = resolveBlogImageUrl(data.coverImage || data.image);
           setImagePreview(src);
         }
       })
@@ -118,18 +103,10 @@ const BlogForm = () => {
         body.append('coverImage', imageFile, imageFile.name);
       }
 
-      const url    = isEditing ? `${API_BASE}/${blogId}` : API_BASE;
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'ngrok-skip-browser-warning': 'true' },
-        body,
-      });
-
-      if (!res.ok) {
-        const txt = await res.text().catch(() => '');
-        throw new Error(txt || `Request failed with status ${res.status}`);
+      if (isEditing) {
+        await updateBlog(blogId, body);
+      } else {
+        await createBlog(body);
       }
 
       setToastMessage(`Article ${isEditing ? 'updated' : 'published'} successfully!`);
@@ -368,4 +345,3 @@ const BlogForm = () => {
 };
 
 export default BlogForm;
-
