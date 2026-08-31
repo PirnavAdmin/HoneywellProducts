@@ -6,21 +6,21 @@ const getStatusBadge = (status) => {
   const s = String(status || '').toLowerCase();
   if (s === 'verified' || s === 'approved') {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
-        <CheckCircle2 size={10} /> Verified
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
+        <CheckCircle2 size={12} /> Verified
       </span>
     );
   }
   if (s.includes('reject') || s === 'inactive') {
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
-        <XCircle size={10} /> {status || 'Rejected'}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+        <XCircle size={12} /> {status || 'Rejected'}
       </span>
     );
   }
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
-      <Clock size={10} /> {status || 'Pending'}
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
+      <Clock size={12} /> {status || 'Pending'}
     </span>
   );
 };
@@ -30,146 +30,221 @@ const SuppliersPopup = ({ supplier, onClose }) => {
 
   return (
     <div 
-      className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 animate-fade-in" 
       onClick={onClose}
       style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.55)',
+        backdropFilter: 'blur(5px)',
+        zIndex: 99999,
         display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
-        alignItems: 'flex-start',
-        padding: '16px',
-        overflowY: 'auto'
+        padding: '20px',
+        boxSizing: 'border-box'
       }}
     >
       <div 
-        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col overflow-hidden border border-slate-100 animate-slide-up"
         onClick={(e) => e.stopPropagation()}
-        style={{ 
-          fontFamily: 'Inter, system-ui, sans-serif',
-          marginTop: '40px',
-          marginBottom: '40px',
-          flexShrink: 0
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          maxWidth: '680px',
+          width: '100%',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          position: 'relative'
         }}
       >
         {/* Header Banner */}
-        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-5 text-white flex justify-between items-start relative flex-shrink-0">
+        <div style={{
+          background: 'linear-gradient(135deg, #059669 0%, #0d9488 100%)',
+          padding: '20px 24px',
+          color: '#ffffff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          flexShrink: 0
+        }}>
           <div>
-            <span className="text-[10px] uppercase font-bold tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
-              {supplier.category || 'General'}
+            <span style={{
+              fontSize: '10px',
+              textTransform: 'uppercase',
+              fontWeight: 800,
+              letterSpacing: '0.05em',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              padding: '3px 10px',
+              borderRadius: '9999px',
+              display: 'inline-block'
+            }}>
+              {supplier.category || 'Farm Tools'}
             </span>
-            <h2 className="text-xl font-bold mt-2">{supplier.name}</h2>
-            <p className="text-emerald-100 text-xs mt-0.5">Supplier Profile: #{supplier.id}</p>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '8px 0 2px 0', lineHeight: 1.2 }}>
+              {supplier.name}
+            </h2>
+            <p style={{ fontSize: '12px', color: '#a7f3d0', margin: 0 }}>
+              Supplier Profile: #{supplier.id}
+            </p>
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
-            title="Close"
+            style={{
+              padding: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.15s ease'
+            }}
+            title="Close Profile"
           >
             <X size={18} />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-6 space-y-6 flex-1 overflow-y-auto text-xs">
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* Quick Metrics Row */}
-          <div className="grid grid-cols-3 gap-4 border-b border-slate-100 pb-5">
-            <div className="bg-slate-50 p-3 rounded-lg text-center">
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">Rating</span>
-              <strong className="text-slate-800 text-sm font-bold flex items-center justify-center gap-1 mt-0.5">
-                <Award size={14} className="text-amber-500" /> {supplier.rating || 'N/A'}/5
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', borderBottom: '1px solid #f1f5f9', paddingBottom: '18px' }}>
+            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>Rating</span>
+              <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '4px' }}>
+                <Award size={15} style={{ color: '#f59e0b' }} /> {supplier.rating || '4.5'}/5
               </strong>
             </div>
-            <div className="bg-slate-50 p-3 rounded-lg text-center">
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">Active POs</span>
-              <strong className="text-slate-800 text-sm font-bold block mt-0.5">{supplier.activePo ?? 0}</strong>
+            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>Active POs</span>
+              <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: 800, display: 'block', marginTop: '4px' }}>
+                {supplier.activePo ?? 0}
+              </strong>
             </div>
-            <div className="bg-slate-50 p-3 rounded-lg text-center">
-              <span className="text-[10px] text-slate-400 font-semibold block uppercase">Monthly Spend</span>
-              <strong className="text-slate-800 text-sm font-bold block mt-0.5">{formatSupplierCurrency(supplier.monthlySpend)}</strong>
+            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>Monthly Spend</span>
+              <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: 800, display: 'block', marginTop: '4px' }}>
+                {formatSupplierCurrency(supplier.monthlySpend)}
+              </strong>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Column 1: Contact Details */}
-            <div className="space-y-4">
-              <h3 className="font-bold text-slate-700 uppercase tracking-wider border-b pb-1.5 flex items-center gap-1.5">
-                <Phone size={14} className="text-emerald-600" /> Contact Info
+          {/* Grid Info Columns */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
+            
+            {/* Contact Details Column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Phone size={14} style={{ color: '#059669' }} /> Contact Info
               </h3>
-              <div className="space-y-2 text-slate-600">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
                 <div>
-                  <span className="text-slate-400 block">Contact Person</span>
-                  <span className="font-semibold text-slate-800">{supplier.contactPerson || 'N/A'}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Contact Person</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{supplier.contactPerson || supplier.name}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block">Email Address</span>
-                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5"><Mail size={12} /> {supplier.email || 'N/A'}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Email Address</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                    <Mail size={13} style={{ color: '#64748b' }} /> {supplier.email || 'N/A'}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block">Phone Number</span>
-                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5"><Phone size={12} /> {supplier.phone || 'N/A'}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Phone Number</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                    <Phone size={13} style={{ color: '#64748b' }} /> {supplier.phone || 'N/A'}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Column 2: Commercial Terms */}
-            <div className="space-y-4">
-              <h3 className="font-bold text-slate-700 uppercase tracking-wider border-b pb-1.5 flex items-center gap-1.5">
-                <DollarSign size={14} className="text-emerald-600" /> Commercial Terms
+            {/* Commercial Terms Column */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <DollarSign size={14} style={{ color: '#059669' }} /> Commercial Terms
               </h3>
-              <div className="space-y-2 text-slate-600">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
                 <div>
-                  <span className="text-slate-400 block">Payment Terms</span>
-                  <span className="font-semibold text-slate-800">{supplier.terms || 'COD'}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Payment Terms</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a' }}>{supplier.terms || 'Net 30'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block">Lead Time</span>
-                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5"><Truck size={12} /> {supplier.leadTime || 'N/A'}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Lead Time</span>
+                  <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                    <Truck size={13} style={{ color: '#64748b' }} /> {supplier.leadTime || '4-6 days'}
+                  </span>
                 </div>
                 <div>
-                  <span className="text-slate-400 block">Onboarding Status</span>
-                  <div className="mt-1">
-                    {getStatusBadge(supplier.status)}
-                  </div>
+                  <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Onboarding Status</span>
+                  {getStatusBadge(supplier.status)}
                 </div>
               </div>
             </div>
+
           </div>
 
-          {/* Address and Products Coverage */}
-          <div className="space-y-4 pt-2">
-            <h3 className="font-bold text-slate-700 uppercase tracking-wider border-b pb-1.5 flex items-center gap-1.5">
-              <FileText size={14} className="text-emerald-600" /> Procurement Coverage &amp; Notes
+          {/* Location & Coverage */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '6px' }}>
+            <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <FileText size={14} style={{ color: '#059669' }} /> Procurement Coverage &amp; Notes
             </h3>
-            <div className="space-y-3">
-              <div className="flex items-start gap-2">
-                <MapPin size={14} className="text-slate-400 mt-0.5" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                <MapPin size={15} style={{ color: '#94a3b8', marginTop: '2px' }} />
                 <div>
-                  <span className="text-slate-400 block">Registered Location</span>
-                  <span className="text-slate-700">{supplier.city || 'N/A'}</span>
+                  <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Registered Location</span>
+                  <span style={{ color: '#334155', fontWeight: 600 }}>{supplier.city || supplier.address || 'N/A'}</span>
                 </div>
               </div>
-              <div>
-                <span className="text-slate-400 block">Supplied Products</span>
-                <p className="text-slate-700 font-medium bg-slate-50 p-2.5 rounded-lg border border-slate-100 mt-1">{supplier.products || 'N/A'}</p>
+              <div style={{ marginTop: '4px' }}>
+                <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '4px' }}>Supplied Products &amp; Machinery</span>
+                <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #f1f5f9', color: '#334155', fontWeight: 600, fontSize: '12px' }}>
+                  {supplier.products || 'Heavy Machinery, Farm Tools, Cultivators & Agricultural Equipment'}
+                </div>
               </div>
             </div>
           </div>
 
         </div>
 
-        {/* Footer */}
-        <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 flex justify-end flex-shrink-0">
+        {/* Footer Bar */}
+        <div style={{
+          backgroundColor: '#f8fafc',
+          padding: '14px 24px',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'flex-end',
+          flexShrink: 0
+        }}>
           <button 
             onClick={onClose} 
-            className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold transition-colors"
+            style={{
+              padding: '8px 20px',
+              backgroundColor: '#e2e8f0',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#334155',
+              fontWeight: 700,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease'
+            }}
           >
             Close Profile
           </button>
         </div>
+
       </div>
     </div>
   );
 };
 
 export default SuppliersPopup;
-
