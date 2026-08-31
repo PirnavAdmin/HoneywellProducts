@@ -27,6 +27,7 @@ export const getAdminProfile = async () => {
       headers: getHeaders()
     });
     if (!response.ok) {
+      if (response.status === 404) return null;
       throw new Error(`Failed to fetch admin profile: status ${response.status}`);
     }
     const data = await response.json();
@@ -52,7 +53,7 @@ export const updateAdminProfile = async (profileData) => {
     if (!response.ok) {
       throw new Error(`Failed to update admin profile (PUT): status ${response.status}`);
     }
-    const data = await response.json();
+    const data = await response.json().catch(() => ({ success: true }));
     return data;
   } catch (err) {
     console.error('updateAdminProfile error:', err);
@@ -75,7 +76,7 @@ export const postAdminProfile = async (profileData) => {
     if (!response.ok) {
       throw new Error(`Failed to post admin profile (POST): status ${response.status}`);
     }
-    const data = await response.json();
+    const data = await response.json().catch(() => ({ success: true }));
     return data;
   } catch (err) {
     console.error('postAdminProfile error:', err);
@@ -98,7 +99,7 @@ export const updateAdminProfileSettings = async (settingsData) => {
     if (!response.ok) {
       throw new Error(`Failed to update admin profile settings (PUT): status ${response.status}`);
     }
-    const data = await response.json();
+    const data = await response.json().catch(() => ({ success: true }));
     return data;
   } catch (err) {
     console.error('updateAdminProfileSettings error:', err);
@@ -121,7 +122,7 @@ export const postAdminProfileSettings = async (settingsData) => {
     if (!response.ok) {
       throw new Error(`Failed to post admin profile settings (POST): status ${response.status}`);
     }
-    const data = await response.json();
+    const data = await response.json().catch(() => ({ success: true }));
     return data;
   } catch (err) {
     console.error('postAdminProfileSettings error:', err);

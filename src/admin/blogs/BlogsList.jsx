@@ -1,17 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Plus, FileText, Calendar, User, Eye, RefreshCw, AlertCircle } from 'lucide-react';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getBlogs, deleteBlog, resolveBlogImageUrl } from '../../services/blogApi';
 import '../catalog/adminModule.css';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
-
-const API_BASE = `${getApiDomain()}/api/Blog`;
-const IMG_BASE = getApiDomain();
-
-const HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-};
 
 const formatDate = (isoStr) => {
   if (!isoStr) return '—';
@@ -49,9 +41,7 @@ const BlogsList = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(API_BASE, { headers: HEADERS });
-      if (!res.ok) throw new Error(`Server error: ${res.status}`);
-      const data = await res.json();
+      const data = await getBlogs();
       setBlogs(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || 'Failed to load blog articles.');
@@ -67,11 +57,7 @@ const BlogsList = () => {
     if (!window.confirm('Delete this blog article permanently?')) return;
     setDeletingId(id);
     try {
-      const res = await fetch(`${API_BASE}/${id}`, {
-        method: 'DELETE',
-        headers: HEADERS,
-      });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      await deleteBlog(id);
       setBlogs(prev => prev.filter(b => b.id !== id));
     } catch (err) {
       alert(err.message || 'Failed to delete the article. Please try again.');
@@ -108,12 +94,6 @@ const BlogsList = () => {
       setSearchError('');
     }
     setSearchTerm(val);
-  };
-
-  const resolveImage = (src) => {
-    if (!src) return null;
-    if (src.startsWith('http')) return src;
-    return `${IMG_BASE}${src}`;
   };
 
   return (
@@ -194,7 +174,7 @@ const BlogsList = () => {
                 </tr>
               ) : filteredBlogs.length > 0 ? (
                 pagedBlogs.map((blog) => {
-                  const imgSrc = resolveImage(blog.coverImage);
+                  const imgSrc = resolveBlogImageUrl(blog.coverImage || blog.image);
                   return (
                     <tr key={blog.id} style={{ fontSize: '12px' }}>
                       {/* Article column */}
@@ -309,4 +289,3 @@ const BlogsList = () => {
 };
 
 export default BlogsList;
-

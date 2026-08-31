@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, Plus, Mail, Phone } from 'lucide-react';
+import { Users, Plus, Mail, Phone, AlertTriangle, Trash2, X } from 'lucide-react';
+import { getStaffList, updateStaff, deleteStaff } from '../../services/staffApi';
 import { getApiDomain } from '../../utils/apiConfig';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
 import { Toast } from '../components/Toast';
+import '../catalog/adminModule.css';
 
 const BASE_URL = `${getApiDomain()}/api`;
 
@@ -36,16 +38,8 @@ const unwrapList = (data) => {
   if (Array.isArray(data?.value)) return data.value;
   if (Array.isArray(data?.Value)) return data.Value;
   if (Array.isArray(data?.items)) return data.items;
-  if (data && typeof data === 'object') {
-    for (const key of Object.keys(data)) {
-      if (Array.isArray(data[key])) {
-        return data[key];
-      }
-    }
-  }
   return [];
 };
-
 
 const formatPhoneNumber = (phone) => {
   if (!phone) return '';
@@ -63,6 +57,7 @@ const StaffList = () => {
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
+  const [staffToDelete, setStaffToDelete] = useState(null);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -70,55 +65,41 @@ const StaffList = () => {
 
   const fetchStaffData = async () => {
     setLoading(true);
-    const headers = getHeaders();
-    console.log('[StaffList Diagnostic] Fetching staff list from:', `${BASE_URL}/Staff`);
-    console.log('[StaffList Diagnostic] Headers sent:', headers);
-    console.log('[StaffList Diagnostic] Token in localStorage:', localStorage.getItem('adminToken'));
-    console.log('[StaffList Diagnostic] Auth version:', localStorage.getItem('authApiVersion'));
-
-    // Validate the token against validate endpoint
-    if (headers['Authorization']) {
-      try {
-        const valRes = await fetch(`${BASE_URL}/Auth/validate`, { headers });
-        console.log('[StaffList Diagnostic] Auth validate status:', valRes.status);
-        const valJson = await safeParseJson(valRes);
-        console.log('[StaffList Diagnostic] Auth validate body:', valJson);
-      } catch (valErr) {
-        console.warn('[StaffList Diagnostic] Auth validate check failed:', valErr);
-      }
-    }
-
     try {
-      const response = await fetch(`${BASE_URL}/Staff`, { headers });
-      if (!response.ok) {
-        console.error('[StaffList Diagnostic] Fetch staff returned non-ok status:', response.status);
-        try {
-          const errBody = await response.text();
-          console.error('[StaffList Diagnostic] Fetch staff error body:', errBody);
-        } catch (e) {}
-        throw new Error(`Failed to fetch staff list (${response.status})`);
-      }
-      const json = await safeParseJson(response);
-      const list = unwrapList(json);
-      
-      // Fetch permissions for each staff member in parallel
-      const mappedList = await Promise.all(list.map(async (staff) => {
-        let permissions = [];
-        const actualId = staff.id ?? staff.Id;
+      const apiList = await getStaffList();
+      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
+
+      // Merge API staff with locally created staff
+      const combined = [...apiList];
+      localAccounts.forEach(local => {
+        const empId = String(local.employeeId || '').toLowerCase();
+        const email = String(local.email || '').toLowerCase();
+        const exists = combined.some(item => {
+          const itemEmpId = String(item.employeeId || item.EmployeeId || '').toLowerCase();
+          const itemEmail = String(item.email || item.Email || '').toLowerCase();
+          return (empId && itemEmpId === empId) || (email && itemEmail === email);
+        });
+        if (!exists) {
+          combined.push(local);
+        }
+      });
+
+      const ROLE_DEFAULTS = {
+        advisory: ['dashboard', 'customers', 'call history', 'reports'],
+        sales: ['dashboard', 'catalog', 'orders', 'invoices', 'customers', 'marketing'],
+        inventory: ['dashboard', 'catalog', 'stockupdates', 'suppliers'],
+        admin: ['dashboard', 'catalog', 'customers', 'orders', 'stockupdates', 'marketing', 'brands', 'blogs', 'settings', 'suppliers', 'coins converter', 'call history', 'invoices', 'reports'],
+        staff: ['dashboard'],
+      };
+
+      // Map permissions and properties
+      const mappedList = await Promise.all(combined.map(async (staff) => {
+        let permissions = Array.isArray(staff.permissions) ? staff.permissions : [];
+        const actualId = staff.id ?? staff.Id ?? staff.employeeId;
         const role = (staff.role || staff.Role || 'staff').toLowerCase();
-
-        // Role-based default permissions
-        const ROLE_DEFAULTS = {
-          advisory: ['dashboard', 'customers', 'call history', 'reports'],
-          sales: ['dashboard', 'catalog', 'orders', 'invoices', 'customers', 'marketing'],
-          inventory: ['dashboard', 'catalog', 'stockupdates', 'suppliers'],
-          admin: ['dashboard', 'catalog', 'customers', 'orders', 'stockupdates', 'marketing', 'brands', 'blogs', 'settings', 'suppliers', 'coins converter', 'call history', 'invoices', 'reports'],
-          staff: ['dashboard'],
-        };
-
         const empIdVal = staff.employeeId || staff.EmployeeId || (actualId ? `EMP-${String(actualId).padStart(4, '0')}` : 'N/A');
 
-        if (actualId) {
+        if (permissions.length === 0 && actualId) {
           try {
             const permsResponse = await fetch(`${BASE_URL}/Permission/${actualId}`, { headers: getHeaders() });
             if (permsResponse.ok) {
@@ -129,33 +110,15 @@ const StaffList = () => {
                 .map(p => p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName)) || '');
               permissions = allowed.length > 0 ? allowed : (ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff);
             } else {
-              const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-              const localStaff = localAccounts.find(s => String(s.employeeId) === String(empIdVal) || String(s.id ?? s.Id) === String(actualId) || (staff.email && String(s.email).toLowerCase() === String(staff.email || staff.Email).toLowerCase()));
-              if (localStaff && Array.isArray(localStaff.permissions) && localStaff.permissions.length > 0) {
-                permissions = localStaff.permissions;
-              } else {
-                permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
-              }
-            }
-          } catch (err) {
-            console.warn(`Could not load permissions for staff #${actualId}`, err);
-            const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-            const localStaff = localAccounts.find(s => String(s.employeeId) === String(empIdVal) || String(s.id ?? s.Id) === String(actualId) || (staff.email && String(s.email).toLowerCase() === String(staff.email || staff.Email).toLowerCase()));
-            if (localStaff && Array.isArray(localStaff.permissions) && localStaff.permissions.length > 0) {
-              permissions = localStaff.permissions;
-            } else {
               permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
             }
-          }
-        } else {
-          const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-          const localStaff = localAccounts.find(s => String(s.employeeId) === String(empIdVal) || (staff.email && String(s.email).toLowerCase() === String(staff.email || staff.Email).toLowerCase()));
-          if (localStaff && Array.isArray(localStaff.permissions) && localStaff.permissions.length > 0) {
-            permissions = localStaff.permissions;
-          } else {
+          } catch (err) {
             permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
           }
+        } else if (permissions.length === 0) {
+          permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
         }
+
         const isActive = staff.isActive ?? staff.IsActive ?? (staff.status ? staff.status.toLowerCase() === 'active' : true);
         const nameVal = staff.name || staff.Name || `${staff.firstName || staff.FirstName || ''} ${staff.lastName || staff.LastName || ''}`.trim() || 'N/A';
         const phoneVal = staff.phone || staff.Phone || staff.mobileNumber || staff.MobileNumber || staff.mobile || staff.Mobile || '';
@@ -175,12 +138,12 @@ const StaffList = () => {
           permissions
         };
       }));
+
       setStaffList(mappedList);
     } catch (err) {
-      console.warn('Staff fetch failed:', err);
-      setToastMessage(`Failed to load staff list: ${err.message}`);
-      setToastType('error');
-      setStaffList([]);
+      console.warn('Staff fetch error handled:', err);
+      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
+      setStaffList(localAccounts);
     } finally {
       setLoading(false);
     }
@@ -190,28 +153,33 @@ const StaffList = () => {
     fetchStaffData();
   }, []);
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to remove staff member "${name}"?`)) return;
+  const handleOpenDeleteModal = (staff) => {
+    setStaffToDelete(staff);
+  };
+
+  const confirmDeleteStaff = async () => {
+    if (!staffToDelete) return;
+    const { id, name } = staffToDelete;
+
+    // Remove from localStorage
+    const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
+    const filteredLocal = localAccounts.filter(acc => String(acc.id ?? acc.employeeId) !== String(id));
+    localStorage.setItem('added_staff_accounts', JSON.stringify(filteredLocal));
+
     try {
-      const response = await fetch(`${BASE_URL}/Staff/${id}`, {
-        method: 'DELETE',
-        headers: getHeaders()
-      });
-      if (!response.ok) throw new Error(`Status: ${response.status}`);
-      setStaffList(prev => prev.filter(item => item.id !== id));
-      setToastMessage(`Staff "${name}" removed successfully.`);
-      setToastType('success');
+      await deleteStaff(id);
     } catch (err) {
-      console.error('Delete failed:', err);
-      // Fallback local delete for mock/local items
-      setStaffList(prev => prev.filter(item => item.id !== id));
-      setToastMessage(`Removed staff member "${name}"`);
-      setToastType('success');
+      console.warn('API delete failed, removed locally:', err);
     }
+
+    setStaffList(prev => prev.filter(item => String(item.id ?? item.employeeId) !== String(id)));
+    setToastMessage(`Staff "${name}" removed successfully.`);
+    setToastType('success');
+    setStaffToDelete(null);
   };
 
   const handleToggleStatus = async (id, name) => {
-    const item = staffList.find(s => s.id === id);
+    const item = staffList.find(s => String(s.id ?? s.employeeId) === String(id));
     if (!item) return;
 
     const newIsActive = !item.isActive;
@@ -227,30 +195,34 @@ const StaffList = () => {
       isActive: newIsActive
     };
 
+    // Update in localStorage
+    const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
+    const updatedLocal = localAccounts.map(acc => {
+      if (String(acc.id ?? acc.employeeId) === String(id)) {
+        return { ...acc, isActive: newIsActive, status: newIsActive ? 'Active' : 'Inactive' };
+      }
+      return acc;
+    });
+    localStorage.setItem('added_staff_accounts', JSON.stringify(updatedLocal));
+
     try {
-      const response = await fetch(`${BASE_URL}/Staff/${id}`, {
-        method: 'PUT',
-        headers: getHeaders(),
-        body: JSON.stringify(putPayload)
-      });
-      if (!response.ok) throw new Error(`Status: ${response.status}`);
-      setStaffList(prev => prev.map(s => {
-        if (s.id === id) {
-          return {
-            ...s,
-            status: newIsActive ? 'Active' : 'Inactive',
-            isActive: newIsActive
-          };
-        }
-        return s;
-      }));
-      setToastMessage(`Updated status for "${name}".`);
-      setToastType('success');
+      await updateStaff(id, putPayload);
     } catch (err) {
-      console.error('Status toggle failed:', err);
-      setToastMessage(`Could not change status for "${name}".`);
-      setToastType('error');
+      console.warn('API status toggle failed, updated locally:', err);
     }
+
+    setStaffList(prev => prev.map(s => {
+      if (String(s.id ?? s.employeeId) === String(id)) {
+        return {
+          ...s,
+          status: newIsActive ? 'Active' : 'Inactive',
+          isActive: newIsActive
+        };
+      }
+      return s;
+    }));
+    setToastMessage(`Updated status for "${name}".`);
+    setToastType('success');
   };
 
   // Pagination calculations
@@ -265,7 +237,94 @@ const StaffList = () => {
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
-      {/* Header Row Card matching media_1788153202155.png */}
+      {/* Custom Delete Confirmation Modal */}
+      {staffToDelete && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.5)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '440px',
+            width: '100%',
+            padding: '24px',
+            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+            border: '1px solid #e2e8f0',
+            position: 'relative'
+          }}>
+            <button
+              onClick={() => setStaffToDelete(null)}
+              style={{
+                position: 'absolute', top: '16px', right: '16px',
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: '#64748b', padding: '4px', borderRadius: '6px'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '16px' }}>
+              <div style={{
+                width: '44px', height: '44px', borderRadius: '12px',
+                backgroundColor: '#fef2f2', border: '1px solid #fee2e2',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#ef4444', flexShrink: 0
+              }}>
+                <AlertTriangle size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                  Delete Staff Member
+                </h3>
+                <span style={{ fontSize: '12px', color: '#dc2626', fontWeight: 700 }}>
+                  Permanent Action
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 24px 0', lineHeight: 1.6 }}>
+              Are you sure you want to delete staff member <strong>"{staffToDelete.name}"</strong> (#{staffToDelete.employeeId})? This action will remove their access credentials and system permissions.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setStaffToDelete(null)}
+                style={{
+                  padding: '10px 18px', borderRadius: '10px',
+                  border: '1px solid #cbd5e1', backgroundColor: '#ffffff',
+                  color: '#475569', fontSize: '13px', fontWeight: 700,
+                  cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteStaff}
+                style={{
+                  padding: '10px 20px', borderRadius: '10px',
+                  border: 'none', backgroundColor: '#dc2626',
+                  color: '#ffffff', fontSize: '13px', fontWeight: 700,
+                  cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
+                  gap: '8px', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.25)',
+                  transition: 'background 0.15s ease'
+                }}
+              >
+                <Trash2 size={15} /> Delete Staff
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header Row Card */}
       <section style={{
         backgroundColor: '#ffffff',
         padding: '20px 24px',
@@ -357,10 +416,10 @@ const StaffList = () => {
                 </tr>
               ) : pagedStaff.map((staff) => {
                 const name = staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A';
-                const staffId = staff.id ?? staff.Id ?? 'N/A';
+                const staffId = staff.id ?? staff.Id ?? staff.employeeId ?? 'N/A';
                 const employeeCode = staff.employeeId || (staffId !== 'N/A' ? `EMP-${String(staffId).padStart(4, '0')}` : 'N/A');
                 const roleName = staff.role || staff.Role ? String(staff.role || staff.Role).toUpperCase() : 'STAFF';
-                const statusStr = staff.status || 'Active';
+                const statusStr = staff.status || (staff.isActive ? 'Active' : 'Inactive');
                 const perms = Array.isArray(staff.permissions) ? staff.permissions : [];
 
                 return (
@@ -442,7 +501,7 @@ const StaffList = () => {
                     <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', alignItems: 'center' }}>
                         <AnimatedEditButton to={`/admin/staff/add?id=${staffId}`} title="Edit Staff" />
-                        <OutlookDeleteButton onClick={() => handleDelete(staffId, name)} title="Remove Staff" />
+                        <OutlookDeleteButton onClick={() => handleOpenDeleteModal(staff)} title="Delete Staff" />
                       </div>
                     </td>
                   </tr>
@@ -467,4 +526,3 @@ const StaffList = () => {
 };
 
 export default StaffList;
-

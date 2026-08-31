@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, AlertCircle, RefreshCw, Plus, Trash2, CreditCard, ShieldCheck, CheckCircle2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { getApiDomain } from '../../utils/apiConfig';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Save, AlertCircle, RefreshCw, Plus, Trash2, CreditCard, ShieldCheck } from 'lucide-react';
+import { createInvoice } from '../../services/invoicesApi';
+import { fetchProducts } from '../catalog/productsApi';
 import './invoices.css';
 
 const AddInvoice = () => {
@@ -33,23 +33,15 @@ const AddInvoice = () => {
   const [productList, setProductList] = useState([]);
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const loadProducts = async () => {
       try {
-        const response = await fetch(`${getApiDomain()}/api/products`, {
-          headers: {
-            'ngrok-skip-browser-warning': 'true',
-            'Accept': 'application/json'
-          }
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setProductList(Array.isArray(data) ? data : (data.products || []));
-        }
+        const data = await fetchProducts();
+        setProductList(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Failed to fetch product list', err);
+        console.error('Failed to fetch product list for invoice', err);
       }
     };
-    fetchProducts();
+    loadProducts();
   }, []);
 
   const [totalAmount, setTotalAmount] = useState(0);
@@ -104,10 +96,10 @@ const AddInvoice = () => {
   const handleProductNameChange = (index, value) => {
     handleItemChange(index, 'productName', value);
     if (!value) return;
-    const selectedProd = productList.find(p => (p.productName || '').trim().toLowerCase() === value.trim().toLowerCase());
+    const selectedProd = productList.find(p => (p.name || p.productName || '').trim().toLowerCase() === value.trim().toLowerCase());
     if (selectedProd) {
       handleItemChange(index, 'productCode', selectedProd.sku || '');
-      handleItemChange(index, 'price', selectedProd.sellingPrice || selectedProd.mrp || 0);
+      handleItemChange(index, 'price', selectedProd.price || selectedProd.sellingPrice || selectedProd.mrp || 0);
     }
   };
 
@@ -153,19 +145,16 @@ const AddInvoice = () => {
       const rawEmail = formData.emailAddress.trim();
       const cleanEmail = rawEmail.toLowerCase();
 
-      // Lowercase enforcement check
       if (rawEmail !== cleanEmail) {
         setError('Email address must be written in lowercase letters only.');
         return;
       }
 
-      // Reject invalid @gmail.in domain extension
       if (/@gmail\.in$/i.test(cleanEmail)) {
         setError('Invalid email domain "@gmail.in". Gmail addresses must end with @gmail.com.');
         return;
       }
 
-      // Strict email regex matching valid formats (.com, .org, .net, .in, .co.in, etc.)
       const strictEmailRegex = /^[a-z0-9._%+-]+@[a-z0-9.-]+\.(com|org|net|edu|gov|co\.in|in|io|co|biz|info|me|farm|agro)$/;
       if (!strictEmailRegex.test(cleanEmail)) {
         setError('Please enter a valid lowercase email address ending with a valid extension (e.g., .com, .org, .net, .in, .co.in).');
@@ -181,12 +170,6 @@ const AddInvoice = () => {
     }
     if (addressTrim.length < 15) {
       setError('Please enter a complete delivery address (minimum 15 characters including street, city, state and pincode).');
-      return;
-    }
-    const hasPincode = /\b\d{5,6}\b/.test(addressTrim);
-    const hasAddressStructure = addressTrim.includes(',') || addressTrim.includes('-') || addressTrim.split(/\s+/).length >= 4;
-    if (!hasPincode && !hasAddressStructure) {
-      setError('Improper address format. Please enter a full delivery address with Street, City/District, State, and 6-digit Pincode (e.g. 123 Farm Road, Anand, Gujarat - 388001).');
       return;
     }
 
@@ -224,20 +207,7 @@ const AddInvoice = () => {
         }))
       };
 
-      const response = await fetch(`${getApiDomain()}/api/Invoices`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(errData.message || 'Failed to create invoice.');
-      }
-
+      await createInvoice(payload);
       navigate('/admin/invoice');
     } catch (err) {
       setError(err.message || 'An error occurred while saving invoice.');
@@ -479,8 +449,8 @@ const AddInvoice = () => {
                       />
                       <datalist id={`product-options-${index}`}>
                         {productList.map((p, pIdx) => (
-                          <option key={pIdx} value={p.productName}>
-                            SKU: {p.sku} | Price: ₹{(p.sellingPrice || p.mrp || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          <option key={pIdx} value={p.name || p.productName}>
+                            SKU: {p.sku} | Price: ₹{Number(p.price || p.sellingPrice || p.mrp || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </option>
                         ))}
                       </datalist>
@@ -646,4 +616,3 @@ const AddInvoice = () => {
 };
 
 export default AddInvoice;
-

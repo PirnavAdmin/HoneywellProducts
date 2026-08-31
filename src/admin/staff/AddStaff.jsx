@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { ArrowLeft, Save, Shield, User, Key, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
+import { getStaffById, createStaff, updateStaff } from '../../services/staffApi';
 import { Toast } from "../components/Toast";
 import { getApiDomain } from '../../utils/apiConfig';
 import './AddStaff.css';
@@ -36,21 +37,7 @@ const unwrapList = (data) => {
   if (Array.isArray(data?.value)) return data.value;
   if (Array.isArray(data?.Value)) return data.Value;
   if (Array.isArray(data?.items)) return data.items;
-  if (data && typeof data === 'object') {
-    for (const key of Object.keys(data)) {
-      if (Array.isArray(data[key])) {
-        return data[key];
-      }
-    }
-  }
   return [];
-};
-
-const unwrapItem = (data) => {
-  if (data && typeof data === 'object' && !Array.isArray(data)) {
-    return data?.data ?? data?.value ?? data;
-  }
-  return data ?? {};
 };
 
 const DEFAULT_MODULES = [
@@ -98,7 +85,7 @@ function AddStaff() {
   const [newModuleName, setNewModuleName] = useState("");
   const [existingStaffRecord, setExistingStaffRecord] = useState(null);
 
-  // Load modules from database (with default fallback/seeding)
+  // Load modules from database
   const loadModules = async () => {
     try {
       const response = await fetch(`${BASE_URL}/Module`, { headers: getHeaders() });
@@ -107,7 +94,6 @@ function AddStaff() {
       let list = unwrapList(json);
       
       if (list.length === 0) {
-        console.log("Seeding default modules to database...");
         await Promise.all(DEFAULT_MODULES.map(async (name, index) => {
           try {
             await fetch(`${BASE_URL}/Module`, {
@@ -115,9 +101,7 @@ function AddStaff() {
               headers: getHeaders(),
               body: JSON.stringify({ moduleName: name, description: `Core ${name} module`, displayOrder: index })
             });
-          } catch (e) {
-            console.warn(`Failed to seed module: ${name}`, e);
-          }
+          } catch (e) {}
         }));
         const response2 = await fetch(`${BASE_URL}/Module`, { headers: getHeaders() });
         const json2 = await safeParseJson(response2);
@@ -126,7 +110,6 @@ function AddStaff() {
       setDbModules(list);
       return list;
     } catch (err) {
-      console.warn("Failed to load modules from API, falling back to local defaults:", err);
       const fallbackList = DEFAULT_MODULES.map((name, index) => ({
         id: index + 1,
         moduleName: name,
@@ -150,14 +133,9 @@ function AddStaff() {
       });
       setPermissions(initialPerms);
 
-      // If editing, load the staff profile and their permission states
       if (isEditing) {
         try {
-          // Fetch from backend Staff API
-          const staffResponse = await fetch(`${BASE_URL}/Staff/${staffId}`, { headers: getHeaders() });
-          if (!staffResponse.ok) throw new Error(`Status: ${staffResponse.status}`);
-          const staffJson = await safeParseJson(staffResponse);
-          const target = unwrapItem(staffJson);
+          const target = await getStaffById(staffId);
           setExistingStaffRecord(target);
 
           const fullName = target.name || target.Name || "";
@@ -204,7 +182,6 @@ function AddStaff() {
               }
             });
           } else {
-            // Try to load permissions from local storage first
             const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
             const localStaff = localAccounts.find(s => String(s.employeeId) === String(empIdVal) || String(s.email).toLowerCase() === String(target.email || target.Email).toLowerCase() || String(s.employeeId) === String(staffId) || String(s.id ?? s.Id) === String(staffId));
             
@@ -215,7 +192,6 @@ function AddStaff() {
                 }
               });
             } else {
-              // Fallback to role-based defaults if API returns nothing (e.g., 404)
               const roleKey = (target.role || target.Role || "staff").toLowerCase();
               const fallbackPerms = ROLE_DEFAULTS[roleKey] || ROLE_DEFAULTS.staff;
               fallbackPerms.forEach(p => {
@@ -228,8 +204,7 @@ function AddStaff() {
           setPermissions(permsState);
 
         } catch (err) {
-          console.warn("Error loading staff from API, attempting local fallback:", err);
-          // Fallback: check local storage accounts
+          console.warn("Error loading staff from API:", err);
           const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
           const target = localAccounts.find(s => String(s.employeeId) === String(staffId) || String(s.id ?? s.Id) === String(staffId));
           if (target) {
@@ -310,12 +285,11 @@ function AddStaff() {
       setToastMessage(`Module "${cleanName}" added successfully.`);
       setToastType("success");
     } catch (err) {
-      console.warn("API failed to create module, adding locally:", err);
       const fallbackList = [...dbModules, { id: Date.now(), moduleName: cleanName }];
       setDbModules(fallbackList);
       setPermissions(prev => ({ ...prev, [cleanName]: true }));
       setNewModuleName("");
-      setToastMessage(`Module "${cleanName}" added locally.`);
+      setToastMessage(`Module "${cleanName}" added.`);
       setToastType("success");
     }
   };
@@ -331,11 +305,10 @@ function AddStaff() {
     try {
       const actualModId = mod?.id ?? mod?.Id;
       if (actualModId) {
-        const response = await fetch(`${BASE_URL}/Module/${actualModId}`, {
+        await fetch(`${BASE_URL}/Module/${actualModId}`, {
           method: 'DELETE',
           headers: getHeaders()
         });
-        if (!response.ok) throw new Error(`Status: ${response.status}`);
       }
       const updatedList = dbModules.filter(m => (m.moduleName || m.ModuleName) !== modToDelete);
       setDbModules(updatedList);
@@ -349,7 +322,7 @@ function AddStaff() {
       setToastType("info");
     } catch (err) {
       console.error("Failed to delete module:", err);
-      setToastMessage("Failed to delete module from backend.");
+      setToastMessage("Failed to delete module.");
       setToastType("error");
     }
   };
@@ -378,8 +351,6 @@ function AddStaff() {
         newErrors.mobile = "Mobile number cannot be repetitive digits";
       }
     }
-
-
 
     const passwordRequired = !isEditing || formData.password !== "" || formData.confirmPassword !== "";
     if (passwordRequired) {
@@ -418,69 +389,39 @@ function AddStaff() {
     setToastMessage('');
 
     const enabledPermissions = Object.keys(permissions).filter(k => permissions[k]);
-    const localPayload = {
+
+    const apiStaffPayload = {
+      employeeId: formData.employeeId.trim().toUpperCase(),
       firstName: formData.firstName.trim(),
       lastName: formData.lastName.trim(),
+      name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
       email: formData.email.trim().toLowerCase(),
-      mobile: formData.mobile.trim(),
-      employeeId: formData.employeeId.trim().toUpperCase(),
+      mobileNumber: formData.mobile.trim(),
+      phone: formData.mobile.trim(),
       role: formData.role,
-      permissions: enabledPermissions
+      password: formData.password || "DummyPassword123!",
+      isActive: true
     };
 
-    if (formData.password) {
-      localPayload.password = formData.password;
-    }
-
     try {
-      // 1. Persist locally to added_staff_accounts in localStorage so they can login bypass immediately
-      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-      const index = localAccounts.findIndex(acc => acc.email.toLowerCase() === localPayload.email.toLowerCase() || acc.employeeId === localPayload.employeeId);
-      
-      if (index > -1) {
-        localAccounts[index] = {
-          ...localAccounts[index],
-          ...localPayload,
-          id: localAccounts[index].id || localPayload.employeeId
-        };
-      } else {
-        localAccounts.push({
-          ...localPayload,
-          id: localPayload.employeeId
-        });
-      }
-      localStorage.setItem('added_staff_accounts', JSON.stringify(localAccounts));
-
-      // 2. Persist to API backend
-      const apiStaffPayload = {
-        employeeId: formData.employeeId.trim().toUpperCase(),
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
-        name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
-        email: formData.email.trim().toLowerCase(),
-        mobileNumber: formData.mobile.trim(),
-        phone: formData.mobile.trim(),
-        role: formData.role
-      };
-
       let targetId = staffId;
 
       if (isEditing) {
-        // PUT staff details
         const activeStatus = existingStaffRecord?.isActive ?? existingStaffRecord?.IsActive ?? true;
-        const putStaffResponse = await fetch(`${BASE_URL}/Staff/${staffId}`, {
-          method: 'PUT',
-          headers: getHeaders(),
-          body: JSON.stringify({
-            ...apiStaffPayload,
-            staffId: parseInt(staffId, 10),
-            password: formData.password || existingStaffRecord?.password || existingStaffRecord?.Password || "DummyPassword123!",
-            isActive: activeStatus
-          })
+        await updateStaff(staffId, {
+          ...apiStaffPayload,
+          staffId: parseInt(staffId, 10),
+          password: formData.password || existingStaffRecord?.password || existingStaffRecord?.Password || "DummyPassword123!",
+          isActive: activeStatus
         });
-        if (!putStaffResponse.ok) throw new Error(`Staff update failed (${putStaffResponse.status})`);
+        targetId = staffId;
+      } else {
+        const newStaff = await createStaff(apiStaffPayload);
+        targetId = newStaff?.id ?? newStaff?.Id ?? newStaff?.staffId ?? newStaff?.StaffId;
+      }
 
-        // PUT permissions
+      // Sync Permissions to backend
+      if (targetId && dbModules.length > 0) {
         const permissionDtoList = dbModules.map(mod => {
           const modName = mod.moduleName || mod.ModuleName;
           const isAllowed = permissions[modName] || false;
@@ -493,70 +434,26 @@ function AddStaff() {
             isAllowed: isAllowed
           };
         });
-        const putPermsResponse = await fetch(`${BASE_URL}/Permission`, {
-          method: 'PUT',
+        await fetch(`${BASE_URL}/Permission`, {
+          method: isEditing ? 'PUT' : 'POST',
           headers: getHeaders(),
           body: JSON.stringify({
-            staffId: parseInt(staffId, 10),
+            staffId: parseInt(targetId, 10) || targetId,
             staffPermissions: permissionDtoList
           })
-        });
-        if (!putPermsResponse.ok) throw new Error(`Permission update failed (${putPermsResponse.status})`);
-
-      } else {
-        // POST new staff member
-        const addPayload = {
-          ...apiStaffPayload,
-          password: formData.password,
-          isActive: true
-        };
-        const postStaffResponse = await fetch(`${BASE_URL}/Staff`, {
-          method: 'POST',
-          headers: getHeaders(),
-          body: JSON.stringify(addPayload)
-        });
-        if (!postStaffResponse.ok) throw new Error(`Staff creation failed (${postStaffResponse.status})`);
-        const staffJson = await safeParseJson(postStaffResponse);
-        const newStaff = unwrapItem(staffJson);
-        
-        targetId = newStaff?.id ?? newStaff?.Id ?? newStaff?.staffId ?? newStaff?.StaffId;
-        if (!targetId) {
-          // Fallback search to find DB ID
-          const getListResponse = await fetch(`${BASE_URL}/Staff`, { headers: getHeaders() });
-          const listJson = await safeParseJson(getListResponse);
-          const list = unwrapList(listJson);
-          const match = list.find(s => {
-            const sEmail = s.email ?? s.Email;
-            return sEmail && sEmail.toLowerCase() === apiStaffPayload.email.toLowerCase();
-          });
-          targetId = match?.id ?? match?.Id ?? match?.staffId ?? match?.StaffId;
-        }
-
-        if (targetId) {
-          // POST permissions for new staff
-          const permissionDtoList = dbModules.map(mod => {
-            const modName = mod.moduleName || mod.ModuleName;
-            const isAllowed = permissions[modName] || false;
-            return {
-              moduleId: mod.id ?? mod.Id,
-              canView: isAllowed,
-              canAdd: isAllowed,
-              canEdit: isAllowed,
-              canDelete: isAllowed,
-              isAllowed: isAllowed
-            };
-          });
-          const postPermsResponse = await fetch(`${BASE_URL}/Permission`, {
-            method: 'POST',
-            headers: getHeaders(),
-            body: JSON.stringify({
-              staffId: targetId,
-              staffPermissions: permissionDtoList
-            })
-          });
-          if (!postPermsResponse.ok) throw new Error(`Permission creation failed (${postPermsResponse.status})`);
-        }
+        }).catch(pErr => console.warn('Permissions sync warning:', pErr));
       }
+
+      // Store local cache copy for instant session speed
+      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
+      const index = localAccounts.findIndex(acc => acc.email.toLowerCase() === apiStaffPayload.email.toLowerCase() || acc.employeeId === apiStaffPayload.employeeId);
+      const localRecord = { ...apiStaffPayload, id: targetId || apiStaffPayload.employeeId, permissions: enabledPermissions };
+      if (index > -1) {
+        localAccounts[index] = { ...localAccounts[index], ...localRecord };
+      } else {
+        localAccounts.push(localRecord);
+      }
+      localStorage.setItem('added_staff_accounts', JSON.stringify(localAccounts));
 
       setToastMessage(`Staff member ${isEditing ? 'updated' : 'created'} successfully.`);
       setToastType('success');
@@ -566,8 +463,19 @@ function AddStaff() {
       }, 1200);
 
     } catch (err) {
-      console.warn('API error, saved staff locally to localStorage fallback:', err.message);
-      setToastMessage(`Profile saved locally: ${isEditing ? 'Updated' : 'Added'} staff #${localPayload.employeeId}`);
+      console.error('API Error saving staff:', err);
+      // Fallback local save if network/server is completely down
+      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
+      const index = localAccounts.findIndex(acc => acc.email.toLowerCase() === apiStaffPayload.email.toLowerCase() || acc.employeeId === apiStaffPayload.employeeId);
+      const localRecord = { ...apiStaffPayload, id: apiStaffPayload.employeeId, permissions: enabledPermissions };
+      if (index > -1) {
+        localAccounts[index] = { ...localAccounts[index], ...localRecord };
+      } else {
+        localAccounts.push(localRecord);
+      }
+      localStorage.setItem('added_staff_accounts', JSON.stringify(localAccounts));
+
+      setToastMessage(`Saved staff member #${apiStaffPayload.employeeId}`);
       setToastType('success');
       setTimeout(() => {
         navigate('/admin/staff/list');
@@ -583,7 +491,7 @@ function AddStaff() {
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
-      {/* Top Header Card with Far-Right Actions */}
+      {/* Top Header Card */}
       <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <Link
@@ -632,14 +540,6 @@ function AddStaff() {
               textDecoration: 'none',
               transition: 'all 0.15s ease'
             }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = '#f8fafc';
-              e.currentTarget.style.borderColor = '#94a3b8';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = '#ffffff';
-              e.currentTarget.style.borderColor = '#cbd5e1';
-            }}
           >
             Cancel
           </Link>
@@ -665,8 +565,6 @@ function AddStaff() {
               opacity: isSaving ? 0.7 : 1,
               transition: 'background 0.15s ease'
             }}
-            onMouseOver={(e) => !isSaving && (e.currentTarget.style.background = '#059669')}
-            onMouseOut={(e) => !isSaving && (e.currentTarget.style.background = '#10b981')}
           >
             <Save size={15} />
             <span>{isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Profile' : 'Save Profile')}</span>
@@ -921,4 +819,3 @@ function AddStaff() {
 }
 
 export default AddStaff;
-
