@@ -25,21 +25,21 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
     const s = String(status || '').toLowerCase();
     if (s === 'approved' || s === 'verified') {
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
-          <CheckCircle2 size={12} /> Approved
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
+          <CheckCircle2 size={11} /> Approved
         </span>
       );
     }
     if (s.includes('reject')) {
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
-          <XCircle size={12} /> Rejected
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+          <XCircle size={11} /> Rejected
         </span>
       );
     }
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
-        <Clock size={12} /> Pending
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
+        <Clock size={11} /> Pending
       </span>
     );
   };
@@ -53,13 +53,13 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.6)',
-        backdropFilter: 'blur(5px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.55)',
+        backdropFilter: 'blur(4px)',
         zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
+        padding: '16px',
         boxSizing: 'border-box'
       }}
     >
@@ -72,22 +72,22 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '18px',
-          maxWidth: '920px',
-          width: '92%',
-          maxHeight: '90vh',
+          borderRadius: '14px',
+          maxWidth: '780px',
+          width: '100%',
+          maxHeight: 'calc(100vh - 40px)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
           border: '1px solid #e2e8f0',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
           position: 'relative'
         }}
       >
         {/* Header Banner */}
         <div style={{
           background: 'linear-gradient(135deg, #047857 0%, #0f766e 100%)',
-          padding: '20px 28px',
+          padding: '14px 20px',
           color: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
@@ -96,28 +96,28 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         }}>
           <div>
             <span style={{
-              fontSize: '10px',
+              fontSize: '9.5px',
               textTransform: 'uppercase',
               fontWeight: 800,
               letterSpacing: '0.05em',
               backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              padding: '3px 10px',
+              padding: '2px 8px',
               borderRadius: '9999px',
               display: 'inline-block'
             }}>
               Registration Ticket Review
             </span>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '6px 0 0 0' }}>
+            <h2 style={{ fontSize: '17px', fontWeight: 800, margin: '4px 0 0 0' }}>
               {registration.businessName || 'Business Registration'}
             </h2>
           </div>
           <button 
             onClick={onClose} 
             style={{
-              padding: '6px',
+              padding: '5px',
               backgroundColor: 'rgba(255, 255, 255, 0.15)',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '6px',
               color: '#ffffff',
               cursor: 'pointer',
               display: 'flex',
@@ -127,7 +127,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
             }}
             title="Close"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
@@ -135,51 +135,51 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         <div 
           className="hide-scrollbar"
           style={{ 
-            padding: '28px', 
+            padding: '16px 20px', 
             overflowY: 'auto', 
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
             flex: 1, 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', 
-            gap: '24px' 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
+            gap: '16px' 
           }}
         >
           
           {/* Left Column: Tracking Card & Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'space-between' }}>
             {/* Tracking ID visual box */}
-            <div style={{ backgroundColor: '#ecfdf5', border: '1px dashed #6ee7b7', borderRadius: '12px', padding: '20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: '#64748b', fontWeight: 600, fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+            <div style={{ backgroundColor: '#ecfdf5', border: '1px dashed #6ee7b7', borderRadius: '10px', padding: '14px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: '#64748b', fontWeight: 600, fontSize: '11px', display: 'block', marginBottom: '2px' }}>
                 Request Tracking ID:
               </span>
-              <strong style={{ color: '#059669', fontWeight: 900, fontSize: '24px', letterSpacing: '0.04em', userSelect: 'all' }}>
+              <strong style={{ color: '#059669', fontWeight: 900, fontSize: '20px', letterSpacing: '0.04em', userSelect: 'all' }}>
                 {registration.id}
               </strong>
-              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '11px', color: '#64748b' }}>Status:</span>
+              <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '10.5px', color: '#64748b' }}>Status:</span>
                 {getStatusBadge(registration.status)}
               </div>
             </div>
 
             {/* Action Buttons Panel */}
-            <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <h4 style={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '11px', margin: 0, textAlign: 'center' }}>
+            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <h4 style={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10.5px', margin: 0, textAlign: 'center' }}>
                 Action Center
               </h4>
               {registration.status === 'Pending' && onStatusChange ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   <button 
                     onClick={() => onStatusChange(registration.id, 'Approved')} 
                     style={{
                       width: '100%',
-                      padding: '10px',
+                      padding: '8px',
                       backgroundColor: '#16a34a',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       fontWeight: 700,
-                      fontSize: '12.5px',
+                      fontSize: '12px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -188,19 +188,19 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
                       boxShadow: '0 1px 3px rgba(22, 163, 74, 0.2)'
                     }}
                   >
-                    <CheckCircle2 size={15} /> Approve Ticket
+                    <CheckCircle2 size={14} /> Approve Ticket
                   </button>
                   <button 
                     onClick={() => onStatusChange(registration.id, 'Rejected')} 
                     style={{
                       width: '100%',
-                      padding: '10px',
+                      padding: '8px',
                       backgroundColor: '#dc2626',
                       color: '#ffffff',
                       border: 'none',
-                      borderRadius: '8px',
+                      borderRadius: '6px',
                       fontWeight: 700,
-                      fontSize: '12.5px',
+                      fontSize: '12px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
@@ -209,39 +209,39 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
                       boxShadow: '0 1px 3px rgba(220, 38, 38, 0.2)'
                     }}
                   >
-                    <XCircle size={15} /> Reject Ticket
+                    <XCircle size={14} /> Reject Ticket
                   </button>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '8px 0', fontSize: '12px' }}>
-                  Ticket status is <strong>{registration.status}</strong>. No further action needed.
+                <div style={{ textAlign: 'center', color: '#64748b', padding: '4px 0', fontSize: '11.5px' }}>
+                  Ticket status is <strong>{registration.status}</strong>.
                 </div>
               )}
             </div>
           </div>
 
           {/* Right Columns: Registration Details Grid */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
               {/* Owner Details */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FileText size={14} style={{ color: '#059669' }} /> Owner Details
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FileText size={13} style={{ color: '#059669' }} /> Owner Details
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Full Name</span>
+                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Full Name</span>
                     <span style={{ fontWeight: 700, color: '#0f172a' }}>{registration.name || 'N/A'}</span>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Mobile Number</span>
-                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Mobile Number</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
                       <Phone size={12} style={{ color: '#64748b' }} /> {formatPhoneNumber(registration.mobile || registration.phone)}
                     </span>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Email Address</span>
-                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Email Address</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
                       <Mail size={12} style={{ color: '#64748b' }} /> {registration.email || 'N/A'}
                     </span>
                   </div>
@@ -249,23 +249,23 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
               </div>
 
               {/* Business Info */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Building size={14} style={{ color: '#059669' }} /> Business Details
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Building size={13} style={{ color: '#059669' }} /> Business Details
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Business / Shop Name</span>
+                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Business / Shop Name</span>
                     <span style={{ fontWeight: 700, color: '#0f172a' }}>{registration.businessName || 'N/A'}</span>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Product Category</span>
-                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Product Category</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
                       <Shield size={12} style={{ color: '#64748b' }} /> {getCategoryLabel(registration.category)}
                     </span>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>GSTIN Number</span>
+                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>GSTIN Number</span>
                     <span style={{ fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{registration.gstin || 'N/A'}</span>
                   </div>
                 </div>
@@ -273,23 +273,23 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
             </div>
 
             {/* Business Address & Timestamp */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MapPin size={14} style={{ color: '#059669' }} /> Business Location &amp; Timestamp
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MapPin size={13} style={{ color: '#059669' }} /> Location &amp; Timestamp
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                  <MapPin size={15} style={{ color: '#94a3b8', marginTop: '2px' }} />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                  <MapPin size={14} style={{ color: '#94a3b8', marginTop: '1px' }} />
                   <div style={{ flex: 1 }}>
-                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Registered Address</span>
-                    <p style={{ color: '#334155', fontWeight: 600, backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #f1f5f9', margin: 0, fontSize: '12px', lineHeight: 1.5 }}>
+                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block', marginBottom: '2px' }}>Registered Address</span>
+                    <p style={{ color: '#334155', fontWeight: 600, backgroundColor: '#f8fafc', padding: '8px 10px', borderRadius: '6px', border: '1px solid #f1f5f9', margin: 0, fontSize: '11.5px', lineHeight: 1.4 }}>
                       {registration.address || 'N/A'}
                     </p>
                   </div>
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', marginTop: '4px', paddingLeft: '23px' }}>
-                  <Calendar size={12} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#94a3b8', fontSize: '10.5px', marginTop: '2px', paddingLeft: '20px' }}>
+                  <Calendar size={11} />
                   <span>Ticket Raised At: {registration.submittedAt ? new Date(registration.submittedAt).toLocaleString() : 'N/A'}</span>
                 </div>
               </div>
@@ -301,7 +301,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         {/* Footer */}
         <div style={{
           backgroundColor: '#f8fafc',
-          padding: '14px 28px',
+          padding: '10px 20px',
           borderTop: '1px solid #e2e8f0',
           display: 'flex',
           justifyContent: 'space-between',
@@ -313,55 +313,55 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
               <button 
                 onClick={() => onStatusChange && onStatusChange(registration.id, 'Approved')} 
                 style={{
-                  padding: '8px 16px',
+                  padding: '6px 14px',
                   backgroundColor: '#059669',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   fontWeight: 700,
-                  fontSize: '12px',
+                  fontSize: '11.5px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '5px',
                   boxShadow: '0 1px 3px rgba(5, 150, 105, 0.2)'
                 }}
               >
-                <CheckCircle2 size={14} /> Approve Supplier
+                <CheckCircle2 size={13} /> Approve Supplier
               </button>
             )}
             {registration.status !== 'Rejected' && (
               <button 
                 onClick={() => onStatusChange && onStatusChange(registration.id, 'Rejected')} 
                 style={{
-                  padding: '8px 16px',
+                  padding: '6px 14px',
                   backgroundColor: '#dc2626',
                   color: '#ffffff',
                   border: 'none',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   fontWeight: 700,
-                  fontSize: '12px',
+                  fontSize: '11.5px',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '5px',
                   boxShadow: '0 1px 3px rgba(220, 38, 38, 0.2)'
                 }}
               >
-                <XCircle size={14} /> Reject Application
+                <XCircle size={13} /> Reject Application
               </button>
             )}
           </div>
           <button 
             onClick={onClose} 
             style={{
-              padding: '10px 24px',
+              padding: '7px 18px',
               backgroundColor: '#e2e8f0',
               border: 'none',
-              borderRadius: '10px',
+              borderRadius: '8px',
               color: '#334155',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '12px',
               cursor: 'pointer',
               transition: 'background 0.15s ease'
             }}
