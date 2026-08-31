@@ -8,8 +8,8 @@
   justify-content: space-between;
   align-items: center;
   height: 70px;
-  background: var(--ems-bg, #F6F8FB);
-  border-bottom: 1px solid var(--ems-border, #D9E2EC);
+  background: var(--ems-bg, #F0F8F6);
+  border-bottom: 1px solid var(--ems-border, #D6EAE5);
   padding: 0 24px;
   font-family: 'Outfit', 'Inter', sans-serif;
   overflow: visible;
@@ -29,18 +29,18 @@
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid var(--ems-border, #D9E2EC);
+  border: 1px solid var(--ems-border, #D6EAE5);
   background: #FFFFFF;
-  color: var(--ems-text-dark, #2F343A);
+  color: var(--ems-text-dark, #0A3832);
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 87, 184, 0.03);
+  box-shadow: 0 2px 8px rgba(0, 95, 83, 0.03);
 }
 
 .sidebar-hamburger-btn:hover {
-  background: var(--ems-active-pill, #EAF3FF);
-  color: var(--ems-primary, #0057B8);
-  border-color: var(--ems-primary-light, #003B7A);
+  background: var(--ems-active-pill, #D8EFEA);
+  color: var(--ems-primary, #1268A5);
+  border-color: var(--ems-primary-light, #0A4D7C);
   transform: scale(1.04);
 }
 
@@ -50,10 +50,10 @@
   align-items: center;
   gap: 10px;
   background: #FFFFFF;
-  border: 1px solid var(--ems-border, #D9E2EC);
+  border: 1px solid var(--ems-border, #D6EAE5);
   padding: 10px 24px;
   border-radius: 18px;
-  box-shadow: 0 2px 8px rgba(0, 87, 184, 0.03);
+  box-shadow: 0 2px 8px rgba(0, 95, 83, 0.03);
 }
 
 .greeting-flower {
@@ -63,7 +63,7 @@
 .greeting-text {
   font-size: 15px;
   font-weight: 800;
-  color: var(--ems-text-dark, #2F343A);
+  color: var(--ems-text-dark, #0A3832);
   letter-spacing: 0.3px;
 }
 
@@ -84,16 +84,16 @@
   align-items: center;
   gap: 10px;
   background: #FFFFFF;
-  border: 1px solid var(--ems-border, #D9E2EC);
+  border: 1px solid var(--ems-border, #D6EAE5);
   padding: 6px 18px 6px 8px;
   border-radius: 24px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 87, 184, 0.03);
+  box-shadow: 0 2px 8px rgba(0, 95, 83, 0.03);
   transition: all 0.2s ease;
 }
 
 .user-profile-btn:hover {
-  border-color: var(--ems-primary-light, #003B7A);
+  border-color: var(--ems-primary-light, #0A4D7C);
   background: #F9FCFB;
 }
 
@@ -101,8 +101,8 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--ems-active-pill, #EAF3FF);
-  color: var(--ems-primary, #0057B8);
+  background: var(--ems-active-pill, #D8EFEA);
+  color: var(--ems-primary, #1268A5);
   font-size: 14px;
   font-weight: 800;
   display: flex;
@@ -120,17 +120,17 @@
 .user-name {
   font-size: 13px;
   font-weight: 700;
-  color: var(--ems-text-dark, #2F343A);
+  color: var(--ems-text-dark, #0A3832);
 }
 
 .user-email {
   font-size: 11px;
-  color: var(--ems-text-muted, #64748B);
+  color: var(--ems-text-muted, #527870);
 }
 
 .chevron-arrow {
   transition: transform 0.2s ease;
-  color: var(--ems-text-muted, #64748B);
+  color: var(--ems-text-muted, #527870);
 }
 
 .chevron-arrow.rotate {
@@ -144,9 +144,9 @@
   right: 0;
   width: 220px;
   background: #FFFFFF;
-  border: 1px solid var(--ems-border, #D9E2EC);
+  border: 1px solid var(--ems-border, #D6EAE5);
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 59, 122, 0.1);
+  box-shadow: 0 10px 30px rgba(0, 95, 83, 0.1);
   padding: 8px 0;
   z-index: 1000;
   animation: fadeInDown 0.2s ease;
@@ -159,19 +159,19 @@
 
 .profile-dropdown-header {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--ems-border, #D9E2EC);
+  border-bottom: 1px solid var(--ems-border, #D6EAE5);
   display: flex;
   flex-direction: column;
 }
 
 .profile-dropdown-header strong {
   font-size: 14px;
-  color: var(--ems-text-dark, #2F343A);
+  color: var(--ems-text-dark, #0A3832);
 }
 
 .profile-dropdown-header span {
   font-size: 11px;
-  color: var(--ems-text-muted, #64748B);
+  color: var(--ems-text-muted, #527870);
 }
 
 .profile-dropdown-list {
@@ -195,8 +195,8 @@
 }
 
 .profile-dropdown-item:hover {
-  background: var(--ems-active-pill, #EAF3FF);
-  color: var(--ems-primary, #0057B8);
+  background: var(--ems-active-pill, #D8EFEA);
+  color: var(--ems-primary, #1268A5);
 }
 
 .profile-dropdown-item.logout {

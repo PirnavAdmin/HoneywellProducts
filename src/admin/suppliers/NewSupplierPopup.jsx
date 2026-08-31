@@ -25,47 +25,101 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
     const s = String(status || '').toLowerCase();
     if (s === 'approved' || s === 'verified') {
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 9px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
-          <CheckCircle2 size={11} /> Approved
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
+          <CheckCircle2 size={12} /> Approved
         </span>
       );
     }
     if (s.includes('reject')) {
       return (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 9px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
-          <XCircle size={11} /> Rejected
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#fee2e2', color: '#b91c1c', border: '1px solid #fecaca' }}>
+          <XCircle size={12} /> Rejected
         </span>
       );
     }
     return (
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 9px', borderRadius: '9999px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
-        <Clock size={11} /> Pending
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', borderRadius: '9999px', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a' }}>
+        <Clock size={12} /> Pending
       </span>
     );
   };
 
   return (
     <div 
-      className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" 
       onClick={onClose}
-      style={{ zIndex: 9999 }} // Set extremely high z-index to stay above topbar
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        backdropFilter: 'blur(5px)',
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        boxSizing: 'border-box'
+      }}
     >
       <div 
-        className="bg-white rounded-xl shadow-2xl max-w-4xl w-full overflow-hidden border border-slate-100 animate-slide-up"
         onClick={(e) => e.stopPropagation()}
-        style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
+        style={{
+          backgroundColor: '#ffffff',
+          borderRadius: '16px',
+          maxWidth: '850px',
+          width: '100%',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          position: 'relative'
+        }}
       >
         {/* Header Banner */}
-        <div className="bg-gradient-to-r from-emerald-700 to-teal-700 px-6 py-4 text-white flex justify-between items-center relative">
+        <div style={{
+          background: 'linear-gradient(135deg, #047857 0%, #0f766e 100%)',
+          padding: '18px 24px',
+          color: '#ffffff',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexShrink: 0
+        }}>
           <div>
-            <span className="text-[9px] uppercase font-bold tracking-wider bg-white/20 px-2 py-0.5 rounded-full">
+            <span style={{
+              fontSize: '10px',
+              textTransform: 'uppercase',
+              fontWeight: 800,
+              letterSpacing: '0.05em',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              padding: '3px 10px',
+              borderRadius: '9999px',
+              display: 'inline-block'
+            }}>
               Registration Ticket Review
             </span>
-            <h2 className="text-lg font-bold mt-1">{registration.businessName || 'Business Registration'}</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '6px 0 0 0' }}>
+              {registration.businessName || 'Business Registration'}
+            </h2>
           </div>
           <button 
             onClick={onClose} 
-            className="p-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-white transition-colors"
+            style={{
+              padding: '6px',
+              backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#ffffff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'background 0.15s ease'
+            }}
             title="Close"
           >
             <X size={18} />
@@ -73,44 +127,76 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         </div>
 
         {/* Content Body in Landscape Layout */}
-        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 text-xs max-h-[75vh] overflow-y-auto">
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
           
           {/* Left Column: Tracking Card & Actions */}
-          <div className="md:col-span-1 space-y-4 flex flex-col justify-between">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'space-between' }}>
             {/* Tracking ID visual box */}
-            <div className="bg-emerald-50/50 border border-dashed border-emerald-300 rounded-lg p-5 text-center flex flex-col items-center justify-center">
-              <span className="text-slate-500 font-medium text-xs block mb-1">Your Request Tracking ID:</span>
-              <strong className="text-emerald-600 font-extrabold text-2xl tracking-wide select-all">
+            <div style={{ backgroundColor: '#ecfdf5', border: '1px dashed #6ee7b7', borderRadius: '12px', padding: '20px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ color: '#64748b', fontWeight: 600, fontSize: '12px', display: 'block', marginBottom: '4px' }}>
+                Request Tracking ID:
+              </span>
+              <strong style={{ color: '#059669', fontWeight: 900, fontSize: '24px', letterSpacing: '0.04em', userSelect: 'all' }}>
                 {registration.id}
               </strong>
-              <div className="mt-2 flex items-center gap-2">
-                <span style={{ fontSize: '10px' }} className="text-slate-400">Status:</span>
+              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>Status:</span>
                 {getStatusBadge(registration.status)}
               </div>
             </div>
 
             {/* Action Buttons Panel */}
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 space-y-3">
-              <h4 className="font-bold text-slate-700 uppercase tracking-wider text-[10px] mb-2 text-center">
+            <div style={{ backgroundColor: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <h4 style={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '11px', margin: 0, textAlign: 'center' }}>
                 Action Center
               </h4>
               {registration.status === 'Pending' && onStatusChange ? (
-                <div className="flex flex-col gap-2">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <button 
                     onClick={() => onStatusChange(registration.id, 'Approved')} 
-                    className="w-full py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: '#16a34a',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '12.5px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 3px rgba(22, 163, 74, 0.2)'
+                    }}
                   >
-                    <CheckCircle2 size={14} /> Approve Ticket
+                    <CheckCircle2 size={15} /> Approve Ticket
                   </button>
                   <button 
                     onClick={() => onStatusChange(registration.id, 'Rejected')} 
-                    className="w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                    style={{
+                      width: '100%',
+                      padding: '10px',
+                      backgroundColor: '#dc2626',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 700,
+                      fontSize: '12.5px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 1px 3px rgba(220, 38, 38, 0.2)'
+                    }}
                   >
-                    <XCircle size={14} /> Reject Ticket
+                    <XCircle size={15} /> Reject Ticket
                   </button>
                 </div>
               ) : (
-                <div className="text-center text-slate-500 py-2">
+                <div style={{ textAlign: 'center', color: '#64748b', padding: '8px 0', fontSize: '12px' }}>
                   Ticket status is <strong>{registration.status}</strong>. No further action needed.
                 </div>
               )}
@@ -118,75 +204,75 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
           </div>
 
           {/* Right Columns: Registration Details Grid */}
-          <div className="md:col-span-2 space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               {/* Owner Details */}
-              <div className="space-y-3">
-                <h3 className="font-bold text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-1.5">
-                  <FileText size={13} className="text-emerald-600" /> Owner Details
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FileText size={14} style={{ color: '#059669' }} /> Owner Details
                 </h3>
-                <div className="space-y-2 text-slate-600">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Full Name</span>
-                    <span className="font-semibold text-slate-800 text-sm">{registration.name || 'N/A'}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Full Name</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a' }}>{registration.name || 'N/A'}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Mobile Number</span>
-                    <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
-                      <Phone size={11} className="text-slate-400" /> {formatPhoneNumber(registration.mobile || registration.phone)}
+                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Mobile Number</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                      <Phone size={12} style={{ color: '#64748b' }} /> {formatPhoneNumber(registration.mobile || registration.phone)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Email Address</span>
-                    <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
-                      <Mail size={11} className="text-slate-400" /> {registration.email || 'N/A'}
+                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Email Address</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                      <Mail size={12} style={{ color: '#64748b' }} /> {registration.email || 'N/A'}
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Business Info */}
-              <div className="space-y-3">
-                <h3 className="font-bold text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-1.5">
-                  <Building size={13} className="text-emerald-600" /> Business Details
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Building size={14} style={{ color: '#059669' }} /> Business Details
                 </h3>
-                <div className="space-y-2 text-slate-600">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Business / Shop Name</span>
-                    <span className="font-semibold text-slate-800 text-sm">{registration.businessName || 'N/A'}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Business / Shop Name</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a' }}>{registration.businessName || 'N/A'}</span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px]">Product Category</span>
-                    <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
-                      <Shield size={11} className="text-slate-400" /> {getCategoryLabel(registration.category)}
+                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Product Category</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                      <Shield size={12} style={{ color: '#64748b' }} /> {getCategoryLabel(registration.category)}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-400 block text-[10px]">GSTIN Number</span>
-                    <span className="font-semibold text-slate-800 font-mono tracking-wider">{registration.gstin || 'N/A'}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>GSTIN Number</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{registration.gstin || 'N/A'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Business Address & Timestamp */}
-            <div className="space-y-3 pt-1">
-              <h3 className="font-bold text-slate-700 uppercase tracking-wider border-b pb-1 flex items-center gap-1.5">
-                <MapPin size={13} className="text-emerald-600" /> Business Location &amp; Timestamp
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #e2e8f0', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <MapPin size={14} style={{ color: '#059669' }} /> Business Location &amp; Timestamp
               </h3>
-              <div className="space-y-2">
-                <div className="flex items-start gap-2">
-                  <MapPin size={13} className="text-slate-400 mt-0.5" />
-                  <div className="flex-1">
-                    <span className="text-slate-400 block text-[10px] mb-0.5">Registered Address</span>
-                    <p className="text-slate-700 leading-relaxed font-medium bg-slate-50 p-2.5 rounded-lg border border-slate-100">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                  <MapPin size={15} style={{ color: '#94a3b8', marginTop: '2px' }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '2px' }}>Registered Address</span>
+                    <p style={{ color: '#334155', fontWeight: 600, backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #f1f5f9', margin: 0, fontSize: '12px', lineHeight: 1.5 }}>
                       {registration.address || 'N/A'}
                     </p>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-1.5 text-slate-400 text-[10px] mt-1 pl-5">
-                  <Calendar size={11} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px', marginTop: '4px', paddingLeft: '23px' }}>
+                  <Calendar size={12} />
                   <span>Ticket Raised At: {registration.submittedAt ? new Date(registration.submittedAt).toLocaleString() : 'N/A'}</span>
                 </div>
               </div>
@@ -196,12 +282,33 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         </div>
 
         {/* Footer */}
-        <div className="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-between items-center">
-          <div className="flex items-center gap-2">
+        <div style={{
+          backgroundColor: '#f8fafc',
+          padding: '12px 24px',
+          borderTop: '1px solid #e2e8f0',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexShrink: 0
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {registration.status !== 'Approved' && registration.status !== 'Verified' && (
               <button 
                 onClick={() => onStatusChange && onStatusChange(registration.id, 'Approved')} 
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors text-xs flex items-center gap-1.5 shadow-sm"
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#059669',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 1px 3px rgba(5, 150, 105, 0.2)'
+                }}
               >
                 <CheckCircle2 size={14} /> Approve Supplier
               </button>
@@ -209,7 +316,20 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
             {registration.status !== 'Rejected' && (
               <button 
                 onClick={() => onStatusChange && onStatusChange(registration.id, 'Rejected')} 
-                className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold transition-colors text-xs flex items-center gap-1.5 shadow-sm"
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontWeight: 700,
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 1px 3px rgba(220, 38, 38, 0.2)'
+                }}
               >
                 <XCircle size={14} /> Reject Application
               </button>
@@ -217,7 +337,17 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
           </div>
           <button 
             onClick={onClose} 
-            className="px-5 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-semibold transition-colors text-xs"
+            style={{
+              padding: '8px 20px',
+              backgroundColor: '#e2e8f0',
+              border: 'none',
+              borderRadius: '8px',
+              color: '#334155',
+              fontWeight: 700,
+              fontSize: '12.5px',
+              cursor: 'pointer',
+              transition: 'background 0.15s ease'
+            }}
           >
             Close Profile
           </button>
@@ -228,4 +358,3 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
 };
 
 export default NewSupplierPopup;
-
