@@ -265,7 +265,7 @@ const CustomersList = () => {
         <button
           onClick={() => setShowAddModal(true)}
           style={{
-            backgroundColor: '#0057B8',
+            backgroundColor: '#059669',
             color: '#ffffff',
             fontSize: '13px',
             fontWeight: 700,
@@ -276,7 +276,7 @@ const CustomersList = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            boxShadow: '0 1px 3px rgba(0, 87, 184, 0.25)',
+            boxShadow: '0 1px 3px rgba(5, 150, 105, 0.25)',
             whiteSpace: 'nowrap'
           }}
         >

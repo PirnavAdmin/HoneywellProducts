@@ -9,18 +9,17 @@
   --sidebar-duration:  0.28s;
   --topbar-height:     70px;
 
-  /* Honeywell Products Color Palette */
-  --ems-bg:             #F6F8FB;
+  /* Website Brand-Matched Color Palette for Admin */
+  --ems-bg:             #F4F7F9;
   --ems-card-bg:        #FFFFFF;
   --ems-input-bg:       #FFFFFF;
-  --ems-border:         #D9E2EC;
-  --ems-primary:        #0057B8;
-  --ems-primary-light:  #003B7A;
-  --ems-active-pill:   #EAF3FF;
-  --ems-text-dark:      #2F343A;
-  --ems-text-body:      #1E293B;
-  --ems-text-muted:     #64748B;
-  --ems-accent:         #FF7A00;
+  --ems-border:         #CFD1D4;
+  --ems-primary:        #1268A5;
+  --ems-primary-light:  #0A4D7C;
+  --ems-active-pill:   #EAF4FB;
+  --ems-text-dark:      #102735;
+  --ems-text-body:      #303338;
+  --ems-text-muted:     #5F6369;
 }
 
 /* ── Grid Layout ── */

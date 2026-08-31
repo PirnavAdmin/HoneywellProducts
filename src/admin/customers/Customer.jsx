@@ -437,49 +437,54 @@ const Customer = () => {
   const customerType = profile.type || 'Farmer';
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white p-4 rounded-xl border border-slate-100 shadow-sm gap-4">
-        <div className="flex items-center gap-3">
-          <button className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200" onClick={() => navigate('/admin/customers/list')}>
-            <ArrowLeft size={16} />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '18px 24px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <button
+            onClick={() => navigate('/admin/customers/list')}
+            style={{ width: '38px', height: '38px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: '#ffffff', color: '#475569', cursor: 'pointer', transition: 'all 0.15s ease' }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
+          >
+            <ArrowLeft size={18} />
           </button>
           <div>
-            <h2 className="text-lg font-bold text-slate-800">Customer Profile &amp; Farm Records</h2>
-            <p className="text-slate-500 text-xs">Overview of grower records, field details, crop advisory, and order transactions.</p>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Customer Profile &amp; Farm Records</h2>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '3px 0 0 0' }}>Overview of grower records, field details, crop advisory, and order transactions.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 self-end sm:self-auto">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           {/* Switch Customer Dropdown */}
-          <div className="relative">
+          <div style={{ position: 'relative' }}>
             <button
               onClick={() => setShowSwitchDropdown(!showSwitchDropdown)}
-              className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#475569', backgroundColor: '#ffffff', cursor: 'pointer' }}
             >
               Switch Customer <ChevronDown size={14} />
             </button>
             
             {showSwitchDropdown && (
-              <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-100 p-3 z-30">
+              <div style={{ position: 'absolute', right: 0, marginTop: '8px', width: '280px', backgroundColor: '#ffffff', borderRadius: '14px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0', padding: '12px', zIndex: 50 }}>
                 <input
                   type="text"
                   placeholder="Quick search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full px-2.5 py-1.5 text-xs border border-slate-200 rounded-lg mb-2 focus:outline-none focus:border-emerald-500"
+                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '8px', marginBottom: '8px', outline: 'none' }}
                   autoFocus
                 />
-                <div className="space-y-1 max-h-48 overflow-y-auto">
+                <div style={{ maxHeight: '180px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   {filteredSearchList.map(c => (
                     <div
                       key={c.id}
                       onClick={() => selectCustomer(c.id)}
-                      className={`p-2 rounded-lg text-xs cursor-pointer transition-colors ${c.id === profile.id ? 'bg-emerald-50 text-emerald-800 font-semibold' : 'hover:bg-slate-50 text-slate-700'}`}
+                      style={{ padding: '8px 12px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', backgroundColor: c.id === profile.id ? '#e6f4ea' : 'transparent', color: c.id === profile.id ? '#15803d' : '#334155', fontWeight: c.id === profile.id ? 700 : 500 }}
                     >
-                      <div className="flex justify-between">
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>{c.name}</span>
-                        <span className="text-slate-400">#{c.id}</span>
+                        <span style={{ color: '#94a3b8' }}>#{c.id}</span>
                       </div>
                     </div>
                   ))}
@@ -490,7 +495,7 @@ const Customer = () => {
 
           <button
             onClick={() => setShowEditModal(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold transition-colors border border-slate-200"
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '13px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}
           >
             <Edit size={14} /> Edit Profile
           </button>
@@ -498,25 +503,32 @@ const Customer = () => {
       </div>
 
       {/* Main content */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px' }}>
         {/* Left column – summary */}
-        <div className="md:col-span-1 space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 text-center">
-            <img
-              src={profile.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name)}&background=2e7d32&color=fff`}
-              alt={profile.name}
-              className="w-20 h-20 rounded-full mx-auto mb-4 border border-emerald-100 shadow-sm object-cover"
-            />
-            <h3 className="text-base font-bold text-slate-800">{profile.name}</h3>
-            <span className="inline-block px-3 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full uppercase tracking-wider mb-4">
-              {customerType}
-            </span>
-            <div className="text-left space-y-3 text-xs text-slate-600 border-t border-slate-100 pt-4">
-              <div className="flex items-center gap-2"><Phone size={14} className="text-slate-400 font-semibold" />{profile.phone}</div>
-              <div className="flex items-center gap-2"><Mail size={14} className="text-slate-400" />{profile.email || 'No email provided'}</div>
-              <div className="flex items-start gap-2">
-                <MapPin size={14} className="text-slate-400 mt-0.5 flex-shrink-0" />
-                <span className="text-slate-500 leading-relaxed">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '28px 24px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '999px', backgroundColor: '#1e7e34', color: '#ffffff', fontSize: '28px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px auto', textTransform: 'uppercase' }}>
+              {profile.name ? profile.name.slice(0, 2) : 'CU'}
+            </div>
+            <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{profile.name}</h3>
+            <div style={{ marginTop: '8px', marginBottom: '20px' }}>
+              <span style={{ backgroundColor: '#e6f4ea', color: '#15803d', border: '1px solid #bbf7d0', fontSize: '11px', fontWeight: 800, padding: '4px 14px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'inline-block' }}>
+                {customerType}
+              </span>
+            </div>
+
+            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '12px', textAlign: 'left', fontSize: '13px', color: '#475569' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Phone size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <span>{profile.phone}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Mail size={15} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                <span>{profile.email || 'No email provided'}</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <MapPin size={15} style={{ color: '#94a3b8', flexShrink: 0, marginTop: '2px' }} />
+                <span>
                   {(() => {
                     const parts = [profile.address, profile.district, profile.state].filter(p => p && p.trim() && p !== 'string' && p !== 'N/A');
                     return parts.length > 0 ? parts.join(', ') : '—';
@@ -527,140 +539,153 @@ const Customer = () => {
           </div>
 
           {/* Farm details */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-5 space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-              <Tractor size={18} className="text-emerald-600" />
-              <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider">Agrarian Details</h4>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+              <Tractor size={18} style={{ color: '#059669' }} />
+              <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#064e3b', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>Agrarian Details</h4>
             </div>
-            <div className="text-xs space-y-3">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Total Land Area:</span>
-                <span className="font-semibold text-slate-800">
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '13px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8' }}>Total Land Area:</span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>
                   {profile.agrarianProfile?.farmSizeAcres ? `${profile.agrarianProfile.farmSizeAcres} Acres` : '—'}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Soil Condition:</span>
-                <span className="font-semibold text-slate-800">{profile.agrarianProfile?.soilType && profile.agrarianProfile.soilType !== 'N/A' ? profile.agrarianProfile.soilType : '—'}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8' }}>Soil Condition:</span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                  {profile.agrarianProfile?.soilType && profile.agrarianProfile.soilType !== 'N/A' ? profile.agrarianProfile.soilType : '—'}
+                </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Irrigation Source:</span>
-                <span className="font-semibold text-slate-800">{profile.agrarianProfile?.irrigationSource && profile.agrarianProfile.irrigationSource !== 'N/A' ? profile.agrarianProfile.irrigationSource : '—'}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8' }}>Irrigation Source:</span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>
+                  {profile.agrarianProfile?.irrigationSource && profile.agrarianProfile.irrigationSource !== 'N/A' ? profile.agrarianProfile.irrigationSource : '—'}
+                </span>
               </div>
-
             </div>
           </div>
         </div>
 
         {/* Right column – finance, orders & advisories */}
-        <div className="md:col-span-2 space-y-6">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {/* Finance Snapshot */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
-              <div className="w-9 h-9 bg-emerald-50 rounded-lg text-emerald-600 flex items-center justify-center">
-                <CreditCard size={18} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#e6f4ea', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CreditCard size={20} />
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 font-medium">Total Spent</span>
-                <h4 className="text-sm font-bold text-slate-800">₹{totalSpent.toLocaleString('en-IN')}</h4>
+                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Total Spent</span>
+                <h4 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>₹{totalSpent.toLocaleString('en-IN')}</h4>
               </div>
             </div>
-            <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-4 flex items-center gap-3">
-              <div className="w-9 h-9 bg-amber-50 rounded-lg text-amber-600 flex items-center justify-center">
-                <CreditCard size={18} />
+
+            <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#fef3c7', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <CreditCard size={20} />
               </div>
               <div>
-                <span className="text-[10px] text-slate-400 font-medium">Agro Coins Balance</span>
-                <h4 className="text-sm font-bold text-slate-800">{profile.coinsBalance || 0} Coins</h4>
+                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Agro Coins Balance</span>
+                <h4 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{profile.coinsBalance || 0} Coins</h4>
               </div>
             </div>
           </div>
 
           {/* Order History */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
-            <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2.5">Recent Order History</h4>
-            <div className="space-y-3">
-              {profile.orders && profile.orders.length > 0 ? profile.orders.map((ord) => {
-                const orderItemsText = Array.isArray(ord.items) && ord.items.length > 0 
-                  ? ord.items.map(item => item.productName || item.name).join(', ')
-                  : 'Agricultural Equipment / Supplies';
-                return (
-                  <div key={ord.id} className="flex justify-between items-center bg-slate-50/50 hover:bg-slate-50 border border-slate-100 p-3 rounded-lg transition-colors text-xs">
-                    <div>
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-bold text-slate-800">{ord.orderNumber || `ORD-#${ord.id}`}</span>
-                        <span className="text-slate-400 text-[10px]">• {ord.orderDate ? ord.orderDate.slice(0, 10) : 'Recent'}</span>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#475569', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0 0 16px 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>RECENT ORDER HISTORY</h4>
+            
+            {profile.orders && profile.orders.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {profile.orders.map((ord) => {
+                  const orderItemsText = Array.isArray(ord.items) && ord.items.length > 0 
+                    ? ord.items.map(item => item.productName || item.name).join(', ')
+                    : 'Agricultural Equipment / Supplies';
+                  return (
+                    <div key={ord.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>{ord.orderNumber || `ORD-#${ord.id}`}</span>
+                          <span style={{ color: '#94a3b8', fontSize: '12px' }}>• {ord.orderDate ? ord.orderDate.slice(0, 10) : 'Recent'}</span>
+                        </div>
+                        <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>{orderItemsText}</p>
                       </div>
-                      <p className="text-[10px] text-slate-500 font-medium truncate max-w-[280px]">{orderItemsText}</p>
+                      <div style={{ textAlign: 'right' }}>
+                        <span style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '2px' }}>₹{(ord.finalAmount || ord.totalAmount || 0).toLocaleString('en-IN')}</span>
+                        <span style={{ fontSize: '10px', fontWeight: 800, padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', backgroundColor: ord.status === 'Delivered' ? '#e6f4ea' : '#dbeafe', color: ord.status === 'Delivered' ? '#15803d' : '#1e40af' }}>
+                          {ord.status || 'Pending'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <span className="font-bold text-slate-800 block mb-0.5">₹{(ord.finalAmount || ord.totalAmount || 0).toLocaleString('en-IN')}</span>
-                      <span className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${ord.status === 'Delivered' ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'}`}>{ord.status || 'Pending'}</span>
-                    </div>
-                  </div>
-                );
-              }) : (
-                <div className="text-slate-400 text-xs py-4 text-center">No orders registered for this customer yet.</div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', padding: '36px 0' }}>
+                No orders registered for this customer yet.
+              </div>
+            )}
           </div>
 
-          {/* Crop Advisory Logging Form & Logs */}
-          <div className="bg-white rounded-xl border border-slate-100 shadow-sm p-5 space-y-6">
-            <div className="flex items-center gap-2 border-b border-slate-100 pb-2.5">
-              <Activity size={18} className="text-emerald-600" />
-              <h4 className="font-bold text-xs text-slate-700 uppercase tracking-wider">Crop Advisory logs &amp; Notes</h4>
+          {/* Crop Advisory Logs & Notes */}
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px', marginBottom: '20px' }}>
+              <Activity size={18} style={{ color: '#059669' }} />
+              <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#064e3b', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>CROP ADVISORY LOGS &amp; NOTES</h4>
             </div>
 
-            {/* Post new advisory */}
-            <form onSubmit={postAdvisory} className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
-              <span className="text-xs font-bold text-slate-700 block uppercase">Post New Expert Advisory</span>
-              <div className="space-y-2">
+            {/* Post New Advisory Box */}
+            <form onSubmit={postAdvisory} style={{ backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '20px', marginBottom: '24px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '14px' }}>POST NEW EXPERT ADVISORY</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <input
                   type="text"
                   placeholder="Observation / Issue Description (e.g. Yellowing leaves)"
                   value={advisoryText}
                   onChange={e => setAdvisoryText(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 bg-white"
+                  style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', backgroundColor: '#ffffff', outline: 'none' }}
                 />
                 <textarea
                   placeholder="Expert Recommendation / Solution"
                   value={recommendation}
                   onChange={e => setRecommendation(e.target.value)}
                   rows="3"
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 bg-white resize-none"
+                  style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', backgroundColor: '#ffffff', outline: 'none', resize: 'none' }}
                 />
               </div>
-              <div className="flex justify-end">
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
                 <button
                   type="submit"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+                  style={{ backgroundColor: '#059669', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '9px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 1px 2px rgba(5,150,105,0.2)' }}
                 >
-                  <Plus size={14} /> Submit Advisory
+                  <Plus size={16} /> Submit Advisory
                 </button>
               </div>
             </form>
 
             {/* Advisory Logs List */}
-            <div className="relative pl-6 border-l-2 border-slate-100 space-y-5 py-2">
-              {profile.advisories && profile.advisories.length > 0 ? profile.advisories.map((log) => (
-                <div key={log.id} className="relative">
-                  <div className="absolute -left-[31px] top-1.5 w-3.5 h-3.5 bg-emerald-500 rounded-full border-4 border-white shadow-sm"></div>
-                  <span className="text-slate-400 text-[10px] font-bold block mb-1">
-                    {log.dateCreated ? log.dateCreated.slice(0, 16).replace('T', ' ') : 'Recent'}
-                  </span>
-                  <div className="bg-slate-50/60 rounded-lg border border-slate-100 p-3 text-xs">
-                    <span className="font-bold text-slate-800 block mb-1">Observation: <span className="font-medium text-slate-600">{log.advisoryText}</span></span>
-                    <span className="font-bold text-emerald-800 block">Solution: <span className="font-medium text-emerald-700">{log.recommendation}</span></span>
-                    {log.staff && (
-                      <span className="text-[10px] text-slate-400 block mt-2 border-t pt-1">Assigned Expert: {log.staff.name} ({log.staff.role})</span>
-                    )}
+            {profile.advisories && profile.advisories.length > 0 ? (
+              <div style={{ position: 'relative', paddingLeft: '24px', borderLeft: '2px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {profile.advisories.map((log) => (
+                  <div key={log.id} style={{ position: 'relative' }}>
+                    <div style={{ position: 'absolute', left: '-31px', top: '4px', width: '12px', height: '12px', backgroundColor: '#059669', borderRadius: '999px', border: '3px solid #ffffff' }} />
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
+                      {log.dateCreated ? log.dateCreated.slice(0, 16).replace('T', ' ') : 'Recent'}
+                    </span>
+                    <div style={{ backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '14px', fontSize: '13px' }}>
+                      <span style={{ fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Observation: <span style={{ fontWeight: 500, color: '#475569' }}>{log.advisoryText}</span></span>
+                      <span style={{ fontWeight: 800, color: '#065f46', display: 'block' }}>Solution: <span style={{ fontWeight: 500, color: '#047857' }}>{log.recommendation}</span></span>
+                    </div>
                   </div>
-                </div>
-              )) : (
-                <div className="text-slate-400 text-xs py-4 text-center -ml-6">No advisory logs recorded yet.</div>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', padding: '36px 0' }}>
+                No advisory logs recorded yet.
+              </div>
+            )}
           </div>
         </div>
       </div>

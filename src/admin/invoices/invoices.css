@@ -32,20 +32,20 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #0057B8, #003B7A);
+  background: linear-gradient(135deg, #1268a5, #0a4d7c);
   color: white;
   padding: 10px 18px;
   border-radius: 10px;
   font-size: 14px;
   font-weight: 600;
   text-decoration: none;
-  box-shadow: 0 4px 12px rgba(0, 87, 184, 0.2);
+  box-shadow: 0 4px 12px rgba(18, 104, 165, 0.2);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .add-invoice-button:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 87, 184, 0.3);
+  box-shadow: 0 6px 16px rgba(18, 104, 165, 0.3);
 }
 
 .back-link-invoices {
@@ -53,7 +53,7 @@
   align-items: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--ems-primary, #0057B8);
+  color: var(--ems-primary, #1268a5);
   text-decoration: none;
   font-weight: 600;
 }
