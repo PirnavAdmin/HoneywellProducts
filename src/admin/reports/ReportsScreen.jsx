@@ -1143,7 +1143,7 @@ const ReportsScreen = () => {
           <div className="reports-modal-content drilldown-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '95%' }}>
             <div className="drilldown-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '16px' }}>
               <div>
-                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#059669', letterSpacing: '0.05em' }}>Analytics Drill-Down</span>
+                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#1268a5', letterSpacing: '0.05em' }}>Analytics Drill-Down</span>
                 <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '2px 0 0 0' }}>{drillDownModal.title}</h2>
               </div>
               <button className="reports-icon-btn" onClick={() => setDrillDownModal({ ...drillDownModal, isOpen: false })} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer' }}>

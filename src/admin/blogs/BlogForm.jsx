@@ -150,7 +150,7 @@ const BlogForm = () => {
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#059669', fontWeight: 700, letterSpacing: '0.04em', display: 'block', marginBottom: '2px' }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#1268a5', fontWeight: 700, letterSpacing: '0.04em', display: 'block', marginBottom: '2px' }}>
               BLOG MANAGER
             </span>
             <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
@@ -228,7 +228,7 @@ const BlogForm = () => {
         ) : (
           <form className="catalog-form" onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             
-            <h3 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#059669', letterSpacing: '0.05em', borderBottom: '2px solid #f1f5f9', paddingBottom: '6px', margin: '0' }}>
+            <h3 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#1268a5', letterSpacing: '0.05em', borderBottom: '2px solid #f1f5f9', paddingBottom: '6px', margin: '0' }}>
               Article Details
             </h3>
 
@@ -288,7 +288,7 @@ const BlogForm = () => {
               <div className="catalog-field">
                 <label>Featured Cover Image</label>
                 <label className="catalog-upload" htmlFor="blog-image" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', border: '1px dashed #cbd5e1', borderRadius: '8px', padding: '6px 10px', backgroundColor: '#f8fafc', height: '34px', overflow: 'hidden' }}>
-                  <Upload size={14} style={{ color: '#059669', flexShrink: 0 }} />
+                  <Upload size={14} style={{ color: '#1268a5', flexShrink: 0 }} />
                   <span style={{ fontSize: '11px', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     <strong>{imagePreview ? 'Change Photo' : 'Upload Cover Photo'}</strong>
                   </span>

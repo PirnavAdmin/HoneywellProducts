@@ -73,7 +73,7 @@ export const mapCategoryFromApi = (raw = {}) => ({
   description: raw.description || '',
   status: raw.isActive === false ? 'Inactive' : 'Active',
   displayOrder: Number(raw.displayOrder ?? raw.display_order ?? 0),
-  metaTitle: raw.metaTitle || `${raw.name || ''} | Shyam Agro`,
+  metaTitle: raw.metaTitle || `${raw.name || ''} | Honeywell`,
   metaDescription: raw.metaDescription || raw.description || '',
   image: resolveImageUrl(raw.imageUrl || raw.image),
   imageUrl: raw.imageUrl || '',
@@ -104,7 +104,7 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
     ''
   );
 
-  let brandName = 'Shyam Agro Tools';
+  let brandName = 'Honeywell';
   if (typeof raw.brand === 'string') {
     brandName = raw.brand;
   } else if (raw.brand && typeof raw.brand === 'object') {
@@ -317,7 +317,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null) =>
   fd.append('SubcategoryId', Number(product.subcategoryId) || 0);
   fd.append('Name', product.name || '');
   fd.append('Sku', product.sku || '');
-  fd.append('Brand', product.brand || 'Shyam Agro Tools');
+  fd.append('Brand', product.brand || 'Honeywell');
   fd.append('Supplier', product.supplier || '');
   fd.append('Description', product.shortDescription || product.description || '');
   fd.append('ProductDetails', product.productDetails || '');

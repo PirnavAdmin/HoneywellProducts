@@ -236,9 +236,9 @@ const BannersList = () => {
                 fontSize: '12px',
                 fontWeight: 700,
                 borderRadius: '6px',
-                border: filterType === type ? '2px solid #10b981' : '1px solid #cbd5e1',
-                background: filterType === type ? '#ecfdf5' : '#fff',
-                color: filterType === type ? '#047857' : '#475569',
+                border: filterType === type ? '2px solid #1268a5' : '1px solid #cbd5e1',
+                background: filterType === type ? '#eaf4fb' : '#fff',
+                color: filterType === type ? '#1268a5' : '#475569',
                 cursor: 'pointer'
               }}
             >
@@ -304,8 +304,8 @@ const BannersList = () => {
                       borderRadius: '4px',
                       fontSize: '11px',
                       fontWeight: 700,
-                      background: banner.bannerType === 'Hero' ? '#e0f2fe' : '#fef3c7',
-                      color: banner.bannerType === 'Hero' ? '#0369a1' : '#b45309'
+                      background: banner.bannerType === 'Hero' ? '#eaf4fb' : '#fef3c7',
+                      color: banner.bannerType === 'Hero' ? '#1268a5' : '#b45309'
                     }}>
                       {banner.bannerType} Banner
                     </span>

@@ -153,7 +153,7 @@ const AdminLoginPage = () => {
 
       const role = (profile?.role || profile?.Role || 'staff').toLowerCase();
       if (permissions.length === 0) {
-        if (role === 'super admin' || userEmail.toLowerCase().trim() === 'shyam@shyamagrotools.com') {
+        if (role === 'super admin' || userEmail.toLowerCase().trim() === 'admin@honeywell.local') {
           permissions = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"];
         } else if (role === 'admin') {
           permissions = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "staff"];

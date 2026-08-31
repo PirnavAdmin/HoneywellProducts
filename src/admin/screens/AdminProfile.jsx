@@ -7,19 +7,19 @@ const AdminProfile = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState({
     name: 'Admin User',
-    email: 'admin@shyamagro.com',
+    email: 'admin@honeywell.local',
     role: 'admin',
-    mobile: '9912649265',
-    address: 'Opposite New Bustand, Nandikotkur (TQ), Nandyal (DT) - 518401',
+    mobile: '04048555758',
+    address: '302A, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana',
     permissions: []
   });
 
   useEffect(() => {
     const storedName = localStorage.getItem('adminName') || 'Admin User';
-    const storedEmail = localStorage.getItem('adminEmail') || 'admin@shyamagro.com';
+    const storedEmail = localStorage.getItem('adminEmail') || 'admin@honeywell.local';
     let storedRole = localStorage.getItem('adminRole') || 'admin';
     const storedPerms = localStorage.getItem('adminPermissions');
-    const storedAddress = localStorage.getItem('adminAddress') || 'Opposite New Bustand, Nandikotkur (TQ), Nandyal (DT) - 518401';
+    const storedAddress = localStorage.getItem('adminAddress') || '302A, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana';
     
     // Attempt to match from local staff list to pull phone if available
     const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');

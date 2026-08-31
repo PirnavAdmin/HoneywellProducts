@@ -24,9 +24,9 @@ const AdminAccountSettings = () => {
 
   useEffect(() => {
     const storedName = localStorage.getItem('adminName') || 'Admin User';
-    const storedEmail = localStorage.getItem('adminEmail') || 'admin@shyamagro.com';
+    const storedEmail = localStorage.getItem('adminEmail') || 'admin@honeywell.local';
     const storedRole = localStorage.getItem('adminRole') || 'admin';
-    const storedAddress = localStorage.getItem('adminAddress') || 'Opposite New Bustand, Nandikotkur (TQ), Nandyal (DT) - 518401';
+    const storedAddress = localStorage.getItem('adminAddress') || '302A, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana';
     
     const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
     const matched = localAccounts.find(acc => acc.email.toLowerCase() === storedEmail.toLowerCase());
@@ -36,7 +36,7 @@ const AdminAccountSettings = () => {
       name: storedName,
       email: storedEmail,
       mobile: matched?.mobile || '9912649265',
-      address: storedAddress || matched?.address || 'Opposite New Bustand, Nandikotkur (TQ), Nandyal (DT) - 518401'
+      address: storedAddress || matched?.address || '302A, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana'
     }));
   }, []);
 

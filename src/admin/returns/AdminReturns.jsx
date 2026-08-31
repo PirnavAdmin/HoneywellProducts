@@ -356,7 +356,7 @@ const AdminReturns = () => {
       {/* Workspace Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '24px', marginBottom: '24px', flexWrap: 'wrap' }}>
         <div style={{ flex: '1', minWidth: '280px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: '900', color: '#064e3b', margin: '0 0 6px 0', letterSpacing: '-0.02em', lineHeight: '1.15' }}>
+          <h1 style={{ fontSize: '32px', fontWeight: '900', color: '#102735', margin: '0 0 6px 0', letterSpacing: '-0.02em', lineHeight: '1.15' }}>
             Return & Refund Claims
           </h1>
           <p style={{ fontSize: '14px', color: '#64748b', margin: 0, fontWeight: '400', lineHeight: '1.4' }}>
@@ -376,9 +376,9 @@ const AdminReturns = () => {
           flexShrink: 0,
           whiteSpace: 'nowrap'
         }}>
-          <Layers size={18} style={{ color: '#16a34a' }} />
+          <Layers size={18} style={{ color: '#1268a5' }} />
           <span style={{ fontSize: '13.5px', fontWeight: '700', color: '#0f172a' }}>
-            Total Claims: <strong style={{ color: '#064e3b' }}>{totalCount}</strong>
+            Total Claims: <strong style={{ color: '#1268a5' }}>{totalCount}</strong>
           </span>
         </div>
       </div>
@@ -616,7 +616,7 @@ const AdminReturns = () => {
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleSelectReturn(ret); }}
                             style={{
-                              backgroundColor: '#064e3b',
+                              backgroundColor: '#1268a5',
                               color: '#ffffff',
                               fontSize: '12.5px',
                               fontWeight: '700',

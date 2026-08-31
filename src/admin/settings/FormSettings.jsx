@@ -180,7 +180,7 @@ const FormSettings = () => {
 
           <div>
             {isSaved ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', fontWeight: 700, fontSize: '12.5px', padding: '0 16px', height: '38px', borderRadius: '8px' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#eaf4fb', border: '1px solid #bde0fe', color: '#1268a5', fontWeight: 700, fontSize: '12.5px', padding: '0 16px', height: '38px', borderRadius: '8px' }}>
                 <CheckCircle size={16} /> Settings Updated
               </span>
             ) : (
@@ -189,7 +189,7 @@ const FormSettings = () => {
                 onClick={handleSubmit} 
                 disabled={saving || loading}
                 style={{
-                  background: '#059669',
+                  background: '#1268a5',
                   color: '#ffffff',
                   border: 'none',
                   borderRadius: '8px',
@@ -201,9 +201,11 @@ const FormSettings = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  boxShadow: '0 1px 3px rgba(18,104,165,0.2)',
                   transition: 'background 0.15s ease'
                 }}
+                onMouseOver={(e) => { if (!saving && !loading) e.currentTarget.style.background = '#0a4d7c'; }}
+                onMouseOut={(e) => { if (!saving && !loading) e.currentTarget.style.background = '#1268a5'; }}
               >
                 {saving ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
                 <span>{saving ? 'Updating...' : 'Update Settings'}</span>
@@ -220,7 +222,7 @@ const FormSettings = () => {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '48px 0', color: '#94a3b8' }}>
-            <RefreshCw size={20} className="spin" style={{ display: 'block', margin: '0 auto 8px' }} />
+            <RefreshCw size={20} className="spin" style={{ display: 'block', margin: '0 auto 8px', color: '#1268a5' }} />
             Loading live settings from API...
           </div>
         ) : (
@@ -229,8 +231,8 @@ const FormSettings = () => {
             {/* Section 1: BANK ACCOUNT PAYMENT SETTINGS */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>
-                <CreditCard size={16} style={{ color: '#059669' }} />
-                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                <CreditCard size={16} style={{ color: '#1268a5' }} />
+                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#1268a5', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
                   BANK ACCOUNT PAYMENT SETTINGS
                 </h3>
               </div>
@@ -245,7 +247,10 @@ const FormSettings = () => {
                     name="accountHolderName"
                     value={bankData.accountHolderName}
                     onChange={handleBankChange}
+                    placeholder="Enter account holder name"
                     style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
                   />
                 </div>
 
@@ -258,7 +263,10 @@ const FormSettings = () => {
                     name="bankName"
                     value={bankData.bankName}
                     onChange={handleBankChange}
+                    placeholder="Enter bank name"
                     style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
                   />
                 </div>
 
@@ -271,7 +279,10 @@ const FormSettings = () => {
                     name="accountNumber"
                     value={bankData.accountNumber}
                     onChange={handleBankChange}
+                    placeholder="Enter account number"
                     style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
                   />
                 </div>
 
@@ -284,7 +295,10 @@ const FormSettings = () => {
                     name="ifscCode"
                     value={bankData.ifscCode}
                     onChange={handleBankChange}
+                    placeholder="Enter IFSC code"
                     style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
                   />
                 </div>
               </div>
@@ -293,8 +307,8 @@ const FormSettings = () => {
             {/* Section 2: UPI MERCHANT CONFIGURATION */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>
-                <Settings size={16} style={{ color: '#0284c7' }} />
-                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                <Settings size={16} style={{ color: '#1268a5' }} />
+                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#1268a5', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
                   UPI MERCHANT CONFIGURATION
                 </h3>
               </div>
@@ -309,7 +323,10 @@ const FormSettings = () => {
                     name="merchantName"
                     value={upiData.merchantName}
                     onChange={handleUpiChange}
+                    placeholder="Enter merchant name"
                     style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
                   />
                 </div>
 
@@ -322,7 +339,10 @@ const FormSettings = () => {
                     name="merchantUpiId"
                     value={upiData.merchantUpiId}
                     onChange={handleUpiChange}
+                    placeholder="e.g. merchant@ybl"
                     style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
                   />
                 </div>
               </div>
@@ -331,8 +351,8 @@ const FormSettings = () => {
             {/* Section 3: CUSTOMER SUPPORT & RETURNS POLICY */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>
-                <Phone size={16} style={{ color: '#7c3aed' }} />
-                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                <Phone size={16} style={{ color: '#1268a5' }} />
+                <h3 style={{ fontSize: '12px', fontWeight: 800, color: '#1268a5', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
                   CUSTOMER SUPPORT & RETURNS WINDOW
                 </h3>
               </div>
@@ -347,7 +367,10 @@ const FormSettings = () => {
                     name="supportPhoneNumber"
                     value={supportData.supportPhoneNumber}
                     onChange={handleSupportChange}
+                    placeholder="e.g. 040 4855 5758"
                     style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
                   />
                 </div>
 
@@ -360,7 +383,10 @@ const FormSettings = () => {
                     name="workTimings"
                     value={supportData.workTimings}
                     onChange={handleSupportChange}
+                    placeholder="e.g. Mon-Sat 9:00 AM - 6:00 PM"
                     style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
                   />
                 </div>
 

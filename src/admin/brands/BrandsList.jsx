@@ -549,7 +549,7 @@ const BrandsList = () => {
               fontSize: '11px',
               textTransform:
                 'uppercase',
-              color: '#059669',
+              color: '#1268a5',
               fontWeight: 800,
               display: 'block',
               letterSpacing:

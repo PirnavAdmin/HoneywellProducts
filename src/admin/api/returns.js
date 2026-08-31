@@ -12,9 +12,9 @@ const MOCK_RETURNS = [];
 
 
 const getLocalReturns = () => {
-  const local = localStorage.getItem('shyam_agro_returns');
+  const local = localStorage.getItem('honeywell_returns') || localStorage.getItem('shyam_agro_returns');
   if (!local) {
-    localStorage.setItem('shyam_agro_returns', JSON.stringify(MOCK_RETURNS));
+    localStorage.setItem('honeywell_returns', JSON.stringify(MOCK_RETURNS));
     return MOCK_RETURNS;
   }
   try {
@@ -25,7 +25,7 @@ const getLocalReturns = () => {
 };
 
 const saveLocalReturns = (data) => {
-  localStorage.setItem('shyam_agro_returns', JSON.stringify(data));
+  localStorage.setItem('honeywell_returns', JSON.stringify(data));
 };
 
 // GET /api/Returns/config
@@ -64,7 +64,7 @@ export const checkReturnEligibility = async (orderItemId) => {
     console.warn('Backend unavailable, simulating return eligibility:', error.message);
     
     // Fallback simulation: fetch local orders to find matching item
-    const localOrdersStr = localStorage.getItem('shyam_agro_orders');
+    const localOrdersStr = localStorage.getItem('honeywell_orders') || localStorage.getItem('shyam_agro_orders');
     if (localOrdersStr) {
       try {
         const orders = JSON.parse(localOrdersStr);
@@ -132,12 +132,12 @@ export const createReturnRequest = async (formData) => {
     const newId = localReturns.length > 0 ? Math.max(...localReturns.map(r => r.id)) + 1 : 1;
     
     // Get item names from local orders to make UI complete
-    let productName = 'Agro Item';
-    let sku = 'AGRO-001';
+    let productName = 'Honeywell Product';
+    let sku = 'HW-001';
     let customerName = 'Rajesh Kumar';
     let unitPrice = 1000;
     
-    const localOrdersStr = localStorage.getItem('shyam_agro_orders');
+    const localOrdersStr = localStorage.getItem('honeywell_orders') || localStorage.getItem('shyam_agro_orders');
     if (localOrdersStr) {
       try {
         const orders = JSON.parse(localOrdersStr);

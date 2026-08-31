@@ -66,7 +66,7 @@ export const mapCategoryFromApi = (raw = {}) => ({
   description: raw.description || '',
   status: raw.isActive === false ? 'Inactive' : 'Active',
   displayOrder: raw.displayOrder ?? '',
-  metaTitle: raw.metaTitle || `${raw.categoryName || raw.name || ''} | Shyam Agro`,
+  metaTitle: raw.metaTitle || `${raw.categoryName || raw.name || ''} | Honeywell`,
   metaDescription: raw.metaDescription || raw.description || '',
   image: resolveImageUrl(raw.imageUrl || raw.image || ''),
   imageUrl: raw.imageUrl || '',
@@ -121,7 +121,7 @@ export const mapProductFromApi = (
     const rawBrand = (item.brand || item.Brand || item.brandName || item.manufacturer || item.Manufacturer || '').toString().trim();
     
     // If a custom non-generic brand is explicitly stored, keep it
-    if (rawBrand && rawBrand !== 'Shyam Agro' && rawBrand !== 'Shyam Agro Tools' && rawBrand !== 'ShyamAgro') {
+    if (rawBrand && rawBrand !== 'Shyam Agro' && rawBrand !== 'Shyam Agro Tools' && rawBrand !== 'ShyamAgro' && rawBrand !== 'Honeywell') {
       return rawBrand;
     }
 
@@ -141,7 +141,7 @@ export const mapProductFromApi = (
     if (categoryName.includes('spray')) return 'Neptune';
     if (categoryName.includes('garden') || categoryName.includes('farm')) return 'AgriPro';
 
-    return 'Shyam Agro';
+    return 'Honeywell';
   };
 
   // ── Weight Resolution ──────────────────────────────────────────────────────
@@ -510,8 +510,8 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   fd.append('SKU', product.sku || '');
   fd.append('sku', product.sku || '');
 
-  fd.append('Brand', product.brand || 'Shyam Agro Tools');
-  fd.append('brand', product.brand || 'Shyam Agro Tools');
+  fd.append('Brand', product.brand || 'Honeywell');
+  fd.append('brand', product.brand || 'Honeywell');
 
   fd.append('Manufacturer', product.supplier || product.manufacturer || '');
   fd.append('manufacturer', product.supplier || product.manufacturer || '');
@@ -592,7 +592,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     productName: product.name || '',
     name: product.name || '',
     sku: product.sku || '',
-    brand: product.brand || 'Shyam Agro',
+    brand: product.brand || 'Honeywell',
     manufacturer: product.supplier || product.manufacturer || '',
     subcategoryId: Number(product.subcategoryId) || 0,
     categoryId: Number(product.categoryId) || 0,

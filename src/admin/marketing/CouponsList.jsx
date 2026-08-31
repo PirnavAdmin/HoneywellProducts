@@ -75,7 +75,7 @@ const CouponEditModal = ({ coupon, onClose, onSave }) => {
       <div className="coupon-modal" style={{ backgroundColor: 'white', borderRadius: '12px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
         <div className="coupon-modal__header" style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#059669', fontWeight: 700 }}>Campaign Editor</span>
+            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1268a5', fontWeight: 700 }}>Campaign Editor</span>
             <h2 id="edit-coupon-title" style={{ fontSize: '16px', fontWeight: 700, margin: '2px 0 0 0' }}>Edit Coupon: {coupon.code}</h2>
           </div>
           <button className="catalog-btn catalog-btn--icon close-modal-btn" type="button" onClick={onClose} title="Close edit coupon popup" style={{ padding: '4px' }}>

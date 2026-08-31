@@ -74,7 +74,7 @@ const PaymentHistory = () => {
   });
   const [upiId, setUpiId] = useState('');
   const [originalUpiDetails, setOriginalUpiDetails] = useState({});
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('shyam_agro_payment_notifications') !== 'false');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => (localStorage.getItem('honeywell_payment_notifications') || localStorage.getItem('shyam_agro_payment_notifications')) !== 'false');
   
   // Feedback Messages
   const [saveStatus, setSaveStatus] = useState({ type: '', message: '' });
@@ -218,7 +218,7 @@ const PaymentHistory = () => {
   const handleToggleNotifications = async (e) => {
     const enabled = e.target.checked;
     setNotificationsEnabled(enabled);
-    localStorage.setItem('shyam_agro_payment_notifications', enabled ? 'true' : 'false');
+    localStorage.setItem('honeywell_payment_notifications', enabled ? 'true' : 'false');
     
     showBannerStatus('success', `Payment alerts turned ${enabled ? 'ON' : 'OFF'}.`);
     
@@ -552,13 +552,13 @@ const PaymentHistory = () => {
   const saveUpiSettings = async (e) => {
     e.preventDefault();
     if (!isUpiValid(upiId)) {
-      showBannerStatus('error', 'Invalid UPI ID. Format must be: yourname@bankhandle (e.g. shyamagro@ybl).');
+      showBannerStatus('error', 'Invalid UPI ID. Format must be: yourname@bankhandle (e.g. honeywell@ybl).');
       return;
     }
     
     try {
       const response = await updateUpiDetails({
-        merchantName: originalUpiDetails.merchantName || 'Shyam Agro Tools',
+        merchantName: originalUpiDetails.merchantName || 'Honeywell',
         merchantUpiId: upiId,
         bankDisplayName: originalUpiDetails.bankDisplayName || 'Bank Account',
         currency: originalUpiDetails.currency || 'INR'
@@ -1143,7 +1143,7 @@ const PaymentHistory = () => {
                 <input 
                   type="text" 
                   className="bank-input"
-                  placeholder="Shyam Agro"
+                  placeholder="Honeywell"
                   required
                   value={bankDetails.accountHolderName}
                   onChange={(e) => setBankDetails({ ...bankDetails, accountHolderName: e.target.value })}
@@ -1180,7 +1180,7 @@ const PaymentHistory = () => {
                 <input 
                   type="text" 
                   className={`upi-input ${upiId && !isUpiValid(upiId) ? 'error' : ''}`}
-                  placeholder="e.g. shyamagro@ybl"
+                  placeholder="e.g. honeywell@ybl"
                   required
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value.trim())}
@@ -1193,7 +1193,7 @@ const PaymentHistory = () => {
                         Unrecognized PSP handle <strong>@{upiId.trim().split('@')[1]}</strong>. Use a valid bank handle (e.g. @ybl, @oksbi, @paytm, @upi, @axisbank).
                       </span>
                     ) : (
-                      <span>Invalid format. Use <strong>localpart@bankhandle</strong> (e.g. shyamagro@ybl, business@oksbi).</span>
+                      <span>Invalid format. Use <strong>localpart@bankhandle</strong> (e.g. honeywell@ybl, business@oksbi).</span>
                     )}
                   </div>
                 ) : (

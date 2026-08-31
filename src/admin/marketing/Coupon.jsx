@@ -84,7 +84,7 @@ const Coupon = () => {
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#059669', fontWeight: 700 }}>Marketing Campaign</span>
+            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#1268a5', fontWeight: 700 }}>Marketing Campaign</span>
             <h1 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', margin: 0 }}>Create Coupon</h1>
           </div>
         </div>
@@ -203,11 +203,11 @@ const Coupon = () => {
               <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#334155', margin: 0 }}>Live Preview</h2>
               <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>How the campaign reads at checkout.</p>
             </div>
-            <div className="coupon-preview-card" style={{ padding: '16px', border: '2px dashed #059669', borderRadius: '12px', backgroundColor: '#f0fdf4', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-              <Tag size={28} style={{ color: '#059669' }} />
-              <span style={{ fontSize: '15px', fontWeight: 800, color: '#065f46', letterSpacing: '0.05em' }}>{formData.code || 'COUPON'}</span>
-              <strong style={{ fontSize: '24px', fontWeight: 900, color: '#065f46' }}>{previewDiscount}</strong>
-              <p style={{ fontSize: '11px', color: '#047857', margin: 0 }}>{formData.description || 'Coupon description will appear here.'}</p>
+            <div className="coupon-preview-card" style={{ padding: '16px', border: '2px dashed #1268a5', borderRadius: '12px', backgroundColor: '#eaf4fb', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
+              <Tag size={28} style={{ color: '#1268a5' }} />
+              <span style={{ fontSize: '15px', fontWeight: 800, color: '#102735', letterSpacing: '0.05em' }}>{formData.code || 'COUPON'}</span>
+              <strong style={{ fontSize: '24px', fontWeight: 900, color: '#1268a5' }}>{previewDiscount}</strong>
+              <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>{formData.description || 'Coupon description will appear here.'}</p>
             </div>
           </section>
 
@@ -218,10 +218,10 @@ const Coupon = () => {
               <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>Quick operational checklist.</p>
             </div>
             <div className="coupon-summary-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11px', color: '#475569' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Percent size={15} style={{ color: '#059669' }} /> <span>{previewDiscount} discount type: {formData.type}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldCheck size={15} style={{ color: '#059669' }} /> <span>Min cart {formatCurrency(formData.minSpend)}, cap {formatCurrency(formData.maxDiscount)}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={15} style={{ color: '#059669' }} /> <span>{formatDateDMY(formData.startDate)} to {formatDateDMY(formData.endDate)}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ClipboardList size={15} style={{ color: '#059669' }} /> <span>{formData.usageLimit} total uses, {formData.perCustomerLimit} per customer</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Percent size={15} style={{ color: '#1268a5' }} /> <span>{previewDiscount} discount type: {formData.type}</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldCheck size={15} style={{ color: '#1268a5' }} /> <span>Min cart {formatCurrency(formData.minSpend)}, cap {formatCurrency(formData.maxDiscount)}</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={15} style={{ color: '#1268a5' }} /> <span>{formatDateDMY(formData.startDate)} to {formatDateDMY(formData.endDate)}</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ClipboardList size={15} style={{ color: '#1268a5' }} /> <span>{formData.usageLimit} total uses, {formData.perCustomerLimit} per customer</span></div>
             </div>
           </section>
         </aside>

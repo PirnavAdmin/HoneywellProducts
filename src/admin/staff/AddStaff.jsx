@@ -638,7 +638,7 @@ function AddStaff() {
               <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>EMPLOYEE ID</label>
               <input
                 name="employeeId"
-                placeholder="shyam@shyamagrotools.com"
+                placeholder="staff@honeywell.local"
                 value={formData.employeeId}
                 onChange={handleChange}
                 style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #dbeafe', outline: 'none', backgroundColor: '#eff6ff', color: '#1e293b', fontWeight: 500 }}

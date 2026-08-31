@@ -774,7 +774,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background-color: #059669;
+  background-color: #1268a5;
   color: #ffffff;
   padding: 9px 18px;
   border-radius: 8px;
@@ -786,7 +786,7 @@
 }
 
 .qr-submit-btn:hover {
-  background-color: #047857;
+  background-color: #0a4d7c;
 }
 
 .qr-form-note {
@@ -864,12 +864,12 @@
 }
 
 .bank-input:focus {
-  border-color: #059669;
-  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.1);
+  border-color: #1268a5;
+  box-shadow: 0 0 0 2px rgba(18, 104, 165, 0.1);
 }
 
 .bank-input.ifsc-verified {
-  border: 1.5px solid #059669;
+  border: 1.5px solid #1268a5;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -889,7 +889,7 @@
   margin-top: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #059669;
+  color: #1268a5;
 }
 
 .bank-error-msg {
@@ -906,7 +906,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background-color: #059669;
+  background-color: #1268a5;
   color: #ffffff;
   padding: 10px 20px;
   border-radius: 8px;
@@ -919,7 +919,7 @@
 }
 
 .bank-submit-btn:hover {
-  background-color: #047857;
+  background-color: #0a4d7c;
 }
 
 .bank-submit-btn:disabled {

@@ -226,8 +226,8 @@ const normaliseOrder = (o) => {
     billingAddress: o.billingAddress || o.shippingAddress || '',
     notes: o.notes || o.adminNotes || '',
     // Packer / Shipper Details added
-    isPacked: !!(o.packerName && o.packerName !== "Thank you for shopping with Shyam Agro Tools & Equipment!") || ['PACKED', 'DISPATCHED', 'SHIPPED', 'COMPLETED'].includes((o.fulfillment || o.status || '').toUpperCase()) || !!(o.carrierName || o.trackingNumber),
-    packerName: (o.packerName && o.packerName !== "Thank you for shopping with Shyam Agro Tools & Equipment!") ? o.packerName : (!!(o.carrierName || o.trackingNumber) || ['PACKED', 'DISPATCHED', 'SHIPPED', 'COMPLETED'].includes((o.fulfillment || o.status || '').toUpperCase()) ? 'Warehouse Team' : ''),
+    isPacked: !!(o.packerName && o.packerName !== "Thank you for shopping with Honeywell!") || ['PACKED', 'DISPATCHED', 'SHIPPED', 'COMPLETED'].includes((o.fulfillment || o.status || '').toUpperCase()) || !!(o.carrierName || o.trackingNumber),
+    packerName: (o.packerName && o.packerName !== "Thank you for shopping with Honeywell!") ? o.packerName : (!!(o.carrierName || o.trackingNumber) || ['PACKED', 'DISPATCHED', 'SHIPPED', 'COMPLETED'].includes((o.fulfillment || o.status || '').toUpperCase()) ? 'Warehouse Team' : ''),
     packerImage: resolveImageUrl(o.packerPhotoUrl || o.packerImage || ''),
     packedDate: o.packedDate || (o.packerName || !!(o.carrierName || o.trackingNumber) || ['PACKED', 'DISPATCHED', 'SHIPPED', 'COMPLETED'].includes((o.fulfillment || o.status || '').toUpperCase()) ? 'Verified' : ''),
     isShipped: !!(o.carrierName || o.trackingNumber) || ['DISPATCHED', 'SHIPPED', 'COMPLETED'].includes((o.fulfillment || o.status || '').toUpperCase()),
@@ -574,12 +574,12 @@ const printInvoice = (order) => {
             <div style="display: flex; align-items: flex-start; gap: 18px;">
               <img src="/honeywell-products-logo.png" style="height: 70px; width: auto; object-fit: contain; margin-top: 4px;" alt="Honeywell Products" />
               <div>
-                <div class="company-title">Shyam Agro Tools</div>
-                <div class="company-subtitle">EQUIPMENTS & INDUSTRIAL MACHINERY</div>
+                <div class="company-title">Honeywell</div>
+                <div class="company-subtitle">SECURITY & SURVEILLANCE SOLUTIONS</div>
                 <div class="company-meta">
-                  Opposite New Bustand, Nandikotkur (TQ), Nandyal (DT) - 518401, Andhra Pradesh<br/>
-                  GSTIN: <strong>24DYYPP1677P1Z6</strong> | Phone: +91 9912649265, +91 6301275516<br/>
-                  Email: sales@shyamagro.com | Web: www.shyamagrotools.com
+                  302A, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana<br/>
+                  GSTIN: <strong>24DYYPP1677P1Z6</strong> | Phone: 040 4855 5758<br/>
+                  Email: info@honeywellproducts.com
                 </div>
               </div>
             </div>
@@ -596,7 +596,7 @@ const printInvoice = (order) => {
               <div class="info-row"><span class="info-label">Invoice No:</span><span class="info-val">${order.invoiceNo}</span></div>
               <div class="info-row"><span class="info-label">Invoice Date:</span><span class="info-val">${formatDateToDMyLong(order.date)}</span></div>
               <div class="info-row"><span class="info-label">Order Ref ID:</span><span class="info-val">ORD-${order.id}</span></div>
-              <div class="info-row"><span class="info-label">Place of Supply:</span><span class="info-val">Andhra Pradesh (37)</span></div>
+              <div class="info-row"><span class="info-label">Place of Supply:</span><span class="info-val">Telangana (36)</span></div>
             </div>
             <div class="info-block">
               <div class="info-block-title">Payment & Settlement Status</div>
@@ -650,10 +650,10 @@ const printInvoice = (order) => {
             <div class="bank-box">
               <div class="bank-box-title">Remittance / Bank Account Details</div>
               <div class="bank-row"><span class="bank-label">Bank Name:</span><span class="bank-val">State Bank of India</span></div>
-              <div class="bank-row"><span class="bank-label">Account Name:</span><span class="bank-val">Shyam Agro Tools & Equipments</span></div>
+              <div class="bank-row"><span class="bank-label">Account Name:</span><span class="bank-val">Honeywell</span></div>
               <div class="bank-row"><span class="bank-label">Account No:</span><span class="bank-val">50200012345678</span></div>
               <div class="bank-row"><span class="bank-label">IFSC Code:</span><span class="bank-val">SBIN0001234</span></div>
-              <div class="bank-row"><span class="bank-label">UPI VPA:</span><span class="bank-val">sales@shyamagro</span></div>
+              <div class="bank-row"><span class="bank-label">UPI VPA:</span><span class="bank-val">sales@honeywell.local</span></div>
             </div>
 
             <div class="financial-totals">
@@ -674,12 +674,12 @@ const printInvoice = (order) => {
             <div>
               <strong>Terms & Memos:</strong><br/>
               1. Goods once sold will not be taken back without valid return approval.<br/>
-              2. Subject to Nandyal Jurisdiction only.<br/>
+              2. Subject to Hyderabad Jurisdiction only.<br/>
               <em>This is a computer-generated tax invoice requiring no physical signature.</em>
             </div>
             <div class="signatory-box">
               <div class="signatory-line"></div>
-              <strong>For Shyam Agro Tools</strong><br/>
+              <strong>For Honeywell</strong><br/>
               <span>Authorized Signatory</span>
             </div>
           </div>

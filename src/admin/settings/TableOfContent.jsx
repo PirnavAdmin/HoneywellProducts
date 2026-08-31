@@ -67,14 +67,14 @@ const TableOfContent = () => {
   return (
     <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
       
-      {/* Top Banner (Dark Green Header Card) */}
+      {/* Top Banner (Header Card) */}
       <div
         style={{
-          background: '#064e3b',
+          background: 'linear-gradient(135deg, #1268a5 0%, #0a4d7c 100%)',
           color: '#ffffff',
           borderRadius: '14px',
           padding: '24px 28px',
-          boxShadow: '0 4px 12px rgba(6, 78, 59, 0.15)',
+          boxShadow: '0 4px 12px rgba(18, 104, 165, 0.2)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
@@ -90,9 +90,9 @@ const TableOfContent = () => {
 
         <div style={{ zIndex: 1, maxWidth: '640px' }}>
           <h1 style={{ color: '#ffffff', fontWeight: 800, fontSize: '22px', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>
-            SHYAM AGRO Tools Admin Control
+            Honeywell Admin Control
           </h1>
-          <p style={{ color: '#a7f3d0', fontSize: '13px', lineHeight: 1.5, margin: 0, fontWeight: 500 }}>
+          <p style={{ color: '#eaf4fb', fontSize: '13px', lineHeight: 1.5, margin: 0, fontWeight: 500 }}>
             Welcome to the Central Administration Interface. Below is an index of all available features, controls, forms, and database listings.
           </p>
         </div>
@@ -101,7 +101,7 @@ const TableOfContent = () => {
           to="/admin/settings/form"
           style={{
             background: '#ffffff',
-            color: '#064e3b',
+            color: '#1268a5',
             fontWeight: 700,
             fontSize: '13px',
             borderRadius: '8px',
@@ -115,7 +115,7 @@ const TableOfContent = () => {
             whiteSpace: 'nowrap',
             transition: 'all 0.15s ease'
           }}
-          onMouseOver={(e) => (e.currentTarget.style.background = '#f0fdf4')}
+          onMouseOver={(e) => (e.currentTarget.style.background = '#eaf4fb')}
           onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
         >
           <Settings size={16} />
@@ -167,8 +167,8 @@ const TableOfContent = () => {
                     boxSizing: 'border-box'
                   }}
                   onMouseOver={(e) => {
-                    e.currentTarget.style.background = '#f0fdf4';
-                    e.currentTarget.style.borderColor = '#a7f3d0';
+                    e.currentTarget.style.background = '#eaf4fb';
+                    e.currentTarget.style.borderColor = '#bde0fe';
                   }}
                   onMouseOut={(e) => {
                     e.currentTarget.style.background = '#f8fafc';
@@ -176,7 +176,7 @@ const TableOfContent = () => {
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
-                    <span style={{ display: 'flex', alignItems: 'center' }}>{link.icon}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', color: '#1268a5' }}>{link.icon}</span>
                     <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1e293b', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
                       {link.name}
                     </span>
@@ -192,8 +192,8 @@ const TableOfContent = () => {
       {/* Bottom Banner: Platform Security Status */}
       <div
         style={{
-          background: '#f0fdf4',
-          border: '1px solid #a7f3d0',
+          background: '#eaf4fb',
+          border: '1px solid #bde0fe',
           borderRadius: '12px',
           padding: '18px 22px',
           boxSizing: 'border-box'
@@ -202,8 +202,8 @@ const TableOfContent = () => {
         {/* Header Row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Shield size={16} style={{ color: '#10b981' }} />
-            <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Shield size={16} style={{ color: '#1268a5' }} />
+            <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#102735', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               PLATFORM SECURITY STATUS
             </span>
           </div>
@@ -213,16 +213,16 @@ const TableOfContent = () => {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#dcfce7',
-              border: '1px solid #86efac',
+              background: '#dbeafe',
+              border: '1px solid #93c5fd',
               borderRadius: '20px',
               padding: '4px 12px',
               fontSize: '11px',
               fontWeight: 700,
-              color: '#15803d'
+              color: '#1268a5'
             }}
           >
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', display: 'inline-block' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#1268a5', display: 'inline-block' }} />
             All Systems Secure
           </span>
         </div>
@@ -235,12 +235,12 @@ const TableOfContent = () => {
               alignItems: 'center',
               gap: '10px',
               background: '#ffffff',
-              border: '1px solid #d1fae5',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
               padding: '10px 14px'
             }}
           >
-            <KeyRound size={16} style={{ color: '#10b981', flexShrink: 0 }} />
+            <KeyRound size={16} style={{ color: '#1268a5', flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 JWT KEY ROTATION
@@ -257,12 +257,12 @@ const TableOfContent = () => {
               alignItems: 'center',
               gap: '10px',
               background: '#ffffff',
-              border: '1px solid #d1fae5',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
               padding: '10px 14px'
             }}
           >
-            <ClipboardCheck size={16} style={{ color: '#10b981', flexShrink: 0 }} />
+            <ClipboardCheck size={16} style={{ color: '#1268a5', flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 LAST AUDIT
@@ -279,12 +279,12 @@ const TableOfContent = () => {
               alignItems: 'center',
               gap: '10px',
               background: '#ffffff',
-              border: '1px solid #d1fae5',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
               padding: '10px 14px'
             }}
           >
-            <HardDrive size={16} style={{ color: '#10b981', flexShrink: 0 }} />
+            <HardDrive size={16} style={{ color: '#1268a5', flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 LAST BACKUP
@@ -301,12 +301,12 @@ const TableOfContent = () => {
               alignItems: 'center',
               gap: '10px',
               background: '#ffffff',
-              border: '1px solid #d1fae5',
+              border: '1px solid #cbd5e1',
               borderRadius: '8px',
               padding: '10px 14px'
             }}
           >
-            <Lock size={16} style={{ color: '#10b981', flexShrink: 0 }} />
+            <Lock size={16} style={{ color: '#1268a5', flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 SESSION ENCRYPTION

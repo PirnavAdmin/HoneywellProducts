@@ -878,13 +878,13 @@ const BrandForm = () => {
               style={{
                 fontSize: '11px',
                 textTransform: 'uppercase',
-                color: '#059669',
+                color: '#1268a5',
                 fontWeight: 800,
                 display: 'block',
                 letterSpacing: '0.05em'
               }}
             >
-              CATALOG SETTINGS
+              Brand Management
             </span>
 
             <h1
@@ -897,7 +897,7 @@ const BrandForm = () => {
             >
               {isEditing
                 ? 'Edit Brand'
-                : 'Create Brand'}
+                : 'Add New Brand'}
             </h1>
           </div>
         </div>
@@ -937,7 +937,7 @@ const BrandForm = () => {
               backgroundColor:
                 isSaving || isLoading
                   ? '#94a3b8'
-                  : '#059669',
+                  : '#1268a5',
               color: '#ffffff',
               fontSize: '13px',
               fontWeight: 700,
@@ -1005,7 +1005,7 @@ const BrandForm = () => {
                 fontSize: '12px',
                 fontWeight: 800,
                 textTransform: 'uppercase',
-                color: '#059669',
+                color: '#1268a5',
                 letterSpacing: '0.05em',
                 borderBottom:
                   '1px solid #f1f5f9',
@@ -1048,7 +1048,7 @@ const BrandForm = () => {
                 <span
                   style={{
                     fontSize: '11px',
-                    color: '#059669',
+                    color: '#1268a5',
                     fontWeight: 600,
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -1152,7 +1152,7 @@ const BrandForm = () => {
                     )
                   )
                 }
-                placeholder="e.g. Shyam Agro Tools"
+                placeholder="e.g. Honeywell"
                 required
                 disabled={isLoading}
                 style={{
@@ -1377,7 +1377,7 @@ const BrandForm = () => {
                     <Upload
                       size={22}
                       style={{
-                        color: '#059669'
+                        color: '#1268a5'
                       }}
                     />
 

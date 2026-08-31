@@ -1384,12 +1384,12 @@ const ProductsForm = () => {
                   ) : formData.posterUrl || formData.posterImage || formData.poster ? (
                     <img src={resolveImageUrl(formData.posterUrl || formData.posterImage || formData.poster)} alt="Poster Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   ) : (
-                    <FileText size={28} style={{ color: '#059669' }} />
+                    <FileText size={28} style={{ color: '#1268a5' }} />
                   )}
                 </span>
                 <span style={{ display: 'flex', flexDirection: 'column', gap: '2px', alignItems: 'center' }}>
-                  <strong style={{ color: '#047857' }}>Detailed Poster / Info Graphic (Optional)</strong>
-                  <span style={{ fontSize: '11px', color: '#059669', textAlign: 'center' }}>
+                  <strong style={{ color: '#1268a5' }}>Detailed Poster / Info Graphic (Optional)</strong>
+                  <span style={{ fontSize: '11px', color: '#1268a5', textAlign: 'center' }}>
                     HD full-screen PDF view for user. Leave empty if not required.
                   </span>
                 </span>

@@ -33,13 +33,13 @@ import {
 
 /* ─── Mock Data ─────────────────────────────────────────── */
 const INITIAL_STOCK = [
-  { id: 5, sku: 'SAT-FAR-862', name: 'Cultivator', category: 'Cultivators / Tillers / Weeders', subcategory: 'Tillers', supplier: 'Shyam Agro Tools', currentStock: 45, reorderLevel: 10, unit: 'Units', costPrice: 32000, sellingPrice: 43700, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +15 },
-  { id: 6, sku: 'SAT-FAR-400', name: 'Heavy Duty Scythe With 23 Inch Blade', category: 'Special Farm Tools', subcategory: 'Harvesting Tools', supplier: 'Shyam Agro Tools', currentStock: 80, reorderLevel: 20, unit: 'Pcs', costPrice: 850, sellingPrice: 1350, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +25 },
-  { id: 7, sku: 'SAT-FAR-565', name: 'Heavy-Duty 6 Tooth Spike Harrow', category: 'Special Farm Tools', subcategory: 'Soil Tools', supplier: 'Shyam Agro Tools', currentStock: 60, reorderLevel: 15, unit: 'Pcs', costPrice: 450, sellingPrice: 795, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'stable', change: 0 },
+  { id: 5, sku: 'SAT-FAR-862', name: 'Cultivator', category: 'Cultivators / Tillers / Weeders', subcategory: 'Tillers', supplier: 'Honeywell', currentStock: 45, reorderLevel: 10, unit: 'Units', costPrice: 32000, sellingPrice: 43700, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +15 },
+  { id: 6, sku: 'SAT-FAR-400', name: 'Heavy Duty Scythe With 23 Inch Blade', category: 'Special Farm Tools', subcategory: 'Harvesting Tools', supplier: 'Honeywell', currentStock: 80, reorderLevel: 20, unit: 'Pcs', costPrice: 850, sellingPrice: 1350, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +25 },
+  { id: 7, sku: 'SAT-FAR-565', name: 'Heavy-Duty 6 Tooth Spike Harrow', category: 'Special Farm Tools', subcategory: 'Soil Tools', supplier: 'Honeywell', currentStock: 60, reorderLevel: 15, unit: 'Pcs', costPrice: 450, sellingPrice: 795, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'stable', change: 0 },
   { id: 8, sku: 'SAT-FAR-842', name: 'Gramstrong Republic Solar Street Light 120W', category: 'Solar Products', subcategory: 'Solar Lighting', supplier: 'SolarFarm Tech', currentStock: 35, reorderLevel: 10, unit: 'Pcs', costPrice: 2600, sellingPrice: 3995, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +18 },
-  { id: 9, sku: 'SAT-FAR-885', name: 'Heavy-Duty Agricultural Impact Sprinkler', category: 'Sprayers', subcategory: 'Irrigation Sprinklers', supplier: 'Shyam Agro Tools', currentStock: 120, reorderLevel: 30, unit: 'Pcs', costPrice: 320, sellingPrice: 523, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +30 },
-  { id: 10, sku: 'SAT-FAR-484', name: 'Farmio Grass Cutting Machine', category: 'Garden Tools', subcategory: 'Cutters', supplier: 'Shyam Agro Tools', currentStock: 40, reorderLevel: 10, unit: 'Pcs', costPrice: 890, sellingPrice: 1360, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'stable', change: 0 },
-  { id: 12, sku: 'SAT-FAR-829', name: 'Premium Quality Thermal Fogging Machine, 16 Litre', category: 'Fogging Machine', subcategory: 'Foggers', supplier: 'Shyam Agro Tools', currentStock: 18, reorderLevel: 5, unit: 'Units', costPrice: 12000, sellingPrice: 16501, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +10 },
+  { id: 9, sku: 'SAT-FAR-885', name: 'Heavy-Duty Agricultural Impact Sprinkler', category: 'Sprayers', subcategory: 'Irrigation Sprinklers', supplier: 'Honeywell', currentStock: 120, reorderLevel: 30, unit: 'Pcs', costPrice: 320, sellingPrice: 523, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +30 },
+  { id: 10, sku: 'SAT-FAR-484', name: 'Farmio Grass Cutting Machine', category: 'Garden Tools', subcategory: 'Cutters', supplier: 'Honeywell', currentStock: 40, reorderLevel: 10, unit: 'Pcs', costPrice: 890, sellingPrice: 1360, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'stable', change: 0 },
+  { id: 12, sku: 'SAT-FAR-829', name: 'Premium Quality Thermal Fogging Machine, 16 Litre', category: 'Fogging Machine', subcategory: 'Foggers', supplier: 'Honeywell', currentStock: 18, reorderLevel: 5, unit: 'Units', costPrice: 12000, sellingPrice: 16501, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +10 },
   { id: 14, sku: 'SAT-FAR-382', name: 'Kisankraft KK-STB-050 Grass Stubble Mower', category: 'Special Farm Tools', subcategory: 'Mowers', supplier: 'Kisankraft', currentStock: 12, reorderLevel: 3, unit: 'Units', costPrice: 82000, sellingPrice: 105020, status: 'In Stock', lastUpdated: '2026-07-28', trend: 'up', change: +8 }
 ];
 
@@ -480,11 +480,11 @@ const AddEntryModal = ({ categories = [], onClose, onSave }) => {
 };
 
 const saveLocalStock = (stock) => {
-  localStorage.setItem('shyam_stock_ledger', JSON.stringify(stock));
+  localStorage.setItem('honeywell_stock_ledger', JSON.stringify(stock));
 };
 
 const getLocalStock = () => {
-  const local = localStorage.getItem('shyam_stock_ledger');
+  const local = localStorage.getItem('honeywell_stock_ledger') || localStorage.getItem('shyam_stock_ledger');
   return local ? JSON.parse(local) : INITIAL_STOCK;
 };
 

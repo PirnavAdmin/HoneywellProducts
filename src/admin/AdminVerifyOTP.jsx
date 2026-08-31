@@ -173,7 +173,7 @@ const AdminVerifyOTP = () => {
     let permissionsList = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "staff"];
 
     // Set role and permissions based on login email
-    if (email.toLowerCase().trim() === 'shyam@shyamagrotools.com') {
+    if (email.toLowerCase().trim() === 'admin@honeywell.local') {
       registeredRole = 'admin';
       permissionsList = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"];
     } else if (location.state?.localStaff) {

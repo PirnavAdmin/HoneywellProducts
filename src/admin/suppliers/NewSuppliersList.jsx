@@ -161,9 +161,9 @@ const NewSuppliersList = () => {
       {/* Metrics Row */}
       <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm gap-4">
         <div className="catalog-title-wrap">
-          <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#059669', fontWeight: 700 }}>Procurement</span>
+          <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#1268a5', fontWeight: 700 }}>Procurement</span>
           <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b', margin: 0 }}>New Seller Tickets</h1>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>Review and verify self-registered sellers requesting to join Shyam Agro.</p>
+          <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>Review and verify self-registered sellers requesting to join Honeywell.</p>
         </div>
 
         <div className="suppliers-metrics" style={{ display: 'flex', gap: '12px' }}>

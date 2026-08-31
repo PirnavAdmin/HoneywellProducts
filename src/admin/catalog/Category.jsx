@@ -98,7 +98,7 @@ const Category = () => {
       const saved = await saveCategoryApi({
         ...formData,
         slug: formData.slug || slugify(formData.name),
-        metaTitle: formData.metaTitle || `${formData.name} | Shyam Agro Tools`,
+        metaTitle: formData.metaTitle || `${formData.name} | Honeywell`,
         metaDescription: formData.metaDescription || formData.description,
       });
       if (saved) {

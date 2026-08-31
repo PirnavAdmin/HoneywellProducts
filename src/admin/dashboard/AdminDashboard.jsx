@@ -419,7 +419,7 @@ const AdminDashboard = () => {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `shyam-agro-dashboard-report.csv`;
+    link.download = `honeywell-dashboard-report.csv`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -447,7 +447,7 @@ const AdminDashboard = () => {
         <div className="dashboard-heading">
           <span className="dashboard-eyebrow">Storefront Management Console</span>
           <h1>Admin Overview</h1>
-          <p>Real-time orders metrics, product catalog stats, supplier statuses, and employee operations for Shyam Agro Tools.</p>
+          <p>Real-time orders metrics, product catalog stats, supplier statuses, and employee operations for Honeywell.</p>
         </div>
 
         <div className="dashboard-controls" aria-label="Dashboard controls">

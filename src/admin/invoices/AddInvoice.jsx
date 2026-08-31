@@ -23,7 +23,7 @@ const AddInvoice = () => {
     taxAmount: 0,
     discount: 0,
     shippingCharge: 0,
-    notes: 'Official tax invoice issued by Shyam Agro Tools for high-quality agricultural equipment, machinery, and farm supplies. Subject to standard commercial warranty and sales terms.'
+    notes: 'Official tax invoice issued by Honeywell for high-quality security, surveillance, and electronic equipment. Subject to standard commercial warranty and sales terms.'
   });
 
   const [items, setItems] = useState([
@@ -391,7 +391,7 @@ const AddInvoice = () => {
           {/* Official Receiving Account Box */}
           <div className="seller-bank-card">
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803d', fontWeight: 700, fontSize: '12px' }}>
-              <ShieldCheck size={16} /> Official Seller Receiving Account (Shyam Agro Tools)
+              <ShieldCheck size={16} /> Official Seller Receiving Account (Honeywell)
             </div>
             <div className="seller-bank-grid">
               <div className="seller-bank-item">
@@ -400,7 +400,7 @@ const AddInvoice = () => {
               </div>
               <div className="seller-bank-item">
                 <label>Account Name</label>
-                <span>Shyam Agro Tools & Equipments</span>
+                <span>Honeywell</span>
               </div>
               <div className="seller-bank-item">
                 <label>Account Number</label>
@@ -412,7 +412,7 @@ const AddInvoice = () => {
               </div>
               <div className="seller-bank-item">
                 <label>UPI ID</label>
-                <span>sales@shyamagro</span>
+                <span>sales@honeywell.local</span>
               </div>
             </div>
           </div>

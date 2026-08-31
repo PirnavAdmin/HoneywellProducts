@@ -73,7 +73,7 @@ const NotificationsDropdown = () => {
     if (t.includes('payment') || t.includes('checkout')) {
       return {
         className: 'info',
-        icon: <CreditCard size={15} className="text-indigo-600" />
+        icon: <CreditCard size={15} className="text-[#1268a5]" />
       };
     }
     if (t.includes('review') || t.includes('testimonial') || t.includes('ticket')) {

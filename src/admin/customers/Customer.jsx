@@ -296,9 +296,9 @@ const Customer = () => {
               justifyContent: 'center',
               margin: '0 auto 18px'
             }}>
-              <User size={28} style={{ color: '#059669' }} />
+              <User size={28} style={{ color: '#1268a5' }} />
             </div>
-            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#064e3b', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
+            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#102735', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
               Select Customer Profile
             </h1>
             <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
@@ -392,7 +392,7 @@ const Customer = () => {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#059669',
+                color: '#1268a5',
                 fontSize: '14px',
                 fontWeight: 700,
                 cursor: 'pointer',
