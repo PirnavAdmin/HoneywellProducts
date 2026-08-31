@@ -242,112 +242,200 @@ const CustomersList = () => {
   if (error) return <div className="text-center py-8 text-red-600">Error: {error}</div>;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-6 relative" style={{ padding: '16px' }}>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+      {/* Header Card matching media_1788166168026.png */}
+      <section style={{
+        backgroundColor: '#ffffff',
+        padding: '24px 28px',
+        borderRadius: '16px',
+        border: '1px solid #f1f5f9',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
         <div>
-          <h2 className="text-[20px] font-bold text-slate-800">Customers Directory</h2>
-          <p className="text-slate-500 text-xs">
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+            Customers Directory
+          </h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
             Manage registered growers, retailers, and agricultural bulk buyers.
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm"
+          style={{
+            backgroundColor: '#059669',
+            color: '#ffffff',
+            fontSize: '13px',
+            fontWeight: 700,
+            padding: '10px 20px',
+            borderRadius: '10px',
+            border: 'none',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 1px 3px rgba(5, 150, 105, 0.25)',
+            whiteSpace: 'nowrap'
+          }}
         >
-          <Plus size={14} /> Add Customer
+          <Plus size={16} /> Add Customer
         </button>
-      </div>
+      </section>
 
-      {/* Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+      {/* Search Bar & Filter Toolbar */}
+      <section style={{
+        backgroundColor: '#ffffff',
+        padding: '16px 24px',
+        borderRadius: '16px',
+        border: '1px solid #f1f5f9',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        gap: '16px'
+      }}>
+        <div style={{ flex: '1', position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Search size={16} style={{ position: 'absolute', left: '14px', color: '#94a3b8' }} />
           <input
             type="text"
             placeholder="Search by customer name, id..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+            style={{
+              width: '100%',
+              padding: '10px 14px 10px 38px',
+              fontSize: '13px',
+              border: '1px solid #e2e8f0',
+              borderRadius: '10px',
+              outline: 'none',
+              backgroundColor: '#ffffff',
+              color: '#0f172a'
+            }}
           />
         </div>
         <select
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
-          className="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-emerald-500 cursor-pointer"
+          style={{
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            padding: '10px 16px',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#334155',
+            outline: 'none',
+            cursor: 'pointer'
+          }}
         >
           <option value="All">All Customer Types</option>
           <option value="Farmer">Farmers</option>
           <option value="Retailer">Retailers</option>
           <option value="Wholesaler">Wholesalers</option>
         </select>
-      </div>
+      </section>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-slate-100">
-        <table className="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
-              <th className="px-4 py-2">ID</th>
-              <th className="px-4 py-2">Customer Name</th>
-              <th className="px-4 py-2">Phone Number</th>
-              <th className="px-4 py-2">Address</th>
-              <th className="px-4 py-2 text-center">Orders</th>
-              <th className="px-4 py-2 text-right">Total Spent</th>
-              <th className="px-4 py-2 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {currentCustomers.map((cust) => {
+      {/* Customer Directory Table Card */}
+      <section style={{
+        backgroundColor: '#ffffff',
+        padding: '0',
+        borderRadius: '16px',
+        border: '1px solid #f1f5f9',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.03)',
+        overflow: 'hidden'
+      }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, fontSize: '13px' }}>
+            <thead>
+              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>ID</th>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Customer Name</th>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Phone Number</th>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Address</th>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Orders</th>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Total Spent</th>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {currentCustomers.map((cust) => {
+                const formatAddr = () => {
+                  const parts = [cust.address, cust.district, cust.state].filter(p => p && p.trim() && p !== 'string' && p !== 'N/A');
+                  return parts.length > 0 ? parts.join(', ') : '—';
+                };
+                const displayAddress = formatAddr();
+                const orderCount = cust.orders?.length || 0;
+                const totalSpent = cust.orders?.reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0) || 0;
+                const customerType = cust.type || 'Farmer';
 
+                return (
+                  <tr 
+                    key={cust.id} 
+                    style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background-color 0.15s ease' }}
+                    onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                    onMouseOut={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    onClick={() => navigate(`/admin/customers/customer?id=${cust.id}`)}
+                  >
+                    <td style={{ padding: '14px 18px', fontWeight: 600, color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                      #{cust.id}
+                    </td>
+                    <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0f172a', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                      <span>{cust.name}</span>
+                      <span style={{
+                        backgroundColor: customerType === 'Farmer' ? '#dcfce7' : (customerType === 'Retailer' ? '#dbeafe' : '#f3e8ff'),
+                        color: customerType === 'Farmer' ? '#15803d' : (customerType === 'Retailer' ? '#1e40af' : '#6b21a8'),
+                        border: `1px solid ${customerType === 'Farmer' ? '#bbf7d0' : (customerType === 'Retailer' ? '#bfdbfe' : '#e9d5ff')}`,
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '999px',
+                        textTransform: 'uppercase',
+                        marginLeft: '8px',
+                        display: 'inline-block'
+                      }}>
+                        {customerType}
+                      </span>
+                    </td>
+                    <td style={{ padding: '14px 18px', fontWeight: 500, color: '#475569', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                      {cust.phone}
+                    </td>
+                    <td style={{ padding: '14px 18px', color: '#64748b', fontSize: '13px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <MapPin size={14} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                        <span style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={displayAddress}>
+                          {displayAddress}
+                        </span>
+                      </div>
+                    </td>
 
-              const formatAddr = () => {
-                const parts = [cust.address, cust.district, cust.state].filter(p => p && p.trim() && p !== 'string' && p !== 'N/A');
-                return parts.length > 0 ? parts.join(', ') : '—';
-              };
-              const displayAddress = formatAddr();
-              const orderCount = cust.orders?.length || 0;
-              const totalSpent = cust.orders?.reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0) || 0;
-              const customerType = cust.type || 'Farmer';
-
-              return (
-                <tr 
-                  key={cust.id} 
-                  className="hover:bg-slate-50/60 transition-colors text-slate-700 cursor-pointer"
-                  onClick={() => navigate(`/admin/customers/customer?id=${cust.id}`)}
-                >
-                  <td className="px-4 py-2 font-medium text-slate-500">#{cust.id}</td>
-                  <td className="px-4 py-2 font-semibold text-slate-800">
-                    <span className="hover:text-emerald-600 transition-colors">{cust.name}</span>
-                    <span className={`text-[9px] ml-2 px-1.5 py-0.2 rounded-full font-bold uppercase ${getTagColor(customerType)}`}> {customerType} </span>
-                  </td>
-                  <td className="px-4 py-2 font-medium text-slate-600">{cust.phone}</td>
-                  <td className="px-4 py-2 text-slate-500">
-                    <div className="flex items-center gap-1">
-                      <MapPin size={12} className="text-slate-400 shrink-0" />
-                      <span className="truncate max-w-[220px]" title={displayAddress}>{displayAddress}</span>
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-2 text-center font-semibold text-slate-700">{orderCount}</td>
-                  <td className="px-4 py-2 text-right font-bold text-slate-800">₹{totalSpent.toLocaleString('en-IN')}</td>
-                  <td className="px-4 py-2 text-right">
-                    <div className="flex justify-end gap-2 items-center" onClick={e => e.stopPropagation()}>
-                      <AnimatedViewButton to={`/admin/customers/customer?id=${cust.id}`} title="View Profile" />
-                      <OutlookDeleteButton onClick={() => handleDelete(cust.id)} title="Delete Customer" />
-                    </div>
+                    <td style={{ padding: '14px 18px', textAlign: 'center', fontWeight: 600, color: '#1e293b', fontSize: '13px' }}>
+                      {orderCount}
+                    </td>
+                    <td style={{ padding: '14px 18px', textAlign: 'right', fontWeight: 800, color: '#0f172a', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                      ₹{totalSpent.toLocaleString('en-IN')}
+                    </td>
+                    <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                        <AnimatedViewButton to={`/admin/customers/customer?id=${cust.id}`} title="View Profile" />
+                        <OutlookDeleteButton onClick={() => handleDelete(cust.id)} title="Delete Customer" />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {filteredCustomers.length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '14px', fontWeight: 500 }}>
+                    No customers found.
                   </td>
                 </tr>
-              );
-            })}
-            {filteredCustomers.length === 0 && (
-              <tr>
-                <td colSpan="7" className="text-center py-6 text-slate-400">No customers found.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <Pagination
         currentPage={currentPage}

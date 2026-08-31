@@ -583,102 +583,174 @@ function AddStaff() {
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
-      {/* Top Header Card */}
-      <section className="add-staff-header flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200" to="/admin/staff/list">
-            <ArrowLeft size={16} />
+      {/* Top Header Card with Far-Right Actions */}
+      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <Link
+            to="/admin/staff/list"
+            style={{
+              width: '36px',
+              height: '36px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#475569',
+              background: '#ffffff',
+              transition: 'all 0.15s ease',
+              textDecoration: 'none'
+            }}
+          >
+            <ArrowLeft size={18} />
           </Link>
           <div>
-            <span className="staff-kicker">Staff Directory</span>
-            <h1 className="header-title">
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#10b981', fontWeight: 700, letterSpacing: '0.04em', display: 'block', marginBottom: '2px' }}>
+              STAFF DIRECTORY
+            </span>
+            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
               {isEditing ? 'Edit Staff Profile' : 'Add Staff Member'}
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link to="/admin/staff/list" className="staff-cancel-btn">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto' }}>
+          <Link
+            to="/admin/staff/list"
+            style={{
+              background: '#ffffff',
+              color: '#475569',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              height: '38px',
+              padding: '0 18px',
+              fontSize: '13px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textDecoration: 'none',
+              transition: 'all 0.15s ease'
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = '#f8fafc';
+              e.currentTarget.style.borderColor = '#94a3b8';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.borderColor = '#cbd5e1';
+            }}
+          >
             Cancel
           </Link>
-          <button className="staff-save-btn" onClick={handleSubmit} disabled={isSaving}>
-            <Save size={14} />
-            {isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Profile' : 'Save Profile')}
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSaving}
+            style={{
+              background: '#10b981',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              height: '38px',
+              padding: '0 18px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: isSaving ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              opacity: isSaving ? 0.7 : 1,
+              transition: 'background 0.15s ease'
+            }}
+            onMouseOver={(e) => !isSaving && (e.currentTarget.style.background = '#059669')}
+            onMouseOut={(e) => !isSaving && (e.currentTarget.style.background = '#10b981')}
+          >
+            <Save size={15} />
+            <span>{isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Profile' : 'Save Profile')}</span>
           </button>
         </div>
       </section>
 
       {/* Form Fields Card Layout */}
       <div className="staff-content-grid">
-        {/* Left Card: Basic Info */}
+        {/* Left Card: Basic Info & Access Password */}
         <div className="staff-form-card">
-          <h3 className="card-section-title">
-            <User size={16} /> Basic Credentials
+          {/* Basic Credentials Section */}
+          <h3 className="card-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>
+            <User size={18} style={{ color: '#064e3b' }} /> BASIC CREDENTIALS
           </h3>
           
-          <div className="fields-grid">
+          <div className="fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 20px', marginBottom: '28px' }}>
             <div className="staff-field">
-              <label>First Name</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>FIRST NAME</label>
               <input
                 name="firstName"
                 placeholder="First name"
                 value={formData.firstName}
                 onChange={handleChange}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
               />
               {errors.firstName && <span className="field-error-msg">{errors.firstName}</span>}
             </div>
 
             <div className="staff-field">
-              <label>Last Name</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>LAST NAME</label>
               <input
                 name="lastName"
                 placeholder="Last name"
                 value={formData.lastName}
                 onChange={handleChange}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
               />
               {errors.lastName && <span className="field-error-msg">{errors.lastName}</span>}
             </div>
 
             <div className="staff-field">
-              <label style={{ textTransform: 'none' }}>Email Address</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>Email Address</label>
               <input
                 type="email"
                 name="email"
                 placeholder="name@gmail.com"
                 value={formData.email}
                 onChange={handleChange}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
               />
               {errors.email && <span className="field-error-msg">{errors.email}</span>}
             </div>
 
             <div className="staff-field">
-              <label>Mobile Number</label>
-              <div className="phone-input-container">
-                <span className="phone-prefix">+91</span>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>MOBILE NUMBER</label>
+              <div className="phone-input-container" style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+                <span className="phone-prefix" style={{ backgroundColor: '#f8fafc', padding: '10px 14px', fontSize: '13px', fontWeight: 700, color: '#334155', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>+91</span>
                 <input
                   name="mobile"
                   value={formData.mobile}
                   placeholder="10 digit number"
                   onChange={handleChange}
+                  style={{ border: 'none', padding: '10px 14px', fontSize: '13px', width: '100%', outline: 'none' }}
                 />
               </div>
               {errors.mobile && <span className="field-error-msg">{errors.mobile}</span>}
             </div>
 
             <div className="staff-field">
-              <label>Employee ID</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>EMPLOYEE ID</label>
               <input
                 name="employeeId"
-                placeholder="e.g. M102"
+                placeholder="shyam@shyamagrotools.com"
                 value={formData.employeeId}
                 onChange={handleChange}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #dbeafe', outline: 'none', backgroundColor: '#eff6ff', color: '#1e293b', fontWeight: 500 }}
               />
               {errors.employeeId && <span className="field-error-msg">{errors.employeeId}</span>}
             </div>
 
             <div className="staff-field">
-              <label>Role</label>
-              <select name="role" value={formData.role} onChange={handleChange}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>ROLE</label>
+              <select name="role" value={formData.role} onChange={handleChange} style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#ffffff' }}>
                 <option value="">Select Role</option>
                 <option value="admin">Admin</option>
                 <option value="advisory">Advisory</option>
@@ -691,28 +763,38 @@ function AddStaff() {
             </div>
           </div>
 
-          <h3 className="card-section-title pt-6">
-            <Key size={16} /> Access Password
+          {/* Access Password Section */}
+          <h3 className="card-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>
+            <Key size={18} style={{ color: '#064e3b' }} /> ACCESS PASSWORD
           </h3>
           
-          <div className="fields-grid">
+          <div className="fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 20px' }}>
+            {/* Password Field */}
             <div className="staff-field">
-              <label>{isEditing ? 'New Password (Optional)' : 'Password'}</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>PASSWORD</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
-                  placeholder="Password"
+                  placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
-                  style={{ width: '100%', paddingRight: '40px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 40px 10px 14px',
+                    fontSize: '13px',
+                    borderRadius: '10px',
+                    border: '1px solid #dbeafe',
+                    backgroundColor: formData.password ? '#eff6ff' : '#ffffff',
+                    outline: 'none'
+                  }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
-                    right: '10px',
+                    right: '12px',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
@@ -723,29 +805,15 @@ function AddStaff() {
                   }}
                   title={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {errors.password && <span className="field-error-msg">{errors.password}</span>}
             </div>
 
+            {/* Confirm Password Field */}
             <div className="staff-field">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label>Confirm Password</label>
-                {formData.password && formData.confirmPassword && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: formData.password === formData.confirmPassword ? '#10b981' : '#ef4444' }}>
-                    {formData.password === formData.confirmPassword ? (
-                      <>
-                        <CheckCircle2 size={13} /> Passwords Match
-                      </>
-                    ) : (
-                      <>
-                        <XCircle size={13} /> Passwords Do Not Match
-                      </>
-                    )}
-                  </span>
-                )}
-              </div>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>CONFIRM PASSWORD</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
@@ -755,37 +823,32 @@ function AddStaff() {
                   onChange={handleChange}
                   style={{
                     width: '100%',
-                    paddingRight: '64px',
-                    borderColor: formData.confirmPassword
-                      ? (formData.password === formData.confirmPassword ? '#10b981' : '#ef4444')
-                      : undefined
+                    padding: '10px 40px 10px 14px',
+                    fontSize: '13px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    outline: 'none'
                   }}
                 />
-                <div style={{ position: 'absolute', right: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {formData.password && formData.confirmPassword && (
-                    formData.password === formData.confirmPassword ? (
-                      <CheckCircle2 size={16} color="#10b981" title="Passwords match" />
-                    ) : (
-                      <XCircle size={16} color="#ef4444" title="Passwords do not match" />
-                    )
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: '#64748b',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '2px'
-                    }}
-                    title={showConfirmPassword ? "Hide password" : "Show password"}
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px'
+                  }}
+                  title={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
               {errors.confirmPassword && <span className="field-error-msg">{errors.confirmPassword}</span>}
             </div>

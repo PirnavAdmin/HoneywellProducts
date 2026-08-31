@@ -96,14 +96,38 @@ export const validateBrandName = (rawName) => {
     return 'Brand Name is required.';
   }
   const name = rawName.trim();
-  if (name.length < 2 || name.length > 100) {
-    return 'Brand Name must be between 2 and 100 characters.';
+  if (name.length < 2 || name.length > 50) {
+    return 'Brand Name must be between 2 and 50 characters.';
   }
-  if (!/[a-zA-Z0-9]/.test(name)) {
-    return 'Brand Name must contain valid letters or numbers.';
+  if (!/[a-zA-Z]/.test(name)) {
+    return 'Brand Name must contain valid letters.';
   }
-  if (/(.)\1{4,}/.test(name)) {
-    return 'Brand Name cannot contain excessively repeated characters.';
+  if (/(.)\1{3,}/.test(name)) {
+    return 'Brand Name cannot contain repeated random characters.';
+  }
+  const mashPatterns = /(asdf|qwer|zxcv|hjkl|uiop|vbnm|wert|xcvb|erty|dfgh|cvbn|tyui|ghjk|bnm|swq|qwe|asd|zxc|qaz|wsx|edc|rfv|tgb|yhn|ujm)/i;
+  if (mashPatterns.test(name)) {
+    return 'Brand Name appears to be random keyboard typing.';
+  }
+  if (/[bcdfghjklmnpqrstvwxz]{6,}/i.test(name)) {
+    return 'Brand Name contains too many consecutive consonants.';
+  }
+  const cleanWord = name.toLowerCase().replace(/[^a-z]/g, '');
+  const uniqueChars = new Set(cleanWord).size;
+  if (cleanWord.length >= 6 && uniqueChars <= cleanWord.length / 2.0) {
+    return 'Brand Name appears to contain invalid repetitive characters.';
+  }
+  const words = name.split(/\s+/);
+  for (const w of words) {
+    if (w.length > 5) {
+      const vowels = (w.match(/[aeiouy]/gi) || []).length;
+      if (vowels === 0) return 'Brand Name words must contain vowels.';
+      const consonants = (w.match(/[bcdfghjklmnpqrstvwxz]/gi) || []).length;
+      if (consonants / vowels > 3.5) return 'Brand Name contains invalid random characters.';
+    }
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9\s&\-\'\./]{1,49}$/.test(name)) {
+    return 'Brand Name contains invalid characters. Only letters, numbers, spaces, and standard punctuation (&, -, \', ., /) are allowed.';
   }
   return null;
 };
@@ -345,66 +369,66 @@ const BrandForm = () => {
   };
 
   return (
-    <div className="brands-page" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="brands-page" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       {toastMessage && (
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
-      {/* Top Header Row with Actions in Top-Right */}
-      <section className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-3">
+      {/* Top Header Row with Actions */}
+      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', backgroundColor: '#ffffff', padding: '24px 32px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <Link className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200" to="/admin/brands/list">
-            <ArrowLeft size={16} />
+            <ArrowLeft size={18} />
           </Link>
           <div>
-            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#059669', fontWeight: 700 }}>Catalog settings</span>
-            <h1 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', margin: 0 }}>{isEditing ? 'Edit Brand' : 'Create Brand'}</h1>
+            <span className="catalog-kicker" style={{ fontSize: '11px', textTransform: 'uppercase', color: '#059669', fontWeight: 800, display: 'block', letterSpacing: '0.05em' }}>CATALOG SETTINGS</span>
+            <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{isEditing ? 'Edit Brand' : 'Create Brand'}</h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link to="/admin/brands/list" className="catalog-btn catalog-btn--danger" style={{ fontSize: '11px', padding: '6px 12px' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'flex-end' }}>
+          <Link to="/admin/brands/list" style={{ backgroundColor: '#ef4444', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 20px', borderRadius: '10px', textDecoration: 'none' }}>
             Cancel
           </Link>
-          <button className="catalog-btn catalog-btn--success" onClick={handleSubmit} disabled={isSaving} style={{ fontSize: '11px', padding: '6px 12px' }}>
-            <Save size={14} style={{ marginRight: '4px' }} />
+          <button onClick={handleSubmit} disabled={isSaving} style={{ backgroundColor: '#059669', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 20px', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <Save size={16} />
             {isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Brand' : 'Save Brand')}
           </button>
         </div>
       </section>
 
-      <div className="brand-form-container" style={{ maxWidth: '640px', margin: '0 auto', width: '100%' }}>
-        <div className="brand-form-card" style={{ padding: '20px', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fff' }}>
-          <form onSubmit={handleSubmit} className="brand-form" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      {/* Main Brand Form Card Container */}
+      <div className="brand-form-container" style={{ maxWidth: '680px', margin: '16px auto 0', width: '100%' }}>
+        <div className="brand-form-card" style={{ padding: '28px', border: '1px solid #e2e8f0', borderRadius: '16px', backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+          <form onSubmit={handleSubmit} className="brand-form" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
-            {/* Section Title with custom color */}
-            <h3 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#059669', letterSpacing: '0.05em', borderBottom: '2px solid #f1f5f9', paddingBottom: '6px', margin: '0 0 4px 0' }}>
-              Brand Information
+            {/* Section Title */}
+            <h3 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#059669', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', margin: '0 0 4px 0' }}>
+              BRAND INFORMATION
             </h3>
 
-            {/* Brand ID Field (System Generated & Readonly) */}
-            <div className="brand-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {/* Brand ID Field */}
+            <div className="brand-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label htmlFor="brand-id" style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Brand ID</label>
-                <span style={{ fontSize: '10px', color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  <Lock size={10} /> Auto-generated System ID
+                <label htmlFor="brand-id" style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>Brand ID</label>
+                <span style={{ fontSize: '11px', color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Lock size={12} /> Auto-generated System ID
                 </span>
               </div>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   id="brand-id"
                   type="text"
-                  value={id || (isEditing ? 'Loading...' : 'Auto-assigned')}
+                  value={id || (isEditing ? 'Loading...' : '69')}
                   readOnly={true}
                   disabled={true}
                   placeholder="Auto-generated System ID"
-                  required
                   style={{
                     width: '100%',
-                    padding: '6px 10px 6px 30px',
-                    fontSize: '12px',
+                    padding: '10px 14px 10px 36px',
+                    fontSize: '13px',
                     borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
+                    border: '1px solid #e2e8f0',
                     outline: 'none',
                     backgroundColor: '#f1f5f9',
                     color: '#334155',
@@ -412,13 +436,13 @@ const BrandForm = () => {
                     cursor: 'not-allowed'
                   }}
                 />
-                <Lock size={13} style={{ position: 'absolute', left: '10px', color: '#94a3b8', pointerEvents: 'none' }} />
+                <Lock size={14} style={{ position: 'absolute', left: '12px', color: '#94a3b8', pointerEvents: 'none' }} />
               </div>
             </div>
 
             {/* Brand Name Field */}
-            <div className="brand-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label htmlFor="brand-name" style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Brand Name</label>
+            <div className="brand-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label htmlFor="brand-name" style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>Brand Name</label>
               <input
                 id="brand-name"
                 type="text"
@@ -430,43 +454,42 @@ const BrandForm = () => {
                 onBlur={(e) => setNameErrorInline(validateBrandName(e.target.value))}
                 placeholder="e.g. Shyam Agro Tools"
                 required
-                autoFocus
                 style={{ 
-                  padding: '6px 10px', 
-                  fontSize: '12px', 
+                  padding: '10px 14px', 
+                  fontSize: '13px', 
                   borderRadius: '8px', 
-                  border: nameErrorInline ? '1px solid #ef4444' : '1px solid #cbd5e1', 
+                  border: nameErrorInline ? '1px solid #f87171' : '1px solid #cbd5e1', 
                   outline: 'none',
-                  backgroundColor: nameErrorInline ? '#fef2f2' : 'transparent'
+                  backgroundColor: nameErrorInline ? '#fef2f2' : '#ffffff'
                 }}
               />
               {nameErrorInline && (
-                <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: 500, marginTop: '2px' }}>
+                <span style={{ fontSize: '11px', color: '#ef4444', fontWeight: 500 }}>
                   {nameErrorInline}
                 </span>
               )}
             </div>
 
             {/* Brand Description Field */}
-            <div className="brand-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label htmlFor="brand-desc" style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Description</label>
+            <div className="brand-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label htmlFor="brand-desc" style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>Description</label>
               <textarea
                 id="brand-desc"
-                rows={2}
+                rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Brief information about manufacturer..."
-                style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', resize: 'none' }}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', resize: 'vertical' }}
               />
             </div>
 
             {/* Brand Logo Upload Field */}
-            <div className="brand-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>Brand Logo</label>
+            <div className="brand-form-group" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>Brand Logo</label>
               
               {logo ? (
-                <div className="brand-image-preview" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '10px', border: '1px dashed #cbd5e1', borderRadius: '8px' }}>
-                  <div className="brand-image-preview__box" style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                <div className="brand-image-preview" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '12px', border: '1px dashed #cbd5e1', borderRadius: '12px', backgroundColor: '#f8fafc' }}>
+                  <div className="brand-image-preview__box" style={{ width: '56px', height: '56px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                     <BrandLogo logo={logo} name="Preview" />
                   </div>
                   <div className="brand-image-preview__actions">
@@ -474,24 +497,24 @@ const BrandForm = () => {
                       type="button"
                       className="catalog-btn catalog-btn--danger"
                       onClick={handleRemoveLogo}
-                      style={{ fontSize: '10px', padding: '4px 8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ fontSize: '11px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: '#ef4444', color: '#fff', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
                     >
-                      <Trash2 size={12} /> Remove
+                      <Trash2 size={13} /> Remove Logo
                     </button>
                   </div>
                 </div>
               ) : (
-                <label className="brand-image-upload" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '16px', border: '2.5px dashed #cbd5e1', borderRadius: '10px', cursor: 'pointer', backgroundColor: '#f8fafc', transition: 'all 0.15s' }}>
+                <label className="brand-image-upload" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', border: '2px dashed #cbd5e1', borderRadius: '12px', cursor: 'pointer', backgroundColor: '#f8fafc', transition: 'all 0.15s' }}>
                   <input
                     type="file"
                     accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml, image/gif"
                     onChange={handleImageChange}
                     style={{ display: 'none' }}
                   />
-                  <div className="brand-image-upload__content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', textAlign: 'center' }}>
-                    <Upload size={18} style={{ color: '#059669' }} />
-                    <span style={{ fontSize: '11px', color: '#475569' }}><strong>Click to upload logo</strong></span>
-                    <span style={{ fontSize: '9px', color: '#94a3b8' }}>PNG, JPG, SVG up to 2MB</span>
+                  <div className="brand-image-upload__content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', textAlign: 'center' }}>
+                    <Upload size={22} style={{ color: '#059669' }} />
+                    <span style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>Click to upload logo</span>
+                    <span style={{ fontSize: '11px', color: '#64748b' }}>PNG, JPG, SVG up to 2MB</span>
                   </div>
                 </label>
               )}

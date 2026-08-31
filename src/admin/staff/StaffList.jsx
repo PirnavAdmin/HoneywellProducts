@@ -345,13 +345,13 @@ const StaffList = () => {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" className="catalog-center-cell" style={{ padding: '36px 0', color: '#94a3b8', fontSize: '13px' }}>
+                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '14px', fontWeight: 500 }}>
                     Loading staff directory...
                   </td>
                 </tr>
               ) : pagedStaff.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="catalog-center-cell" style={{ padding: '36px 0', color: '#94a3b8', fontSize: '13px' }}>
+                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '14px', fontWeight: 500 }}>
                     No staff members found.
                   </td>
                 </tr>
