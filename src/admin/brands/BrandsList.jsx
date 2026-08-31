@@ -184,38 +184,38 @@ const BrandsList = () => {
   const pagedBrands = filteredBrands.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="brands-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+    <div className="brands-page" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '24px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
       {toastMessage && (
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
       {/* Top Page Header */}
-      <div className="flex justify-between items-center bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm" style={{ padding: '24px 28px', borderRadius: '16px' }}>
         <div>
-          <span className="catalog-kicker" style={{ fontSize: '11px', textTransform: 'uppercase', color: '#059669', fontWeight: 800, display: 'block', letterSpacing: '0.05em', marginBottom: '2px' }}>CATALOG SETTINGS</span>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Brands Directory</h1>
-          <p style={{ fontSize: '12px', color: '#64748b', margin: '2px 0 0 0' }}>Manage manufacturers and brands assigned to products.</p>
+          <span className="catalog-kicker" style={{ fontSize: '11px', textTransform: 'uppercase', color: '#059669', fontWeight: 800, display: 'block', letterSpacing: '0.05em', marginBottom: '4px' }}>CATALOG SETTINGS</span>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', lineHeight: 1.2 }}>Brands Directory</h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Manage manufacturers and brands assigned to products.</p>
         </div>
         <div>
-          <Link to="/admin/brands/form" style={{ backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <Link to="/admin/brands/form" style={{ backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 20px', borderRadius: '10px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', border: 'none', boxShadow: '0 1px 2px rgba(37, 99, 235, 0.2)' }}>
             <Plus size={16} /> Add Brand
           </Link>
         </div>
       </div>
 
       {/* Toolbar / Search Filter */}
-      <div className="brands-toolbar" style={{ padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px' }}>
-        <div className="brands-search" style={{ flex: '0 1 450px', position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', color: '#94a3b8' }} />
+      <div className="brands-toolbar" style={{ padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+        <div className="brands-search" style={{ flex: '0 1 340px', position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Search size={16} style={{ position: 'absolute', left: '14px', color: '#94a3b8' }} />
           <input
             type="text"
             placeholder="Search brands by name or ID..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{ width: '100%', padding: '8px 12px 8px 38px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '8px', outline: 'none', backgroundColor: '#f8fafc' }}
+            style={{ width: '100%', padding: '9px 14px 9px 40px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none', backgroundColor: '#f8fafc', color: '#0f172a' }}
           />
         </div>
-        <span className="brands-count" style={{ fontSize: '12px', color: '#64748b', fontWeight: 600, backgroundColor: '#f1f5f9', padding: '6px 14px', borderRadius: '999px' }}>
+        <span className="brands-count" style={{ fontSize: '12px', color: '#475569', fontWeight: 600, backgroundColor: '#f1f5f9', padding: '6px 16px', borderRadius: '9999px' }}>
           {filteredBrands.length} {filteredBrands.length === 1 ? 'brand' : 'brands'}
         </span>
       </div>
