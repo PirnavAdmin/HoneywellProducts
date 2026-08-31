@@ -151,31 +151,92 @@ const BlogForm = () => {
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
-      {/* Top Header Row with Actions in Top-Right */}
-      <section className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200" to="/admin/blogs/list">
-            <ArrowLeft size={16} />
+      {/* Top Header Row with Actions on Far Right */}
+      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <Link
+            to="/admin/blogs/list"
+            style={{
+              width: '36px',
+              height: '36px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#475569',
+              background: '#ffffff',
+              transition: 'all 0.15s ease',
+              textDecoration: 'none'
+            }}
+          >
+            <ArrowLeft size={18} />
           </Link>
           <div>
-            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#059669', fontWeight: 700 }}>Blog Manager</span>
-            <h1 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', margin: 0 }}>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#059669', fontWeight: 700, letterSpacing: '0.04em', display: 'block', marginBottom: '2px' }}>
+              BLOG MANAGER
+            </span>
+            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
               {isEditing ? 'Edit Blog Article' : 'Write Blog Article'}
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link to="/admin/blogs/list" className="catalog-btn" style={{ fontSize: '11px', padding: '6px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto' }}>
+          <Link
+            to="/admin/blogs/list"
+            style={{
+              background: '#278652',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              height: '38px',
+              padding: '0 18px',
+              fontSize: '13px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textDecoration: 'none',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              transition: 'background 0.15s ease'
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = '#1e683f')}
+            onMouseOut={(e) => (e.currentTarget.style.background = '#278652')}
+          >
             Cancel
           </Link>
-          <button className="catalog-btn catalog-btn--primary" onClick={handleSubmit} disabled={saving} style={{ fontSize: '11px', padding: '6px 12px' }}>
+
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={saving}
+            style={{
+              background: '#2563eb',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              height: '38px',
+              padding: '0 18px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: saving ? 'not-allowed' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              opacity: saving ? 0.7 : 1,
+              transition: 'background 0.15s ease'
+            }}
+            onMouseOver={(e) => !saving && (e.currentTarget.style.background = '#1d4ed8')}
+            onMouseOut={(e) => !saving && (e.currentTarget.style.background = '#2563eb')}
+          >
             {saving ? (
-              <RefreshCw size={14} className="spin" style={{ marginRight: '4px' }} />
+              <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} />
             ) : (
-              <Save size={14} style={{ marginRight: '4px' }} />
+              <Save size={15} />
             )}
-            {saving ? (isEditing ? 'Updating...' : 'Publishing...') : (isEditing ? 'Update Article' : 'Publish Article')}
+            <span>{saving ? (isEditing ? 'Updating...' : 'Publishing...') : (isEditing ? 'Update Article' : 'Publish Article')}</span>
           </button>
         </div>
       </section>
