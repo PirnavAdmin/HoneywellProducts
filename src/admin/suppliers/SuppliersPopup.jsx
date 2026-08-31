@@ -37,13 +37,14 @@ const SuppliersPopup = ({ supplier, onClose }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.55)',
-        backdropFilter: 'blur(4px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(5px)',
         zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
+        padding: '32px 20px',
+        overflowY: 'auto',
         boxSizing: 'border-box'
       }}
     >
@@ -52,20 +53,20 @@ const SuppliersPopup = ({ supplier, onClose }) => {
         style={{
           backgroundColor: '#ffffff',
           borderRadius: '16px',
-          maxWidth: '680px',
+          maxWidth: '640px',
           width: '100%',
           padding: '24px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           border: '1px solid #e2e8f0',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          gap: '18px',
-          maxHeight: '90vh',
-          overflowY: 'auto'
+          gap: '16px',
+          margin: 'auto',
+          boxSizing: 'border-box'
         }}
       >
-        {/* Modal Top Row: Header & Close Button */}
+        {/* Modal Header: Category Badge, Title & Close Button */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <span style={{
@@ -113,47 +114,47 @@ const SuppliersPopup = ({ supplier, onClose }) => {
 
         {/* Quick Metrics Row */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-          <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+          <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
             <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>Rating</span>
-            <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '4px' }}>
-              <Award size={15} style={{ color: '#f59e0b' }} /> {supplier.rating || '4.5'}/5
+            <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', marginTop: '3px' }}>
+              <Award size={14} style={{ color: '#f59e0b' }} /> {supplier.rating || '4.5'}/5
             </strong>
           </div>
-          <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+          <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
             <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>Active POs</span>
-            <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: 800, display: 'block', marginTop: '4px' }}>
+            <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: 800, display: 'block', marginTop: '3px' }}>
               {supplier.activePo ?? 0}
             </strong>
           </div>
-          <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
+          <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '10px', textAlign: 'center', border: '1px solid #f1f5f9' }}>
             <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>Monthly Spend</span>
-            <strong style={{ fontSize: '15px', color: '#0f172a', fontWeight: 800, display: 'block', marginTop: '4px' }}>
+            <strong style={{ fontSize: '14px', color: '#0f172a', fontWeight: 800, display: 'block', marginTop: '3px' }}>
               {formatSupplierCurrency(supplier.monthlySpend)}
             </strong>
           </div>
         </div>
 
         {/* 2-Column Info Details */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '18px' }}>
           {/* Contact Details Column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Phone size={13} style={{ color: '#059669' }} /> Contact Info
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Phone size={12} style={{ color: '#059669' }} /> Contact Info
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Contact Person</span>
+                <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Contact Person</span>
                 <span style={{ fontWeight: 700, color: '#0f172a' }}>{supplier.contactPerson || supplier.name}</span>
               </div>
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Email Address</span>
-                <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Email Address</span>
+                <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
                   <Mail size={12} style={{ color: '#64748b' }} /> {supplier.email || 'N/A'}
                 </span>
               </div>
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Phone Number</span>
-                <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Phone Number</span>
+                <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
                   <Phone size={12} style={{ color: '#64748b' }} /> {supplier.phone || 'N/A'}
                 </span>
               </div>
@@ -161,23 +162,23 @@ const SuppliersPopup = ({ supplier, onClose }) => {
           </div>
 
           {/* Commercial Terms Column */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <DollarSign size={13} style={{ color: '#059669' }} /> Commercial Terms
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <DollarSign size={12} style={{ color: '#059669' }} /> Commercial Terms
             </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '12.5px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Payment Terms</span>
+                <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Payment Terms</span>
                 <span style={{ fontWeight: 700, color: '#0f172a' }}>{supplier.terms || 'Net 30'}</span>
               </div>
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Lead Time</span>
-                <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '2px' }}>
+                <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Lead Time</span>
+                <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
                   <Truck size={12} style={{ color: '#64748b' }} /> {supplier.leadTime || '4-6 days'}
                 </span>
               </div>
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '3px' }}>Onboarding Status</span>
+                <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block', marginBottom: '3px' }}>Onboarding Status</span>
                 {getStatusBadge(supplier.status)}
               </div>
             </div>
@@ -185,21 +186,21 @@ const SuppliersPopup = ({ supplier, onClose }) => {
         </div>
 
         {/* Location & Coverage */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '6px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <FileText size={13} style={{ color: '#059669' }} /> Procurement Coverage &amp; Notes
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+            <FileText size={12} style={{ color: '#059669' }} /> Procurement Coverage &amp; Notes
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12.5px' }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-              <MapPin size={14} style={{ color: '#94a3b8', marginTop: '2px' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+              <MapPin size={13} style={{ color: '#94a3b8', marginTop: '2px' }} />
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block' }}>Registered Location</span>
+                <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Registered Location</span>
                 <span style={{ color: '#334155', fontWeight: 600 }}>{supplier.city || supplier.address || 'N/A'}</span>
               </div>
             </div>
             <div style={{ marginTop: '2px' }}>
-              <span style={{ color: '#94a3b8', fontSize: '11px', display: 'block', marginBottom: '3px' }}>Supplied Products &amp; Machinery</span>
-              <div style={{ backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #f1f5f9', color: '#334155', fontWeight: 600, fontSize: '12px' }}>
+              <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block', marginBottom: '3px' }}>Supplied Products &amp; Machinery</span>
+              <div style={{ backgroundColor: '#f8fafc', padding: '8px 12px', borderRadius: '8px', border: '1px solid #f1f5f9', color: '#334155', fontWeight: 600, fontSize: '11.5px' }}>
                 {supplier.products || 'Heavy Machinery, Farm Tools, Cultivators & Agricultural Equipment'}
               </div>
             </div>
@@ -207,17 +208,17 @@ const SuppliersPopup = ({ supplier, onClose }) => {
         </div>
 
         {/* Modal Bottom Row: Close Button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '4px' }}>
           <button 
             onClick={onClose} 
             style={{
-              padding: '9px 22px',
+              padding: '8px 20px',
               backgroundColor: '#f1f5f9',
               border: '1px solid #cbd5e1',
               borderRadius: '8px',
               color: '#334155',
               fontWeight: 700,
-              fontSize: '12.5px',
+              fontSize: '12px',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}

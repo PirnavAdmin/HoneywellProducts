@@ -53,13 +53,14 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.55)',
-        backdropFilter: 'blur(4px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(5px)',
         zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
+        padding: '32px 20px',
+        overflowY: 'auto',
         boxSizing: 'border-box'
       }}
     >
@@ -68,17 +69,17 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         style={{
           backgroundColor: '#ffffff',
           borderRadius: '16px',
-          maxWidth: '740px',
+          maxWidth: '680px',
           width: '100%',
           padding: '24px',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
           border: '1px solid #e2e8f0',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          gap: '18px',
-          maxHeight: '90vh',
-          overflowY: 'auto'
+          gap: '16px',
+          margin: 'auto',
+          boxSizing: 'border-box'
         }}
       >
         {/* Modal Top Row: Header & Close Button */}
@@ -125,16 +126,16 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         </div>
 
         {/* Content Body Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '18px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
           
           {/* Left Column: Tracking Card & Actions */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'space-between' }}>
             {/* Tracking ID visual box */}
-            <div style={{ backgroundColor: '#ecfdf5', border: '1px dashed #6ee7b7', borderRadius: '10px', padding: '14px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ backgroundColor: '#ecfdf5', border: '1px dashed #6ee7b7', borderRadius: '10px', padding: '12px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ color: '#64748b', fontWeight: 600, fontSize: '11px', display: 'block', marginBottom: '2px' }}>
                 Request Tracking ID:
               </span>
-              <strong style={{ color: '#059669', fontWeight: 900, fontSize: '20px', letterSpacing: '0.04em', userSelect: 'all' }}>
+              <strong style={{ color: '#059669', fontWeight: 900, fontSize: '18px', letterSpacing: '0.04em', userSelect: 'all' }}>
                 {registration.id}
               </strong>
               <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -144,8 +145,8 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
             </div>
 
             {/* Action Buttons Panel */}
-            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <h4 style={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10.5px', margin: 0, textAlign: 'center' }}>
+            <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <h4 style={{ fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', fontSize: '10px', margin: 0, textAlign: 'center' }}>
                 Action Center
               </h4>
               {registration.status === 'Pending' && onStatusChange ? (
@@ -154,47 +155,47 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
                     onClick={() => onStatusChange(registration.id, 'Approved')} 
                     style={{
                       width: '100%',
-                      padding: '8px',
+                      padding: '7px',
                       backgroundColor: '#16a34a',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '6px',
                       fontWeight: 700,
-                      fontSize: '12px',
+                      fontSize: '11.5px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px',
+                      gap: '5px',
                       boxShadow: '0 1px 3px rgba(22, 163, 74, 0.2)'
                     }}
                   >
-                    <CheckCircle2 size={14} /> Approve Ticket
+                    <CheckCircle2 size={13} /> Approve Ticket
                   </button>
                   <button 
                     onClick={() => onStatusChange(registration.id, 'Rejected')} 
                     style={{
                       width: '100%',
-                      padding: '8px',
+                      padding: '7px',
                       backgroundColor: '#dc2626',
                       color: '#ffffff',
                       border: 'none',
                       borderRadius: '6px',
                       fontWeight: 700,
-                      fontSize: '12px',
+                      fontSize: '11.5px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px',
+                      gap: '5px',
                       boxShadow: '0 1px 3px rgba(220, 38, 38, 0.2)'
                     }}
                   >
-                    <XCircle size={14} /> Reject Ticket
+                    <XCircle size={13} /> Reject Ticket
                   </button>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', color: '#64748b', padding: '4px 0', fontSize: '11.5px' }}>
+                <div style={{ textAlign: 'center', color: '#64748b', padding: '2px 0', fontSize: '11px' }}>
                   Ticket status is <strong>{registration.status}</strong>.
                 </div>
               )}
@@ -202,51 +203,51 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
           </div>
 
           {/* Right Columns: Registration Details Grid */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
               {/* Owner Details */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FileText size={13} style={{ color: '#059669' }} /> Owner Details
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '3px', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <FileText size={12} style={{ color: '#059669' }} /> Owner Details
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11.5px' }}>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Full Name</span>
+                    <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block' }}>Full Name</span>
                     <span style={{ fontWeight: 700, color: '#0f172a' }}>{registration.name || 'N/A'}</span>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Mobile Number</span>
-                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
-                      <Phone size={12} style={{ color: '#64748b' }} /> {formatPhoneNumber(registration.mobile || registration.phone)}
+                    <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block' }}>Mobile Number</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                      <Phone size={11} style={{ color: '#64748b' }} /> {formatPhoneNumber(registration.mobile || registration.phone)}
                     </span>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Email Address</span>
-                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
-                      <Mail size={12} style={{ color: '#64748b' }} /> {registration.email || 'N/A'}
+                    <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block' }}>Email Address</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                      <Mail size={11} style={{ color: '#64748b' }} /> {registration.email || 'N/A'}
                     </span>
                   </div>
                 </div>
               </div>
 
               {/* Business Info */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Building size={13} style={{ color: '#059669' }} /> Business Details
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '3px', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <Building size={12} style={{ color: '#059669' }} /> Business Details
                 </h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', fontSize: '11.5px' }}>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Business / Shop Name</span>
+                    <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block' }}>Business / Shop Name</span>
                     <span style={{ fontWeight: 700, color: '#0f172a' }}>{registration.businessName || 'N/A'}</span>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>Product Category</span>
-                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
-                      <Shield size={12} style={{ color: '#64748b' }} /> {getCategoryLabel(registration.category)}
+                    <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block' }}>Product Category</span>
+                    <span style={{ fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                      <Shield size={11} style={{ color: '#64748b' }} /> {getCategoryLabel(registration.category)}
                     </span>
                   </div>
                   <div>
-                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block' }}>GSTIN Number</span>
+                    <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block' }}>GSTIN Number</span>
                     <span style={{ fontWeight: 700, color: '#0f172a', fontFamily: 'monospace' }}>{registration.gstin || 'N/A'}</span>
                   </div>
                 </div>
@@ -254,22 +255,22 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
             </div>
 
             {/* Business Address & Timestamp */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <h3 style={{ fontSize: '11.5px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '4px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <MapPin size={13} style={{ color: '#059669' }} /> Location &amp; Timestamp
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <h3 style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '3px', margin: 0, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <MapPin size={12} style={{ color: '#059669' }} /> Location &amp; Timestamp
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
-                  <MapPin size={14} style={{ color: '#94a3b8', marginTop: '1px' }} />
+                  <MapPin size={13} style={{ color: '#94a3b8', marginTop: '1px' }} />
                   <div style={{ flex: 1 }}>
-                    <span style={{ color: '#94a3b8', fontSize: '10.5px', display: 'block', marginBottom: '2px' }}>Registered Address</span>
-                    <p style={{ color: '#334155', fontWeight: 600, backgroundColor: '#f8fafc', padding: '8px 10px', borderRadius: '6px', border: '1px solid #f1f5f9', margin: 0, fontSize: '11.5px', lineHeight: 1.4 }}>
+                    <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block', marginBottom: '2px' }}>Registered Address</span>
+                    <p style={{ color: '#334155', fontWeight: 600, backgroundColor: '#f8fafc', padding: '8px 10px', borderRadius: '6px', border: '1px solid #f1f5f9', margin: 0, fontSize: '11px', lineHeight: 1.4 }}>
                       {registration.address || 'N/A'}
                     </p>
                   </div>
                 </div>
                 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#94a3b8', fontSize: '10.5px', marginTop: '2px', paddingLeft: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#94a3b8', fontSize: '10px', marginTop: '2px', paddingLeft: '19px' }}>
                   <Calendar size={11} />
                   <span>Ticket Raised At: {registration.submittedAt ? new Date(registration.submittedAt).toLocaleString() : 'N/A'}</span>
                 </div>
@@ -280,7 +281,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         </div>
 
         {/* Modal Bottom Row: Actions & Close */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '6px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {registration.status !== 'Approved' && registration.status !== 'Verified' && (
               <button 
@@ -328,13 +329,13 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
           <button 
             onClick={onClose} 
             style={{
-              padding: '9px 22px',
+              padding: '8px 20px',
               backgroundColor: '#f1f5f9',
               border: '1px solid #cbd5e1',
               borderRadius: '8px',
               color: '#334155',
               fontWeight: 700,
-              fontSize: '12.5px',
+              fontSize: '12px',
               cursor: 'pointer',
               transition: 'all 0.15s ease'
             }}
