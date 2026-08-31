@@ -676,75 +676,81 @@ function AddStaff() {
 
       {/* Form Fields Card Layout */}
       <div className="staff-content-grid">
-        {/* Left Card: Basic Info */}
+        {/* Left Card: Basic Info & Access Password */}
         <div className="staff-form-card">
-          <h3 className="card-section-title">
-            <User size={16} /> Basic Credentials
+          {/* Basic Credentials Section */}
+          <h3 className="card-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>
+            <User size={18} style={{ color: '#064e3b' }} /> BASIC CREDENTIALS
           </h3>
           
-          <div className="fields-grid">
+          <div className="fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 20px', marginBottom: '28px' }}>
             <div className="staff-field">
-              <label>First Name</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>FIRST NAME</label>
               <input
                 name="firstName"
                 placeholder="First name"
                 value={formData.firstName}
                 onChange={handleChange}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
               />
               {errors.firstName && <span className="field-error-msg">{errors.firstName}</span>}
             </div>
 
             <div className="staff-field">
-              <label>Last Name</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>LAST NAME</label>
               <input
                 name="lastName"
                 placeholder="Last name"
                 value={formData.lastName}
                 onChange={handleChange}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
               />
               {errors.lastName && <span className="field-error-msg">{errors.lastName}</span>}
             </div>
 
             <div className="staff-field">
-              <label style={{ textTransform: 'none' }}>Email Address</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>Email Address</label>
               <input
                 type="email"
                 name="email"
                 placeholder="name@gmail.com"
                 value={formData.email}
                 onChange={handleChange}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
               />
               {errors.email && <span className="field-error-msg">{errors.email}</span>}
             </div>
 
             <div className="staff-field">
-              <label>Mobile Number</label>
-              <div className="phone-input-container">
-                <span className="phone-prefix">+91</span>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>MOBILE NUMBER</label>
+              <div className="phone-input-container" style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+                <span className="phone-prefix" style={{ backgroundColor: '#f8fafc', padding: '10px 14px', fontSize: '13px', fontWeight: 700, color: '#334155', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>+91</span>
                 <input
                   name="mobile"
                   value={formData.mobile}
                   placeholder="10 digit number"
                   onChange={handleChange}
+                  style={{ border: 'none', padding: '10px 14px', fontSize: '13px', width: '100%', outline: 'none' }}
                 />
               </div>
               {errors.mobile && <span className="field-error-msg">{errors.mobile}</span>}
             </div>
 
             <div className="staff-field">
-              <label>Employee ID</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>EMPLOYEE ID</label>
               <input
                 name="employeeId"
-                placeholder="e.g. M102"
+                placeholder="shyam@shyamagrotools.com"
                 value={formData.employeeId}
                 onChange={handleChange}
+                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #dbeafe', outline: 'none', backgroundColor: '#eff6ff', color: '#1e293b', fontWeight: 500 }}
               />
               {errors.employeeId && <span className="field-error-msg">{errors.employeeId}</span>}
             </div>
 
             <div className="staff-field">
-              <label>Role</label>
-              <select name="role" value={formData.role} onChange={handleChange}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>ROLE</label>
+              <select name="role" value={formData.role} onChange={handleChange} style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#ffffff' }}>
                 <option value="">Select Role</option>
                 <option value="admin">Admin</option>
                 <option value="advisory">Advisory</option>
@@ -757,28 +763,38 @@ function AddStaff() {
             </div>
           </div>
 
-          <h3 className="card-section-title pt-6">
-            <Key size={16} /> Access Password
+          {/* Access Password Section */}
+          <h3 className="card-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>
+            <Key size={18} style={{ color: '#064e3b' }} /> ACCESS PASSWORD
           </h3>
           
-          <div className="fields-grid">
+          <div className="fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 20px' }}>
+            {/* Password Field */}
             <div className="staff-field">
-              <label>{isEditing ? 'New Password (Optional)' : 'Password'}</label>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>PASSWORD</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
-                  placeholder="Password"
+                  placeholder="••••••••"
                   value={formData.password}
                   onChange={handleChange}
-                  style={{ width: '100%', paddingRight: '40px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 40px 10px 14px',
+                    fontSize: '13px',
+                    borderRadius: '10px',
+                    border: '1px solid #dbeafe',
+                    backgroundColor: formData.password ? '#eff6ff' : '#ffffff',
+                    outline: 'none'
+                  }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
-                    right: '10px',
+                    right: '12px',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
@@ -789,29 +805,15 @@ function AddStaff() {
                   }}
                   title={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               {errors.password && <span className="field-error-msg">{errors.password}</span>}
             </div>
 
+            {/* Confirm Password Field */}
             <div className="staff-field">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label>Confirm Password</label>
-                {formData.password && formData.confirmPassword && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 700, color: formData.password === formData.confirmPassword ? '#10b981' : '#ef4444' }}>
-                    {formData.password === formData.confirmPassword ? (
-                      <>
-                        <CheckCircle2 size={13} /> Passwords Match
-                      </>
-                    ) : (
-                      <>
-                        <XCircle size={13} /> Passwords Do Not Match
-                      </>
-                    )}
-                  </span>
-                )}
-              </div>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>CONFIRM PASSWORD</label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
@@ -821,37 +823,32 @@ function AddStaff() {
                   onChange={handleChange}
                   style={{
                     width: '100%',
-                    paddingRight: '64px',
-                    borderColor: formData.confirmPassword
-                      ? (formData.password === formData.confirmPassword ? '#10b981' : '#ef4444')
-                      : undefined
+                    padding: '10px 40px 10px 14px',
+                    fontSize: '13px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    outline: 'none'
                   }}
                 />
-                <div style={{ position: 'absolute', right: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  {formData.password && formData.confirmPassword && (
-                    formData.password === formData.confirmPassword ? (
-                      <CheckCircle2 size={16} color="#10b981" title="Passwords match" />
-                    ) : (
-                      <XCircle size={16} color="#ef4444" title="Passwords do not match" />
-                    )
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      color: '#64748b',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '2px'
-                    }}
-                    title={showConfirmPassword ? "Hide password" : "Show password"}
-                  >
-                    {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '2px'
+                  }}
+                  title={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
               {errors.confirmPassword && <span className="field-error-msg">{errors.confirmPassword}</span>}
             </div>
