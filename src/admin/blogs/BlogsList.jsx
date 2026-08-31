@@ -119,21 +119,20 @@ const BlogsList = () => {
   return (
     <div className="catalog-page">
       {/* ── Header ── */}
-      <section className="catalog-header">
+      <section className="catalog-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '24px 28px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #1d4ed8', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', marginBottom: '20px' }}>
         <div className="catalog-title-wrap">
-          <h1>Blog Articles</h1>
-          <p>Create and manage educational articles, crop tips, and agro news displayed to users.</p>
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Blog Articles</h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Create and manage educational articles, crop tips, and agro news displayed to users.</p>
         </div>
 
-        <div className="catalog-header__actions">
-          <Link to="/" className="catalog-btn" target="_blank" rel="noopener noreferrer">
+        <div className="catalog-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto', flexWrap: 'nowrap' }}>
+          <Link to="/" target="_blank" rel="noopener noreferrer" style={{ backgroundColor: '#2d8a54', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', border: 'none' }}>
             <Eye size={16} /> View Shop Phase
           </Link>
-          <button className="catalog-btn" onClick={fetchBlogs} disabled={loading} title="Refresh">
-            <RefreshCw size={16} className={loading ? 'spin' : ''} />
-            Refresh
+          <button onClick={fetchBlogs} disabled={loading} title="Refresh" style={{ backgroundColor: '#2d8a54', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+            <RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh
           </button>
-          <Link to="/admin/blogs/form" className="catalog-btn catalog-btn--primary">
+          <Link to="/admin/blogs/form" style={{ backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxShadow: '0 1px 2px rgba(37,99,235,0.2)' }}>
             <Plus size={16} /> Write New Blog
           </Link>
         </div>
