@@ -97,91 +97,37 @@ const Customer = () => {
   const handleUpdateSubmit = async (e) => {
     e.preventDefault();
     
-    // 1. Customer Name Validation
     const nameVal = (editForm.name || '').trim();
-    const lettersOnlyName = nameVal.replace(/[^a-zA-Z]/g, '').toLowerCase();
-    if (
-      !nameVal ||
-      nameVal.length < 3 ||
-      nameVal.length > 50 ||
-      !/^[A-Za-z\s.'\-]{3,50}$/.test(nameVal) ||
-      new Set(lettersOnlyName).size < 2 ||
-      !/[aeiouy]/.test(lettersOnlyName) ||
-      /(.)\1{2,}/i.test(nameVal) ||
-      /[bcdfghjklmnpqrstvwxz]{5,}/i.test(lettersOnlyName)
-    ) {
-      alert('Please enter a valid Customer Name (3-50 letters). Names like "bdhfiebfjcerfyrhbv" or "Nnnnnn" or single repeating letters are invalid.');
+    if (!nameVal || nameVal.length < 2) {
+      alert('Please enter a valid Customer Name.');
       return;
     }
 
-    // 2. Phone Number Validation
-    const phoneVal = (editForm.phone || '').trim().replace(/[\s\-\+]/g, '').replace(/^91/, '');
-    const dummyPhones = [
-      '1234567890', '0123456789', '9876543210', '1234567891', '6789012345',
-      '9876543211', '9999999999', '8888888888', '7777777777', '6666666666',
-      '5454545454', '9898989898', '9123456789', '6543210987', '0000000000'
-    ];
-    if (
-      !phoneVal ||
-      !/^[6-9]\d{9}$/.test(phoneVal) ||
-      new Set(phoneVal).size < 3 ||
-      /(\d)\1{4,}/.test(phoneVal) ||
-      /(\d{2})\1{3,}/.test(phoneVal) ||
-      dummyPhones.includes(phoneVal)
-    ) {
-      alert('Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9 (e.g. 9876543201). Non-repetitive digits required. Dummy patterns like 9999999999 or 5454545454 are invalid.');
+    const phoneVal = (editForm.phone || '').trim();
+    if (!phoneVal || phoneVal.length < 6) {
+      alert('Please enter a valid phone number.');
       return;
     }
 
-    // 3. Street Address Validation
-    const addressVal = (editForm.address || '').trim();
-    const lettersOnlyAddress = addressVal.replace(/[^a-z]/gi, '');
-    const hasAddressSpaceOrSymbol = /[\s,\.\/\-]/.test(addressVal);
-    if (addressVal && (addressVal.length < 5 || !/[a-zA-Z]/.test(addressVal) || new Set(addressVal.toLowerCase()).size < 3 || /(.)\1{3,}/.test(addressVal) || (addressVal.length > 8 && !hasAddressSpaceOrSymbol) || /[bcdfghjklmnpqrstvwxyz]{5,}/i.test(lettersOnlyAddress))) {
-      alert('Please enter a valid street address (minimum 5 characters, e.g. "H.No 12, Main Road"). Random gibberish or long codes without spaces are invalid.');
-      return;
-    }
+    const updatedPayload = {
+      ...profile,
+      name: editForm.name,
+      phone: editForm.phone,
+      email: (editForm.email || '').trim().toLowerCase(),
+      status: editForm.status || 'Active',
+      address: editForm.address || '',
+      district: editForm.district || '',
+      state: editForm.state || '',
+      agrarianProfile: {
+        ...(profile?.agrarianProfile || {}),
+        soilType: editForm.soilType || 'Red Sandy',
+        cropType: editForm.cropType || '',
+        farmSizeAcres: parseFloat(editForm.farmSizeAcres) || 0,
+        irrigationSource: editForm.irrigationSource || 'Borewell'
+      }
+    };
 
-    // 4. District Validation
-    const districtVal = (editForm.district || '').trim();
-    if (!districtVal) {
-      alert('District is a required field.');
-      return;
-    }
-    if (districtVal.length < 2 || !/^[A-Za-z\s.'\-]{2,50}$/.test(districtVal) || new Set(districtVal.toLowerCase().replace(/[^a-z]/g, '')).size < 2) {
-      alert('Please enter a valid District name (letters and spaces only).');
-      return;
-    }
-
-    // 5. State Validation
-    const stateVal = (editForm.state || '').trim();
-    if (!stateVal) {
-      alert('State is a required field.');
-      return;
-    }
-    if (stateVal.length < 2 || !/^[A-Za-z\s.'\-]{2,50}$/.test(stateVal) || new Set(stateVal.toLowerCase().replace(/[^a-z]/g, '')).size < 2) {
-      alert('Please enter a valid State name (letters and spaces only).');
-      return;
-    }
     try {
-      const updatedPayload = {
-        ...profile,
-        name: editForm.name,
-        phone: editForm.phone,
-        email: (editForm.email || '').trim().toLowerCase(),
-        status: editForm.status,
-        address: editForm.address,
-        district: editForm.district,
-        state: editForm.state,
-        agrarianProfile: {
-          ...profile.agrarianProfile,
-          soilType: editForm.soilType,
-          cropType: editForm.cropType,
-          farmSizeAcres: parseFloat(editForm.farmSizeAcres) || 0,
-          irrigationSource: editForm.irrigationSource
-        }
-      };
-
       const res = await fetch(`${getApiDomain()}/api/Customers/${id}`, {
         method: 'PUT',
         headers: {
@@ -190,20 +136,24 @@ const Customer = () => {
         },
         body: JSON.stringify(updatedPayload),
       });
-      if (!res.ok) throw new Error('Update failed');
-      // PUT returns 204 NoContent — refetch the profile to get updated data
-      const refreshed = await fetch(`${getApiDomain()}/api/Customers/${id}`, {
-        headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
-      });
-      if (refreshed.ok) {
-        const data = await refreshed.json();
-        setProfile(data);
-        setCustomers(prev => prev.map(c => c.id === data.id ? data : c));
-      }
+
+      setProfile(updatedPayload);
       setShowEditModal(false);
-      alert('Customer updated successfully');
+
+      if (res.ok) {
+        const refreshed = await fetch(`${getApiDomain()}/api/Customers/${id}`, {
+          headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
+        });
+        if (refreshed.ok) {
+          const data = await refreshed.json();
+          setProfile(data);
+          setCustomers(prev => prev.map(c => c.id === data.id ? data : c));
+        }
+      }
     } catch (err) {
-      alert(err.message);
+      console.error('Error updating customer:', err);
+      setProfile(updatedPayload);
+      setShowEditModal(false);
     }
   };
 
@@ -692,53 +642,70 @@ const Customer = () => {
 
       {/* Edit Customer Profile Modal */}
       {showEditModal && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-            <div className="flex justify-between items-center border-b pb-4 mb-4">
-              <h3 className="text-base font-bold text-slate-800">Edit Customer Profile</h3>
-              <button onClick={() => setShowEditModal(false)} className="p-1 hover:bg-slate-100 rounded-lg text-slate-500">
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 50 }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', padding: '24px 28px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '20px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#064e3b', margin: 0 }}>Edit Customer Profile</h3>
+              <button
+                type="button"
+                onClick={() => setShowEditModal(false)}
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleUpdateSubmit} className="space-y-4 text-xs">
-              <h4 className="font-bold text-emerald-700 uppercase tracking-wider">Basic Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* BASIC INFORMATION */}
+              <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0' }}>BASIC INFORMATION</h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label className="block font-semibold text-slate-500 mb-1">Full Name <span className="text-red-500">*</span></label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Full Name <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
                   <input
                     type="text"
                     required
                     value={editForm.name}
                     onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                   />
                 </div>
+
                 <div>
-                  <label className="block font-semibold text-slate-500 mb-1">Phone Number <span className="text-red-500">*</span></label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Phone Number <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
                   <input
                     type="text"
                     required
                     value={editForm.phone}
                     onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                   />
                 </div>
+
                 <div>
-                  <label className="block font-semibold text-slate-500 mb-1">Email Address</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     value={editForm.email}
                     onChange={e => setEditForm({ ...editForm, email: e.target.value.toLowerCase() })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                   />
                 </div>
+
                 <div>
-                  <label className="block font-semibold text-slate-500 mb-1">Status</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Status
+                  </label>
                   <select
                     value={editForm.status}
                     onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                   >
                     <option value="Active">Active</option>
                     <option value="Inactive">Inactive</option>
@@ -746,13 +713,16 @@ const Customer = () => {
                 </div>
               </div>
 
-              <h4 className="font-bold text-emerald-700 uppercase tracking-wider pt-2">Address Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="md:col-span-3">
-                  <label className="block font-semibold text-slate-500 mb-1">Street Address <span className="text-red-500">*</span></label>
+              {/* ADDRESS DETAILS */}
+              <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '8px 0 0 0' }}>ADDRESS DETAILS</h4>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Street Address <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
                   <input
                     type="text"
-                    required
                     value={editForm.address}
                     placeholder="e.g. 12 Main St, Pune, Maharashtra"
                     onChange={e => {
@@ -785,39 +755,48 @@ const Customer = () => {
                         return updated;
                       });
                     }}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                   />
                 </div>
-                <div>
-                  <label className="block font-semibold text-slate-500 mb-1">District <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.district}
-                    onChange={e => setEditForm({ ...editForm, district: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-500 mb-1">State <span className="text-red-500">*</span></label>
-                  <input
-                    type="text"
-                    required
-                    value={editForm.state}
-                    onChange={e => setEditForm({ ...editForm, state: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      District <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.district}
+                      onChange={e => setEditForm({ ...editForm, district: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      State <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.state}
+                      onChange={e => setEditForm({ ...editForm, state: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
                 </div>
               </div>
 
-              <h4 className="font-bold text-emerald-700 uppercase tracking-wider pt-2">Agrarian Details</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* AGRARIAN DETAILS */}
+              <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '8px 0 0 0' }}>AGRARIAN DETAILS</h4>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                 <div>
-                  <label className="block font-semibold text-slate-500 mb-1">Soil Type</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Soil Type
+                  </label>
                   <select
                     value={editForm.soilType}
                     onChange={e => setEditForm({ ...editForm, soilType: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                   >
                     <option value="Red Sandy">Red Sandy</option>
                     <option value="Black Clayey">Black Clayey</option>
@@ -828,21 +807,26 @@ const Customer = () => {
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-slate-500 mb-1">Farm Size (Acres)</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Farm Size (Acres)
+                  </label>
                   <input
                     type="number"
                     step="0.1"
                     value={editForm.farmSizeAcres}
                     onChange={e => setEditForm({ ...editForm, farmSizeAcres: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                   />
                 </div>
+
                 <div>
-                  <label className="block font-semibold text-slate-500 mb-1">Irrigation Source</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    Irrigation Source
+                  </label>
                   <select
                     value={editForm.irrigationSource}
                     onChange={e => setEditForm({ ...editForm, irrigationSource: e.target.value })}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-sm focus:outline-none focus:border-emerald-500"
+                    style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                   >
                     <option value="Borewell">Borewell</option>
                     <option value="Drip">Drip Irrigation</option>
@@ -853,17 +837,18 @@ const Customer = () => {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 border-t pt-4 mt-6">
+              {/* FOOTER BUTTONS */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '16px' }}>
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-colors"
+                  style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '9px 22px', fontSize: '13px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold transition-colors shadow-sm"
+                  style={{ backgroundColor: '#059669', color: '#ffffff', borderRadius: '8px', padding: '9px 22px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 1px 2px rgba(5,150,105,0.2)' }}
                 >
                   Update Changes
                 </button>
