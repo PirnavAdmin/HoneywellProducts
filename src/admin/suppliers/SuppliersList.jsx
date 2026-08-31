@@ -29,110 +29,7 @@ export const supplierCategories = [
   'Packaging'
 ];
 
-export const suppliers = [
-  {
-    id: 'SUP-001',
-    name: 'KisanKraft Ltd.',
-    category: 'Farm Tools',
-    contactPerson: 'Amit Sharma',
-    email: 'procurement@kisankraft.in',
-    phone: '+91 80411-23456',
-    city: 'Bengaluru, Karnataka',
-    status: 'Verified',
-    leadTime: '4-6 days',
-    rating: 4.8,
-    activePo: 7,
-    monthlySpend: 286000,
-    lastSupply: '2026-05-27',
-    terms: 'Net 15',
-    products: 'Tillers, pruning tools, crop cutters'
-  },
-  {
-    id: 'SUP-002',
-    name: 'AgroEquip Co.',
-    category: 'Irrigation',
-    contactPerson: 'Neha Patel',
-    email: 'orders@agroequip.co.in',
-    phone: '+91 98250-88221',
-    city: 'Ahmedabad, Gujarat',
-    status: 'Verified',
-    leadTime: '3-5 days',
-    rating: 4.6,
-    activePo: 4,
-    monthlySpend: 174500,
-    lastSupply: '2026-05-24',
-    terms: 'Advance 30%',
-    products: 'Drip kits, pumps, hose connectors'
-  },
-  {
-    id: 'SUP-003',
-    name: 'Bharat Agro Machinery',
-    category: 'Machinery',
-    contactPerson: 'Rakesh Verma',
-    email: 'sales@bharatagromachinery.com',
-    phone: '+91 98110-77144',
-    city: 'Ludhiana, Punjab',
-    status: 'Review',
-    leadTime: '8-12 days',
-    rating: 4.1,
-    activePo: 2,
-    monthlySpend: 412000,
-    lastSupply: '2026-05-18',
-    terms: 'Net 30',
-    products: 'Brush cutters, seed drill attachments'
-  },
-  {
-    id: 'SUP-004',
-    name: 'GreenSafe Protective Works',
-    category: 'Safety Gear',
-    contactPerson: 'Farhan Khan',
-    email: 'dispatch@greensafe.in',
-    phone: '+91 99888-44112',
-    city: 'Delhi NCR',
-    status: 'Verified',
-    leadTime: '2-4 days',
-    rating: 4.7,
-    activePo: 3,
-    monthlySpend: 68400,
-    lastSupply: '2026-05-29',
-    terms: 'Net 7',
-    products: 'Farm gloves, masks, eye protection'
-  },
-  {
-    id: 'SUP-005',
-    name: 'Krishi Seed & Inputs',
-    category: 'Seeds & Inputs',
-    contactPerson: 'Sandeep Rao',
-    email: 'hello@krishiinputs.in',
-    phone: '+91 99002-66718',
-    city: 'Hyderabad, Telangana',
-    status: 'Pending',
-    leadTime: '5-7 days',
-    rating: 3.9,
-    activePo: 1,
-    monthlySpend: 92000,
-    lastSupply: '2026-05-11',
-    terms: 'Advance 50%',
-    products: 'Hybrid seeds, soil additives'
-  },
-  {
-    id: 'SUP-006',
-    name: 'PackRight Rural Logistics',
-    category: 'Packaging',
-    contactPerson: 'Meera Iyer',
-    email: 'support@packright.in',
-    phone: '+91 94444-21890',
-    city: 'Chennai, Tamil Nadu',
-    status: 'Inactive',
-    leadTime: '6-9 days',
-    rating: 3.5,
-    activePo: 0,
-    monthlySpend: 18500,
-    lastSupply: '2026-04-30',
-    terms: 'COD',
-    products: 'Cartons, tapes, woven sacks'
-  }
-];
+export const suppliers = [];
 
 export const formatSupplierCurrency = (amount) => `INR ${Number(amount || 0).toLocaleString('en-IN')}`;
 
@@ -204,10 +101,10 @@ const SuppliersList = () => {
     if (!window.confirm('Are you sure you want to delete this supplier?')) return;
     try {
       await deleteSupplier(id);
-    } catch (err) {
-      console.warn('Backend delete error, removing locally:', err);
-    } finally {
       setSuppliersList(prev => prev.filter(s => String(s.id) !== String(id)));
+    } catch (err) {
+      console.error('Backend delete error:', err);
+      alert('Failed to delete supplier from server: ' + (err.message || 'Unknown error'));
     }
   };
 
@@ -253,108 +150,174 @@ const SuppliersList = () => {
   const pagedSuppliers = filteredSuppliers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="suppliers-page" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px' }}>
+    <div className="suppliers-page" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       
-      {/* Compact Header Section with Sized Down Metrics */}
-      <section className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm gap-4">
-        <div className="catalog-title-wrap">
-          <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#059669', fontWeight: 700 }}>Procurement</span>
-          <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b', margin: 0 }}>Supplier Management</h1>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>Manage approved vendors, contacts, categories, and payment terms.</p>
+      {/* Top Header Section with Procurement Label & Top-Right Metrics */}
+      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 24px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
+        <div>
+          <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#059669', fontWeight: 700, letterSpacing: '0.04em', display: 'block', marginBottom: '2px' }}>
+            PROCUREMENT
+          </span>
+          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0', lineHeight: 1.2 }}>
+            Supplier Management
+          </h1>
+          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+            Manage approved vendors, contacts, categories, and payment terms.
+          </p>
         </div>
 
-        <div className="suppliers-metrics" style={{ display: 'flex', gap: '12px' }}>
-          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-center min-w-[90px]">
-            <span style={{ fontSize: '9px', color: '#64748b', display: 'block', textTransform: 'uppercase' }}>Verified</span>
-            <strong style={{ fontSize: '14px', color: '#1e293b' }}>{summary.verified}</strong>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '6px 16px', textAlign: 'center', minWidth: '70px' }}>
+            <span style={{ fontSize: '9px', color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
+              VERIFIED
+            </span>
+            <strong style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>{summary.verified}</strong>
           </div>
-          <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-100 text-center min-w-[90px]">
-            <span style={{ fontSize: '9px', color: '#64748b', display: 'block', textTransform: 'uppercase' }}>Total</span>
-            <strong style={{ fontSize: '14px', color: '#1e293b' }}>{summary.total}</strong>
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '6px 16px', textAlign: 'center', minWidth: '70px' }}>
+            <span style={{ fontSize: '9px', color: '#64748b', display: 'block', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>
+              TOTAL
+            </span>
+            <strong style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>{summary.total}</strong>
           </div>
         </div>
       </section>
 
-      <section className="catalog-card" style={{ margin: 0 }}>
-        <div className="catalog-card__header" style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Main Vendor Directory Card */}
+      <section style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', margin: 0, boxSizing: 'border-box' }}>
+        
+        {/* Card Header with Add Supplier Button */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>Vendor Directory</h2>
-            <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>{filteredSuppliers.length} suppliers match current filters</p>
+            <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+              Vendor Directory
+            </h2>
+            <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0 0' }}>
+              {filteredSuppliers.length} suppliers match current filters
+            </p>
           </div>
-          <Link className="catalog-btn catalog-btn--primary" to="/admin/suppliers/add" style={{ fontSize: '11px', padding: '5px 10px' }}>
-            <Plus size={13} style={{ marginRight: '4px' }} />
-            Add Supplier
+          <Link
+            to="/admin/suppliers/add"
+            style={{
+              background: '#2563eb',
+              color: '#ffffff',
+              borderRadius: '8px',
+              padding: '0 16px',
+              height: '36px',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              transition: 'background 0.15s ease'
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = '#1d4ed8')}
+            onMouseOut={(e) => (e.currentTarget.style.background = '#2563eb')}
+          >
+            <Plus size={15} />
+            <span>Add Supplier</span>
           </Link>
         </div>
 
-        <div className="catalog-filterbar suppliers-filterbar" style={{ padding: '8px 16px', gap: '10px' }}>
-          <div className="catalog-search" style={{ flex: 1 }}>
-            <Search size={16} />
+        {/* Search & Filter Bar */}
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: '340px' }}>
+            <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input
               type="search"
               placeholder="Search supplier, contact, phone..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              style={{ fontSize: '12px', padding: '4px 8px 4px 32px' }}
+              style={{
+                width: '100%',
+                height: '36px',
+                padding: '0 12px 0 36px',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                fontSize: '12px',
+                outline: 'none',
+                background: '#ffffff',
+                boxSizing: 'border-box'
+              }}
             />
           </div>
 
-          <label className="catalog-filter">
-            <ShieldCheck size={14} />
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} style={{ fontSize: '12px', padding: '4px' }}>
-              <option value="All">All statuses</option>
-              <option value="Verified">Verified</option>
-              <option value="Pending">Pending</option>
-              <option value="Rejected">Rejected</option>
-              <option value="Review">Review</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </label>
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            style={{
+              height: '36px',
+              padding: '0 14px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: '#0f172a',
+              background: '#ffffff',
+              cursor: 'pointer',
+              outline: 'none'
+            }}
+          >
+            <option value="All">All statuses</option>
+            <option value="Verified">Verified</option>
+            <option value="Pending">Pending</option>
+            <option value="Rejected">Rejected</option>
+            <option value="Review">Review</option>
+            <option value="Inactive">Inactive</option>
+          </select>
         </div>
 
-        <div className="catalog-table-wrap">
-          <table className="catalog-table suppliers-table">
+        {/* Data Table */}
+        <div className="catalog-table-wrap" style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+          <table className="catalog-table suppliers-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ fontSize: '11px' }}>
-                <th style={{ padding: '8px 12px' }}>Supplier</th>
-                <th style={{ padding: '8px 12px' }}>Contact</th>
-                <th style={{ padding: '8px 12px' }}>Lead Time</th>
-                <th style={{ padding: '8px 12px' }}>Status</th>
-                <th className="catalog-center-cell" style={{ padding: '8px 12px' }}>Action</th>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
+                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Supplier</th>
+                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Contact</th>
+                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lead Time</th>
+                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</th>
+                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>Action</th>
               </tr>
             </thead>
             <tbody>
               {pagedSuppliers.map((supplier) => (
                 <tr 
                   key={supplier.id} 
-                  style={{ fontSize: '12px', cursor: 'pointer' }}
+                  style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', transition: 'background 0.15s ease' }}
                   onClick={() => setActivePopupSupplier(supplier)}
-                  className="hover:bg-slate-50/80 transition-colors"
+                  onMouseOver={(e) => (e.currentTarget.style.background = '#f8fafc')}
+                  onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
                 >
-                  <td style={{ padding: '6px 12px' }}>
-                    <div className="catalog-table__title" style={{ fontSize: '12px', fontWeight: 600 }}>{supplier.name}</div>
-                    <div className="catalog-table__muted" style={{ fontSize: '10px' }}>Rating {supplier.rating}/5</div>
+                  <td style={{ padding: '10px 14px' }}>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>{supplier.name}</div>
+                    <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '1px' }}>Rating {supplier.rating || '4.5'}/5</div>
                   </td>
-                  <td style={{ padding: '6px 12px' }}>
-                    <div className="catalog-table__title" style={{ fontSize: '12px', fontWeight: 600 }}>{supplier.contactPerson}</div>
-                    <div className="supplier-contact-line" style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: '#64748b' }}>
-                      <Phone size={11} />
-                      {supplier.phone}
-                    </div>
-                    <div className="supplier-contact-line" style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '10px', color: '#64748b' }}>
-                      <Mail size={11} />
-                      {supplier.email}
-                    </div>
+                  <td style={{ padding: '10px 14px' }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>{supplier.contactPerson || supplier.name}</div>
+                    {supplier.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
+                        <Phone size={11} />
+                        {supplier.phone}
+                      </div>
+                    )}
+                    {supplier.email && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
+                        <Mail size={11} />
+                        {supplier.email}
+                      </div>
+                    )}
                   </td>
-                  <td style={{ padding: '6px 12px' }}>
-                    <div className="supplier-lead-time" style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px' }}>
-                      <Truck size={12} />
+                  <td style={{ padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11.5px', color: '#334155' }}>
+                      <Truck size={13} style={{ color: '#64748b' }} />
                       {supplier.leadTime || '4-6 days'}
                     </div>
                   </td>
-                  <td style={{ padding: '6px 12px' }}><SupplierStatusBadge status={supplier.status} /></td>
-                  <td className="catalog-center-cell" style={{ padding: '6px 12px' }} onClick={(e) => e.stopPropagation()}>
-                    <div className="catalog-inline-actions" style={{ display: 'flex', gap: '12px', justifyContent: 'center', alignItems: 'center' }}>
+                  <td style={{ padding: '10px 14px' }}>
+                    <SupplierStatusBadge status={supplier.status} />
+                  </td>
+                  <td style={{ padding: '10px 14px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', alignItems: 'center' }}>
                       <AnimatedViewButton
                         onClick={() => setActivePopupSupplier(supplier)}
                         title="View supplier snapshot"
@@ -374,8 +337,8 @@ const SuppliersList = () => {
 
               {!filteredSuppliers.length && (
                 <tr>
-                  <td colSpan="5">
-                    <div className="suppliers-empty">No suppliers match the current search or filters.</div>
+                  <td colSpan="5" style={{ padding: '32px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
+                    No suppliers match the current search or filters.
                   </td>
                 </tr>
               )}

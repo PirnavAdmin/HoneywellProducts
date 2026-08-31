@@ -3,11 +3,23 @@ import { Link } from 'react-router-dom';
 import { 
   Search, CreditCard, Check, X, Upload, Copy, Info, 
   RefreshCw, CheckCircle, AlertCircle, ArrowUpRight, Activity, Eye,
-  Bell, BellOff, Clock, Calendar, Lock, ChevronDown
+  Bell, BellOff, Clock, Calendar, Lock, ChevronDown, Trash2
 } from 'lucide-react';
-import { getOrders, updateOrderStatus } from '../api/orders';
+import { getOrders, updateOrderStatus, updateOrderPaymentStatus } from '../api/orders';
 import { Toast } from '../components/Toast';
 import { getApiDomain } from '../../utils/apiConfig';
+import {
+  getManualVerifications as fetchManualVerifications,
+  getBankDetails as fetchBankDetails,
+  getUpiDetails as fetchUpiDetails,
+  getQrConfig as fetchQrConfig,
+  updateQrConfig,
+  updateBankDetails,
+  updateUpiDetails,
+  updateManualVerificationStatus,
+  deleteManualVerification,
+  reconcileSms as reconcileSmsOnServer
+} from '../../services/paymentService';
 import './PaymentHistory.css';
 
 const formatDateDisplay = (dateStr) => {
@@ -37,109 +49,6 @@ const formatDateDisplay = (dateStr) => {
   return cleanStr.slice(0, 10);
 };
 
-const BASE_PAYMENT_URL = `${getApiDomain()}/api/Payment`;
-const HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json'
-};
-
-const fetchManualVerifications = async (search = '') => {
-  const url = search 
-    ? `${BASE_PAYMENT_URL}/manual-verifications?search=${encodeURIComponent(search)}` 
-    : `${BASE_PAYMENT_URL}/manual-verifications`;
-  const response = await fetch(url, { headers: HEADERS });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const fetchBankDetails = async () => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/bank-details`, { headers: HEADERS });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const fetchUpiDetails = async () => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/upi-details`, { headers: HEADERS });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const fetchQrConfig = async () => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/qr-config`, { headers: HEADERS });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const updateQrConfig = async (formData) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/qr-config`, {
-    method: 'PUT',
-    headers: {
-      'ngrok-skip-browser-warning': 'true'
-    },
-    body: formData
-  });
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.message || `HTTP error! status: ${response.status}`);
-  }
-  return await response.json();
-};
-
-const updateBankDetails = async (details) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/bank-details`, {
-    method: 'PUT',
-    headers: HEADERS,
-    body: JSON.stringify(details)
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const updateUpiDetails = async (details) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/upi-details`, {
-    method: 'PUT',
-    headers: HEADERS,
-    body: JSON.stringify(details)
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const updateManualVerificationStatus = async (id, status) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/verify-manual/${id}/status`, {
-    method: 'PUT',
-    headers: HEADERS,
-    body: JSON.stringify({ status })
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-// eslint-disable-next-line no-unused-vars
-const deleteManualVerification = async (id) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/verify-manual/${id}`, {
-    method: 'DELETE',
-    headers: HEADERS
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
-};
-
-const reconcileSmsOnServer = async (smsText) => {
-  const response = await fetch(`${BASE_PAYMENT_URL}/reconcile-sms`, {
-    method: 'POST',
-    headers: HEADERS,
-    body: JSON.stringify({ smsPayload: smsText })
-  });
-  if (!response.ok) {
-    const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.message || `HTTP error! status: ${response.status}`);
-  }
-  return await response.json();
-};
-
-
 const PaymentHistory = () => {
   const [activeTab, setActiveTab] = useState('payments-list');
   const [orders, setOrders] = useState([]);
@@ -151,6 +60,11 @@ const PaymentHistory = () => {
   // Settings States
   const [qrPreview, setQrPreview] = useState('');
   const [qrFile, setQrFile] = useState(null);
+  const [qrImgError, setQrImgError] = useState(false);
+
+  useEffect(() => {
+    setQrImgError(false);
+  }, [qrPreview]);
   const [bankDetails, setBankDetails] = useState({
     bankName: '',
     accountNumber: '',
@@ -167,9 +81,53 @@ const PaymentHistory = () => {
   const [ifscStatus, setIfscStatus] = useState({ type: '', message: '' });
   const [fetchedBankInfo, setFetchedBankInfo] = useState({ bankName: '', branch: '' });
   
-  // Simulator States
+  // Simulator & Reconciliation States
   const [smsText, setSmsText] = useState('');
-  const [simulationResult, setSimulationResult] = useState(null);
+  const [isReconciling, setIsReconciling] = useState(false);
+  const [reconcileResult, setReconcileResult] = useState(null);
+
+  const handleReconcileSmsSubmit = async (e) => {
+    e.preventDefault();
+    if (!smsText || !smsText.trim() || smsText.trim() === 'string') {
+      showBannerStatus('error', 'Please enter a valid bank credit SMS payload.');
+      return;
+    }
+    
+    setIsReconciling(true);
+    setReconcileResult(null);
+
+    try {
+      const res = await reconcileSmsOnServer(smsText.trim());
+      setIsReconciling(false);
+
+      if (res && res.success !== false) {
+        const utr = res.utrNumber || res.UtrNumber || res.utr || res.data?.utrNumber || '';
+        const amount = res.amount || res.Amount || res.data?.amount || '';
+        setReconcileResult({
+          success: true,
+          message: res.message || `Successfully parsed bank credit SMS!${utr ? ` UTR: ${utr}.` : ''}${amount ? ` Amount: INR ${amount}.` : ''}`,
+          data: { utrNumber: utr, amount: amount, matchedOrderId: res.orderId || res.OrderId || res.data?.orderId }
+        });
+        showBannerStatus('success', 'SMS parsed and reconciled successfully.');
+        loadOrdersList();
+      } else {
+        const errMsg = res?.message || 'Could not parse UTR or Amount from the SMS payload.';
+        setReconcileResult({
+          success: false,
+          message: errMsg
+        });
+        showBannerStatus('error', errMsg);
+      }
+    } catch (err) {
+      setIsReconciling(false);
+      const errMsg = err.message || 'Could not parse UTR or Amount from the SMS payload.';
+      setReconcileResult({
+        success: false,
+        message: errMsg
+      });
+      showBannerStatus('error', errMsg);
+    }
+  };
 
   // Scrollbar synchronization
   const topScrollRef = React.useRef(null);
@@ -188,37 +146,16 @@ const PaymentHistory = () => {
   };
 
   // Load configured settings on component mount
+  // Load configured settings on component mount directly from backend APIs
   useEffect(() => {
-    const savedQr = localStorage.getItem('shyam_agro_qr_code') || '';
-    const savedUpi = localStorage.getItem('shyam_agro_upi_id') || 'shyamagro@upi';
-    const savedBank = localStorage.getItem('shyam_agro_bank_details');
-    
-    setQrPreview(savedQr);
-    setUpiId(savedUpi);
-    
-    if (savedBank) {
-      try {
-        setBankDetails(JSON.parse(savedBank));
-      } catch (e) {
-        console.error("Failed to parse bank details from local storage");
-      }
-    } else {
-      setBankDetails({
-        bankName: '',
-        accountNumber: '',
-        accountHolderName: '',
-        ifscCode: '',
-        bankBranch: ''
-      });
-    }
-
     const loadServerSettings = async () => {
       try {
         const serverQr = await fetchQrConfig();
-        if (serverQr && serverQr.qrImageUrl) {
-          const fullQrUrl = serverQr.qrImageUrl.startsWith('/') 
-            ? `${getApiDomain()}${serverQr.qrImageUrl}` 
-            : serverQr.qrImageUrl;
+        if (serverQr && (serverQr.qrImageUrl || serverQr.url)) {
+          const rawUrl = serverQr.qrImageUrl || serverQr.url;
+          const fullQrUrl = rawUrl.startsWith('/') 
+            ? `${getApiDomain()}${rawUrl}` 
+            : rawUrl;
           setQrPreview(fullQrUrl);
         }
       } catch (e) {
@@ -227,17 +164,17 @@ const PaymentHistory = () => {
 
       try {
         const serverBank = await fetchBankDetails();
-        if (serverBank && serverBank.bankName) {
+        if (serverBank && (serverBank.bankName || serverBank.ifscCode)) {
           setBankDetails({
-            bankName: serverBank.bankName,
-            accountNumber: serverBank.accountNumber,
-            accountHolderName: serverBank.accountHolderName,
-            ifscCode: serverBank.ifscCode,
+            bankName: serverBank.bankName || '',
+            accountNumber: serverBank.accountNumber || '',
+            accountHolderName: serverBank.accountHolderName || '',
+            ifscCode: serverBank.ifscCode || '',
             bankBranch: serverBank.branch || serverBank.bankBranch || ''
           });
         }
       } catch (e) {
-        console.warn("Failed to load live bank details from server, using local data:", e);
+        console.warn("Failed to load live bank details from server:", e);
       }
 
       try {
@@ -249,7 +186,7 @@ const PaymentHistory = () => {
           }
         }
       } catch (e) {
-        console.warn("Failed to load live UPI details from server, using local data:", e);
+        console.warn("Failed to load live UPI details from server:", e);
       }
     };
     
@@ -318,11 +255,11 @@ const PaymentHistory = () => {
             
             if (Notification.permission === 'granted') {
               new Notification('New Payment Submitted', {
-                body: `Order #${item.orderId} from ${item.customerName} (₹${item.amountPaid.toLocaleString('en-IN')}) requires manual verification.`,
+                body: `Order #${item.orderId || ''} from ${item.customerName || 'Customer'} (₹${Number(item.amountPaid || 0).toLocaleString('en-IN')}) requires manual verification.`,
                 icon: '/favicon.ico'
               });
             }
-            showBannerStatus('success', `New Payment Submitted! Order #${item.orderId} (₹${item.amountPaid.toLocaleString('en-IN')}) requires verification.`);
+            showBannerStatus('success', `New Payment Submitted! Order #${item.orderId || ''} (₹${Number(item.amountPaid || 0).toLocaleString('en-IN')}) requires verification.`);
           }
         }
       } catch (err) {
@@ -336,7 +273,7 @@ const PaymentHistory = () => {
   // IFSC Auto-fetch branch details from Razorpay API
   useEffect(() => {
     const fetchBranchDetails = async () => {
-      const formattedIfsc = bankDetails.ifscCode.toUpperCase().trim();
+      const formattedIfsc = (bankDetails?.ifscCode || '').toUpperCase().trim();
       if (formattedIfsc.length !== 11) {
         setIfscStatus({ type: '', message: '' });
         setFetchedBankInfo({ bankName: '', branch: '' });
@@ -375,41 +312,45 @@ const PaymentHistory = () => {
   }, [bankDetails.ifscCode]);
 
   const handleVerifyPayment = async (orderId, totalAmount, realOrderId, verificationRecordId) => {
-    if (!window.confirm(`Verify payment of INR ${totalAmount.toLocaleString('en-IN')} for Order #${orderId}?\n\nThis will mark the order as Processing.`)) return;
+    if (!window.confirm(`Verify payment of INR ${Number(totalAmount || 0).toLocaleString('en-IN')} for Order #${orderId || ''}?\n\nThis will mark the order as Verified.`)) return;
     
     try {
-      // 1. Approve manual verification record if present (validates UTR match against bank records first)
+      // 1. Approve manual verification record if present
       if (verificationRecordId) {
-        const res = await fetch(`${BASE_PAYMENT_URL}/verify-manual/${verificationRecordId}/status`, {
-          method: 'PUT',
-          headers: HEADERS,
-          body: JSON.stringify({ status: 'Approved' })
-        });
+        const res = await updateManualVerificationStatus(verificationRecordId, 'Approved');
 
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          // 422 = UTR not SMS-verified yet
+        if (res && res.success === false) {
           if (res.status === 422) {
-            const utr = errData.utrNumber || errData.UtrNumber || '';
+            const utr = res.data?.utrNumber || res.data?.UtrNumber || '';
             showBannerStatus('error',
               `⚠️ Cannot approve — UTR not matched against bank records.` +
               (utr ? ` Expected UTR: ${utr}.` : '') +
               ` Paste the bank credit SMS in the "Auto-Verification Sandbox" tab first.`
             );
           } else {
-            showBannerStatus('error', errData.message || errData.Message || `Server error (${res.status}).`);
+            showBannerStatus('error', res.message || `Server error (${res.status || 'unknown'}).`);
           }
-          return; // stop — do not update order status or refresh
+          return;
         }
+
+        // Dynamically update local manualVerifications state
+        setManualVerifications(prev => (Array.isArray(prev) ? prev : []).map(mv => mv.id === verificationRecordId ? { ...mv, verificationStatus: 'Approved', smsVerified: true } : mv));
       }
 
-      // 2. Update order status to Processing on the server only after successful verification approval
-      const isNumericId = /^\d+$/.test(String(realOrderId));
-      if (isNumericId) {
-        await updateOrderStatus(Number(realOrderId), 'Processing');
+      // 2. Update order payment status and order status on server (supports string & numeric IDs)
+      if (realOrderId) {
+        try {
+          await updateOrderPaymentStatus(realOrderId, 'Verified', totalAmount);
+          await updateOrderStatus(realOrderId, 'Processing');
+        } catch (err) {
+          console.warn("Order endpoint update warning:", err);
+        }
+
+        // Dynamically update local orders state
+        setOrders(prev => (Array.isArray(prev) ? prev : []).map(o => String(o.id || o.orderId) === String(realOrderId) ? { ...o, paymentStatus: 'Verified', status: 'Processing' } : o));
       }
       
-      showBannerStatus('success', `Payment for Order #${orderId} verified successfully.${isNumericId ? ' Order status updated to Processing.' : ''}`);
+      showBannerStatus('success', `Payment for Order #${orderId} verified successfully.`);
       loadOrdersList();
     } catch (e) {
       showBannerStatus('error', `Failed to verify payment: ${e.message}`);
@@ -421,21 +362,41 @@ const PaymentHistory = () => {
     if (!window.confirm(`Reject payment details for Order #${orderId}?`)) return;
     
     try {
-      const isNumericId = /^\d+$/.test(String(realOrderId));
-      if (isNumericId) {
-        // 1. Cancel order status on the server
-        await updateOrderStatus(Number(realOrderId), 'Cancelled');
-      }
-
-      // 2. Reject manual verification record if present
       if (verificationRecordId) {
         await updateManualVerificationStatus(verificationRecordId, 'Rejected');
+        setManualVerifications(prev => (Array.isArray(prev) ? prev : []).map(mv => mv.id === verificationRecordId ? { ...mv, verificationStatus: 'Rejected' } : mv));
+      }
+
+      if (realOrderId) {
+        try {
+          await updateOrderPaymentStatus(realOrderId, 'Rejected', 0);
+          await updateOrderStatus(realOrderId, 'Cancelled');
+        } catch (err) {
+          console.warn("Order endpoint update warning:", err);
+        }
+        setOrders(prev => (Array.isArray(prev) ? prev : []).map(o => String(o.id || o.orderId) === String(realOrderId) ? { ...o, paymentStatus: 'Rejected', status: 'Cancelled' } : o));
       }
       
-      showBannerStatus('success', `Payment for Order #${orderId} rejected.${isNumericId ? ' Order status updated to Cancelled.' : ''}`);
+      showBannerStatus('success', `Payment for Order #${orderId} rejected.`);
       loadOrdersList();
     } catch (e) {
       showBannerStatus('error', `Failed to reject payment: ${e.message}`);
+    }
+  };
+
+  const handleDeleteVerification = async (verificationId, orderId) => {
+    if (!window.confirm(`Are you sure you want to delete manual verification record for Order #${orderId}?`)) return;
+    try {
+      const res = await deleteManualVerification(verificationId);
+      if (res && res.success !== false) {
+        setManualVerifications(prev => (Array.isArray(prev) ? prev : []).filter(mv => mv.id !== verificationId));
+        showBannerStatus('success', `Manual verification record deleted successfully.`);
+        loadOrdersList();
+      } else {
+        showBannerStatus('error', res?.message || 'Failed to delete manual verification record.');
+      }
+    } catch (e) {
+      showBannerStatus('error', `Failed to delete manual verification: ${e.message}`);
     }
   };
 
@@ -467,7 +428,6 @@ const PaymentHistory = () => {
       showBannerStatus('error', 'Please upload or preview a QR Code before saving.');
       return;
     }
-    localStorage.setItem('shyam_agro_qr_code', qrPreview);
     
     try {
       const fd = new FormData();
@@ -477,15 +437,17 @@ const PaymentHistory = () => {
         fd.append('qrImageUrl', qrPreview);
       }
       const response = await updateQrConfig(fd);
-      if (response && response.success) {
+      if (response && response.success !== false) {
         showBannerStatus('success', 'QR Code configurations saved to server successfully.');
         setQrFile(null);
+        if (response.qrImageUrl || response.url) {
+          setQrPreview(response.qrImageUrl || response.url);
+        }
       } else {
-        showBannerStatus('success', 'QR Code saved locally only.');
+        showBannerStatus('error', response?.message || 'Failed to update QR Code configuration on server.');
       }
     } catch (err) {
-      console.warn("Failed to update QR config on server, saved locally:", err);
-      showBannerStatus('success', 'QR Code updated locally (Server offline).');
+      showBannerStatus('error', `Failed to update QR Code configuration: ${err.message}`);
     }
   };
 
@@ -516,20 +478,32 @@ const PaymentHistory = () => {
       showBannerStatus('error', 'Please fill in all mandatory bank details with valid input before saving.');
       return;
     }
-    localStorage.setItem('shyam_agro_bank_details', JSON.stringify(bankDetails));
     
     try {
-      await updateBankDetails({
+      const response = await updateBankDetails({
         bankName: bankDetails.bankName,
         accountNumber: bankDetails.accountNumber,
         accountHolderName: bankDetails.accountHolderName,
         ifscCode: bankDetails.ifscCode,
         branch: bankDetails.bankBranch
       });
-      showBannerStatus('success', 'Bank Account details saved to server successfully.');
+
+      if (response && response.success !== false) {
+        showBannerStatus('success', 'Bank Account details saved to server successfully.');
+        if (response.bankName || response.accountNumber) {
+          setBankDetails({
+            bankName: response.bankName || bankDetails.bankName,
+            accountNumber: response.accountNumber || bankDetails.accountNumber,
+            accountHolderName: response.accountHolderName || bankDetails.accountHolderName,
+            ifscCode: response.ifscCode || bankDetails.ifscCode,
+            bankBranch: response.branch || response.bankBranch || bankDetails.bankBranch
+          });
+        }
+      } else {
+        showBannerStatus('error', response?.message || 'Failed to update Bank Account details on server.');
+      }
     } catch (err) {
-      console.warn("Failed to save bank details to server:", err);
-      showBannerStatus('success', 'Bank Account details saved locally (Server offline).');
+      showBannerStatus('error', `Failed to update Bank Account details: ${err.message}`);
     }
   };
 
@@ -581,19 +555,25 @@ const PaymentHistory = () => {
       showBannerStatus('error', 'Invalid UPI ID. Format must be: yourname@bankhandle (e.g. shyamagro@ybl).');
       return;
     }
-    localStorage.setItem('shyam_agro_upi_id', upiId);
     
     try {
-      await updateUpiDetails({
+      const response = await updateUpiDetails({
         merchantName: originalUpiDetails.merchantName || 'Shyam Agro Tools',
         merchantUpiId: upiId,
         bankDisplayName: originalUpiDetails.bankDisplayName || 'Bank Account',
         currency: originalUpiDetails.currency || 'INR'
       });
-      showBannerStatus('success', 'UPI ID details saved to server successfully.');
+
+      if (response && response.success !== false) {
+        showBannerStatus('success', 'UPI ID details saved to server successfully.');
+        if (response.merchantUpiId) {
+          setUpiId(response.merchantUpiId);
+        }
+      } else {
+        showBannerStatus('error', response?.message || 'Failed to update UPI ID details on server.');
+      }
     } catch (err) {
-      console.warn("Failed to save UPI ID to server:", err);
-      showBannerStatus('success', 'UPI ID details saved locally (Server offline).');
+      showBannerStatus('error', `Failed to update UPI ID details: ${err.message}`);
     }
   };
 
@@ -608,11 +588,15 @@ const PaymentHistory = () => {
   const combinedPayments = useMemo(() => {
     const list = [];
     const matchedOrderIds = new Set();
+    const safeVerifications = Array.isArray(manualVerifications) ? manualVerifications : [];
+    const safeOrders = Array.isArray(orders) ? orders : [];
     
     // First, process manual verification submissions from server
-    manualVerifications.forEach(mv => {
+    safeVerifications.forEach(mv => {
+      if (!mv) return;
       const mvDigits = String(mv.orderId || '').replace(/\D/g, '');
-      const o = orders.find(ord => {
+      const o = safeOrders.find(ord => {
+        if (!ord) return false;
         const ordIdDigits = String(ord.id || ord.orderId || '').replace(/\D/g, '');
         const ordNumDigits = String(ord.orderNumber || '').replace(/\D/g, '');
         return (mvDigits && (mvDigits === ordIdDigits || mvDigits === ordNumDigits)) ||
@@ -625,18 +609,18 @@ const PaymentHistory = () => {
       }
       
       list.push({
-        id: mv.orderId,
+        id: mv.orderId || mv.id || 'N/A',
         verificationRecordId: mv.id,
-        orderId: mv.orderId,
+        orderId: mv.orderId || mv.id || 'N/A',
         customerName: mv.customerName || (o ? (o.customerName || o.customer) : 'Unknown'),
         phone: mv.mobileNumber || (o ? o.phone : ''),
-        utr: mv.utrNumber,
+        utr: mv.utrNumber || '',
         paymentDate: mv.paymentDate || (o ? o.orderDate : 'TBD'),
         totalAmount: o ? (o.totalAmount || o.total || o.finalAmount) : mv.amountPaid,
         amountPaid: mv.amountPaid,
         paymentStatus: o ? (o.paymentStatus || o.status) : (mv.verificationStatus === 'Pending' ? 'Pending Verification' : mv.verificationStatus),
-        screenshotUrl: mv.screenshotUrl,
-        remarks: mv.remarks,
+        screenshotUrl: mv.screenshotUrl || null,
+        remarks: mv.remarks || null,
         isVerificationRecord: true,
         smsVerified: mv.smsVerified === true,
         verifiedUtr: mv.verifiedUtr || null,
@@ -645,18 +629,18 @@ const PaymentHistory = () => {
     });
     
     // Add remaining manual payment orders that don't have server verification details
-    orders.forEach(o => {
-      if (o.paymentMethod === 'UPI / Bank Transfer' && !matchedOrderIds.has(String(o.id || o.orderId))) {
+    safeOrders.forEach(o => {
+      if (o && o.paymentMethod === 'UPI / Bank Transfer' && !matchedOrderIds.has(String(o.id || o.orderId))) {
         list.push({
-          id: o.id || o.orderId,
-          orderId: o.id || o.orderId,
+          id: o.id || o.orderId || 'N/A',
+          orderId: o.id || o.orderId || 'N/A',
           customerName: o.customerName || o.customer || 'Unknown',
           phone: o.phone || '',
           utr: o.utr || '',
-          paymentDate: o.orderDate ? o.orderDate.slice(0, 10) : 'TBD',
+          paymentDate: o.orderDate ? String(o.orderDate).slice(0, 10) : 'TBD',
           totalAmount: o.totalAmount || o.total || 0,
           amountPaid: o.paidAmount || 0,
-          paymentStatus: o.paymentStatus || o.status,
+          paymentStatus: o.paymentStatus || o.status || 'Pending',
           screenshotUrl: null,
           remarks: null,
           isVerificationRecord: false,
@@ -669,25 +653,28 @@ const PaymentHistory = () => {
   }, [manualVerifications, orders]);
 
   // Filtered Payments List
-  const filteredPayments = combinedPayments.filter(p => {
-    const search = searchTerm.toLowerCase().trim();
-    const matchesSearch = 
-      String(p.orderId).toLowerCase().includes(search) || 
-      String(p.customerName).toLowerCase().includes(search) ||
-      String(p.utr).toLowerCase().includes(search);
-    
-    let matchesFilter = true;
-    const status = p.paymentStatus;
-    if (statusFilter === 'Pending') {
-      matchesFilter = status === 'Pending Verification' || status === 'Pending' || status === 'PendingVerification' || status === 'Processing';
-    } else if (statusFilter === 'Verified') {
-      matchesFilter = status === 'Paid' || status === 'Verified' || status === 'Approved';
-    } else if (statusFilter === 'Rejected') {
-      matchesFilter = status === 'Rejected' || status === 'Cancelled';
-    }
-    
-    return matchesSearch && matchesFilter;
-  });
+  const filteredPayments = useMemo(() => {
+    return (combinedPayments || []).filter(p => {
+      if (!p) return false;
+      const search = (searchTerm || '').toLowerCase().trim();
+      const matchesSearch = 
+        String(p.orderId || '').toLowerCase().includes(search) || 
+        String(p.customerName || '').toLowerCase().includes(search) ||
+        String(p.utr || '').toLowerCase().includes(search);
+      
+      let matchesFilter = true;
+      const status = p.paymentStatus;
+      if (statusFilter === 'Pending') {
+        matchesFilter = status === 'Pending Verification' || status === 'Pending' || status === 'PendingVerification' || status === 'Processing';
+      } else if (statusFilter === 'Verified') {
+        matchesFilter = status === 'Paid' || status === 'Verified' || status === 'Approved';
+      } else if (statusFilter === 'Rejected') {
+        matchesFilter = status === 'Rejected' || status === 'Cancelled';
+      }
+      
+      return matchesSearch && matchesFilter;
+    });
+  }, [combinedPayments, searchTerm, statusFilter]);
 
   return (
     <div className="payment-history-container">
@@ -887,9 +874,9 @@ const PaymentHistory = () => {
                             <td>
                               <div className="amount-cell">
                                 <span className="amount-main">₹{(payment.totalAmount || 0).toLocaleString('en-IN')}</span>
-                                {payment.amountPaid !== undefined && payment.amountPaid !== payment.totalAmount && (
+                                {payment.amountPaid !== undefined && payment.amountPaid !== null && payment.amountPaid !== payment.totalAmount && (
                                   <span className="amount-paid-sub">
-                                    Paid: ₹{payment.amountPaid.toLocaleString('en-IN')}
+                                    Paid: ₹{Number(payment.amountPaid || 0).toLocaleString('en-IN')}
                                   </span>
                                 )}
                               </div>
@@ -917,27 +904,38 @@ const PaymentHistory = () => {
                               )}
                             </td>
                             <td>
-                              <div className="actions-cell">
-                                {isPending ? (
-                                  <div className="action-buttons-group">
-                                    <button 
-                                      className="action-btn verify-btn"
-                                      title="Approve this payment"
-                                      onClick={() => {
-                                        handleVerifyPayment(payment.orderId, payment.totalAmount || payment.amountPaid || 0, payment.realOrderId, payment.verificationRecordId);
-                                      }}
+                                <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  {isPending ? (
+                                    <div className="action-buttons-group">
+                                      <button 
+                                        className="action-btn verify-btn"
+                                        title="Approve this payment"
+                                        onClick={() => {
+                                          handleVerifyPayment(payment.orderId, payment.totalAmount || payment.amountPaid || 0, payment.realOrderId, payment.verificationRecordId);
+                                        }}
+                                      >
+                                        <Check size={12} /> Verify Success
+                                      </button>
+                                    </div>
+                                  ) : isRejected ? (
+                                    <span className="action-text-rejected">Rejected</span>
+                                  ) : isVerified ? (
+                                    <span className="action-text-completed">Completed</span>
+                                  ) : (
+                                    <span className="action-text-muted">-</span>
+                                  )}
+                                  {payment.verificationRecordId && (
+                                    <button
+                                      type="button"
+                                      className="action-btn delete-btn"
+                                      title="Delete manual verification record"
+                                      style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
+                                      onClick={() => handleDeleteVerification(payment.verificationRecordId, payment.orderId)}
                                     >
-                                      <Check size={12} /> Verify Success
+                                      <Trash2 size={12} />
                                     </button>
-                                  </div>
-                                ) : isRejected ? (
-                                  <span className="action-text-rejected">Rejected</span>
-                                ) : isVerified ? (
-                                  <span className="action-text-completed">Completed</span>
-                                ) : (
-                                  <span className="action-text-muted">-</span>
-                                )}
-                              </div>
+                                  )}
+                                </div>
                             </td>
                           </tr>
                         );
@@ -952,61 +950,66 @@ const PaymentHistory = () => {
 
         {/* Module 2: QR Code Settings */}
         {activeTab === 'qr-code' && (
-          <div className="max-w-4xl">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-slate-800">QR Code Configurations</h3>
-              <p className="text-sm text-slate-500 mt-1">Upload a QR code for user phase checkout payments. Customers scan this QR to pay during checkout.</p>
+          <div className="qr-config-section">
+            <div className="qr-config-header">
+              <h3 className="qr-config-title">QR Code Configurations</h3>
+              <p className="qr-config-subtitle">Upload a QR code for user phase checkout payments. Customers scan this QR to pay during checkout.</p>
             </div>
 
-            <form onSubmit={saveQrSettings} className="grid grid-cols-1 md:grid-cols-[240px_1fr] gap-8 items-start">
-              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 flex flex-col items-center text-center">
-                <div className="w-48 h-48 bg-white border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center overflow-hidden mb-4 relative">
-                  {qrPreview ? (
-                    <img src={qrPreview} alt="Payment QR Code Preview" className="w-full h-full object-contain" />
+            <form onSubmit={saveQrSettings} className="qr-config-grid">
+              <div className="qr-preview-card">
+                <div className="qr-preview-box">
+                  {qrPreview && !qrImgError ? (
+                    <img 
+                      src={qrPreview} 
+                      alt="Payment QR Code Preview" 
+                      className="qr-preview-img" 
+                      onError={() => setQrImgError(true)} 
+                    />
                   ) : (
-                    <div className="flex flex-col items-center text-slate-400">
-                      <CreditCard size={32} className="mb-2" />
-                      <span className="text-xs font-medium">No QR Code</span>
+                    <div className="qr-dashed-placeholder">
+                      <div className="qr-placeholder-inner">
+                        <Upload size={22} className="qr-broken-icon" />
+                        <span className="qr-placeholder-text">Payment QR Code Preview</span>
+                      </div>
                     </div>
                   )}
                 </div>
-                <span className="text-xs font-semibold text-slate-600">User Phase QR Preview</span>
+                <span className="qr-preview-label">User Phase QR Preview</span>
               </div>
 
-              <div className="flex flex-col gap-5">
+              <div className="qr-upload-form">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Select QR Image File</label>
-                  <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors">
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <Upload size={24} className="text-slate-400 mb-2" />
-                      <p className="text-sm font-medium text-slate-600">Click to upload image</p>
-                      <p className="text-xs text-slate-500 mt-1">PNG, JPG, JPEG, SVG up to 2MB</p>
-                    </div>
+                  <label className="qr-form-label">Select QR Image File</label>
+                  <label className="qr-dropzone">
+                    <Upload size={22} className="qr-upload-icon" />
+                    <p className="qr-dropzone-text">Click to upload image</p>
+                    <p className="qr-dropzone-sub">PNG, JPG, JPEG, SVG up to 2MB</p>
                     <input 
                       type="file" 
                       accept="image/*" 
-                      className="hidden"
+                      style={{ display: 'none' }}
                       onChange={handleQrUpload} 
                     />
                   </label>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">Or Paste QR Image URL</label>
+                  <label className="qr-form-label">Or Paste QR Image URL</label>
                   <input 
                     type="url"
-                    className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-shadow"
+                    className="qr-url-input"
                     placeholder="https://example.com/payment-qr.png"
                     value={qrPreview && qrPreview.startsWith('http') ? qrPreview : ''}
                     onChange={(e) => setQrPreview(e.target.value)}
                   />
                 </div>
 
-                <div className="pt-2">
-                  <button type="submit" className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm">
+                <div>
+                  <button type="submit" className="qr-submit-btn">
                     <Check size={16} /> Update QR Code
                   </button>
-                  <p className="text-[11px] text-slate-500 mt-2">
+                  <p className="qr-form-note">
                     Note: QR Code settings will be stored in your browser session for client-side override.
                   </p>
                 </div>
@@ -1017,33 +1020,35 @@ const PaymentHistory = () => {
 
         {/* Module 3: Bank Details Settings */}
         {activeTab === 'bank-details' && (
-          <div className="max-w-2xl">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-slate-800">Bank Transfer Credentials</h3>
-              <p className="text-sm text-slate-500 mt-1">Edit bank account details displayed to farmers/dealers who choose direct bank wire transfers.</p>
+          <div className="bank-config-section">
+            <div className="bank-config-header">
+              <h3 className="bank-config-title">Bank Transfer Credentials</h3>
+              <p className="bank-config-subtitle">Edit bank account details displayed to farmers/dealers who choose direct bank wire transfers.</p>
             </div>
 
-            <form onSubmit={saveBankSettings} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">IFSC Code *</label>
+            <form onSubmit={saveBankSettings} className="bank-config-form">
+              <div className="bank-form-group">
+                <label className="bank-form-label">IFSC Code *</label>
                 {(() => {
                   const ifscVal = (bankDetails.ifscCode || '').trim();
                   const ifscRegex = /^[A-Z]{4}0[A-Z0-9]{6}$/;
                   const isFormatInvalid = ifscVal.length > 0 && ifscVal.length < 11;
                   const isPatternInvalid = ifscVal.length === 11 && !ifscRegex.test(ifscVal);
                   const showRedBorder = isFormatInvalid || isPatternInvalid || ifscStatus.type === 'error';
+                  const isVerified = ifscStatus.type === 'success' || (fetchedBankInfo.bankName && ifscVal.length === 11);
+                  
                   return (
                     <>
                       <input 
                         type="text" 
-                        className={`w-full px-4 py-2.5 rounded-lg border text-sm uppercase outline-none transition-shadow ${
+                        className={`bank-input ${
                           showRedBorder
-                            ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-400'
-                            : ifscStatus.type === 'success'
-                            ? 'border-emerald-400 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-400'
-                            : 'border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+                            ? 'border-rose-400 focus:border-rose-500'
+                            : isVerified
+                            ? 'ifsc-verified'
+                            : ''
                         }`}
-                        placeholder="e.g. SBIN0000001"
+                        placeholder="e.g. HDFC0000001"
                         required
                         maxLength={11}
                         value={bankDetails.ifscCode}
@@ -1051,98 +1056,72 @@ const PaymentHistory = () => {
                       />
                       {/* Inline format hint while typing */}
                       {isFormatInvalid && !ifscStatus.message && (
-                        <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-amber-600">
+                        <div className="bank-error-msg">
                           <AlertCircle size={12} />
-                          <span>IFSC must be 11 characters: 4 letters + <strong>0</strong> + 6 alphanumeric (e.g. SBIN<strong>0</strong>000001).</span>
-                        </div>
-                      )}
-                      {/* Pattern invalid at exactly 11 chars but wrong format */}
-                      {isPatternInvalid && !ifscStatus.message && (
-                        <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-rose-600">
-                          <AlertCircle size={12} />
-                          <span>Invalid IFSC format. Expected: 4 letters + <strong>0</strong> + 6 alphanumeric (e.g. UBIN<strong>0</strong>802948).</span>
+                          <span>IFSC must be 11 characters: 4 letters + 0 + 6 alphanumeric (e.g. HDFC0000001).</span>
                         </div>
                       )}
                       {/* API response feedback (loading / success / error) */}
-                      {ifscStatus.message && (
-                        <div className={`flex items-center gap-1.5 mt-2 text-xs font-medium ${ifscStatus.type === 'error' ? 'text-rose-600' : ifscStatus.type === 'success' ? 'text-emerald-600' : 'text-slate-500'}`}>
+                      {ifscStatus.message ? (
+                        <div className={ifscStatus.type === 'error' ? 'bank-error-msg' : 'bank-verified-msg'}>
                           {ifscStatus.type === 'loading' && <RefreshCw size={12} className="animate-spin" />}
-                          {ifscStatus.type === 'success' && <CheckCircle size={12} />}
+                          {ifscStatus.type === 'success' && <CheckCircle size={14} />}
                           {ifscStatus.type === 'error' && <AlertCircle size={12} />}
                           <span>{ifscStatus.message}</span>
                         </div>
-                      )}
+                      ) : isVerified && fetchedBankInfo.bankName ? (
+                        <div className="bank-verified-msg">
+                          <CheckCircle size={14} />
+                          <span>Verified: {fetchedBankInfo.bankName} — {fetchedBankInfo.branch}</span>
+                        </div>
+                      ) : null}
                     </>
                   );
                 })()}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Bank Name *</span>
-                  {fetchedBankInfo.bankName && (
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={11} /> Auto-verified from IFSC
-                    </span>
-                  )}
-                </label>
+              <div className="bank-form-group">
+                <div className="bank-form-label-row">
+                  <span className="bank-form-label">Bank Name *</span>
+                  <span className="bank-lock-tag">
+                    <Lock size={12} /> Auto-verified from IFSC
+                  </span>
+                </div>
                 <input 
                   type="text" 
-                  className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none transition-shadow ${
-                    fetchedBankInfo.bankName
-                      ? 'bg-slate-100 text-slate-700 border-slate-300 font-semibold cursor-not-allowed'
-                      : 'border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
-                  }`}
-                  placeholder="e.g. State Bank of India"
+                  className="bank-input read-only"
+                  placeholder="e.g. HDFC Bank"
                   required
-                  readOnly={Boolean(fetchedBankInfo.bankName)}
-                  value={bankDetails.bankName}
+                  readOnly
+                  value={bankDetails.bankName || fetchedBankInfo.bankName || ''}
                   onChange={(e) => setBankDetails({ ...bankDetails, bankName: e.target.value })}
                 />
-                {fetchedBankInfo.bankName && bankDetails.bankName.trim().toLowerCase() !== fetchedBankInfo.bankName.trim().toLowerCase() && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '12px', fontWeight: 600, color: '#e11d48' }}>
-                    <AlertCircle size={12} />
-                    <span>Mismatch! IFSC '{bankDetails.ifscCode}' belongs to '{fetchedBankInfo.bankName}'.</span>
-                  </div>
-                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span>Bank Branch *</span>
-                  {fetchedBankInfo.branch && (
-                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Lock size={11} /> Auto-filled from IFSC
-                    </span>
-                  )}
-                </label>
+              <div className="bank-form-group">
+                <div className="bank-form-label-row">
+                  <span className="bank-form-label">Bank Branch *</span>
+                  <span className="bank-lock-tag">
+                    <Lock size={12} /> Auto-filled from IFSC
+                  </span>
+                </div>
                 <input 
                   type="text" 
-                  className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none transition-shadow ${
-                    fetchedBankInfo.branch
-                      ? 'bg-slate-100 text-slate-700 border-slate-300 font-semibold cursor-not-allowed'
-                      : 'border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
-                  }`}
-                  placeholder="e.g. Nagpur Main Branch"
+                  className="bank-input read-only"
+                  placeholder="e.g. TULSIANI CHMBRS - NARIMAN PT"
                   required
-                  readOnly={Boolean(fetchedBankInfo.branch)}
-                  value={bankDetails.bankBranch}
+                  readOnly
+                  value={bankDetails.bankBranch || fetchedBankInfo.branch || ''}
                   onChange={(e) => setBankDetails({ ...bankDetails, bankBranch: e.target.value })}
                 />
-                {fetchedBankInfo.branch && bankDetails.bankBranch.trim().toLowerCase() !== fetchedBankInfo.branch.trim().toLowerCase() && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px', fontSize: '12px', fontWeight: 600, color: '#e11d48' }}>
-                    <AlertCircle size={12} />
-                    <span>Mismatch! IFSC '{bankDetails.ifscCode}' belongs to '{fetchedBankInfo.branch}' branch.</span>
-                  </div>
-                )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Account Number *</label>
+              <div className="bank-form-group">
+                <label className="bank-form-label">Account Number *</label>
                 <input 
                   type="text" 
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-shadow"
-                  placeholder="e.g. 38190012934 (9 to 18 digits)"
+                  className="bank-input"
+                  placeholder="50100012345678"
                   required
                   maxLength={18}
                   value={bankDetails.accountNumber}
@@ -1152,34 +1131,34 @@ const PaymentHistory = () => {
                   }}
                 />
                 {bankDetails.accountNumber && (bankDetails.accountNumber.length < 9 || bankDetails.accountNumber.length > 18) && (
-                  <div className="flex items-center gap-1.5 mt-2 text-xs font-medium text-rose-600">
+                  <div className="bank-error-msg">
                     <AlertCircle size={12} />
                     <span>Account Number must be between 9 and 18 numeric digits.</span>
                   </div>
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Account Holder Name *</label>
+              <div className="bank-form-group">
+                <label className="bank-form-label">Account Holder Name *</label>
                 <input 
                   type="text" 
-                  className="w-full px-4 py-2.5 rounded-lg border border-slate-200 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition-shadow"
-                  placeholder="e.g. SHYAM AGRO TOOLS PRIVATE LIMITED"
+                  className="bank-input"
+                  placeholder="Shyam Agro"
                   required
                   value={bankDetails.accountHolderName}
                   onChange={(e) => setBankDetails({ ...bankDetails, accountHolderName: e.target.value })}
                 />
               </div>
 
-              <div className="pt-2">
+              <div>
                 <button 
                   type="submit" 
                   disabled={!isBankFormValid(bankDetails)}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:bg-slate-300 disabled:hover:bg-slate-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                  className="bank-submit-btn"
                 >
                   <Check size={16} /> Save Bank details
                 </button>
-                <p className="text-[11px] text-slate-500 mt-2">
+                <p className="bank-form-note">
                   Note: Bank details are initialized from the server on load, and saved to your browser session for client-side override.
                 </p>
               </div>
@@ -1189,29 +1168,25 @@ const PaymentHistory = () => {
 
         {/* Module 4: UPI ID Settings */}
         {activeTab === 'upi-id' && (
-          <div className="max-w-2xl">
-            <div className="mb-6">
-              <h3 className="text-lg font-bold text-slate-800">UPI ID Settings</h3>
-              <p className="text-sm text-slate-500 mt-1">Configure the merchant UPI handle shown to customers on the checkout payments screen.</p>
+          <div className="upi-config-section">
+            <div className="upi-config-header">
+              <h3 className="upi-config-title">UPI ID Settings</h3>
+              <p className="upi-config-subtitle">Configure the merchant UPI handle shown to customers on the checkout payments screen.</p>
             </div>
 
-            <form onSubmit={saveUpiSettings} className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Business UPI ID / VPA *</label>
+            <form onSubmit={saveUpiSettings} className="upi-config-form">
+              <div className="upi-form-group">
+                <label className="upi-form-label">Business UPI ID / VPA *</label>
                 <input 
                   type="text" 
-                  className={`w-full px-4 py-2.5 rounded-lg border text-sm outline-none transition-shadow ${
-                    upiId && !isUpiValid(upiId)
-                      ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-400'
-                      : 'border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
-                  }`}
+                  className={`upi-input ${upiId && !isUpiValid(upiId) ? 'error' : ''}`}
                   placeholder="e.g. shyamagro@ybl"
                   required
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value.trim())}
                 />
                 {upiId && !isUpiValid(upiId) ? (
-                  <div className="flex items-center gap-1.5 mt-2 text-xs font-semibold text-rose-600">
+                  <div className="upi-error-msg">
                     <AlertCircle size={12} />
                     {isUpiFormatOkButUnknownHandle(upiId) ? (
                       <span>
@@ -1222,22 +1197,22 @@ const PaymentHistory = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5 mt-2 text-xs text-slate-500">
-                    <Info size={12} />
-                    <span>Format: <strong>yourname@bankhandle</strong> — handle must be a recognized UPI PSP (e.g. @ybl, @paytm, @oksbi).</span>
+                  <div className="upi-hint-text">
+                    <Info size={13} />
+                    <span>Format: yourname@bankhandle — handle must be a recognized UPI PSP (e.g. @ybl, @paytm, @oksbi).</span>
                   </div>
                 )}
               </div>
 
-              <div className="pt-2">
+              <div>
                 <button 
                   type="submit" 
                   disabled={!isUpiValid(upiId)}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 disabled:bg-slate-300 disabled:hover:bg-slate-300 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg font-medium text-sm transition-colors shadow-sm"
+                  className="upi-submit-btn"
                 >
                   <Check size={16} /> Update UPI ID
                 </button>
-                <p className="text-[11px] text-slate-500 mt-2">
+                <p className="upi-form-note">
                   Note: Merchant UPI VPA is initialized from the server on load, and saved to your browser session for client-side override.
                 </p>
               </div>

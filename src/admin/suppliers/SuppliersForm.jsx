@@ -121,60 +121,107 @@ const SuppliersForm = () => {
   };
 
   return (
-    <div className="suppliers-page supplier-form-page" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="suppliers-page supplier-form-page" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', boxSizing: 'border-box' }}>
       {toastMessage && (
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
-      {/* Top Header Row with Actions in Top-Right */}
-      <section className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200" to="/admin/suppliers/list">
-            <ArrowLeft size={16} />
+      {/* Top Header Card */}
+      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <Link
+            to="/admin/suppliers/list"
+            style={{
+              width: '36px',
+              height: '36px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#475569',
+              background: '#ffffff',
+              transition: 'all 0.15s ease',
+              textDecoration: 'none'
+            }}
+          >
+            <ArrowLeft size={18} />
           </Link>
           <div>
-            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#059669', fontWeight: 700 }}>Procurement</span>
-            <h1 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', margin: 0 }}>{isEditing ? 'Edit Supplier Profile' : 'Add Supplier Profile'}</h1>
+            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#059669', fontWeight: 700, letterSpacing: '0.04em', display: 'block', marginBottom: '2px' }}>
+              PROCUREMENT
+            </span>
+            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+              {isEditing ? 'Edit Supplier Profile' : 'Add Supplier Profile'}
+            </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button className="catalog-btn" type="button" onClick={handleReset} disabled={isSaving} style={{ fontSize: '11px', padding: '6px 12px' }}>
-            <RotateCcw size={14} style={{ marginRight: '4px' }} />
-            Reset Form
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto' }}>
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={isSaving}
+            style={{
+              background: '#059669',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '8px',
+              height: '38px',
+              padding: '0 18px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              transition: 'background 0.15s ease'
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.background = '#047857')}
+            onMouseOut={(e) => (e.currentTarget.style.background = '#059669')}
+          >
+            <RotateCcw size={15} />
+            <span>Reset Form</span>
           </button>
         </div>
       </section>
 
-      {/* Completion Score Sleek Progress Indicator */}
-      <section className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+      {/* Progress Bar Card */}
+      <section style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
         <div>
-          <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Profile Setup Progress</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '4px' }}>
-            <div style={{ width: '200px', height: '8px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
-              <div style={{ width: `${completionScore}%`, height: '100%', backgroundColor: completionScore === 100 ? '#10b981' : '#2563eb', transition: 'width 0.3s' }}></div>
+          <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', display: 'block', marginBottom: '6px' }}>
+            Profile Setup Progress
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '220px', height: '6px', backgroundColor: '#f1f5f9', borderRadius: '4px', overflow: 'hidden' }}>
+              <div style={{ width: `${completionScore}%`, height: '100%', backgroundColor: '#10b981', transition: 'width 0.3s ease' }}></div>
             </div>
-            <strong style={{ fontSize: '14px', color: '#1e293b' }}>{completionScore}%</strong>
+            <strong style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>{completionScore}%</strong>
           </div>
         </div>
-        <span style={{ fontSize: '11px', color: '#64748b' }}>
+        <span style={{ fontSize: '11px', color: '#94a3b8' }}>
           Fill required fields to complete the onboarding record.
         </span>
       </section>
 
-      {/* Grid Layout: Form and Sidebar */}
-      <form className="supplier-form-layout" onSubmit={handleSubmit}>
-        <main className="catalog-stack" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Main 2-Column Form Layout (65% / 35%) */}
+      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
+        
+        {/* Left Column: Form Fields */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* Company Information */}
-          <section className="catalog-card" style={{ padding: '16px', margin: 0 }}>
-            <h3 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#059669', letterSpacing: '0.05em', borderBottom: '2px solid #f1f5f9', paddingBottom: '6px', margin: '0 0 12px 0' }}>
-              Company Details
-            </h3>
+          {/* Card A: Company Details */}
+          <section style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
+            <h2 style={{ fontSize: '12px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', margin: '0 0 16px 0' }}>
+              COMPANY DETAILS
+            </h2>
 
-            <div className="catalog-form-grid" style={{ gap: '12px' }}>
-              <div className="catalog-field">
-                <label htmlFor="name">Supplier Name <span style={{ color: '#ef4444' }}>*</span></label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Supplier Name <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input
                   id="name"
                   name="name"
@@ -183,12 +230,14 @@ const SuppliersForm = () => {
                   onChange={handleChange}
                   placeholder="e.g. KisanKraft Ltd."
                   required
-                  style={{ padding: '6px 10px', fontSize: '12px' }}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="contactPerson">Contact Person <span style={{ color: '#ef4444' }}>*</span></label>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Contact Person <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input
                   id="contactPerson"
                   name="contactPerson"
@@ -197,22 +246,38 @@ const SuppliersForm = () => {
                   onChange={handleChange}
                   placeholder="Procurement contact name"
                   required
-                  style={{ padding: '6px 10px', fontSize: '12px' }}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="category">Category</label>
-                <select id="category" name="category" value={supplier.category} onChange={handleChange} style={{ padding: '6px 10px', fontSize: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Category
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={supplier.category}
+                  onChange={handleChange}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', cursor: 'pointer', boxSizing: 'border-box' }}
+                >
                   {supplierCategories.map((category) => (
                     <option value={category} key={category}>{category}</option>
                   ))}
                 </select>
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="status">Approval Status</label>
-                <select id="status" name="status" value={supplier.status} onChange={handleChange} style={{ padding: '6px 10px', fontSize: '12px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Approval Status
+                </label>
+                <select
+                  id="status"
+                  name="status"
+                  value={supplier.status}
+                  onChange={handleChange}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', cursor: 'pointer', boxSizing: 'border-box' }}
+                >
                   <option value="Pending">Pending</option>
                   <option value="Review">Review</option>
                   <option value="Verified">Verified</option>
@@ -221,8 +286,10 @@ const SuppliersForm = () => {
                 </select>
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="gstin">GSTIN / Tax ID</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  GSTIN / Tax ID
+                </label>
                 <input
                   id="gstin"
                   name="gstin"
@@ -230,12 +297,14 @@ const SuppliersForm = () => {
                   value={supplier.gstin}
                   onChange={handleChange}
                   placeholder="Optional tax registration"
-                  style={{ padding: '6px 10px', fontSize: '12px' }}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="productLines">Product Lines <span style={{ color: '#ef4444' }}>*</span></label>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Product Lines <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input
                   id="productLines"
                   name="productLines"
@@ -244,21 +313,23 @@ const SuppliersForm = () => {
                   onChange={handleChange}
                   placeholder="Tillers, pumps, drip kits"
                   required
-                  style={{ padding: '6px 10px', fontSize: '12px' }}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
           </section>
 
-          {/* Contact & Address */}
-          <section className="catalog-card" style={{ padding: '16px', margin: 0 }}>
-            <h3 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#059669', letterSpacing: '0.05em', borderBottom: '2px solid #f1f5f9', paddingBottom: '6px', margin: '0 0 12px 0' }}>
-              Contact &amp; Location
-            </h3>
+          {/* Card B: Contact & Location */}
+          <section style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
+            <h2 style={{ fontSize: '12px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', margin: '0 0 16px 0' }}>
+              CONTACT &amp; LOCATION
+            </h2>
 
-            <div className="catalog-form-grid" style={{ gap: '12px' }}>
-              <div className="catalog-field">
-                <label htmlFor="email">Email Address <span style={{ color: '#ef4444' }}>*</span></label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Email Address <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input
                   id="email"
                   name="email"
@@ -267,12 +338,14 @@ const SuppliersForm = () => {
                   onChange={handleChange}
                   placeholder="orders@supplier.com"
                   required
-                  style={{ padding: '6px 10px', fontSize: '12px' }}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="phone">Phone Number <span style={{ color: '#ef4444' }}>*</span></label>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Phone Number <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input
                   id="phone"
                   name="phone"
@@ -281,12 +354,14 @@ const SuppliersForm = () => {
                   onChange={handleChange}
                   placeholder="+91 98765-43210"
                   required
-                  style={{ padding: '6px 10px', fontSize: '12px' }}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="city">City / Region <span style={{ color: '#ef4444' }}>*</span></label>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  City / Region <span style={{ color: '#ef4444' }}>*</span>
+                </label>
                 <input
                   id="city"
                   name="city"
@@ -295,12 +370,14 @@ const SuppliersForm = () => {
                   onChange={handleChange}
                   placeholder="City, State"
                   required
-                  style={{ padding: '6px 10px', fontSize: '12px' }}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="leadTime">Average Lead Time</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Average Lead Time
+                </label>
                 <input
                   id="leadTime"
                   name="leadTime"
@@ -308,39 +385,51 @@ const SuppliersForm = () => {
                   value={supplier.leadTime}
                   onChange={handleChange}
                   placeholder="e.g. 4-6 days"
-                  style={{ padding: '6px 10px', fontSize: '12px' }}
-                />
-              </div>
-
-              <div className="catalog-field catalog-field--full">
-                <label htmlFor="address">Registered Address <span style={{ color: '#ef4444' }}>*</span></label>
-                <textarea
-                  id="address"
-                  name="address"
-                  value={supplier.address}
-                  onChange={handleChange}
-                  placeholder="Street, industrial area, city, state, PIN"
-                  required
-                  rows={2}
-                  style={{ padding: '6px 10px', fontSize: '12px', resize: 'none' }}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                Registered Address <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <textarea
+                id="address"
+                name="address"
+                value={supplier.address}
+                onChange={handleChange}
+                placeholder="Street, industrial area, city, state, PIN"
+                required
+                rows={3}
+                style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', resize: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
           </section>
-        </main>
 
-        <aside className="catalog-stack" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        </div>
+
+        {/* Right Column: Procurement Terms, Live Review, Action Buttons */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
-          {/* Commercial Terms */}
-          <section className="catalog-card" style={{ padding: '16px', margin: 0 }}>
-            <h3 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#059669', letterSpacing: '0.05em', borderBottom: '2px solid #f1f5f9', paddingBottom: '6px', margin: '0 0 12px 0' }}>
-              Procurement Terms
-            </h3>
+          {/* Card C: Procurement Terms */}
+          <section style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
+            <h2 style={{ fontSize: '12px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', margin: '0 0 16px 0' }}>
+              PROCUREMENT TERMS
+            </h2>
 
-            <div className="catalog-form" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div className="catalog-field">
-                <label htmlFor="paymentTerms">Payment Terms</label>
-                <select id="paymentTerms" name="paymentTerms" value={supplier.paymentTerms} onChange={handleChange} style={{ padding: '6px 10px', fontSize: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Payment Terms
+                </label>
+                <select
+                  id="paymentTerms"
+                  name="paymentTerms"
+                  value={supplier.paymentTerms}
+                  onChange={handleChange}
+                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', cursor: 'pointer', boxSizing: 'border-box' }}
+                >
                   <option value="Net 7">Net 7</option>
                   <option value="Net 15">Net 15</option>
                   <option value="Net 30">Net 30</option>
@@ -350,8 +439,10 @@ const SuppliersForm = () => {
                 </select>
               </div>
 
-              <div className="catalog-field">
-                <label htmlFor="notes">Internal Notes</label>
+              <div>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                  Internal Notes
+                </label>
                 <textarea
                   id="notes"
                   name="notes"
@@ -359,60 +450,107 @@ const SuppliersForm = () => {
                   onChange={handleChange}
                   placeholder="Quality parameters, preferred dispatch days, logistics defaults..."
                   rows={3}
-                  style={{ padding: '6px 10px', fontSize: '12px', resize: 'none' }}
+                  style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', resize: 'none', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
           </section>
 
-          {/* Supplier Snapshot Card */}
-          <section className="catalog-card supplier-preview-card" style={{ padding: '16px', margin: 0 }}>
-            <h3 style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', color: '#059669', letterSpacing: '0.05em', borderBottom: '2px solid #f1f5f9', paddingBottom: '6px', margin: '0 0 12px 0' }}>
-              Live Review
-            </h3>
+          {/* Card D: Live Review */}
+          <section style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
+            <h2 style={{ fontSize: '12px', fontWeight: 800, color: '#047857', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px', margin: '0 0 16px 0' }}>
+              LIVE REVIEW
+            </h2>
 
-            <div className="supplier-preview-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11px', color: '#475569' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Building2 size={15} style={{ color: '#059669' }} />
-                <span style={{ fontWeight: 600, color: '#1e293b' }}>{supplier.name || 'Vendor Name'}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12px', color: '#475569' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Building2 size={15} style={{ color: '#10b981', flexShrink: 0 }} />
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{supplier.name || 'Vendor Name'}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ShieldCheck size={15} style={{ color: '#059669' }} />
-                <span>{supplier.status} | {supplier.category}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldCheck size={15} style={{ color: '#10b981', flexShrink: 0 }} />
+                <span style={{ fontWeight: 600 }}>{supplier.status || 'Pending'} | {supplier.category || 'Farm Tools'}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Phone size={15} style={{ color: '#059669' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Phone size={15} style={{ color: '#10b981', flexShrink: 0 }} />
                 <span>{supplier.phone || 'Phone Number'}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Mail size={15} style={{ color: '#059669' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Mail size={15} style={{ color: '#10b981', flexShrink: 0 }} />
                 <span>{supplier.email || 'Email Address'}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <MapPin size={15} style={{ color: '#059669' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <MapPin size={15} style={{ color: '#10b981', flexShrink: 0 }} />
                 <span>{supplier.city || 'City / Region'}</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Truck size={15} style={{ color: '#059669' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Truck size={15} style={{ color: '#10b981', flexShrink: 0 }} />
                 <span>{supplier.leadTime || 'Lead time not specified'}</span>
               </div>
             </div>
           </section>
 
-          {/* Bottom Actions inside Sidebar */}
-          <div className="flex justify-end gap-2 border-t pt-4">
-            <Link to="/admin/suppliers/list" className="px-4 py-2 border border-slate-200 rounded-lg text-slate-600 text-xs font-semibold hover:bg-slate-50 transition-colors">
+          {/* Far-Right Actions Bar */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', alignItems: 'center' }}>
+            <Link
+              to="/admin/suppliers/list"
+              style={{
+                background: '#ffffff',
+                color: '#475569',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                height: '38px',
+                padding: '0 18px',
+                fontSize: '13px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                textDecoration: 'none',
+                transition: 'all 0.15s ease'
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = '#f8fafc';
+                e.currentTarget.style.borderColor = '#94a3b8';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = '#ffffff';
+                e.currentTarget.style.borderColor = '#cbd5e1';
+              }}
+            >
               Cancel
             </Link>
+
             <button
-              onClick={handleSubmit}
+              type="submit"
               disabled={isSaving}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors shadow-sm flex items-center gap-1"
+              style={{
+                background: '#059669',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                height: '38px',
+                padding: '0 18px',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                opacity: isSaving ? 0.7 : 1,
+                transition: 'background 0.15s ease'
+              }}
+              onMouseOver={(e) => !isSaving && (e.currentTarget.style.background = '#047857')}
+              onMouseOut={(e) => !isSaving && (e.currentTarget.style.background = '#059669')}
             >
-              <Check size={14} /> {isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Supplier' : 'Save Supplier')}
+              <Check size={15} />
+              <span>{isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Supplier' : 'Save Supplier')}</span>
             </button>
           </div>
-        </aside>
+
+        </div>
+
       </form>
     </div>
   );
