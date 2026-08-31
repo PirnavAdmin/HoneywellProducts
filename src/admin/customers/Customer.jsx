@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getApiDomain } from '../../utils/apiConfig';
 import { ArrowLeft, User, Phone, Mail, MapPin, Tractor, CreditCard, Activity, Edit, Plus, X, Search, ChevronDown } from 'lucide-react';
@@ -641,31 +642,33 @@ const Customer = () => {
       </div>
 
       {/* Edit Customer Profile Modal */}
-      {showEditModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 999999 }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', maxWidth: '640px', width: '100%', maxHeight: '85vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {showEditModal && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 999999 }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.3)', maxWidth: '640px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 'auto' }}>
             
-            {/* STICKY HEADER */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#ffffff' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#064e3b', margin: 0 }}>Edit Customer Profile</h3>
+            {/* MODAL HEADER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '22px 28px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
+              <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#064e3b', margin: 0, letterSpacing: '-0.01em' }}>Edit Customer Profile</h3>
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
-                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.color = '#64748b'; }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            {/* SCROLLABLE BODY */}
-            <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', padding: '24px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', padding: '28px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* BASIC INFORMATION */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '0' }}>BASIC INFORMATION</h4>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BASIC INFORMATION</h4>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                       Full Name <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
@@ -673,12 +676,12 @@ const Customer = () => {
                       required
                       value={editForm.name}
                       onChange={e => setEditForm({ ...editForm, name: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                       Phone Number <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
@@ -686,30 +689,30 @@ const Customer = () => {
                       required
                       value={editForm.phone}
                       onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                       Email Address
                     </label>
                     <input
                       type="email"
                       value={editForm.email}
                       onChange={e => setEditForm({ ...editForm, email: e.target.value.toLowerCase() })}
-                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                       Status
                     </label>
                     <select
                       value={editForm.status}
                       onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     >
                       <option value="Active">Active</option>
                       <option value="Inactive">Inactive</option>
@@ -718,11 +721,11 @@ const Customer = () => {
                 </div>
 
                 {/* ADDRESS DETAILS */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '12px 0 0 0' }}>ADDRESS DETAILS</h4>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>ADDRESS DETAILS</h4>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                       Street Address <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <input
@@ -759,48 +762,48 @@ const Customer = () => {
                           return updated;
                         });
                       }}
-                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                         District <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
                         value={editForm.district}
                         onChange={e => setEditForm({ ...editForm, district: e.target.value })}
-                        style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                        style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                       />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                         State <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <input
                         type="text"
                         value={editForm.state}
                         onChange={e => setEditForm({ ...editForm, state: e.target.value })}
-                        style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                        style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* AGRARIAN DETAILS */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.05em', textTransform: 'uppercase', margin: '12px 0 0 0' }}>AGRARIAN DETAILS</h4>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>AGRARIAN DETAILS</h4>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                       Soil Type
                     </label>
                     <select
                       value={editForm.soilType}
                       onChange={e => setEditForm({ ...editForm, soilType: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     >
                       <option value="Red Sandy">Red Sandy</option>
                       <option value="Black Clayey">Black Clayey</option>
@@ -811,7 +814,7 @@ const Customer = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                       Farm Size (Acres)
                     </label>
                     <input
@@ -819,18 +822,18 @@ const Customer = () => {
                       step="0.1"
                       value={editForm.farmSizeAcres}
                       onChange={e => setEditForm({ ...editForm, farmSizeAcres: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                       Irrigation Source
                     </label>
                     <select
                       value={editForm.irrigationSource}
                       onChange={e => setEditForm({ ...editForm, irrigationSource: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     >
                       <option value="Borewell">Borewell</option>
                       <option value="Drip">Drip Irrigation</option>
@@ -842,25 +845,26 @@ const Customer = () => {
                 </div>
               </div>
 
-              {/* STICKY FOOTER */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '16px', marginTop: '24px', backgroundColor: '#ffffff' }}>
+              {/* FOOTER BUTTONS */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '20px', marginTop: '24px', backgroundColor: '#ffffff' }}>
                 <button
                   type="button"
                   onClick={() => setShowEditModal(false)}
-                  style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '9px 22px', fontSize: '13px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}
+                  style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 24px', fontSize: '13px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{ backgroundColor: '#059669', color: '#ffffff', borderRadius: '8px', padding: '9px 22px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 1px 2px rgba(5,150,105,0.2)' }}
+                  style={{ backgroundColor: '#059669', color: '#ffffff', borderRadius: '10px', padding: '10px 26px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5,150,105,0.25)' }}
                 >
                   Update Changes
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
