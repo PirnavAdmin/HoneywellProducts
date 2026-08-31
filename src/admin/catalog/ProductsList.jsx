@@ -162,18 +162,18 @@ const ProductsList = () => {
 
   return (
     <div className="catalog-page">
-      <section className="catalog-header">
+      <section className="catalog-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '24px 28px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #1d4ed8', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', marginBottom: '20px' }}>
         <div className="catalog-title-wrap">
-          <span className="catalog-kicker">Step 3 of 3</span>
-          <h1>Products</h1>
-          <p>Products are created after category and subcategory setup, keeping inventory organized for filters and reports.</p>
+          <span className="catalog-kicker" style={{ fontSize: '11px', textTransform: 'uppercase', color: '#1d4ed8', fontWeight: 800, display: 'block', letterSpacing: '0.05em', marginBottom: '6px' }}>STEP 3 OF 3</span>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Products</h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Products are created after category and subcategory setup, keeping inventory organized for filters and reports.</p>
         </div>
 
-        <div className="catalog-header__actions">
-          <Link to="/admin/catalog/subcategories" className="catalog-btn">
+        <div className="catalog-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto', flexWrap: 'nowrap' }}>
+          <Link to="/admin/catalog/subcategories" style={{ backgroundColor: '#2d8a54', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', border: 'none' }}>
             View Subcategories
           </Link>
-          <Link to="/admin/catalog/products-form" className="catalog-btn catalog-btn--primary">
+          <Link to="/admin/catalog/products-form" style={{ backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxShadow: '0 1px 2px rgba(37,99,235,0.2)' }}>
             <Plus size={16} /> Add Product
           </Link>
         </div>
