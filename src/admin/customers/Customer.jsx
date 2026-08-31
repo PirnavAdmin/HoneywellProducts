@@ -273,58 +273,137 @@ const Customer = () => {
   // Render direct search select interface if no id is specified
   if (!id) {
     return (
-      <div className="max-w-xl mx-auto my-12 p-6 bg-white rounded-2xl border border-slate-100 shadow-xl">
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
-            <User size={32} />
-          </div>
-          <h2 className="text-xl font-bold text-slate-800">Select Customer Profile</h2>
-          <p className="text-slate-500 text-xs mt-1">Search by customer name, phone number, or ID to view their farm record.</p>
-        </div>
-
-        <div className="relative mb-6">
-          <Search className="absolute left-3 top-3.5 text-slate-400" size={18} />
-          <input
-            type="text"
-            placeholder="Search customer name or phone..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-colors bg-slate-50/50"
-          />
-        </div>
-
-        <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
-          {filteredSearchList.map(c => (
-            <div
-              key={c.id}
-              onClick={() => selectCustomer(c.id)}
-              className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 cursor-pointer transition-all"
-            >
-              <div>
-                <div className="font-semibold text-slate-800 text-sm">{c.name}</div>
-                <div className="text-slate-500 text-xs flex items-center gap-1.5 mt-0.5">
-                  <span>#{c.id}</span>
-                  <span>•</span>
-                  <span>{c.phone}</span>
-                </div>
-              </div>
-              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${getTagColor(c.type)}`}>
-                {c.type || 'Farmer'}
-              </span>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '85vh', padding: '20px', backgroundColor: '#f8fafc' }}>
+        <div style={{
+          maxWidth: '640px',
+          width: '100%',
+          backgroundColor: '#ffffff',
+          borderRadius: '28px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.01)',
+          padding: '40px 36px 28px',
+          boxSizing: 'border-box'
+        }}>
+          {/* Avatar Header Icon */}
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{
+              width: '64px',
+              height: '64px',
+              backgroundColor: '#e6f4ea',
+              borderRadius: '999px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 18px'
+            }}>
+              <User size={28} style={{ color: '#059669' }} />
             </div>
-          ))}
-          {filteredSearchList.length === 0 && (
-            <div className="text-center py-8 text-slate-400 text-sm">No customers match your search query.</div>
-          )}
-        </div>
+            <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#064e3b', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
+              Select Customer Profile
+            </h1>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+              Search by customer name, phone number, or ID to view their farm record.
+            </p>
+          </div>
 
-        <div className="mt-6 border-t pt-4 text-center">
-          <button 
-            onClick={() => navigate('/admin/customers/list')}
-            className="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1.5 mx-auto"
-          >
-            <ArrowLeft size={14} /> Back to Directory
-          </button>
+          {/* Search Box Input */}
+          <div style={{ position: 'relative', marginBottom: '24px' }}>
+            <Search size={18} style={{ position: 'absolute', left: '16px', top: '14px', color: '#94a3b8' }} />
+            <input
+              type="text"
+              placeholder="Search customer name or phone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '12px 16px 12px 46px',
+                fontSize: '14px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '14px',
+                outline: 'none',
+                backgroundColor: '#ffffff',
+                color: '#0f172a',
+                boxSizing: 'border-box'
+              }}
+            />
+          </div>
+
+          {/* Scrollable Customer Items List */}
+          <div style={{ maxHeight: '380px', overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+            {filteredSearchList.map(c => (
+              <div
+                key={c.id}
+                onClick={() => selectCustomer(c.id)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '16px 20px',
+                  borderRadius: '16px',
+                  border: '1px solid #e2e8f0',
+                  backgroundColor: '#ffffff',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = '#10b981';
+                  e.currentTarget.style.backgroundColor = '#f8fafc';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.backgroundColor = '#ffffff';
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>{c.name}</div>
+                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>#{c.id}</span>
+                    <span>•</span>
+                    <span>{c.phone}</span>
+                  </div>
+                </div>
+                <span style={{
+                  backgroundColor: (c.type || 'Farmer') === 'Farmer' ? '#e6f4ea' : ((c.type || 'Farmer') === 'Retailer' ? '#dbeafe' : '#f3e8ff'),
+                  color: (c.type || 'Farmer') === 'Farmer' ? '#15803d' : ((c.type || 'Farmer') === 'Retailer' ? '#1e40af' : '#6b21a8'),
+                  border: `1px solid ${(c.type || 'Farmer') === 'Farmer' ? '#bbf7d0' : ((c.type || 'Farmer') === 'Retailer' ? '#bfdbfe' : '#e9d5ff')}`,
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  padding: '4px 14px',
+                  borderRadius: '999px',
+                  letterSpacing: '0.04em',
+                  textTransform: 'uppercase'
+                }}>
+                  {c.type || 'Farmer'}
+                </span>
+              </div>
+            ))}
+            {filteredSearchList.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '36px 0', color: '#94a3b8', fontSize: '14px' }}>
+                No customers match your search query.
+              </div>
+            )}
+          </div>
+
+          {/* Bottom Back Button */}
+          <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '20px', textAlign: 'center' }}>
+            <button 
+              type="button"
+              onClick={() => navigate('/admin/customers/list')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#059669',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <ArrowLeft size={16} /> Back to Directory
+            </button>
+          </div>
         </div>
       </div>
     );
