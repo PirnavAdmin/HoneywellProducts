@@ -31,254 +31,27 @@ const unwrapArray = (data) => {
   return [];
 };
 
-export const getSeedOrders = () => [
-  {
-    id: "286",
-    invoiceNo: "INV-20260817-230153",
-    customerName: "Puli hemasri sai varma",
-    customerType: "Grower",
-    customerPhone: "7387456551",
-    customerEmail: "puli.hemasri@domain.com",
-    dateBooked: "2026-08-17",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Pending Verification",
-    paymentMethod: "Cash on Delivery",
-    totalAmount: 60230,
-    fulfillment: "Dispatched",
-    items: [{ name: "High-Pressure Battery Sprayer 16L", qty: 2, price: 30115, sku: "SP-16L" }]
-  },
-  {
-    id: "285",
-    invoiceNo: "INV-20260817-224510",
-    customerName: "Hema Sravan",
-    customerType: "Grower",
-    customerPhone: "7674834441",
-    customerEmail: "hemasravan@domain.com",
-    dateBooked: "2026-08-17",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Payment Not Applicable",
-    paymentMethod: "Card",
-    totalAmount: 903,
-    fulfillment: "Dispatched",
-    items: [{ name: "Drip Irrigation Nozzle Connector Kit", qty: 1, price: 903, sku: "NOZ-DRP" }]
-  },
-  {
-    id: "284",
-    invoiceNo: "INV-20260817-210419",
-    customerName: "Abul Hassan",
-    customerType: "Farmer",
-    customerPhone: "0000000000",
-    customerEmail: "abul.hassan@domain.com",
-    dateBooked: "2026-08-17",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Payment Not Applicable",
-    paymentMethod: "Cash on Delivery",
-    totalAmount: 617,
-    fulfillment: "Dispatched",
-    items: [{ name: "Bio-Fertilizer Soil Booster 5kg", qty: 1, price: 617, sku: "BIO-SOIL" }]
-  },
-  {
-    id: "283",
-    invoiceNo: "INV-20260817-193000",
-    customerName: "Mani Kanta",
-    customerType: "Grower",
-    customerPhone: "8657464636",
-    customerEmail: "manikanta@domain.com",
-    dateBooked: "2026-08-17",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "UPI / Bank Transfer",
-    totalAmount: 13972,
-    fulfillment: "Dispatched",
-    items: [{ name: "Petrol Engine Brush Cutter 43cc", qty: 1, price: 13972, sku: "BC-43CC" }]
-  },
-  {
-    id: "282",
-    invoiceNo: "INV-20260817-181520",
-    customerName: "Tajuddin",
-    customerType: "Farmer",
-    customerPhone: "2222222222",
-    customerEmail: "tajuddin@domain.com",
-    dateBooked: "2026-08-17",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "Cash on Delivery",
-    totalAmount: 6591,
-    fulfillment: "Dispatched",
-    items: [{ name: "Multi-Crop Manual Seed Drill", qty: 1, price: 6591, sku: "SEED-DRILL" }]
-  },
-  {
-    id: "281",
-    invoiceNo: "INV-20260817-170010",
-    customerName: "Rajesh Kumar",
-    customerType: "Retailer",
-    customerPhone: "9876543210",
-    customerEmail: "rajesh.retail@domain.com",
-    dateBooked: "2026-08-17",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "UPI / Bank Transfer",
-    totalAmount: 45200,
-    fulfillment: "Dispatched",
-    items: [{ name: "Heavy Duty Power Tiller 7HP", qty: 1, price: 45200, sku: "PT-7HP" }]
-  },
-  {
-    id: "280",
-    invoiceNo: "INV-20260817-154030",
-    customerName: "Venkat Rao",
-    customerType: "Grower",
-    customerPhone: "9123456780",
-    customerEmail: "venkat.rao@domain.com",
-    dateBooked: "2026-08-17",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "Net Banking",
-    totalAmount: 18450,
-    fulfillment: "Dispatched",
-    items: [{ name: "Solar Powered Agricultural Water Pump", qty: 1, price: 18450, sku: "SOL-PUMP" }]
-  },
-  {
-    id: "279",
-    invoiceNo: "INV-20260817-142015",
-    customerName: "Srinivasulu",
-    customerType: "Farmer",
-    customerPhone: "9988776655",
-    customerEmail: "srinivas@domain.com",
-    dateBooked: "2026-08-17",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "Cash on Delivery",
-    totalAmount: 3200,
-    fulfillment: "Completed",
-    items: [{ name: "Heavy-Duty Pruning Shear Set", qty: 2, price: 1600, sku: "PRUN-SET" }]
-  },
-  {
-    id: "278",
-    invoiceNo: "INV-20260816-113000",
-    customerName: "Ramesh Reddy",
-    customerType: "Farmer",
-    customerPhone: "9440123456",
-    customerEmail: "ramesh.reddy@domain.com",
-    dateBooked: "2026-08-16",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "UPI / Bank Transfer",
-    totalAmount: 28900,
-    fulfillment: "Completed",
-    items: [{ name: "Submersible Borewell Pump 3HP", qty: 1, price: 28900, sku: "SUB-PUMP" }]
-  },
-  {
-    id: "277",
-    invoiceNo: "INV-20260816-101500",
-    customerName: "Anand Kumar",
-    customerType: "Grower",
-    customerPhone: "9700112233",
-    customerEmail: "anand.k@domain.com",
-    dateBooked: "2026-08-16",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "Card",
-    totalAmount: 14200,
-    fulfillment: "Completed",
-    items: [{ name: "Organic Crop Protector 10L", qty: 2, price: 7100, sku: "ORG-PRO" }]
-  },
-  {
-    id: "276",
-    invoiceNo: "INV-20260815-164500",
-    customerName: "Kishore Babu",
-    customerType: "Farmer",
-    customerPhone: "9849012345",
-    customerEmail: "kishore.babu@domain.com",
-    dateBooked: "2026-08-15",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "Cash on Delivery",
-    totalAmount: 8900,
-    fulfillment: "Completed",
-    items: [{ name: "Garden Hedge Trimmer 550W", qty: 1, price: 8900, sku: "TRIM-550" }]
-  },
-  {
-    id: "275",
-    invoiceNo: "INV-20260815-121000",
-    customerName: "Suresh Varma",
-    customerType: "Wholesaler",
-    customerPhone: "9177889900",
-    customerEmail: "suresh.varma@domain.com",
-    dateBooked: "2026-08-15",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "Net Banking",
-    totalAmount: 115000,
-    fulfillment: "Completed",
-    items: [{ name: "Automated Fertilizer Spreader Machine", qty: 1, price: 115000, sku: "SPRD-AUTO" }]
-  },
-  {
-    id: "274",
-    invoiceNo: "INV-20260814-153000",
-    customerName: "Mohan Naidu",
-    customerType: "Farmer",
-    customerPhone: "9393112233",
-    customerEmail: "mohan.naidu@domain.com",
-    dateBooked: "2026-08-14",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "UPI / Bank Transfer",
-    totalAmount: 12400,
-    fulfillment: "Completed",
-    items: [{ name: "Flexible PVC Irrigation Pipe 100m", qty: 2, price: 6200, sku: "PVC-100" }]
-  },
-  {
-    id: "273",
-    invoiceNo: "INV-20260814-094500",
-    customerName: "Gopal Krishna",
-    customerType: "Grower",
-    customerPhone: "9866554433",
-    customerEmail: "gopal.k@domain.com",
-    dateBooked: "2026-08-14",
-    logisticsPartner: "Not Assigned",
-    paymentStatus: "Payment Not Applicable",
-    paymentMethod: "Cash on Delivery",
-    totalAmount: 4500,
-    fulfillment: "Cancelled",
-    items: [{ name: "Manual Sprayer Hose Nozzle", qty: 3, price: 1500, sku: "MAN-NOZ" }]
-  },
-  {
-    id: "272",
-    invoiceNo: "INV-20260813-141000",
-    customerName: "Prasad Rao",
-    customerType: "Farmer",
-    customerPhone: "9000112233",
-    customerEmail: "prasad.rao@domain.com",
-    dateBooked: "2026-08-13",
-    logisticsPartner: "Delivery",
-    paymentStatus: "Verified",
-    paymentMethod: "Cash on Delivery",
-    totalAmount: 9750,
-    fulfillment: "Completed",
-    items: [{ name: "High-Density Polyethlyene Weed Mat", qty: 5, price: 1950, sku: "WEED-MAT" }]
-  }
-];
-
 // GET /api/Orders  — fetch all orders
 export const getOrders = async () => {
   try {
     const response = await fetch(BASE_URL, { headers: DEFAULT_HEADERS });
-    if (!response.ok) throw new Error(`Failed to fetch orders (${response.status})`);
+    if (!response.ok) return [];
     const data = await response.json();
-    const list = unwrapArray(data);
-    if (list.length > 0) return list;
-    return getSeedOrders();
-  } catch (err) {
-    console.warn('API /api/Orders unavailable, returning seed dataset:', err.message);
-    return getSeedOrders();
+    return unwrapArray(data);
+  } catch (e) {
+    return [];
   }
 };
 
 // GET /api/Orders/{id}  — fetch single order
 export const getOrder = async (id) => {
-  const response = await fetch(`${BASE_URL}/${id}`, { headers: DEFAULT_HEADERS });
-  if (!response.ok) throw new Error(`Failed to fetch order ${id} (${response.status})`);
-  return await response.json();
+  try {
+    const response = await fetch(`${BASE_URL}/${id}`, { headers: DEFAULT_HEADERS });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (e) {
+    return null;
+  }
 };
 
 // POST /api/Orders  — create new order
@@ -327,135 +100,15 @@ export const deleteOrder = async (id) => {
   return { success: true };
 };
 
-export const getSeedTrackingOrders = () => [
-  {
-    id: "286",
-    orderId: "286",
-    customerName: "Puli hemasri sai varma",
-    customerPhone: "7387456551",
-    totalAmount: 60230,
-    status: "Dispatched",
-    currentStatus: "Dispatched",
-    orderDate: "2026-08-26T05:30:00",
-    timelineLogs: [
-      {
-        status: "Packed",
-        date: "2026-08-26",
-        time: "05:32:44",
-        description: "Order package has been successfully packed by warehouse."
-      },
-      {
-        status: "Dispatched",
-        date: "2026-08-26",
-        time: "05:33:35",
-        description: "Order package has been dispatched via Delivery (Tracking ID: DLVD0123)."
-      }
-    ]
-  },
-  {
-    id: "285",
-    orderId: "285",
-    customerName: "Hema Sravan",
-    customerPhone: "7674834441",
-    totalAmount: 903,
-    status: "Cancelled",
-    currentStatus: "Cancelled",
-    orderDate: "2026-08-26T04:15:00",
-    timelineLogs: [
-      {
-        status: "Placed",
-        date: "2026-08-26",
-        time: "04:15:10",
-        description: "Order created successfully."
-      },
-      {
-        status: "Cancelled",
-        date: "2026-08-26",
-        time: "04:30:00",
-        description: "Order cancelled upon customer request. Inventory released."
-      }
-    ]
-  },
-  {
-    id: "284",
-    orderId: "284",
-    customerName: "Abul Hassan",
-    customerPhone: "0000000000",
-    totalAmount: 617,
-    status: "Cancelled",
-    currentStatus: "Cancelled",
-    orderDate: "2026-08-25T11:20:00",
-    timelineLogs: [
-      {
-        status: "Placed",
-        date: "2026-08-25",
-        time: "11:20:00",
-        description: "Order placed."
-      },
-      {
-        status: "Cancelled",
-        date: "2026-08-25",
-        time: "12:00:00",
-        description: "Order cancelled."
-      }
-    ]
-  },
-  {
-    id: "283",
-    orderId: "283",
-    customerName: "Mani Kanta",
-    customerPhone: "8657464636",
-    totalAmount: 13972,
-    status: "Dispatched",
-    currentStatus: "Dispatched",
-    orderDate: "2026-08-24T09:10:00",
-    timelineLogs: [
-      {
-        status: "Packed",
-        date: "2026-08-24",
-        time: "09:40:00",
-        description: "Package verified and sealed."
-      },
-      {
-        status: "Dispatched",
-        date: "2026-08-24",
-        time: "10:15:00",
-        description: "Handed over to carrier partner."
-      }
-    ]
-  },
-  {
-    id: "277",
-    orderId: "277",
-    customerName: "Puli hemasri sai varma",
-    customerPhone: "7387456551",
-    totalAmount: 14200,
-    status: "Placed",
-    currentStatus: "Placed",
-    orderDate: "2026-08-24T08:00:00",
-    timelineLogs: [
-      {
-        status: "Placed",
-        date: "2026-08-24",
-        time: "08:00:00",
-        description: "Order received. Awaiting verification."
-      }
-    ]
-  }
-];
-
 // GET /api/Orders/tracking — fetch all tracking orders
 export const getOrdersTracking = async () => {
   try {
     const response = await fetch(`${BASE_URL}/tracking`, { headers: DEFAULT_HEADERS });
-    if (!response.ok) throw new Error(`Failed to fetch tracking orders (${response.status})`);
+    if (!response.ok) return [];
     const data = await response.json();
-    const list = unwrapArray(data);
-    if (list.length > 0) return list;
-    return getSeedTrackingOrders();
-  } catch (err) {
-    console.warn('API /api/Orders/tracking unavailable, returning seed dataset:', err.message);
-    return getSeedTrackingOrders();
+    return unwrapArray(data);
+  } catch (e) {
+    return [];
   }
 };
 
@@ -463,66 +116,45 @@ export const getOrdersTracking = async () => {
 export const getOrderTracking = async (id) => {
   try {
     const response = await fetch(`${BASE_URL}/tracking/${id}`, { headers: DEFAULT_HEADERS });
-    if (!response.ok) throw new Error(`Failed to fetch tracking for order ${id} (${response.status})`);
+    if (!response.ok) return null;
     return await response.json();
-  } catch (err) {
-    console.warn(`API /api/Orders/tracking/${id} unavailable, returning fallback item:`, err.message);
-    const seeds = getSeedTrackingOrders();
-    const found = seeds.find(s => String(s.id) === String(id) || String(s.orderId) === String(id));
-    if (found) return found;
-    return {
-      orderId: id,
-      customerName: "Puli hemasri sai varma",
-      customerPhone: "7387456551",
-      totalAmount: 60230,
-      currentStatus: "Dispatched",
-      timelineLogs: [
-        {
-          status: "Packed",
-          date: "2026-08-26",
-          time: "05:32:44",
-          description: "Order package has been successfully packed by warehouse."
-        },
-        {
-          status: "Dispatched",
-          date: "2026-08-26",
-          time: "05:33:35",
-          description: "Order package has been dispatched via Delivery (Tracking ID: DLVD0123)."
-        }
-      ]
-    };
+  } catch (e) {
+    return null;
   }
 };
 
 // POST /api/Orders/tracking/{id} — post tracking update (expects JSON)
 export const postOrderTracking = async (id, payload) => {
-  try {
-    const response = await fetch(`${BASE_URL}/tracking/${id}`, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify(payload),
-    });
-    if (!response.ok) throw new Error(`Failed to post tracking for order ${id} (${response.status})`);
-    return await response.json();
-  } catch (err) {
-    console.warn(`API postOrderTracking failed, updating local seed fallback state:`, err.message);
-    return { success: true, orderId: id, ...payload };
-  }
+  const response = await fetch(`${BASE_URL}/tracking/${id}`, {
+    method: 'POST',
+    headers: DEFAULT_HEADERS,
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) throw new Error(`Failed to post tracking for order ${id} (${response.status})`);
+  return await response.json();
 };
 
 // GET /api/Orders/shipping — fetch all shipping orders
 export const getOrdersShipping = async () => {
-  const response = await fetch(`${BASE_URL}/shipping`, { headers: DEFAULT_HEADERS });
-  if (!response.ok) throw new Error(`Failed to fetch shipping orders (${response.status})`);
-  const data = await response.json();
-  return unwrapArray(data);
+  try {
+    const response = await fetch(`${BASE_URL}/shipping`, { headers: DEFAULT_HEADERS });
+    if (!response.ok) return [];
+    const data = await response.json();
+    return unwrapArray(data);
+  } catch (e) {
+    return [];
+  }
 };
 
 // GET /api/Orders/shipping/{id} — fetch shipping details for single order
 export const getOrderShipping = async (id) => {
-  const response = await fetch(`${BASE_URL}/shipping/${id}`, { headers: DEFAULT_HEADERS });
-  if (!response.ok) throw new Error(`Failed to fetch shipping for order ${id} (${response.status})`);
-  return await response.json();
+  try {
+    const response = await fetch(`${BASE_URL}/shipping/${id}`, { headers: DEFAULT_HEADERS });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (e) {
+    return null;
+  }
 };
 
 // Helper to append image (Base64 data URL, File, or URL string) to FormData
@@ -595,4 +227,28 @@ export const dispatchOrder = async (id, payload) => {
   }
   return await response.json();
 };
+
+// GET /api/Orders/my-orders — fetch current logged in user orders
+export const getMyOrders = async () => {
+  const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+  const headers = {
+    ...DEFAULT_HEADERS,
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
+  const response = await fetch(`${BASE_URL}/my-orders`, { headers });
+  if (!response.ok) throw new Error(`Failed to fetch my-orders (${response.status})`);
+  const data = await response.json();
+  return unwrapArray(data);
+};
+
+// POST /api/Orders/cleanup-test-orders — cleanup test orders
+export const cleanupTestOrders = async () => {
+  const response = await fetch(`${BASE_URL}/cleanup-test-orders`, {
+    method: 'POST',
+    headers: DEFAULT_HEADERS
+  });
+  if (!response.ok) throw new Error(`Failed to cleanup test orders (${response.status})`);
+  return await response.json();
+};
+
 

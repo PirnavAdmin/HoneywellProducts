@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getApiDomain } from '../../utils/apiConfig';
 import { ArrowLeft, User, Phone, Mail, MapPin, Tractor, CreditCard, Activity, Edit, Plus, X, Search, ChevronDown } from 'lucide-react';
-import './Customer.css';
 
 const Customer = () => {
   const navigate = useNavigate();
@@ -44,15 +43,11 @@ const Customer = () => {
       headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
     })
       .then(res => {
-        const contentType = res.headers.get('content-type');
-        if (!res.ok || (contentType && !contentType.includes('application/json'))) {
-          throw new Error('Invalid JSON response from API');
-        }
+        if (!res.ok) throw new Error('Failed to fetch customers');
         return res.json();
       })
       .then(data => {
-        const list = Array.isArray(data) ? data : (data?.data || data?.value || data?.items || data?.$values || []);
-        setCustomers(list);
+        setCustomers(data);
       })
       .catch(err => {
         console.error('Error fetching customers list:', err);
@@ -247,26 +242,18 @@ const Customer = () => {
     }
   };
 
-  // State for tracking locally selected customer row in card view
-  const [selectedRowId, setSelectedRowId] = useState(null);
-
   // Filter customers for search
   const filteredSearchList = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
-    const list = Array.isArray(customers)
-      ? customers
-      : (customers?.data || customers?.value || customers?.items || customers?.$values || []);
-    if (!q) return list;
-    return list.filter(c => {
-      const nameVal = (c.name || c.Name || '').toLowerCase();
-      const phoneVal = String(c.phone || c.Phone || '').toLowerCase();
-      const idVal = String(c.id || c.Id || '').toLowerCase();
-      return nameVal.includes(q) || phoneVal.includes(q) || idVal.includes(q);
-    });
+    if (!q) return customers.slice(0, 10); // Show first 10 by default
+    return customers.filter(c => 
+      (c.name || '').toLowerCase().includes(q) ||
+      (c.phone || '').includes(q) ||
+      String(c.id).includes(q)
+    );
   }, [customers, searchQuery]);
 
   const selectCustomer = (custId) => {
-    setSelectedRowId(String(custId));
     setSearchParams({ id: custId });
     setShowSwitchDropdown(false);
     setSearchQuery('');
@@ -286,74 +273,55 @@ const Customer = () => {
   // Render direct search select interface if no id is specified
   if (!id) {
     return (
-      <div className="customer-profile-bg">
-        <div className="customer-profile-card">
-          {/* Circular Top Icon */}
-          <div className="customer-card-icon-wrapper">
-            <User size={28} />
+      <div className="max-w-xl mx-auto my-12 p-6 bg-white rounded-2xl border border-slate-100 shadow-xl">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-3">
+            <User size={32} />
           </div>
+          <h2 className="text-xl font-bold text-slate-800">Select Customer Profile</h2>
+          <p className="text-slate-500 text-xs mt-1">Search by customer name, phone number, or ID to view their farm record.</p>
+        </div>
 
-          {/* Title */}
-          <h2 className="customer-card-title">Select Customer Profile</h2>
+        <div className="relative mb-6">
+          <Search className="absolute left-3 top-3.5 text-slate-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search customer name or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-500 transition-colors bg-slate-50/50"
+          />
+        </div>
 
-          {/* Description */}
-          <p className="customer-card-desc">
-            Search by customer name, phone number, or ID to view their farm record.
-          </p>
-
-          {/* Search Input Box */}
-          <div className="customer-search-wrapper">
-            <Search className="customer-search-icon" size={18} />
-            <input
-              type="text"
-              placeholder="Search customer name or phone..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="customer-search-input"
-            />
-          </div>
-
-          {/* Customer List */}
-          <div className="customer-list-container">
-            {filteredSearchList.map(c => {
-              const custId = String(c.id || c.Id || '');
-              const custName = c.name || c.Name || '';
-              const custPhone = c.phone || c.Phone || '';
-              const custType = (c.type || c.Type || 'Farmer').toUpperCase();
-              const isSelected = selectedRowId === custId;
-
-              return (
-                <div
-                  key={custId}
-                  onClick={() => selectCustomer(custId)}
-                  className={`customer-row-item ${isSelected ? 'selected' : ''}`}
-                >
-                  <div className="customer-row-left">
-                    <div className="customer-row-name">{custName}</div>
-                    <div className="customer-row-subtitle">
-                      <span>#{custId}</span>
-                      <span>•</span>
-                      <span>{custPhone}</span>
-                    </div>
-                  </div>
-                  <span className="farmer-badge">{custType}</span>
+        <div className="space-y-2 max-h-[350px] overflow-y-auto pr-1">
+          {filteredSearchList.map(c => (
+            <div
+              key={c.id}
+              onClick={() => selectCustomer(c.id)}
+              className="flex items-center justify-between p-3 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/30 cursor-pointer transition-all"
+            >
+              <div>
+                <div className="font-semibold text-slate-800 text-sm">{c.name}</div>
+                <div className="text-slate-500 text-xs flex items-center gap-1.5 mt-0.5">
+                  <span>#{c.id}</span>
+                  <span>•</span>
+                  <span>{c.phone}</span>
                 </div>
-              );
-            })}
-            {filteredSearchList.length === 0 && (
-              <div className="text-center py-8 text-slate-400 text-sm">
-                No customers match your search query.
               </div>
-            )}
-          </div>
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${getTagColor(c.type)}`}>
+                {c.type || 'Farmer'}
+              </span>
+            </div>
+          ))}
+          {filteredSearchList.length === 0 && (
+            <div className="text-center py-8 text-slate-400 text-sm">No customers match your search query.</div>
+          )}
+        </div>
 
-          {/* Divider */}
-          <hr className="customer-card-divider" />
-
-          {/* Back to Directory */}
-          <button
+        <div className="mt-6 border-t pt-4 text-center">
+          <button 
             onClick={() => navigate('/admin/customers/list')}
-            className="customer-back-link"
+            className="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1.5 mx-auto"
           >
             <ArrowLeft size={14} /> Back to Directory
           </button>

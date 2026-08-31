@@ -235,96 +235,102 @@ const TrackingOrder = () => {
     }
   };
 
-  return (
-    <div className="tracking-page-container" style={{ padding: '16px 20px', width: '100%', boxSizing: 'border-box' }}>
-      
-      {/* Header Bar: Green Badge, Page Title & Top-Right Refresh Data Button */}
-      <div className="tracking-header-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '18px' }}>
-        <div className="tracking-header-title">
-          <span style={{ fontSize: '11px', fontWeight: 700, color: '#10b981', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '2px' }}>
-            ORDERS & LOGISTICS
-          </span>
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 2px 0' }}>Tracking Order</h1>
-          <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>Real-time order status updates and customer timeline synchronization.</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <button
-            onClick={handleRefreshData}
-            disabled={loading || detailsLoading}
-            style={{
-              background: '#278652',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              height: '38px',
-              padding: '0 16px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: (loading || detailsLoading) ? 'not-allowed' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              opacity: (loading || detailsLoading) ? 0.7 : 1,
-              transition: 'background 0.15s ease'
-            }}
-            onMouseOver={(e) => !(loading || detailsLoading) && (e.currentTarget.style.background = '#1e683f')}
-            onMouseOut={(e) => !(loading || detailsLoading) && (e.currentTarget.style.background = '#278652')}
-          >
-            <RefreshCw size={15} style={(loading || detailsLoading) ? { animation: 'spin 1s linear infinite' } : {}} />
-            <span>{(loading || detailsLoading) ? 'Refreshing...' : 'Refresh Data'}</span>
-          </button>
+  if (loading && orders.length === 0) {
+    return (
+      <div className="orders-mgmt-container" style={{ padding: '24px' }}>
+        <h2>Order Tracking Hub</h2>
+        <p>Loading tracking ledger...</p>
+      </div>
+    );
+  }
 
-          <button
-            onClick={handleUpdateStatus}
-            disabled={updating || !selectedOrderId}
-            style={{
-              background: '#2563eb',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              height: '38px',
-              padding: '0 16px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: (updating || !selectedOrderId) ? 'not-allowed' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-              opacity: (updating || !selectedOrderId) ? 0.7 : 1,
-              transition: 'background 0.15s ease'
-            }}
-            onMouseOver={(e) => !(updating || !selectedOrderId) && (e.currentTarget.style.background = '#1d4ed8')}
-            onMouseOut={(e) => !(updating || !selectedOrderId) && (e.currentTarget.style.background = '#2563eb')}
-          >
-            <Save size={15} />
-            <span>{updating ? 'Saving...' : 'Save & Publish'}</span>
-          </button>
+  return (
+    <div className="orders-mgmt-container" style={{ padding: '24px' }}>
+      
+      {/* Header */}
+      <div className="orders-mgmt-header" style={{ marginBottom: '24px' }}>
+        <div className="orders-mgmt-title">
+          <h1>Tracking Order</h1>
+          <p>Real-time order status updates and customer timeline synchronization.</p>
         </div>
+        <button
+          onClick={handleRefreshData}
+          disabled={loading || detailsLoading}
+          className="date-preset-btn"
+          style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            cursor: (loading || detailsLoading) ? 'not-allowed' : 'pointer',
+            opacity: (loading || detailsLoading) ? 0.7 : 1
+          }}
+        >
+          <RefreshCw size={14} style={(loading || detailsLoading) ? { animation: 'spin 1s linear infinite' } : {}} />
+          <span>{(loading || detailsLoading) ? 'Refreshing...' : 'Refresh Data'}</span>
+        </button>
       </div>
 
-      {error && <div style={{ color: '#dc2626', marginBottom: '16px', fontWeight: 600, fontSize: '13px' }}>{error}</div>}
+      {error && <div style={{ color: '#dc2626', marginBottom: '16px', fontWeight: 600 }}>{error}</div>}
 
-      {/* Main Grid: Left Primary Area (~65%) | Right Secondary Area (~35% / 340px) */}
-      <div className="tracking-main-grid">
+      <div className="shipping-grid">
         
-        {/* LEFT / PRIMARY COLUMN (~65% width): Active Track & Timeline Logs */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', minWidth: 0 }}>
-          
-          {/* Active Track Card */}
-          {detailsLoading ? (
-            <div className="orders-card-table-wrap" style={{ padding: '32px', background: 'white', textAlign: 'center', color: '#64748b', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              Loading tracking details from API...
-            </div>
-          ) : activeOrderDetails ? (
-            <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-              
-              {/* Section Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '16px' }}>
+        {/* Left Side: Order Selector */}
+        <div className="orders-card-table-wrap" style={{ padding: '16px', background: 'white' }}>
+          <h3 style={{ margin: '0 0 12px 0', fontSize: '15px', fontWeight: 800 }}>Orders ledger</h3>
+          <div className="orders-search-wrapper" style={{ marginBottom: '16px' }}>
+            <Search size={16} className="orders-search-icon" />
+            <input
+              type="text"
+              className="orders-search-input"
+              style={{ padding: '8px 12px 8px 38px', fontSize: '13px' }}
+              placeholder="Search ID or Customer..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '550px', overflowY: 'auto', paddingRight: '4px' }}>
+            {filteredOrders.map(o => (
+              <div
+                key={o.id}
+                onClick={() => setSelectedOrderId(o.id)}
+                className={`orders-stat-card order-picker-card ${String(o.id || o.orderId) === String(selectedOrderId) ? 'active' : ''}`}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+              >
                 <div>
-                  <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>ACTIVE TRACK</span>
-                  <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '2px 0 0 0', color: '#0f172a' }}>Order #{activeOrderDetails.id}</h2>
+                  <strong style={{ fontSize: '13px', display: 'block', color: '#1e293b' }}>Order #{o.id || o.orderId}</strong>
+                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                    {o.customerName || o.customer || 'Unknown'} • {formatCurrency(o.finalAmount ?? o.totalAmount ?? o.total)}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <OrderStatusBadge status={o.status} />
+                  <ChevronRight size={14} style={{ color: '#94a3b8' }} />
+                </div>
+              </div>
+            ))}
+            {filteredOrders.length === 0 && (
+              <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '13px' }}>
+                No active tracking orders matching search.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Side: Tracking Details & Status Form */}
+        {detailsLoading ? (
+          <div className="orders-card-table-wrap" style={{ padding: '32px', background: 'white', textAlign: 'center', color: '#64748b' }}>
+            Loading tracking details from API...
+          </div>
+        ) : activeOrderDetails ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            
+            {/* Status Info Card */}
+            <div className="orders-card-table-wrap" style={{ padding: '24px', background: 'white' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '16px' }}>
+                <div>
+                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>Active Track</span>
+                  <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '2px 0 0 0' }}>Order #{activeOrderDetails.id}</h2>
                   <span style={{ fontSize: '12px', color: '#475569', fontWeight: 500 }}>
                     {activeOrderDetails.customerName} ({activeOrderDetails.customerPhone || activeOrderDetails.phone})
                   </span>
@@ -333,17 +339,17 @@ const TrackingOrder = () => {
               </div>
 
               {/* Status Update Form */}
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
-                <h3 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 12px 0', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div className="shipping-action-card" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
+                <h3 className="shipping-action-title">
                   <ClipboardList size={16} style={{ color: '#10b981' }} />
                   Update Order Fulfillment Status
                 </h3>
                 
-                <div>
-                  {/* 6 Horizontal Fulfillment Phase Boxes */}
-                  <div style={{ marginBottom: '14px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontSize: '11.5px', color: '#475569', fontWeight: 600 }}>Select Fulfillment Phase</label>
-                    <div className="status-select-grid-horizontal">
+                <div className="action-form-group">
+                  {/* Redesigned Visual Selector Grid */}
+                  <div>
+                    <label className="action-label" style={{ display: 'block', marginBottom: '8px' }}>Select Fulfillment Phase</label>
+                    <div className="status-select-grid">
                       {Object.keys(STATUS_THEMES).map((s) => {
                         const theme = STATUS_THEMES[s];
                         const Icon = theme.icon;
@@ -366,68 +372,57 @@ const TrackingOrder = () => {
                               '--theme-border': theme.border
                             }}
                           >
-                            <Icon size={15} style={{ color: isActive ? theme.text : '#64748b' }} />
-                            <span style={{ fontSize: '11px' }}>{s}</span>
+                            <Icon size={18} style={{ color: isActive ? theme.text : '#64748b' }} />
+                            <span>{s}</span>
                           </div>
                         );
                       })}
                     </div>
                   </div>
 
-                  {/* Status Notes Textarea */}
-                  <div style={{ width: '100%', marginBottom: '12px' }}>
-                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '11.5px', fontWeight: 600, color: '#475569' }}>
+                  <div>
+                    <label className="action-label" style={{ display: 'block', marginBottom: '6px' }}>
                       Status Notes / Description (Will be displayed to customer)
                     </label>
                     <textarea
-                      rows={2}
-                      style={{ width: '100%', minHeight: '42px', height: '42px', resize: 'vertical', background: 'white', fontFamily: 'inherit', padding: '8px 12px', fontSize: '12px', border: '1px solid #cbd5e1', borderRadius: '8px', boxSizing: 'border-box', display: 'block', outline: 'none' }}
+                      rows={3}
+                      className="action-input"
+                      style={{ resize: 'none', background: 'white', fontFamily: 'inherit' }}
                       placeholder="e.g. Stock verified. Order package has been dispatched from Nagpur warehouse."
                       value={notesInput}
                       onChange={(e) => setNotesInput(e.target.value)}
                     />
-                    <div style={{ fontSize: '10.5px', color: '#94a3b8', marginTop: '4px', display: 'block' }}>
+                    <span style={{ fontSize: '11px', color: '#94a3b8' }}>
                       Leave blank to auto-fill with standard descriptions.
-                    </div>
+                    </span>
                   </div>
 
-                  {/* Save Button */}
                   <button
                     onClick={handleUpdateStatus}
                     disabled={updating}
+                    className="date-preset-btn active"
                     style={{
                       width: '100%',
-                      height: '34px',
-                      padding: '0 16px',
-                      background: '#10b981',
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      fontSize: '12.5px',
-                      fontWeight: 700,
-                      cursor: updating ? 'not-allowed' : 'pointer',
+                      padding: '10px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      gap: '6px',
-                      marginTop: '10px',
-                      transition: 'background 0.15s ease'
+                      gap: '8px',
+                      marginTop: '6px'
                     }}
-                    onMouseOver={(e) => !updating && (e.target.style.background = '#059669')}
-                    onMouseOut={(e) => !updating && (e.target.style.background = '#10b981')}
                   >
-                    <Save size={15} />
+                    <Save size={16} />
                     {updating ? 'Updating...' : 'Save & Publish Tracking Update'}
                   </button>
 
                   {updateMsg.text && (
                     <div
                       style={{
-                        padding: '10px 14px',
+                        padding: '10px',
                         borderRadius: '8px',
                         fontSize: '12px',
                         fontWeight: 600,
-                        marginTop: '10px',
+                        marginTop: '8px',
                         background: updateMsg.isError ? '#fef2f2' : '#f0fdf4',
                         color: updateMsg.isError ? '#b91c1c' : '#166534',
                         border: updateMsg.isError ? '1px solid #fecaca' : '1px solid #bbf7d0'
@@ -439,141 +434,216 @@ const TrackingOrder = () => {
                 </div>
               </div>
 
-              {/* Stage Info Explanation Box */}
+              {/* Status Explanation Card */}
               {tempStatus && (
                 <div
                   style={{
-                    padding: '10px 14px',
-                    borderRadius: '8px',
+                    padding: '14px',
+                    borderRadius: '10px',
                     fontSize: '12px',
-                    lineHeight: '1.4',
+                    lineHeight: '1.5',
                     background: STATUS_THEMES[tempStatus]?.bg || '#f8fafc',
                     color: STATUS_THEMES[tempStatus]?.text || '#475569',
                     border: `1px solid ${STATUS_THEMES[tempStatus]?.border || '#cbd5e1'}`
                   }}
                 >
                   <strong>Fulfillment Stage: {tempStatus}</strong>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '11px' }}>{STATUS_DESCRIPTIONS[tempStatus]}</p>
+                  <p style={{ margin: '4px 0 0 0' }}>{STATUS_DESCRIPTIONS[tempStatus]}</p>
                 </div>
               )}
 
             </div>
-          ) : (
-            <div style={{ padding: '32px', background: 'white', textAlign: 'center', color: '#64748b', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-              Select an order from the Orders Ledger to manage tracking.
-            </div>
-          )}
 
-          {/* Customer Timeline Logs Card */}
-          {activeOrderDetails && (
-            <div style={{ background: 'white', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)' }}>
-              <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '16px' }}>
-                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: 800, textTransform: 'uppercase', color: '#0f172a', letterSpacing: '0.04em' }}>
-                  CUSTOMER TIMELINE LOGS
-                </h3>
-              </div>
+            {/* Current Timeline View */}
+            <div className="orders-card-table-wrap" style={{ padding: '24px', background: 'white' }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: 700, textTransform: 'uppercase', color: '#475569', letterSpacing: '0.05em' }}>
+                Customer Timeline Logs
+              </h3>
 
-              <div className="modern-timeline" style={{ paddingLeft: '16px' }}>
+              <div className="modern-timeline" style={{ paddingLeft: '20px' }}>
                 {activeOrderDetails.timeline && activeOrderDetails.timeline.length > 0 ? (
                   activeOrderDetails.timeline.map((event, idx) => (
-                    <div key={idx} className="timeline-event completed" style={{ marginBottom: '14px' }}>
+                    <div key={idx} className="timeline-event completed">
                       <span className="timeline-dot" />
-                      <div className="timeline-info" style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong style={{ color: '#0f172a', fontSize: '12.5px', fontWeight: 700 }}>{event.label}</strong>
-                          <span style={{ fontSize: '11px', color: '#64748b' }}>{event.date}</span>
-                        </div>
+                      <div className="timeline-info">
+                        <span className="timeline-title" style={{ color: '#0f172a' }}>{event.label}</span>
+                        <span className="timeline-time">{event.date}</span>
                         {event.description && (
-                          <div style={{ fontSize: '11px', color: '#475569', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '8px 12px', borderRadius: '6px', marginTop: '2px' }}>
+                          <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b', background: '#f8fafc', padding: '4px 8px', borderRadius: '4px' }}>
                             {event.description}
-                          </div>
+                          </p>
                         )}
                       </div>
                     </div>
                   ))
                 ) : (
-                  <div style={{ color: '#64748b', fontSize: '12px' }}>No timeline events logged yet.</div>
+                  (() => {
+                    const status = String(activeOrderDetails.status || '').toLowerCase();
+                    const orderDateStr = activeOrderDetails.orderDate?.slice(0, 10) || 'Date Placed';
+
+                    if (status === 'cancelled' || status === 'canceled') {
+                      return (
+                        <>
+                          <div className="timeline-event completed">
+                            <span className="timeline-dot" />
+                            <div className="timeline-info">
+                              <span className="timeline-title" style={{ color: '#0f172a' }}>Order Placed</span>
+                              <span className="timeline-time">{orderDateStr}</span>
+                            </div>
+                          </div>
+                          <div className="timeline-event" style={{ color: '#ef4444' }}>
+                            <span className="timeline-dot" style={{ backgroundColor: '#ef4444' }} />
+                            <div className="timeline-info">
+                              <span className="timeline-title" style={{ color: '#ef4444' }}>Order Cancelled</span>
+                              <span className="timeline-time">Cancelled</span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    }
+
+                    if (status === 'placed' || status === 'pending') {
+                      return (
+                        <>
+                          <div className="timeline-event completed">
+                            <span className="timeline-dot" />
+                            <div className="timeline-info">
+                              <span className="timeline-title" style={{ color: '#0f172a' }}>Order Placed</span>
+                              <span className="timeline-time">{orderDateStr}</span>
+                            </div>
+                          </div>
+                          <div className="timeline-event">
+                            <span className="timeline-dot" />
+                            <div className="timeline-info">
+                              <span className="timeline-title" style={{ color: '#64748b' }}>Payment Verification</span>
+                              <span className="timeline-time" style={{ color: '#94a3b8' }}>Awaiting Payment</span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    }
+
+                    if (status === 'processing' || status === 'processed') {
+                      return (
+                        <>
+                          <div className="timeline-event completed">
+                            <span className="timeline-dot" />
+                            <div className="timeline-info">
+                              <span className="timeline-title" style={{ color: '#0f172a' }}>Order Placed</span>
+                              <span className="timeline-time">{orderDateStr}</span>
+                            </div>
+                          </div>
+                          <div className="timeline-event active">
+                            <span className="timeline-dot" />
+                            <div className="timeline-info">
+                              <span className="timeline-title" style={{ color: '#0f172a' }}>Payment Verification</span>
+                              <span className="timeline-time" style={{ color: '#3b82f6' }}>Processing</span>
+                            </div>
+                          </div>
+                        </>
+                      );
+                    }
+
+                    // For Packed, Shipped, Dispatched, Completed, etc.
+                    return (
+                      <>
+                        <div className="timeline-event completed">
+                          <span className="timeline-dot" />
+                          <div className="timeline-info">
+                            <span className="timeline-title" style={{ color: '#0f172a' }}>Order Placed</span>
+                            <span className="timeline-time">{orderDateStr}</span>
+                          </div>
+                        </div>
+                        <div className="timeline-event completed">
+                          <span className="timeline-dot" />
+                          <div className="timeline-info">
+                            <span className="timeline-title" style={{ color: '#0f172a' }}>Payment Verified</span>
+                            <span className="timeline-time">Verified Success</span>
+                          </div>
+                        </div>
+                        {status === 'packed' && (
+                          <div className="timeline-event completed">
+                            <span className="timeline-dot" />
+                            <div className="timeline-info">
+                              <span className="timeline-title" style={{ color: '#0f172a' }}>Order Packed</span>
+                              <span className="timeline-time">Packed Success</span>
+                            </div>
+                          </div>
+                        )}
+                        {status === 'shipped' && (
+                          <>
+                            <div className="timeline-event completed">
+                              <span className="timeline-dot" />
+                              <div className="timeline-info">
+                                <span className="timeline-title" style={{ color: '#0f172a' }}>Order Packed</span>
+                                <span className="timeline-time">Packed Success</span>
+                              </div>
+                            </div>
+                            <div className="timeline-event completed">
+                              <span className="timeline-dot" />
+                              <div className="timeline-info">
+                                <span className="timeline-title" style={{ color: '#0f172a' }}>Order Shipped</span>
+                                <span className="timeline-time">Shipped Success</span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {status === 'dispatched' && (
+                          <>
+                            <div className="timeline-event completed">
+                              <span className="timeline-dot" />
+                              <div className="timeline-info">
+                                <span className="timeline-title" style={{ color: '#0f172a' }}>Order Packed</span>
+                                <span className="timeline-time">Packed Success</span>
+                              </div>
+                            </div>
+                            <div className="timeline-event completed">
+                              <span className="timeline-dot" />
+                              <div className="timeline-info">
+                                <span className="timeline-title" style={{ color: '#0f172a' }}>Order Dispatched</span>
+                                <span className="timeline-time">Dispatched Success</span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                        {(status === 'completed' || status === 'delivered') && (
+                          <>
+                            <div className="timeline-event completed">
+                              <span className="timeline-dot" />
+                              <div className="timeline-info">
+                                <span className="timeline-title" style={{ color: '#0f172a' }}>Order Packed</span>
+                                <span className="timeline-time">Packed Success</span>
+                              </div>
+                            </div>
+                            <div className="timeline-event completed">
+                              <span className="timeline-dot" />
+                              <div className="timeline-info">
+                                <span className="timeline-title" style={{ color: '#0f172a' }}>Order Dispatched</span>
+                                <span className="timeline-time">Dispatched Success</span>
+                              </div>
+                            </div>
+                            <div className="timeline-event completed">
+                              <span className="timeline-dot" />
+                              <div className="timeline-info">
+                                <span className="timeline-title" style={{ color: '#0f172a' }}>Order Delivered</span>
+                                <span className="timeline-time">Delivered Success</span>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    );
+                  })()
                 )}
               </div>
             </div>
-          )}
 
-        </div>
-
-        {/* RIGHT / SECONDARY COLUMN (~35% width / 340px): Orders Ledger Card */}
-        <div className="tracking-orders-ledger-card">
-          <div style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px', marginBottom: '14px' }}>
-            <h3 style={{ margin: '0 0 2px 0' }}>Orders ledger</h3>
-            <span style={{ fontSize: '11px', color: '#64748b' }}>Select an order to view & update tracking status</span>
           </div>
-
-          <div className="orders-search-wrapper" style={{ marginBottom: '14px', position: 'relative' }}>
-            <Search size={15} className="orders-search-icon" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-            <input
-              type="text"
-              className="tracking-search-input"
-              placeholder="Search ID or Customer..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+        ) : (
+          <div className="orders-card-table-wrap" style={{ padding: '32px', background: 'white', textAlign: 'center', color: '#64748b' }}>
+            Select an order to view tracking dashboard and update logistics statuses.
           </div>
-
-          <div className="tracking-ledger-scroll-list">
-            {loading && orders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '12px' }}>
-                Loading orders...
-              </div>
-            ) : filteredOrders.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#64748b', fontSize: '12px' }}>
-                No active tracking orders matching search.
-              </div>
-            ) : (
-              filteredOrders.map(o => {
-                const isActive = String(o.id || o.orderId) === String(selectedOrderId);
-                return (
-                  <div
-                    key={o.id}
-                    onClick={() => setSelectedOrderId(o.id)}
-                    className={`tracking-order-item-card ${isActive ? 'active' : ''}`}
-                    style={{
-                      padding: '10px 12px',
-                      borderRadius: '8px',
-                      border: isActive ? '2px solid #10b981' : '1px solid #e2e8f0',
-                      background: isActive ? '#f0fdf4' : '#ffffff',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                      <div>
-                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', display: 'block' }}>Order</span>
-                        <strong style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: 800 }}>#{o.id || o.orderId}</strong>
-                      </div>
-                      <OrderStatusBadge status={o.status} />
-                    </div>
-                    
-                    <div style={{ fontSize: '12px', color: '#334155', fontWeight: 600 }}>
-                      {o.customerName || o.customer || 'Customer'}
-                    </div>
-                    {o.customerPhone && (
-                      <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
-                        • {o.customerPhone}
-                      </div>
-                    )}
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>
-                        {formatCurrency(o.finalAmount ?? o.totalAmount ?? o.total ?? 0)}
-                      </span>
-                      <ChevronRight size={14} style={{ color: isActive ? '#10b981' : '#94a3b8' }} />
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
+        )}
       </div>
 
     </div>

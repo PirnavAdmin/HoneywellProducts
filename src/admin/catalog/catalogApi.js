@@ -1,5 +1,13 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
+import { 
+  getCategories, 
+  saveCategories, 
+  upsertCategory, 
+  getProducts, 
+  saveProducts, 
+  upsertProduct 
+} from './catalogStore';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 const BASE_URL = getApiDomain();
@@ -7,7 +15,7 @@ const BASE_URL = getApiDomain();
 // Axios instance — always skip the ngrok browser-warning page
 const api = axios.create({
   baseURL: BASE_URL,
-  timeout: 60000,
+  timeout: 15000,
   headers: {
     'ngrok-skip-browser-warning': 'true',
     Accept: 'application/json',
@@ -165,27 +173,26 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
 };
 
 // ─── Category API ─────────────────────────────────────────────────────────────
-// GET  https://shyamagrotools.com/api/Category
-// POST https://shyamagrotools.com/api/Category
-// PUT  https://shyamagrotools.com/api/Category/{id}
-// DEL  https://shyamagrotools.com/api/Category/{id}
 
 export const fetchCategories = async () => {
   try {
     const response = await api.get('/api/Category');
-    return unwrapList(response).map(mapCategoryFromApi);
-  } catch (primaryErr) {
+    const list = unwrapList(response).map(mapCategoryFromApi);
+    if (list.length > 0) saveCategories(list);
+    return list.length > 0 ? list : getCategories();
+  } catch {
     try {
       const response = await api.get('/api/Categories');
-      return unwrapList(response).map(mapCategoryFromApi);
+      const list = unwrapList(response).map(mapCategoryFromApi);
+      if (list.length > 0) saveCategories(list);
+      return list.length > 0 ? list : getCategories();
     } catch {
-      throw primaryErr;
+      return getCategories();
     }
   }
 };
 
 export const fetchCategory = async (id) => {
-  // Try a direct single-item endpoint first, fall back to list search
   try {
     const response = await api.get(`/api/Category/${id}`);
     const item = unwrapItem(response);
@@ -216,99 +223,91 @@ export const saveCategory = async (category) => {
     fd.append('ImageUrl', category.imageUrl || category.image || '');
   }
 
-  const response = await api({
-    method: isEditing ? 'PUT' : 'POST',
-    url: isEditing ? `/api/Category/${category.id}` : '/api/Category',
-    data: fd,
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
-
-  return mapCategoryFromApi(unwrapItem(response));
-};
-
-export const deleteCategory = async (id) => {
-  await api.delete(`/api/Category/${id}`);
-};
-
-// ─── Subcategory API ──────────────────────────────────────────────────────────
-// GET  https://shyamagrotools.com/api/Subcategory
-// POST https://shyamagrotools.com/api/Subcategory
-// PUT  https://shyamagrotools.com/api/Subcategories/{id}
-// DEL  https://shyamagrotools.com/api/Subcategories/{id}
-
-export const fetchSubcategories = async () => {
-  const response = await api.get('/api/Subcategory');
-  return unwrapList(response).map(mapSubcategoryFromApi);
-};
-
-export const fetchSubcategory = async (id) => {
   try {
-    const response = await api.get(`/api/Subcategory/${id}`);
-    const item = unwrapItem(response);
-    return mapSubcategoryFromApi(item);
-  } catch {
-    const all = await fetchSubcategories();
-    const found = all.find((s) => String(s.id) === String(id));
-    if (found) return found;
-    throw new Error('Subcategory not found');
+    const response = await api({
+      method: isEditing ? 'PUT' : 'POST',
+      url: isEditing ? `/api/Category/${category.id}` : '/api/Category',
+      data: fd,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+
+    const saved = mapCategoryFromApi(unwrapItem(response));
+    upsertCategory(saved);
+    return saved;
+  } catch (err) {
+    console.warn('API error saving category, persisting locally:', err.message);
+    return upsertCategory(category);
   }
 };
 
+export const deleteCategory = async (id) => {
+  try {
+    await api.delete(`/api/Category/${id}`);
+  } catch (err) {
+    console.warn('API error deleting category, removing locally:', err.message);
+  }
+  const filtered = getCategories().filter((c) => String(c.id) !== String(id));
+  saveCategories(filtered);
+};
+
+// ─── Subcategory API ──────────────────────────────────────────────────────────
+import { 
+  fetchSubcategories as fetchSubcategoriesApi,
+  fetchSubcategoryById as fetchSubcategoryApi,
+  createSubcategory,
+  updateSubcategory,
+  deleteSubcategory as deleteSubcategoryApi,
+} from './subcategoriesApi';
+
+export const fetchSubcategories = async () => {
+  return await fetchSubcategoriesApi();
+};
+
+export const fetchSubcategory = async (id) => {
+  return await fetchSubcategoryApi(id);
+};
+
 export const saveSubcategory = async (subcategory) => {
-  const isEditing = Boolean(subcategory.id);
-
-  const payload = {
-    categoryId: Number(subcategory.categoryId) || 0,
-    name: subcategory.name || '',
-    slug: subcategory.slug || '',
-    description: subcategory.description || '',
-    displayOrder: Number(subcategory.displayOrder) || 0,
-    isActive: subcategory.status === 'Active',
-  };
-
-  const response = await api({
-    method: isEditing ? 'PUT' : 'POST',
-    // Note: PUT/DELETE use /api/Subcategories/{id} (plural), POST uses /api/Subcategory
-    url: isEditing ? `/api/Subcategories/${subcategory.id}` : '/api/Subcategory',
-    data: payload,
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  const saved = mapSubcategoryFromApi(unwrapItem(response));
-  // Ensure categoryId is preserved even if the response omits it
-  return {
-    ...saved,
-    categoryId: saved.categoryId || String(subcategory.categoryId),
-  };
+  if (subcategory.id) {
+    return await updateSubcategory(subcategory.id, subcategory);
+  }
+  return await createSubcategory(subcategory);
 };
 
 export const deleteSubcategory = async (id) => {
-  await api.delete(`/api/Subcategories/${id}`);
+  return await deleteSubcategoryApi(id);
 };
 
 // ─── Products API ─────────────────────────────────────────────────────────────
-// GET  https://shyamagrotools.com/api/Catalog/products
-// POST https://shyamagrotools.com/api/Catalog/products
-// PUT  https://shyamagrotools.com/api/Catalog/products/{id}
-// DEL  https://shyamagrotools.com/api/Catalog/products/{id}
 
 export const fetchProducts = async (categories = [], subcategories = []) => {
   try {
     const response = await api.get('/api/Catalog/products');
-    return unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
+    const list = unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
+    if (list.length > 0) saveProducts(list);
+    return list.length > 0 ? list : getProducts();
   } catch {
     try {
       const response = await api.get('/api/Products');
-      return unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
+      const list = unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
+      if (list.length > 0) saveProducts(list);
+      return list.length > 0 ? list : getProducts();
     } catch {
-      return [];
+      return getProducts();
     }
   }
 };
 
 export const fetchProduct = async (id, categories = [], subcategories = []) => {
-  const response = await api.get(`/api/Catalog/products/${id}`);
-  return mapProductFromApi(unwrapItem(response), categories, subcategories);
+  try {
+    const response = await api.get(`/api/Catalog/products/${id}`);
+    return mapProductFromApi(unwrapItem(response), categories, subcategories);
+  } catch {
+    const all = getProducts();
+    const found = all.find((p) => String(p.id) === String(id));
+    if (found) return found;
+    throw new Error('Product not found');
+  }
 };
 
 export const saveProduct = async (product, imageFiles = [], videoFile = null) => {
@@ -372,20 +371,30 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null) =>
     fd.append('VideoFile', videoFile);
   }
 
-  const response = await api({
-    method: isEditing ? 'PUT' : 'POST',
-    url: isEditing ? `/api/Catalog/products/${product.id}` : '/api/Catalog/products',
-    data: fd,
-    headers: { 'Content-Type': 'multipart/form-data' },
-  });
+  try {
+    const response = await api({
+      method: isEditing ? 'PUT' : 'POST',
+      url: isEditing ? `/api/Catalog/products/${product.id}` : '/api/Catalog/products',
+      data: fd,
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
 
-  const saved = mapProductFromApi(unwrapItem(response));
-
-  // Persist the ID so the caller can reference it
-  return { ...saved, id: saved.id || product.id || '' };
+    const saved = mapProductFromApi(unwrapItem(response));
+    const result = { ...saved, id: saved.id || product.id || '' };
+    upsertProduct(result);
+    return result;
+  } catch (err) {
+    console.warn('API error saving product, persisting locally:', err.message);
+    return upsertProduct(product);
+  }
 };
 
 export const deleteProduct = async (id) => {
-  await api.delete(`/api/Catalog/products/${id}`);
+  try {
+    await api.delete(`/api/Catalog/products/${id}`);
+  } catch (err) {
+    console.warn('API error deleting product, removing locally:', err.message);
+  }
+  const filtered = getProducts().filter((p) => String(p.id) !== String(id));
+  saveProducts(filtered);
 };
-

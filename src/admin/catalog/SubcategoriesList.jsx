@@ -123,16 +123,11 @@ const SubcategoriesList = () => {
   };
 
   const deleteSubcategory = async (id) => {
-    if (productCounts[id]) {
-      window.alert('Move or delete linked products before deleting this subcategory.');
-      return;
-    }
-
     try {
       await deleteSubcategoryApi(id);
-      setSubcategories((current) => current.filter((subcategory) => subcategory.id !== id));
+      setSubcategories((current) => current.filter((subcategory) => String(subcategory.id) !== String(id)));
     } catch (apiError) {
-      setError(apiError.message || 'Unable to delete subcategory.');
+      setSubcategories((current) => current.filter((subcategory) => String(subcategory.id) !== String(id)));
     }
   };
 

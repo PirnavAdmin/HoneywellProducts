@@ -370,10 +370,10 @@ const CallHistoryScreen = () => {
         </div>
       </section>
 
-      {/* KPI Summary Cards (4 Columns in single row) */}
+      {/* KPI Summary Cards (4 Columns) */}
       <div style={{ 
         display: 'grid', 
-        gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', 
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', 
         gap: '16px', 
         marginBottom: '20px' 
       }}>
@@ -382,16 +382,15 @@ const CallHistoryScreen = () => {
           background: '#ffffff', 
           borderRadius: '16px', 
           border: '1px solid #e2e8f0', 
-          padding: '18px 20px', 
+          padding: '20px 24px', 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          minWidth: 0
+          gap: '16px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
           <div style={{ 
-            width: '46px', 
-            height: '46px', 
+            width: '50px', 
+            height: '50px', 
             borderRadius: '12px', 
             backgroundColor: '#ecfdf5', 
             color: '#16a34a', 
@@ -400,9 +399,9 @@ const CallHistoryScreen = () => {
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <Phone size={20} />
+            <Phone size={22} />
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div>
             <span style={{ 
               display: 'block', 
               fontSize: '11px', 
@@ -410,10 +409,7 @@ const CallHistoryScreen = () => {
               color: '#94a3b8', 
               textTransform: 'uppercase', 
               letterSpacing: '0.05em',
-              marginBottom: '2px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              marginBottom: '2px'
             }}>
               TOTAL CALLS LOGGED
             </span>
@@ -428,16 +424,15 @@ const CallHistoryScreen = () => {
           background: '#ffffff', 
           borderRadius: '16px', 
           border: '1px solid #e2e8f0', 
-          padding: '18px 20px', 
+          padding: '20px 24px', 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          minWidth: 0
+          gap: '16px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
           <div style={{ 
-            width: '46px', 
-            height: '46px', 
+            width: '50px', 
+            height: '50px', 
             borderRadius: '12px', 
             backgroundColor: '#fffbeb', 
             color: '#d97706', 
@@ -446,9 +441,9 @@ const CallHistoryScreen = () => {
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <Clock size={20} />
+            <Clock size={22} />
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div>
             <span style={{ 
               display: 'block', 
               fontSize: '11px', 
@@ -456,10 +451,7 @@ const CallHistoryScreen = () => {
               color: '#94a3b8', 
               textTransform: 'uppercase', 
               letterSpacing: '0.05em',
-              marginBottom: '2px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              marginBottom: '2px'
             }}>
               TODAY'S CALLBACKS
             </span>
@@ -474,16 +466,15 @@ const CallHistoryScreen = () => {
           background: '#ffffff', 
           borderRadius: '16px', 
           border: '1px solid #e2e8f0', 
-          padding: '18px 20px', 
+          padding: '20px 24px', 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          minWidth: 0
+          gap: '16px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
           <div style={{ 
-            width: '46px', 
-            height: '46px', 
+            width: '50px', 
+            height: '50px', 
             borderRadius: '12px', 
             backgroundColor: '#f3e8ff', 
             color: '#7e22ce', 
@@ -492,9 +483,9 @@ const CallHistoryScreen = () => {
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <Calendar size={20} />
+            <Calendar size={22} />
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div>
             <span style={{ 
               display: 'block', 
               fontSize: '11px', 
@@ -502,10 +493,7 @@ const CallHistoryScreen = () => {
               color: '#94a3b8', 
               textTransform: 'uppercase', 
               letterSpacing: '0.05em',
-              marginBottom: '2px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              marginBottom: '2px'
             }}>
               TOTAL FOLLOW-UPS
             </span>
@@ -520,16 +508,15 @@ const CallHistoryScreen = () => {
           background: '#ffffff', 
           borderRadius: '16px', 
           border: '1px solid #e2e8f0', 
-          padding: '18px 20px', 
+          padding: '20px 24px', 
           display: 'flex', 
           alignItems: 'center', 
-          gap: '14px',
-          boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          minWidth: 0
+          gap: '16px',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.02)'
         }}>
           <div style={{ 
-            width: '46px', 
-            height: '46px', 
+            width: '50px', 
+            height: '50px', 
             borderRadius: '12px', 
             backgroundColor: '#e0f2fe', 
             color: '#0284c7', 
@@ -538,9 +525,9 @@ const CallHistoryScreen = () => {
             justifyContent: 'center',
             flexShrink: 0
           }}>
-            <Star size={20} />
+            <Star size={22} />
           </div>
-          <div style={{ minWidth: 0 }}>
+          <div>
             <span style={{ 
               display: 'block', 
               fontSize: '11px', 
@@ -548,10 +535,7 @@ const CallHistoryScreen = () => {
               color: '#94a3b8', 
               textTransform: 'uppercase', 
               letterSpacing: '0.05em',
-              marginBottom: '2px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              marginBottom: '2px'
             }}>
               QUALIFIED LEADS
             </span>

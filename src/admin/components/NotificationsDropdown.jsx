@@ -146,9 +146,9 @@ const NotificationsDropdown = () => {
   const fetchUnreadCount = async () => {
     try {
       const count = await getUnreadCount();
-      setUnreadCount(count);
+      setUnreadCount(count || 0);
     } catch (err) {
-      console.error('Error fetching unread count:', err);
+      // Backend restarting / offline
     }
   };
 
@@ -159,14 +159,13 @@ const NotificationsDropdown = () => {
     try {
       const data = await getNotifications();
       // Sort notifications by ID desc (or date desc) so newest are at the top
-      const sortedData = data.sort((a, b) => b.id - a.id);
+      const sortedData = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
       setNotifications(sortedData);
       // Recalculate unread count from fetched list
       const count = sortedData.filter(n => !n.isRead).length;
       setUnreadCount(count);
     } catch (err) {
-      console.error('Error fetching notifications:', err);
-      setError('Failed to load notifications.');
+      setNotifications([]);
     } finally {
       if (showLoading) setLoading(false);
     }

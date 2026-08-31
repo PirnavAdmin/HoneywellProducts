@@ -27,5 +27,19 @@ function staticSiteWorker() {
 
 export default defineConfig({
   plugins: [react(), sites(), staticSiteWorker()],
-  server: { host: '127.0.0.1', port: 5173 },
+  server: { 
+    host: '127.0.0.1', 
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'https://wildlife-unwieldy-devotee.ngrok-free.dev',
+        changeOrigin: true,
+        secure: false,
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      },
+    },
+  },
 });
+

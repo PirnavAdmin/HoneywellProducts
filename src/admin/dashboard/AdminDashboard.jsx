@@ -34,6 +34,18 @@ import {
 import { getOrders } from '../api/orders';
 import { fetchProducts, fetchCategories } from '../catalog/productsApi';
 import { fetchSuppliers } from '../suppliers/suppliersApi';
+import {
+  fetchProductsDashboard,
+  fetchReportsOrders,
+  fetchReportsCatalog,
+  fetchMainOrdersDashboard,
+  fetchStockLedgerDashboard,
+  fetchPaymentVerificationsDashboard,
+  fetchReturnsAdminDashboard,
+  fetchTicketsDashboard,
+  fetchCustomersDashboard,
+  fetchAdminProfileDashboard,
+} from '../api/dashboardApi';
 import './AdminDashboard.css';
 
 const numberFormatter = new Intl.NumberFormat('en-IN');
@@ -48,27 +60,6 @@ const formatCurrency = (value) => {
   return `INR ${isNaN(num) ? '0' : numberFormatter.format(num)}`;
 };
 
-// Fallback dataset for a populated dashboard view when database is empty
-const MOCK_FALLBACK = {
-  salesSeries: [
-    { name: 'Week 1', value: 62000 },
-    { name: 'Week 2', value: 78500 },
-    { name: 'Week 3', value: 112000 },
-    { name: 'Week 4', value: 127400 },
-  ],
-  categorySeries: [
-    { name: 'Farm Tools', value: 35, color: '#2563eb' },
-    { name: 'Irrigation', value: 24, color: '#0891b2' },
-    { name: 'Machinery', value: 18, color: '#16a34a' },
-    { name: 'Seeds & Inputs', value: 15, color: '#f59e0b' },
-    { name: 'Safety Gear', value: 8, color: '#ec4899' },
-  ],
-  insights: [
-    { type: 'success', text: 'Irrigation kits are currently leading catalog conversions' },
-    { type: 'warning', text: 'Ensure cultivator accessories are restocked soon' },
-    { type: 'info', text: 'Three bulk orders are currently awaiting UTR confirmation' }
-  ]
-};
 
 const buildCsv = (rows) =>
   rows
@@ -277,7 +268,7 @@ const AdminDashboard = () => {
 
   // Chart Data preparation
   const salesSeriesData = useMemo(() => {
-    if (orders.length === 0) return MOCK_FALLBACK.salesSeries;
+    if (orders.length === 0) return [{ name: 'Today', value: metrics.totalSales || 0 }];
 
     // Group sales by day of order
     const dailySalesMap = {};
@@ -289,19 +280,13 @@ const AdminDashboard = () => {
     });
 
     const series = Object.entries(dailySalesMap).map(([name, value]) => ({ name, value }));
-    return series.length > 1 ? series.slice(-6) : [
-      { name: 'Today', value: metrics.totalSales }
+    return series.length > 0 ? series.slice(-6) : [
+      { name: 'Today', value: metrics.totalSales || 0 }
     ];
   }, [orders, metrics.totalSales]);
 
   const orderStatusSeriesData = useMemo(() => {
-    if (orders.length === 0) {
-      return [
-        { name: 'Completed', value: 3, color: '#10b981' },
-        { name: 'Processing', value: 4, color: '#2563eb' },
-        { name: 'Pending', value: 2, color: '#f59e0b' }
-      ];
-    }
+    if (orders.length === 0) return [];
     const counts = { Completed: 0, Processing: 0, Dispatched: 0, Packed: 0, Pending: 0, 'On Hold': 0, Canceled: 0, Placed: 0, Shipped: 0 };
     orders.forEach(o => {
       let status = o.status || 'Pending';
@@ -329,7 +314,7 @@ const AdminDashboard = () => {
   };
 
   const categorySeriesData = useMemo(() => {
-    if (categories.length === 0 || products.length === 0) return MOCK_FALLBACK.categorySeries;
+    if (categories.length === 0 && products.length === 0) return [];
 
     const counts = {};
     products.forEach(p => {
@@ -392,10 +377,11 @@ const AdminDashboard = () => {
       list.push({ type: 'warning', text: `${pendingVerificationOrders} orders require manual payment receipt UTR verification` });
     }
     if (list.length === 0) {
-      return MOCK_FALLBACK.insights;
+      return [{ type: 'info', text: 'All operations running normally across all catalog modules' }];
     }
     return list;
   }, [metrics, orders]);
+
 
   // CSV Exporter
   const handleExport = () => {

@@ -286,13 +286,7 @@ const ProductsForm = () => {
   }, [productId, categories, subcategories, navigate]);
 
   useEffect(() => {
-    if (availableSubcategories.length === 0) {
-      setFormData((current) => {
-        if (current.subcategoryId === '') return current;
-        return { ...current, subcategoryId: '' };
-      });
-      return;
-    }
+    if (isLoadingMetadata || availableSubcategories.length === 0) return;
     const hasSelectedSubcategory = availableSubcategories.some(
       (subcategory) => String(subcategory.id) === String(formData.subcategoryId)
     );
@@ -303,7 +297,7 @@ const ProductsForm = () => {
         return { ...current, subcategoryId: '' };
       });
     }
-  }, [availableSubcategories, formData.categoryId, formData.subcategoryId]);
+  }, [availableSubcategories, formData.categoryId, formData.subcategoryId, isLoadingMetadata]);
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;

@@ -8,56 +8,8 @@ const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const MOCK_RETURNS = [
-  {
-    id: 1,
-    orderId: 10214,
-    orderItemId: 1,
-    productName: 'Premium Organic Fertilizer',
-    sku: 'FERT-001',
-    requestType: 'Refund',
-    reasonCode: 'Damaged Product',
-    description: 'The fertilizer packaging was torn upon delivery, and about half of the product spilled out inside the shipping box.',
-    requestedQuantity: 1,
-    refundMethod: 'Wallet',
-    pickupAddressId: 101,
-    evidenceFiles: [],
-    status: 'Pending',
-    createdAt: '2026-07-11T14:30:00.000Z',
-    pickupDetails: null,
-    refundDetails: null,
-    replacementDetails: null,
-    customerName: 'Rajesh Kumar',
-    unitPrice: 7250
-  },
-  {
-    id: 2,
-    orderId: 10215,
-    orderItemId: 2,
-    productName: 'Heavy Duty Hand Weeder',
-    sku: 'TOOL-05',
-    requestType: 'Replacement',
-    reasonCode: 'Defective / Faulty',
-    description: 'The wooden handle is cracked near the joint, making it unsafe to apply pressure during weeding.',
-    requestedQuantity: 1,
-    refundMethod: 'Wallet',
-    pickupAddressId: 102,
-    evidenceFiles: [],
-    status: 'Approved',
-    createdAt: '2026-07-12T09:15:00.000Z',
-    pickupDetails: {
-      pickupDate: '2026-07-14T10:00:00.000Z',
-      pickupAgentName: 'Vikram Singh',
-      pickupAgentPhone: '9898989898',
-      pickupTrackingNumber: 'PUP-SAT-99218',
-      remarks: 'Agent assigned. Pickup scheduled between 10 AM and 2 PM.'
-    },
-    refundDetails: null,
-    replacementDetails: null,
-    customerName: 'Amit Patel',
-    unitPrice: 1700
-  }
-];
+const MOCK_RETURNS = [];
+
 
 const getLocalReturns = () => {
   const local = localStorage.getItem('shyam_agro_returns');

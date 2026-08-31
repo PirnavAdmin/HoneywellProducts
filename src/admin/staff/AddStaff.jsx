@@ -583,93 +583,27 @@ function AddStaff() {
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
-      {/* Top Header Card with Far-Right Actions */}
-      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <Link
-            to="/admin/staff/list"
-            style={{
-              width: '36px',
-              height: '36px',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#475569',
-              background: '#ffffff',
-              transition: 'all 0.15s ease',
-              textDecoration: 'none'
-            }}
-          >
-            <ArrowLeft size={18} />
+      {/* Top Header Card */}
+      <section className="add-staff-header flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
+        <div className="flex items-center gap-3">
+          <Link className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200" to="/admin/staff/list">
+            <ArrowLeft size={16} />
           </Link>
           <div>
-            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#10b981', fontWeight: 700, letterSpacing: '0.04em', display: 'block', marginBottom: '2px' }}>
-              STAFF DIRECTORY
-            </span>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+            <span className="staff-kicker">Staff Directory</span>
+            <h1 className="header-title">
               {isEditing ? 'Edit Staff Profile' : 'Add Staff Member'}
             </h1>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto' }}>
-          <Link
-            to="/admin/staff/list"
-            style={{
-              background: '#ffffff',
-              color: '#475569',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              height: '38px',
-              padding: '0 18px',
-              fontSize: '13px',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              transition: 'all 0.15s ease'
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = '#f8fafc';
-              e.currentTarget.style.borderColor = '#94a3b8';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = '#ffffff';
-              e.currentTarget.style.borderColor = '#cbd5e1';
-            }}
-          >
+        <div className="flex items-center gap-2">
+          <Link to="/admin/staff/list" className="staff-cancel-btn">
             Cancel
           </Link>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isSaving}
-            style={{
-              background: '#10b981',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              height: '38px',
-              padding: '0 18px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: isSaving ? 'not-allowed' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              opacity: isSaving ? 0.7 : 1,
-              transition: 'background 0.15s ease'
-            }}
-            onMouseOver={(e) => !isSaving && (e.currentTarget.style.background = '#059669')}
-            onMouseOut={(e) => !isSaving && (e.currentTarget.style.background = '#10b981')}
-          >
-            <Save size={15} />
-            <span>{isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Profile' : 'Save Profile')}</span>
+          <button className="staff-save-btn" onClick={handleSubmit} disabled={isSaving}>
+            <Save size={14} />
+            {isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Profile' : 'Save Profile')}
           </button>
         </div>
       </section>

@@ -909,7 +909,7 @@ const OrdersLedger = () => {
   }
 
   return (
-    <div className="orders-mgmt-container">
+    <div className="orders-mgmt-container" style={{ padding: '24px' }}>
       
       {/* Title & Stats */}
       <div className="orders-mgmt-header">
@@ -919,11 +919,11 @@ const OrdersLedger = () => {
         </div>
       </div>
 
-      {/* Metrics Row (4 Cards in single row) */}
+      {/* Metrics Row */}
       <div className="orders-stats-grid">
         <div className="orders-stat-card">
           <div className="stat-card-icon" style={{ background: '#ecfdf5', color: '#059669' }}>
-            <DollarSign size={20} />
+            <DollarSign size={22} />
           </div>
           <div className="stat-card-info">
             <span>Verified Revenue</span>
@@ -932,7 +932,7 @@ const OrdersLedger = () => {
         </div>
         <div className="orders-stat-card">
           <div className="stat-card-icon" style={{ background: '#fffbeb', color: '#d97706' }}>
-            <Clock3 size={20} />
+            <Clock3 size={22} />
           </div>
           <div className="stat-card-info">
             <span>Processing</span>
@@ -940,8 +940,8 @@ const OrdersLedger = () => {
           </div>
         </div>
         <div className="orders-stat-card">
-          <div className="stat-card-icon" style={{ background: '#f3e8ff', color: '#7e22ce' }}>
-            <Truck size={20} />
+          <div className="stat-card-icon" style={{ background: '#e0e7ff', color: '#4f46e5' }}>
+            <Truck size={22} />
           </div>
           <div className="stat-card-info">
             <span>Dispatched</span>
@@ -950,7 +950,7 @@ const OrdersLedger = () => {
         </div>
         <div className="orders-stat-card">
           <div className="stat-card-icon" style={{ background: '#ecfdf5', color: '#047857' }}>
-            <CheckCircle2 size={20} />
+            <CheckCircle2 size={22} />
           </div>
           <div className="stat-card-info">
             <span>Completed</span>
@@ -959,195 +959,194 @@ const OrdersLedger = () => {
         </div>
       </div>
 
-      {/* Main Card Table Wrapper */}
+      {/* Filters Toolbar */}
+      <div className="orders-toolbar">
+        {/* Search */}
+        <div className="orders-search-wrapper">
+          <Search size={18} className="orders-search-icon" />
+          <input
+            type="text"
+            className="orders-search-input"
+            placeholder="Search by order ID, customer name, or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Date Filters */}
+        <div className="orders-filters-wrapper">
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#475569', marginRight: '4px' }}>
+            Date Booked:
+          </span>
+          {['All', 'Today', 'Week', 'Month', 'Custom'].map((filter) => (
+            <button
+              key={filter}
+              className={`date-preset-btn ${dateFilter === filter ? 'active' : ''}`}
+              onClick={() => setDateFilter(filter)}
+            >
+              {filter}
+            </button>
+          ))}
+
+          {/* Custom Date Picker Inputs */}
+          {dateFilter === 'Custom' && (
+            <div className="custom-date-container">
+              <Calendar size={13} style={{ color: '#64748b' }} />
+              <input
+                type="date"
+                className="custom-date-input"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                title="Start Date"
+              />
+              <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>to</span>
+              <input
+                type="date"
+                className="custom-date-input"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                title="End Date"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Main Grid Table */}
       <div className="orders-card-table-wrap">
-        {/* Filters Toolbar inside Card */}
-        <div className="orders-toolbar">
-          {/* Search */}
-          <div className="orders-search-wrapper">
-            <Search size={16} className="orders-search-icon" />
-            <input
-              type="text"
-              className="orders-search-input"
-              placeholder="Search by order ID, customer name, or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          {/* Date Filters */}
-          <div className="orders-filters-wrapper">
-            <span style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginRight: '4px' }}>
-              Date Booked:
-            </span>
-            {['All', 'Today', 'Week', 'Month', 'Custom'].map((filter) => (
-              <button
-                key={filter}
-                className={`date-preset-btn ${dateFilter === filter ? 'active' : ''}`}
-                onClick={() => setDateFilter(filter)}
-              >
-                {filter}
-              </button>
-            ))}
-
-            {/* Custom Date Picker Inputs */}
-            {dateFilter === 'Custom' && (
-              <div className="custom-date-container">
-                <Calendar size={13} style={{ color: '#64748b' }} />
-                <input
-                  type="date"
-                  className="custom-date-input"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  title="Start Date"
-                />
-                <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 600 }}>to</span>
-                <input
-                  type="date"
-                  className="custom-date-input"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  title="End Date"
-                />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Horizontal Scrollable Table Wrapper */}
-        <div style={{ overflowX: 'auto', width: '100%', display: 'block' }}>
-          <table className="orders-modern-table" style={{ minWidth: '950px' }}>
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Date Booked</th>
-                <th>Logistics Partner</th>
-                <th>Payment Status</th>
-                <th>Total Amount</th>
-                <th>Fulfillment</th>
-                <th style={{ textAlign: 'center' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedOrders.map((order) => (
-                <tr key={order.id}>
-                  <td style={{ fontWeight: 700, color: '#1e293b' }}>
-                    #{order.id}
-                    <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 400 }}>{order.invoiceNo}</div>
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600, color: '#1e293b' }}>{order.customer}</div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>{order.customerType} • {order.phone}</div>
-                  </td>
-                  <td style={{ color: '#475569', fontWeight: 500 }}>{formatDateToDMY(order.date)}</td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#475569' }}>
-                      <Truck size={14} style={{ color: '#6366f1' }} />
-                      <span>{order.logistics || 'Self Pickup'}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <PaymentStatusBadge paymentStatus={order.paymentStatus} />
-                    <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>{order.payMethod}</div>
-                  </td>
-                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{formatCurrency(order.total)}</td>
-                  <td>
-                    <OrderStatusBadge status={order.status} />
-                  </td>
-                  <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
-                      <button
-                        onClick={async () => {
+        <table className="orders-modern-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Date Booked</th>
+              <th>Logistics Partner</th>
+              <th>Payment Status</th>
+              <th>Total Amount</th>
+              <th>Fulfillment</th>
+              <th style={{ textAlign: 'center' }}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pagedOrders.map((order) => (
+              <tr key={order.id}>
+                <td style={{ fontWeight: 700, color: '#1e293b' }}>
+                  #{order.id}
+                  <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 400 }}>{order.invoiceNo}</div>
+                </td>
+                <td>
+                  <div style={{ fontWeight: 600, color: '#1e293b' }}>{order.customer}</div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>{order.customerType} • {order.phone}</div>
+                </td>
+                <td style={{ color: '#475569', fontWeight: 500 }}>{formatDateToDMY(order.date)}</td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#475569' }}>
+                    <Truck size={14} style={{ color: '#6366f1' }} />
+                    <span>{order.logistics || 'Self Pickup'}</span>
+                  </div>
+                </td>
+                <td>
+                  <PaymentStatusBadge paymentStatus={order.paymentStatus} />
+                  <div style={{ fontSize: '10px', color: '#64748b', marginTop: '4px' }}>{order.payMethod}</div>
+                </td>
+                <td style={{ fontWeight: 700, color: '#0f172a' }}>{formatCurrency(order.total)}</td>
+                <td>
+                  <OrderStatusBadge status={order.status} />
+                </td>
+                <td style={{ padding: '16px 20px', textAlign: 'center' }}>
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const fullOrder = await getOrder(order.id);
+                          const norm = normaliseOrder(fullOrder);
+                          norm.customer = order.customer;
+                          norm.customerType = order.customerType;
+                          norm.phone = order.phone;
+                          norm.email = order.email;
+                          norm.shippingAddress = order.shippingAddress;
+                          norm.logistics = order.logistics || norm.logistics;
+                          norm.trackingNo = order.trackingNo || norm.trackingNo;
+                          setSelectedOrder(norm);
+                        } catch (err) {
+                          alert(`Failed to load order details: ${err.message}`);
+                        }
+                      }}
+                      style={{
+                        background: '#10b981',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        transition: 'background 0.2s'
+                      }}
+                      onMouseOver={(e) => e.target.style.background = '#059669'}
+                      onMouseOut={(e) => e.target.style.background = '#10b981'}
+                    >
+                      <Eye size={14} />
+                      Details
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (window.confirm(`Are you sure you want to delete Order #${order.id}?`)) {
                           try {
-                            const fullOrder = await getOrder(order.id);
-                            const norm = normaliseOrder(fullOrder);
-                            norm.customer = order.customer;
-                            norm.customerType = order.customerType;
-                            norm.phone = order.phone;
-                            norm.email = order.email;
-                            norm.shippingAddress = order.shippingAddress;
-                            norm.logistics = order.logistics || norm.logistics;
-                            norm.trackingNo = order.trackingNo || norm.trackingNo;
-                            setSelectedOrder(norm);
-                          } catch (err) {
-                            alert(`Failed to load order details: ${err.message}`);
-                          }
-                        }}
-                        style={{
-                          background: '#10b981',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '6px 12px',
-                          fontSize: '12px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          transition: 'background 0.2s'
-                        }}
-                        onMouseOver={(e) => e.target.style.background = '#059669'}
-                        onMouseOut={(e) => e.target.style.background = '#10b981'}
-                      >
-                        <Eye size={14} />
-                        Details
-                      </button>
-                      <button
-                        onClick={async () => {
-                          if (window.confirm(`Are you sure you want to delete Order #${order.id}?`)) {
-                            try {
-                              const res = await fetch(`${getApiDomain()}/api/Orders/${order.id}`, { method: 'DELETE' });
-                              if (res.ok) {
-                                setOrders(prev => prev.filter(o => o.id !== order.id));
-                              } else {
-                                alert('Failed to delete order.');
-                              }
-                            } catch (err) {
-                              alert(`Error: ${err.message}`);
+                            const res = await fetch(`${getApiDomain()}/api/Orders/${order.id}`, { method: 'DELETE' });
+                            if (res.ok) {
+                              setOrders(prev => prev.filter(o => o.id !== order.id));
+                            } else {
+                              alert('Failed to delete order.');
                             }
+                          } catch (err) {
+                            alert(`Error: ${err.message}`);
                           }
-                        }}
-                        title="Delete Order"
-                        style={{
-                          background: '#fee2e2',
-                          color: '#ef4444',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '6px 10px',
-                          fontSize: '12px',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filteredOrders.length === 0 && (
-                <tr>
-                  <td colSpan="8" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
-                    No verified success orders found matching the filter criteria.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                        }
+                      }}
+                      title="Delete Order"
+                      style={{
+                        background: '#fee2e2',
+                        color: '#ef4444',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '6px 10px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filteredOrders.length === 0 && (
+              <tr>
+                <td colSpan="8" style={{ textAlign: 'center', padding: '32px', color: '#64748b' }}>
+                  No verified success orders found matching the filter criteria.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
 
-        {/* Pagination Controls Footer */}
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          totalItems={filteredOrders.length}
-          itemsPerPage={itemsPerPage}
-        />
+        {/* Pagination Controls */}
+        {filteredOrders.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            totalItems={filteredOrders.length}
+            itemsPerPage={itemsPerPage}
+          />
+        )}
       </div>
 
       {/* DETAILED ORDER POPUP MODAL SCREEN */}
@@ -1415,7 +1414,7 @@ const OrdersLedger = () => {
                     <div className={`timeline-event ${selectedOrder.status === 'Completed' ? 'completed' : ''}`}>
                       <span className="timeline-dot" />
                       <div className="timeline-info">
-                        <span className="timeline-title">{"Delivered & Closed"}</span>
+                        <span className="timeline-title">Delivered & Closed</span>
                         <span className="timeline-time">{selectedOrder.status === 'Completed' ? 'Fulfillment Successful' : 'Awaiting Delivery Confirmation'}</span>
                       </div>
                     </div>

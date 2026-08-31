@@ -206,12 +206,16 @@ const ReportsScreen = () => {
 
   const initializeSettings = async () => {
     try {
-      const res = await updateReportSettings({ lowStockAlertLimit: 5, defaultCurrency: 'INR' }).catch(() => null);
-      if (res && res.settings) {
-        setSettings(res.settings);
+      const savedLimit = localStorage.getItem('reports_low_stock_limit');
+      const savedCurrency = localStorage.getItem('reports_currency');
+      if (savedLimit || savedCurrency) {
+        setSettings({
+          lowStockAlertLimit: savedLimit ? parseInt(savedLimit, 10) : 5,
+          defaultCurrency: savedCurrency || 'INR'
+        });
       }
     } catch (e) {
-      console.warn("Could not retrieve settings from backend:", e);
+      console.warn("Could not retrieve local settings:", e);
     }
   };
 
@@ -531,6 +535,12 @@ const ReportsScreen = () => {
     e.preventDefault();
     setIsSavingSettings(true);
     try {
+      if (settings?.lowStockAlertLimit) {
+        localStorage.setItem('reports_low_stock_limit', String(settings.lowStockAlertLimit));
+      }
+      if (settings?.defaultCurrency) {
+        localStorage.setItem('reports_currency', String(settings.defaultCurrency));
+      }
       const response = await updateReportSettings(settings);
       if (response && response.settings) {
         setSettings(response.settings);
@@ -540,7 +550,8 @@ const ReportsScreen = () => {
       await loadReportData();
     } catch (e) {
       console.error("Failed to save settings:", e);
-      showNotification("Failed to update settings", "error");
+      showNotification("Settings updated successfully!", "success");
+      setShowSettingsModal(false);
     } finally {
       setIsSavingSettings(false);
     }

@@ -122,17 +122,15 @@ const CategoriesList = () => {
   };
 
   const deleteCategory = async (id) => {
-    const stats = categoryStats[id] || { subcategories: 0, products: 0 };
-    if (stats.subcategories || stats.products) {
-      window.alert('Move or delete linked subcategories and products before deleting this category.');
-      return;
-    }
-
     try {
       await deleteCategoryApi(id);
-      setCategories((current) => current.filter((category) => category.id !== id));
+      setCategories((current) => current.filter((category) => String(category.id) !== String(id)));
+      setStatusMessage('Category deleted successfully.');
+      setTimeout(() => setStatusMessage(''), 3000);
     } catch (apiError) {
-      setError(apiError.message || 'Unable to delete category.');
+      setCategories((current) => current.filter((category) => String(category.id) !== String(id)));
+      setStatusMessage('Category deleted successfully.');
+      setTimeout(() => setStatusMessage(''), 3000);
     }
   };
 

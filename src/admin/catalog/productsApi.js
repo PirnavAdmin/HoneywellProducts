@@ -498,108 +498,131 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   const isEditing = Boolean(product.id);
 
   const fd = new FormData();
+  if (isEditing) {
+    fd.append('Id', String(product.id));
+    fd.append('id', String(product.id));
+  }
   fd.append('ProductName', product.name || '');
+  fd.append('productName', product.name || '');
+  fd.append('Name', product.name || '');
+  fd.append('name', product.name || '');
+
   fd.append('SKU', product.sku || '');
+  fd.append('sku', product.sku || '');
+
   fd.append('Brand', product.brand || 'Shyam Agro Tools');
+  fd.append('brand', product.brand || 'Shyam Agro Tools');
+
   fd.append('Manufacturer', product.supplier || product.manufacturer || '');
-  fd.append('MRP', Number(product.mrp) || 0);
-  fd.append('Stock', Number(product.stock) || 0);
-  fd.append('CategoryId', Number(product.categoryId) || 0);
-  fd.append('SubcategoryId', Number(product.subcategoryId) || 0);
+  fd.append('manufacturer', product.supplier || product.manufacturer || '');
+  fd.append('SupplierName', product.supplier || product.manufacturer || '');
+
+  fd.append('MRP', String(Number(product.mrp) || 0));
+  fd.append('mrp', String(Number(product.mrp) || 0));
+
+  fd.append('SellingPrice', String(Number(product.price) || 0));
+  fd.append('sellingPrice', String(Number(product.price) || 0));
+  fd.append('Price', String(Number(product.price) || 0));
+  fd.append('price', String(Number(product.price) || 0));
+
+  fd.append('Stock', String(Number(product.stock) || 0));
+  fd.append('stock', String(Number(product.stock) || 0));
+  fd.append('StockQuantity', String(Number(product.stock) || 0));
+
+  fd.append('CategoryId', String(Number(product.categoryId) || 0));
+  fd.append('categoryId', String(Number(product.categoryId) || 0));
+
+  fd.append('SubcategoryId', String(Number(product.subcategoryId) || 0));
+  fd.append('subcategoryId', String(Number(product.subcategoryId) || 0));
+
   fd.append('ShortDescription', product.shortDescription || product.description || '');
+  fd.append('shortDescription', product.shortDescription || product.description || '');
+
   fd.append('ProductDetails', product.productDetails || '');
+  fd.append('productDetails', product.productDetails || '');
+
   fd.append('PackageIncludes', product.packageIncludes || '');
+  fd.append('packageIncludes', product.packageIncludes || '');
 
   // Specifications
   fd.append('Weight', product.specifications?.weight || '');
+  fd.append('weight', product.specifications?.weight || '');
+
   fd.append('Dimensions', product.specifications?.dimensions || '');
+  fd.append('dimensions', product.specifications?.dimensions || '');
+
   fd.append('PowerSource', product.specifications?.powerSource || '');
+  fd.append('powerSource', product.specifications?.powerSource || '');
+
   fd.append('Material', product.specifications?.material || '');
+  fd.append('material', product.specifications?.material || '');
+
   fd.append('CoverageUsage', product.specifications?.coverage || '');
+  fd.append('coverageUsage', product.specifications?.coverage || '');
 
-  // Pricing
+  // Pricing & Discounts
   fd.append('DiscountType', product.discountType || 'none');
-  fd.append('DiscountAmount', Number(product.discountValue) || 0);
-  fd.append('SellingPrice', Number(product.price) || 0);
+  fd.append('discountType', product.discountType || 'none');
+  fd.append('DiscountAmount', String(Number(product.discountValue) || 0));
+  fd.append('discountAmount', String(Number(product.discountValue) || 0));
 
-  // Reviews & Ratings summary
-  fd.append('AverageRating', Number(product.rating) || 0);
-  fd.append('TotalReviews', Number(product.totalReviews) || 0);
-  fd.append('FiveStar', Number(product.ratingBreakdown?.[5] ?? product.FiveStar ?? product.fiveStar) || 0);
-  fd.append('FourStar', Number(product.ratingBreakdown?.[4] ?? product.FourStar ?? product.fourStar) || 0);
-  fd.append('ThreeStar', Number(product.ratingBreakdown?.[3] ?? product.ThreeStar ?? product.threeStar) || 0);
-  fd.append('TwoStar', Number(product.ratingBreakdown?.[2] ?? product.TwoStar ?? product.twoStar) || 0);
-  fd.append('OneStar', Number(product.ratingBreakdown?.[1] ?? product.OneStar ?? product.oneStar) || 0);
-
-  // Features & Reviews JSON data
-  fd.append('FeaturesJson', JSON.stringify(product.keyFeatures || []));
-
-  const backendReviews = (product.reviews || []).map((r) => ({
-    CustomerName: r.customer || 'Anonymous',
-    Rating: Number(r.rating) || 5,
-    ReviewComment: r.comment || '',
-    VerifiedPurchase: r.verified !== false,
-    ReviewDate: r.date ? `${r.date}-01T00:00:00Z` : new Date().toISOString(),
-  }));
-  fd.append('ReviewsJson', JSON.stringify(backendReviews));
-
-  // Inventory & Delivery
-  fd.append('StockStatus', product.status || 'In Stock');
-  fd.append('CountryOfOrigin', product.countryOfOrigin || 'India');
-  fd.append('EstimatedDelivery', product.deliveryEstimate || '3-7 business days');
-  fd.append('DeliveryReturn', product.returnPolicy || 'Easy Returns');
-  fd.append(
-    'CODAvailability',
-    product.codAvailable === 'Yes' || product.codAvailable === true ? 'true' : 'false'
-  );
-
-  // Images (field name: Images[])
-  if (Array.isArray(imageFiles) && imageFiles.length > 0) {
+  // Images & Media
+  if (Array.isArray(imageFiles)) {
     imageFiles.forEach((file) => fd.append('Images', file));
   }
+  if (videoFile) fd.append('Video', videoFile);
+  if (posterFile) fd.append('Poster', posterFile);
 
-  // Existing images to keep (case-insensitive keys for maximum compatibility)
-  if (Array.isArray(product.images)) {
-    product.images.forEach((img) => {
-      const url = typeof img === 'string' ? img : img?.imageUrl || img?.image || img?.url || '';
-      if (url) {
-        fd.append('ExistingImages', url);
-        fd.append('existingImages', url);
-        fd.append('RemainingImages', url);
-        fd.append('remainingImages', url);
-      }
+  try {
+    const response = await api({
+      method: isEditing ? 'PUT' : 'POST',
+      url: isEditing ? `/api/products/${product.id}` : '/api/products',
+      data: fd,
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
+    const saved = unwrapItem(response);
+    return mapProductFromApi(saved);
+  } catch (err) {
+    console.warn('FormData product upload failed, attempting JSON fallback:', err.message);
   }
 
-  // Video
-  if (videoFile) {
-    fd.append('Video', videoFile);
-  }
+  // Standard JSON payload fallback
+  const payload = {
+    id: isEditing ? Number(product.id) : undefined,
+    productName: product.name || '',
+    name: product.name || '',
+    sku: product.sku || '',
+    brand: product.brand || 'Shyam Agro',
+    manufacturer: product.supplier || product.manufacturer || '',
+    subcategoryId: Number(product.subcategoryId) || 0,
+    categoryId: Number(product.categoryId) || 0,
+    mrp: Number(product.mrp) || 0,
+    price: Number(product.price) || 0,
+    sellingPrice: Number(product.price) || 0,
+    stock: Number(product.stock) || 0,
+    stockQuantity: Number(product.stock) || 0,
+    shortDescription: product.shortDescription || product.description || '',
+    productDetails: product.productDetails || '',
+    packageIncludes: product.packageIncludes || '',
+    weight: product.specifications?.weight || '',
+    dimensions: product.specifications?.dimensions || '',
+    powerSource: product.specifications?.powerSource || '',
+    material: product.specifications?.material || '',
+    coverageUsage: product.specifications?.coverage || '',
+    discountType: product.discountType || 'none',
+    discountAmount: Number(product.discountValue) || 0,
+    isActive: product.status !== 'Inactive' && product.isActive !== false,
+  };
 
-  // Poster / Info Graphic (Optional)
-  if (posterFile) {
-    fd.append('Poster', posterFile);
-    fd.append('posterFile', posterFile);
-    fd.append('PosterFile', posterFile);
-  } else if (product.posterUrl || product.posterImage || product.poster) {
-    const existingPoster = product.posterUrl || product.posterImage || product.poster;
-    fd.append('PosterUrl', existingPoster);
-    fd.append('posterUrl', existingPoster);
-  }
-
-  // ── POST or PUT product ────────────────────────────────────────────────────
   const response = await api({
     method: isEditing ? 'PUT' : 'POST',
     url: isEditing ? `/api/products/${product.id}` : '/api/products',
-    data: fd,
-    headers: { 'Content-Type': 'multipart/form-data' },
+    data: payload,
+    headers: { 'Content-Type': 'application/json' },
   });
-
   const saved = unwrapItem(response);
-  const savedId = String(saved.id || product.id || '');
-
-  // Return fully populated product (features + reviews included)
-  return fetchProduct(savedId);
+  const savedId = String(saved.productId || saved.id || product.id || '');
+  return { ...mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved), id: savedId };
 };
 
 // ─── Products — Delete ────────────────────────────────────────────────────────
@@ -610,12 +633,20 @@ export const deleteProduct = async (id) => {
 };
 
 // ─── Products — Patch Stock ───────────────────────────────────────────────────
-// PATCH /api/products/{id}/stock?stock=
+// PATCH /api/products/{id}/stock
 
 export const updateProductStock = async (id, newStock) => {
-  const response = await api.patch(`/api/products/${id}/stock`, null, {
-    params: { stock: Number(newStock) },
-  });
-  return response.data;
+  try {
+    const response = await api.patch(`/api/products/${id}/stock`, { stockQuantity: Number(newStock) }, {
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return response.data;
+  } catch (err) {
+    const response = await api.patch(`/api/products/${id}/stock`, null, {
+      params: { stock: Number(newStock) },
+    });
+    return response.data;
+  }
 };
+
 
