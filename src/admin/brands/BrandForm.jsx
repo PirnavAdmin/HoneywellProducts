@@ -96,14 +96,38 @@ export const validateBrandName = (rawName) => {
     return 'Brand Name is required.';
   }
   const name = rawName.trim();
-  if (name.length < 2 || name.length > 100) {
-    return 'Brand Name must be between 2 and 100 characters.';
+  if (name.length < 2 || name.length > 50) {
+    return 'Brand Name must be between 2 and 50 characters.';
   }
-  if (!/[a-zA-Z0-9]/.test(name)) {
-    return 'Brand Name must contain valid letters or numbers.';
+  if (!/[a-zA-Z]/.test(name)) {
+    return 'Brand Name must contain valid letters.';
   }
-  if (/(.)\1{4,}/.test(name)) {
-    return 'Brand Name cannot contain excessively repeated characters.';
+  if (/(.)\1{3,}/.test(name)) {
+    return 'Brand Name cannot contain repeated random characters.';
+  }
+  const mashPatterns = /(asdf|qwer|zxcv|hjkl|uiop|vbnm|wert|xcvb|erty|dfgh|cvbn|tyui|ghjk|bnm|swq|qwe|asd|zxc|qaz|wsx|edc|rfv|tgb|yhn|ujm)/i;
+  if (mashPatterns.test(name)) {
+    return 'Brand Name appears to be random keyboard typing.';
+  }
+  if (/[bcdfghjklmnpqrstvwxz]{6,}/i.test(name)) {
+    return 'Brand Name contains too many consecutive consonants.';
+  }
+  const cleanWord = name.toLowerCase().replace(/[^a-z]/g, '');
+  const uniqueChars = new Set(cleanWord).size;
+  if (cleanWord.length >= 6 && uniqueChars <= cleanWord.length / 2.0) {
+    return 'Brand Name appears to contain invalid repetitive characters.';
+  }
+  const words = name.split(/\s+/);
+  for (const w of words) {
+    if (w.length > 5) {
+      const vowels = (w.match(/[aeiouy]/gi) || []).length;
+      if (vowels === 0) return 'Brand Name words must contain vowels.';
+      const consonants = (w.match(/[bcdfghjklmnpqrstvwxz]/gi) || []).length;
+      if (consonants / vowels > 3.5) return 'Brand Name contains invalid random characters.';
+    }
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9\s&\-\'\./]{1,49}$/.test(name)) {
+    return 'Brand Name contains invalid characters. Only letters, numbers, spaces, and standard punctuation (&, -, \', ., /) are allowed.';
   }
   return null;
 };
