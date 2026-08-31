@@ -59,18 +59,23 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
+        padding: '24px',
         boxSizing: 'border-box'
       }}
     >
+      <style>{`
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
       <div 
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          maxWidth: '850px',
-          width: '100%',
-          maxHeight: '85vh',
+          borderRadius: '18px',
+          maxWidth: '920px',
+          width: '92%',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -82,7 +87,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         {/* Header Banner */}
         <div style={{
           background: 'linear-gradient(135deg, #047857 0%, #0f766e 100%)',
-          padding: '18px 24px',
+          padding: '20px 28px',
           color: '#ffffff',
           display: 'flex',
           justifyContent: 'space-between',
@@ -102,7 +107,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
             }}>
               Registration Ticket Review
             </span>
-            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '6px 0 0 0' }}>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '6px 0 0 0' }}>
               {registration.businessName || 'Business Registration'}
             </h2>
           </div>
@@ -122,12 +127,24 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
             }}
             title="Close"
           >
-            <X size={18} />
+            <X size={20} />
           </button>
         </div>
 
-        {/* Content Body in Landscape Layout */}
-        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '24px' }}>
+        {/* Content Body with hidden scrollbar */}
+        <div 
+          className="hide-scrollbar"
+          style={{ 
+            padding: '28px', 
+            overflowY: 'auto', 
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            flex: 1, 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', 
+            gap: '24px' 
+          }}
+        >
           
           {/* Left Column: Tracking Card & Actions */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'space-between' }}>
@@ -284,7 +301,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         {/* Footer */}
         <div style={{
           backgroundColor: '#f8fafc',
-          padding: '12px 24px',
+          padding: '14px 28px',
           borderTop: '1px solid #e2e8f0',
           display: 'flex',
           justifyContent: 'space-between',
@@ -338,13 +355,13 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
           <button 
             onClick={onClose} 
             style={{
-              padding: '8px 20px',
+              padding: '10px 24px',
               backgroundColor: '#e2e8f0',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '10px',
               color: '#334155',
               fontWeight: 700,
-              fontSize: '12.5px',
+              fontSize: '13px',
               cursor: 'pointer',
               transition: 'background 0.15s ease'
             }}
