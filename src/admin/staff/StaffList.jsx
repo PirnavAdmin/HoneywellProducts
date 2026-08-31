@@ -9,86 +9,6 @@ import '../catalog/adminModule.css';
 
 const BASE_URL = `${getApiDomain()}/api`;
 
-const DEFAULT_STAFF_DIRECTORY = [
-  {
-    id: '1',
-    employeeId: 'EMP-0001',
-    name: 'Ramesh Kumar',
-    email: 'ramesh@shyamagro.com',
-    mobile: '9987650002',
-    role: 'advisory',
-    permissions: ['Dashboard', 'Customers', 'Call History', 'Reports'],
-    isActive: true,
-    status: 'Active'
-  },
-  {
-    id: '2',
-    employeeId: 'EMP-0002',
-    name: 'Sunita Sharma',
-    email: 'sunita@shyamagro.com',
-    mobile: '9876500002',
-    role: 'sales',
-    permissions: ['Dashboard', 'Catalog', 'Orders', 'Invoices', 'Customers', 'Marketing'],
-    isActive: true,
-    status: 'Active'
-  },
-  {
-    id: '3',
-    employeeId: 'EMP-0003',
-    name: 'Amit Patel',
-    email: 'amit@shyamagro.com',
-    mobile: '9876500003',
-    role: 'inventory',
-    permissions: ['Dashboard', 'Catalog', 'Stockupdates', 'Suppliers'],
-    isActive: true,
-    status: 'Active'
-  },
-  {
-    id: '5',
-    employeeId: 'EMP-0005',
-    name: 'Vineetha Vinni',
-    email: 'vineethavinni70@gmail.com',
-    mobile: '9876543210',
-    role: 'manager',
-    permissions: ['Dashboard'],
-    isActive: true,
-    status: 'Active'
-  },
-  {
-    id: '6',
-    employeeId: 'EMP-0006',
-    name: 'Nihan Raj',
-    email: 'nihan2002@gmail.com',
-    mobile: '8567904643',
-    role: 'sales',
-    permissions: ['Dashboard', 'Catalog', 'Orders', 'Invoices', 'Customers', 'Marketing'],
-    isActive: true,
-    status: 'Active'
-  },
-  {
-    id: '7',
-    employeeId: 'EMP-0007',
-    name: 'dheeran sanith',
-    email: 'dheeransanith@gmail.com',
-    mobile: '7645354242',
-    role: 'manager',
-    permissions: ['Dashboard'],
-    isActive: true,
-    status: 'Active'
-  },
-  {
-    id: '8',
-    employeeId: 'EMP-0008',
-    name: 'Neethu Kapoor',
-    email: 'neethu1134@gmail.com',
-    mobile: '9876543210',
-    role: 'sales',
-    permissions: ['Dashboard', 'Catalog', 'Orders', 'Invoices', 'Customers', 'Marketing'],
-    isActive: true,
-    status: 'Active'
-  }
-];
-
 const getHeaders = () => {
   const headers = {
     'ngrok-skip-browser-warning': 'true',
@@ -132,27 +52,6 @@ const formatPhoneNumber = (phone) => {
   return `+91 ${digits}`;
 };
 
-const formatModuleName = (mod) => {
-  if (!mod) return '';
-  const str = String(mod).trim();
-  const lower = str.toLowerCase();
-  if (lower === 'dashboard') return 'Dashboard';
-  if (lower === 'catalog') return 'Catalog';
-  if (lower === 'customers') return 'Customers';
-  if (lower === 'orders') return 'Orders';
-  if (lower === 'invoices') return 'Invoices';
-  if (lower === 'marketing') return 'Marketing';
-  if (lower === 'stockupdates') return 'Stockupdates';
-  if (lower === 'suppliers') return 'Suppliers';
-  if (lower === 'call history') return 'Call History';
-  if (lower === 'reports') return 'Reports';
-  if (lower === 'brands') return 'Brands';
-  if (lower === 'blogs') return 'Blogs';
-  if (lower === 'settings') return 'Settings';
-  if (lower === 'coins converter') return 'Coins Converter';
-  return str.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
-};
-
 const StaffList = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -170,9 +69,8 @@ const StaffList = () => {
       const apiList = await getStaffList();
       const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
 
-      // Merge API list + local accounts + default demo staff
+      // Merge API staff with locally created staff
       const combined = [...apiList];
-      
       localAccounts.forEach(local => {
         const empId = String(local.employeeId || '').toLowerCase();
         const email = String(local.email || '').toLowerCase();
@@ -186,39 +84,20 @@ const StaffList = () => {
         }
       });
 
-      DEFAULT_STAFF_DIRECTORY.forEach(def => {
-        const empId = String(def.employeeId).toLowerCase();
-        const email = String(def.email).toLowerCase();
-        const exists = combined.some(item => {
-          const itemEmpId = String(item.employeeId || item.EmployeeId || '').toLowerCase();
-          const itemEmail = String(item.email || item.Email || '').toLowerCase();
-          return (empId && itemEmpId === empId) || (email && itemEmail === email);
-        });
-        if (!exists) {
-          combined.push(def);
-        }
-      });
-
       const ROLE_DEFAULTS = {
-        advisory: ['Dashboard', 'Customers', 'Call History', 'Reports'],
-        sales: ['Dashboard', 'Catalog', 'Orders', 'Invoices', 'Customers', 'Marketing'],
-        inventory: ['Dashboard', 'Catalog', 'Stockupdates', 'Suppliers'],
-        manager: ['Dashboard'],
-        admin: ['Dashboard', 'Catalog', 'Customers', 'Orders', 'Stockupdates', 'Marketing', 'Brands', 'Blogs', 'Settings', 'Suppliers', 'Coins Converter', 'Call History', 'Invoices', 'Reports'],
-        staff: ['Dashboard'],
+        advisory: ['dashboard', 'customers', 'call history', 'reports'],
+        sales: ['dashboard', 'catalog', 'orders', 'invoices', 'customers', 'marketing'],
+        inventory: ['dashboard', 'catalog', 'stockupdates', 'suppliers'],
+        admin: ['dashboard', 'catalog', 'customers', 'orders', 'stockupdates', 'marketing', 'brands', 'blogs', 'settings', 'suppliers', 'coins converter', 'call history', 'invoices', 'reports'],
+        staff: ['dashboard'],
       };
 
       // Map permissions and properties
       const mappedList = await Promise.all(combined.map(async (staff) => {
-        let permissions = Array.isArray(staff.permissions) ? staff.permissions.map(formatModuleName) : [];
+        let permissions = Array.isArray(staff.permissions) ? staff.permissions : [];
         const actualId = staff.id ?? staff.Id ?? staff.employeeId;
         const role = (staff.role || staff.Role || 'staff').toLowerCase();
-        
-        let rawEmpId = staff.employeeId || staff.EmployeeId || '';
-        if (!rawEmpId && actualId) {
-          rawEmpId = `EMP-${String(actualId).padStart(4, '0')}`;
-        }
-        const empIdVal = rawEmpId.replace(/^#+/, '');
+        const empIdVal = staff.employeeId || staff.EmployeeId || (actualId ? `EMP-${String(actualId).padStart(4, '0')}` : 'N/A');
 
         if (permissions.length === 0 && actualId) {
           try {
@@ -228,7 +107,7 @@ const StaffList = () => {
               const permsData = unwrapList(permsJson);
               const allowed = permsData
                 .filter(p => p.isAllowed ?? p.IsAllowed ?? false)
-                .map(p => formatModuleName(p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName)) || ''));
+                .map(p => p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName)) || '');
               permissions = allowed.length > 0 ? allowed : (ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff);
             } else {
               permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
@@ -264,7 +143,7 @@ const StaffList = () => {
     } catch (err) {
       console.warn('Staff fetch error handled:', err);
       const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-      setStaffList(localAccounts.length > 0 ? localAccounts : DEFAULT_STAFF_DIRECTORY);
+      setStaffList(localAccounts);
     } finally {
       setLoading(false);
     }
@@ -538,8 +417,7 @@ const StaffList = () => {
               ) : pagedStaff.map((staff) => {
                 const name = staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A';
                 const staffId = staff.id ?? staff.Id ?? staff.employeeId ?? 'N/A';
-                const rawEmpCode = staff.employeeId || (staffId !== 'N/A' ? `EMP-${String(staffId).padStart(4, '0')}` : 'N/A');
-                const employeeCode = String(rawEmpCode).replace(/^#+/, '');
+                const employeeCode = staff.employeeId || (staffId !== 'N/A' ? `EMP-${String(staffId).padStart(4, '0')}` : 'N/A');
                 const roleName = staff.role || staff.Role ? String(staff.role || staff.Role).toUpperCase() : 'STAFF';
                 const statusStr = staff.status || (staff.isActive ? 'Active' : 'Inactive');
                 const perms = Array.isArray(staff.permissions) ? staff.permissions : [];
@@ -591,10 +469,11 @@ const StaffList = () => {
                               padding: '2px 8px', 
                               borderRadius: '6px', 
                               fontWeight: 600, 
+                              textTransform: 'capitalize',
                               lineHeight: '1.4'
                             }}
                           >
-                            {formatModuleName(p)}
+                            {p}
                           </span>
                         ))}
                         {perms.length === 0 && <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>No permissions</span>}
