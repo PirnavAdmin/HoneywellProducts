@@ -8,7 +8,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import productsHeroImage from '../assets/images/products-hero.png';
 
 const categoryFilters = [
-  ['CCTV', ['cctv-cameras']], ['IP Camera', ['ip-cameras']], ['Analog Camera', ['cctv-cameras', 'dome-cameras', 'bullet-cameras']], ['Dome', ['dome-cameras']], ['Bullet', ['bullet-cameras']], ['PTZ', ['ptz-cameras']], ['Wi-Fi', ['wifi-cameras']], ['4G', ['4g-cameras']], ['Solar', ['solar-cameras']], ['NVR', ['nvr']], ['DVR', ['dvr']], ['Storage', ['surveillance-storage']], ['Networking', ['networking']], ['Accessories', ['cctv-accessories']],
+  ['CCTV', ['cctv-cameras']], ['IP Camera', ['ip-cameras']], ['Analog Camera', ['cctv-cameras', 'dome-cameras', 'bullet-cameras']], ['Dome', ['dome-cameras']], ['Bullet', ['bullet-cameras']], ['PTZ', ['ptz-cameras']], ['Wi-Fi', ['wifi-cameras']], ['4G', ['4g-cameras']], ['Solar Security', ['solar-cameras']], ['Solar Panels', ['solar-panels']], ['Solar Inverters', ['solar-inverters']], ['Solar Batteries', ['solar-batteries']], ['Solar Accessories', ['solar-controllers']], ['NVR', ['nvr']], ['DVR', ['dvr']], ['Storage', ['surveillance-storage']], ['Networking', ['networking']], ['Accessories', ['cctv-accessories']],
 ];
 const filterGroups = [
   { key: 'category', label: 'Category', items: categoryFilters.map(([label]) => label) },
