@@ -86,16 +86,28 @@ const InvoicesList = () => {
       const parseCurrencyValue = (val) => {
         if (typeof val === 'number') return val;
         if (!val) return 0;
-        const clean = String(val).replace(/[^0-9.]/g, '');
-        return Number(clean) || 0;
+        let str = String(val).trim();
+        str = str.replace(/^(rs\.?|inr|₹)\s*/i, '');
+        str = str.replace(/,/g, '');
+        str = str.replace(/[^0-9.]/g, '');
+        return Number(str) || 0;
       };
 
-      const finalAmountNum = order.finalAmount !== undefined ? Number(order.finalAmount) : parseCurrencyValue(order.billed);
-      const subtotalNum = order.subtotal !== undefined ? Number(order.subtotal) : (finalAmountNum / 1.18);
-      const discountNum = Number(order.discountAmount || 0);
-      const shippingNum = Number(order.shippingFee || 0);
+      const finalAmountNum = order.totalAmount !== undefined ? Number(order.totalAmount) : (order.finalAmount !== undefined ? Number(order.finalAmount) : parseCurrencyValue(order.billed));
+
+      const itemsList = Array.isArray(order.items) && order.items.length > 0 ? order.items : [];
+      const computedItemsSubtotal = itemsList.reduce((acc, item) => {
+        const itemPrice = item.priceNum !== undefined ? Number(item.priceNum) : parseCurrencyValue(item.price);
+        const itemQty = Number(item.quantity || 1);
+        return acc + (itemPrice * itemQty);
+      }, 0);
+
+      const subtotalNum = order.subTotal !== undefined ? Number(order.subTotal) : (order.subtotal !== undefined ? Number(order.subtotal) : (computedItemsSubtotal > 0 ? computedItemsSubtotal : (finalAmountNum / 1.18)));
+      const discountNum = Number(order.discountAmount || order.discount || 0);
+      const shippingNum = Number(order.shippingFee || order.shippingCharge || 0);
       const netTaxableNum = Math.max(0, subtotalNum - discountNum);
-      const gstAmountNum = order.gstAmount !== undefined ? Number(order.gstAmount) : (netTaxableNum * 0.18);
+      const gstAmountNum = order.taxAmount !== undefined ? Number(order.taxAmount) : (order.gstAmount !== undefined ? Number(order.gstAmount) : (netTaxableNum * 0.18));
+      const grandTotalNum = finalAmountNum > 0 ? finalAmountNum : (netTaxableNum + gstAmountNum + shippingNum);
       const cgstNum = gstAmountNum / 2;
       const sgstNum = gstAmountNum / 2;
 
@@ -112,7 +124,7 @@ const InvoicesList = () => {
         document.body.appendChild(printIframe);
       }
 
-      const itemsHtml = (order.items || []).map((item, idx) => {
+      const itemsHtml = itemsList.map((item, idx) => {
         const itemPrice = item.priceNum !== undefined ? Number(item.priceNum) : parseCurrencyValue(item.price);
         const itemQty = Number(item.quantity || 1);
         const itemSubtotal = itemPrice * itemQty;
@@ -145,8 +157,9 @@ const InvoicesList = () => {
         }
       };
 
-      const isPaid = (order.paymentStatus || '').toLowerCase() === 'paid';
-      const isCancelled = (order.paymentStatus || '').toLowerCase() === 'cancelled';
+      const currentStatus = order.paymentStatus || order.status || 'Unpaid';
+      const isPaid = currentStatus.toLowerCase() === 'paid';
+      const isCancelled = currentStatus.toLowerCase() === 'cancelled';
 
       const docTitle = isPaid ? 'TAX INVOICE' : isCancelled ? 'CANCELLED INVOICE' : 'PROFORMA INVOICE';
       const docSubTitle = isPaid ? 'Original for Recipient' : isCancelled ? 'Void / Cancelled Document' : 'Proforma / Quotation - Payment Pending';
@@ -441,8 +454,8 @@ const InvoicesList = () => {
                 <div class="info-block">
                   <div class="info-block-title">Payment & Settlement Status</div>
                   <div class="info-row"><span class="info-label">Payment Method:</span><span class="info-val">${order.paymentMethod || 'UPI / Bank Transfer'}</span></div>
-                  <div class="info-row"><span class="info-label">Payment Status:</span><span class="info-val" style="color: ${statusColor}; font-weight: 800;">${(order.paymentStatus || 'UNPAID').toUpperCase()} ${!isPaid && !isCancelled ? '(Payment Pending)' : ''}</span></div>
-                  <div class="info-row"><span class="info-label">Billing Currency:</span><span class="info-val">INR ₹${finalAmountNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                  <div class="info-row"><span class="info-label">Payment Status:</span><span class="info-val" style="color: ${statusColor}; font-weight: 800;">${currentStatus.toUpperCase()} ${!isPaid && !isCancelled ? '(Payment Pending)' : ''}</span></div>
+                  <div class="info-row"><span class="info-label">Billing Currency:</span><span class="info-val">INR ₹${grandTotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                 </div>
               </div>
 
@@ -504,7 +517,7 @@ const InvoicesList = () => {
                   <div class="total-line"><span>SGST (9%)</span><span>₹${sgstNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                   <div class="grand-total-line">
                     <span>Grand Total Due</span>
-                    <span>₹${finalAmountNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>₹${grandTotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                 </div>
               </div>

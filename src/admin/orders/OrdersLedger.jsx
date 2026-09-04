@@ -42,7 +42,8 @@ const resolveImageUrl = (url) => {
 export const formatCurrency = (amount) => {
   if (amount === null || amount === undefined) return 'INR 0';
   if (typeof amount === 'string' && amount.trim().startsWith('INR')) return amount;
-  const num = typeof amount === 'number' ? amount : parseFloat(String(amount || 0).replace(/[^0-9.]/g, ''));
+  let str = String(amount || 0).trim().replace(/^(rs\.?|inr|₹)\s*/i, '').replace(/,/g, '').replace(/[^0-9.]/g, '');
+  const num = typeof amount === 'number' ? amount : parseFloat(str);
   return `INR ${(isNaN(num) ? 0 : num).toLocaleString('en-IN')}`;
 };
 
@@ -125,7 +126,8 @@ export const PaymentStatusBadge = ({ paymentStatus }) => {
 export const parseAmount = (val) => {
   if (typeof val === 'number') return val;
   if (!val) return 0;
-  const num = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+  let str = String(val).trim().replace(/^(rs\.?|inr|₹)\s*/i, '').replace(/,/g, '').replace(/[^0-9.]/g, '');
+  const num = parseFloat(str);
   return isNaN(num) ? 0 : num;
 };
 
