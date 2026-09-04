@@ -29,11 +29,15 @@ import './ProductsForm.css';
 
 const resolveImageUrl = (url) => {
   if (!url) return '';
-  if (String(url).toLowerCase().includes('placeholder')) {
+  if (String(url).toLowerCase().includes('placeholder') || String(url).includes('honeywell-products-logo.png')) {
     return '/honeywell-products-logo.png';
   }
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/honeywell-products-logo.png')) {
     return url;
+  }
+  if (url.includes('/uploads/')) {
+    const uploadPath = url.slice(url.indexOf('/uploads/'));
+    return `${getApiDomain().replace(/\/$/, '')}${uploadPath}`;
   }
   return `${getApiDomain().replace(/\/$/, '')}/${url.replace(/^\/+/, '')}`;
 };

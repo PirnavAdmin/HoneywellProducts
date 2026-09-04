@@ -36,8 +36,11 @@ api.interceptors.request.use((config) => {
 /** Resolve a relative image path to a full URL */
 const resolveImageUrl = (url) => {
   if (!url) return '';
-  if (String(url).toLowerCase().includes('placeholder')) {
+  if (String(url).toLowerCase().includes('placeholder') || String(url).includes('honeywell-products-logo.png')) {
     return '/honeywell-products-logo.png';
+  }
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/honeywell-products-logo.png') || url.startsWith('/admin-') || url.startsWith('/favicon')) {
+    return url;
   }
   if (url.includes('/uploads/')) {
     const uploadPath = url.slice(url.indexOf('/uploads/'));
@@ -183,9 +186,17 @@ export const fetchCategories = async () => {
 };
 
 export const fetchCategory = async (id) => {
-  const response = await api.get(`/api/Category/${id}`);
-  const item = unwrapItem(response);
-  return mapCategoryFromApi(item);
+  try {
+    const response = await api.get(`/api/Category/${id}`);
+    const item = unwrapItem(response);
+    return mapCategoryFromApi(item);
+  } catch (err) {
+    console.warn(`GET /api/Category/${id} unavailable (${err.message}), falling back to category list search.`);
+    const categories = await fetchCategories();
+    const found = categories.find((c) => String(c.id) === String(id));
+    if (found) return found;
+    return mapCategoryFromApi({ id });
+  }
 };
 
 export const saveCategory = async (category) => {
@@ -261,7 +272,11 @@ export const saveCategory = async (category) => {
 };
 
 export const deleteCategory = async (id) => {
-  await api.delete(`/api/Category/${id}`);
+  try {
+    await api.delete(`/api/Category/${id}`);
+  } catch (err) {
+    console.warn(`DELETE /api/Category/${id} failed:`, err.message);
+  }
 };
 
 // ─── Subcategory API ──────────────────────────────────────────────────────────
@@ -296,7 +311,7 @@ export const deleteSubcategory = async (id) => {
 
 export const fetchProducts = async (categories = [], subcategories = []) => {
   try {
-    const response = await api.get('/api/Catalog/products');
+    const response = await api.get('/api/products');
     const list = unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
     if (list.length > 0) saveProducts(list);
     return list.length > 0 ? list : getProducts();
@@ -314,13 +329,18 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
 
 export const fetchProduct = async (id, categories = [], subcategories = []) => {
   try {
-    const response = await api.get(`/api/Catalog/products/${id}`);
+    const response = await api.get(`/api/products/${id}`);
     return mapProductFromApi(unwrapItem(response), categories, subcategories);
   } catch {
-    const all = getProducts();
-    const found = all.find((p) => String(p.id) === String(id));
-    if (found) return found;
-    throw new Error('Product not found');
+    try {
+      const response = await api.get(`/api/Products/${id}`);
+      return mapProductFromApi(unwrapItem(response), categories, subcategories);
+    } catch {
+      const all = getProducts();
+      const found = all.find((p) => String(p.id) === String(id));
+      if (found) return found;
+      throw new Error('Product not found');
+    }
   }
 };
 
@@ -388,7 +408,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null) =>
   try {
     const response = await api({
       method: isEditing ? 'PUT' : 'POST',
-      url: isEditing ? `/api/Catalog/products/${product.id}` : '/api/Catalog/products',
+      url: isEditing ? `/api/products/${product.id}` : '/api/products',
       data: fd,
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -405,7 +425,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null) =>
 
 export const deleteProduct = async (id) => {
   try {
-    await api.delete(`/api/Catalog/products/${id}`);
+    await api.delete(`/api/products/${id}`);
   } catch (err) {
     console.warn('API error deleting product, removing locally:', err.message);
   }

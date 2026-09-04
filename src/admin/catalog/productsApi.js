@@ -28,8 +28,11 @@ export const computeStockStatus = (stockVal, reorderVal) => {
 /** Resolve a relative image path to a full URL */
 export const resolveImageUrl = (url) => {
   if (!url) return '';
-  if (String(url).toLowerCase().includes('placeholder')) {
+  if (String(url).toLowerCase().includes('placeholder') || String(url).includes('honeywell-products-logo.png')) {
     return '/honeywell-products-logo.png';
+  }
+  if (url.startsWith('data:') || url.startsWith('blob:') || url.startsWith('/honeywell-products-logo.png') || url.startsWith('/admin-') || url.startsWith('/favicon')) {
+    return url;
   }
   if (url.includes('/uploads/')) {
     const uploadPath = url.slice(url.indexOf('/uploads/'));
