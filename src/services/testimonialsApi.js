@@ -19,6 +19,9 @@ const getHeaders = () => {
 
 export const resolveImageUrl = (url) => {
   if (!url) return '';
+  if (String(url).toLowerCase().includes('placeholder')) {
+    return '/honeywell-products-logo.png';
+  }
   if (url.startsWith('data:')) return url;
   if (url.includes('/uploads/')) {
     const uploadPath = url.slice(url.indexOf('/uploads/'));

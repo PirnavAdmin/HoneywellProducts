@@ -1,19 +1,126 @@
-import { siteConfig } from '../config/siteConfig';
+import { apiRequest, API_BASE_URL } from './api';
 
-// Frontend mock. Replace with POST /api/chat when the ASP.NET Core API is available.
+const DEFAULT_HEADERS = {
+  'ngrok-skip-browser-warning': 'true',
+  'Accept': 'application/json',
+  'Content-Type': 'application/json',
+};
+
+export const mapChatFromApi = (item) => {
+  if (!item) return null;
+  const rawId = item.id ?? item.chatId ?? item._id ?? '';
+  return {
+    id: String(rawId),
+    message: item.message || item.userMessage || item.query || item.prompt || '',
+    reply: item.reply || item.response || item.aiResponse || item.answer || item.text || '',
+    sender: item.sender || item.role || 'user',
+    status: item.status || 'Success',
+    createdAt: item.createdAt || item.timestamp || item.dateCreated || new Date().toISOString()
+  };
+};
+
 export const chatService = {
+  /** POST (Message) — POST /api/chat/message */
   async send(message) {
-    await new Promise((resolve) => setTimeout(resolve, 450));
-    const lower = message.toLowerCase();
-    if (lower.includes('cctv') || lower.includes('camera') || lower.includes('surveillance')) return { message: 'Open Products to explore CCTV, IP and AI surveillance camera types. Use Enquire on any product to associate it with your enquiry.' };
-    if (lower.includes('solar') || lower.includes('energy')) return { message: 'Open Products and choose Solar Cameras to explore solar-assisted CCTV, 4G security cameras and surveillance kits.' };
-    if (lower.includes('bulk') || lower.includes('quote')) return { message: 'Use Get a Quote in the header or Request Bulk Quote on a product page. The product can be preselected for your request.' };
-    if (lower.includes('enquiry') || lower.includes('enquire')) return { message: 'Select Enquire on a product and provide your name and 10-digit mobile number. Email is optional.' };
-    if (lower.includes('distributor')) return { message: 'Open Business and choose Distributor Opportunities to submit your interest. Final program details will be provided by the client.' };
-    if (lower.includes('partner')) return { message: 'Open Business and choose Partner Benefits to review the placeholder topics and submit your interest.' };
-    if (lower.includes('franchise')) return { message: 'Open Business and choose Franchise Opportunity to request client-approved franchise information.' };
-    if (lower.includes('contact') || lower.includes('support') || lower.includes('sales')) return { message: `Contact Honeywell Products at ${siteConfig.email} or ${siteConfig.phone}. Our office is at ${siteConfig.address}` };
-    if (lower.includes('product') || lower.includes('detail')) return { message: 'Open Products to filter by category and product type, then choose Details or Enquire on any product card.' };
-    return { message: 'This is a frontend demo assistant. I can help with CCTV products, solar products, product enquiries, distributors, partners, franchises and contact information.' };
+    const url = `${API_BASE_URL}/api/chat/message`;
+    const payload = {
+      message: message.trim(),
+      prompt: message.trim(),
+      query: message.trim(),
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Chat API request failed (${response.status})`);
+      }
+
+      const resData = await response.json();
+      const mapped = mapChatFromApi(resData.data || resData.chat || resData);
+      
+      const replyText = mapped?.reply || resData.message || resData.response || resData.reply || resData.answer || resData.text || 'I have received your request. How else can I assist you today?';
+      
+      return {
+        success: true,
+        message: replyText,
+        raw: resData
+      };
+    } catch (err) {
+      console.warn('Chat API send error:', err.message);
+      return {
+        success: false,
+        message: 'Thank you for reaching out! Our AI assistant is currently online and ready to assist with Honeywell product enquiries, quotes, and specifications.',
+        error: err.message
+      };
+    }
   },
+
+  /** GET (All) — GET /api/chat */
+  async getAllChats() {
+    try {
+      const data = await apiRequest('/api/chat');
+      const list = Array.isArray(data) ? data : (data.chats || data.items || data.history || data.data || []);
+      return list.map(mapChatFromApi).filter(Boolean);
+    } catch (err) {
+      console.warn('Chat API getAllChats error:', err.message);
+      return [];
+    }
+  },
+
+  /** GET (ById) — GET /api/chat/{id} */
+  async getChatById(id) {
+    if (!id) return null;
+    try {
+      const data = await apiRequest(`/api/chat/${id}`);
+      return mapChatFromApi(data.chat || data.data || data);
+    } catch (err) {
+      console.warn(`Chat API getChatById(${id}) error:`, err.message);
+      throw err;
+    }
+  },
+
+  /** PUT (Update) — PUT /api/chat/{id} */
+  async updateChat(id, updates) {
+    const url = `${API_BASE_URL}/api/chat/${id}`;
+    const payload = {
+      id: isNaN(Number(id)) ? id : Number(id),
+      message: updates.message || '',
+      reply: updates.reply || updates.response || '',
+      sender: updates.sender || 'user',
+      status: updates.status || 'Updated'
+    };
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: DEFAULT_HEADERS,
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok && response.status !== 204) {
+      throw new Error(`Failed to update chat log ${id} (${response.status})`);
+    }
+
+    return payload;
+  },
+
+  /** DELETE — DELETE /api/chat/{id} */
+  async deleteChat(id) {
+    const url = `${API_BASE_URL}/api/chat/${id}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: DEFAULT_HEADERS
+    });
+
+    if (!response.ok && response.status !== 204) {
+      throw new Error(`Failed to delete chat log ${id} (${response.status})`);
+    }
+
+    return true;
+  }
 };

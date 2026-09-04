@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Box, Users, ShoppingCart, Target, 
   FolderOpen, BarChart2, Settings, ChevronRight, ChevronDown, FileText, Boxes,
-  PhoneCall, FileSpreadsheet, Shield, MessageSquare, CreditCard, Ticket
+  PhoneCall, FileSpreadsheet, Shield, MessageSquare, CreditCard, Ticket, Mail
 } from 'lucide-react';
 import './AdminMenuBar.css';
 
@@ -86,6 +86,9 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   const hasAccess = (moduleName) => {
     if (moduleName === 'testimonials') return true;
     if (moduleName === 'tickets') return true;
+    if (moduleName === 'enquiries') return true;
+    if (moduleName === 'contact-submissions') return true;
+    if (moduleName === 'quotes') return true;
     if (moduleName === 'reports') return true;
     if (moduleName === 'staff') return userRole === 'super admin' || userRole === 'admin';
 
@@ -239,6 +242,57 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                   <div className="nav-left">
                     <div className="icon-box"><Ticket size={18} className="nav-icon" /></div>
                     <span className="nav-label-text">Tickets</span>
+                  </div>
+                </NavLink>
+              </li>
+            )}
+
+            {/* Enquiries */}
+            {hasAccess('enquiries') && (
+              <li>
+                <NavLink
+                  to="/admin/enquiries"
+                  className={({ isActive }) => isActive ? 'stroyka-nav-link active' : 'stroyka-nav-link'}
+                  data-tooltip="Enquiries"
+                  title={!expanded ? "Enquiries" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><MessageSquare size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Enquiries</span>
+                  </div>
+                </NavLink>
+              </li>
+            )}
+
+            {/* Contact Submissions */}
+            {hasAccess('contact-submissions') && (
+              <li>
+                <NavLink
+                  to="/admin/contact-submissions"
+                  className={({ isActive }) => isActive ? 'stroyka-nav-link active' : 'stroyka-nav-link'}
+                  data-tooltip="Contact Form"
+                  title={!expanded ? "Contact Form" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><Mail size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Contact Form</span>
+                  </div>
+                </NavLink>
+              </li>
+            )}
+
+            {/* Bulk Quotes */}
+            {hasAccess('quotes') && (
+              <li>
+                <NavLink
+                  to="/admin/quotes"
+                  className={({ isActive }) => isActive ? 'stroyka-nav-link active' : 'stroyka-nav-link'}
+                  data-tooltip="Bulk Quotes"
+                  title={!expanded ? "Bulk Quotes" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><FileSpreadsheet size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Bulk Quotes</span>
                   </div>
                 </NavLink>
               </li>

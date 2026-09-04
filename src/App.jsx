@@ -33,6 +33,9 @@ const Customer = lazy(() => import('./admin/customers/Customer'));
 const CallHistoryScreen = lazy(() => import('./admin/screens/CallHistoryScreen'));
 const ReportsScreen = lazy(() => import('./admin/reports/ReportsScreen'));
 const TicketsScreen = lazy(() => import('./admin/tickets/TicketsScreen'));
+const EnquiriesScreen = lazy(() => import('./admin/enquiries/EnquiriesScreen'));
+const ContactSubmissionsScreen = lazy(() => import('./admin/contact/ContactSubmissionsScreen'));
+const QuotesScreen = lazy(() => import('./admin/quotes/QuotesScreen'));
 const OrdersLedger = lazy(() => import('./admin/orders/OrdersLedger'));
 const TrackingOrder = lazy(() => import('./admin/orders/TrackingOrder'));
 const ShippingOrder = lazy(() => import('./admin/orders/ShippingOrder'));
@@ -93,6 +96,9 @@ export default function App() {
       <Route path="call-history" element={<CallHistoryScreen />} />
       <Route path="reports" element={<ReportsScreen />} />
       <Route path="tickets" element={<TicketsScreen />} />
+      <Route path="enquiries" element={<EnquiriesScreen />} />
+      <Route path="contact-submissions" element={<ContactSubmissionsScreen />} />
+      <Route path="quotes" element={<QuotesScreen />} />
       <Route path="orders" element={<OrdersLedger />} />
       <Route path="orders/list" element={<OrdersLedger />} />
       <Route path="orders/tracking" element={<TrackingOrder />} />

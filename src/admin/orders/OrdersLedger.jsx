@@ -19,13 +19,16 @@ import {
   Printer,
   Trash2
 } from 'lucide-react';
-import { getOrders, getOrder } from '../api/orders';
+import { getOrders, getOrder, getOrderInvoice, updateOrderStatus, deleteOrder } from '../api/orders';
 import { getApiDomain } from '../../utils/apiConfig';
 import { Pagination } from '../components/ActionButtons';
 import './adminOrders.css';
 
 const resolveImageUrl = (url) => {
   if (!url) return '';
+  if (String(url).toLowerCase().includes('placeholder')) {
+    return '/honeywell-products-logo.png';
+  }
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }
@@ -1096,12 +1099,8 @@ const OrdersLedger = () => {
                       onClick={async () => {
                         if (window.confirm(`Are you sure you want to delete Order #${order.id}?`)) {
                           try {
-                            const res = await fetch(`${getApiDomain()}/api/Orders/${order.id}`, { method: 'DELETE' });
-                            if (res.ok) {
-                              setOrders(prev => prev.filter(o => o.id !== order.id));
-                            } else {
-                              alert('Failed to delete order.');
-                            }
+                            await deleteOrder(order.id);
+                            setOrders(prev => prev.filter(o => o.id !== order.id));
                           } catch (err) {
                             alert(`Error: ${err.message}`);
                           }

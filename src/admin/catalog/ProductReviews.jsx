@@ -3,7 +3,9 @@ import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Save, Star, Trash2, PackagePlus } from 'lucide-react';
 import {
   fetchProductReviews,
+  fetchProductReviewById,
   createProductReview,
+  updateProductReview,
   deleteProductReview,
 } from './productsApi';
 import './adminModule.css';

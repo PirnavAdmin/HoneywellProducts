@@ -15,6 +15,9 @@ import './adminOrders.css';
 
 const resolveImageUrl = (url) => {
   if (!url) return '';
+  if (String(url).toLowerCase().includes('placeholder')) {
+    return '/honeywell-products-logo.png';
+  }
   if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
     return url;
   }

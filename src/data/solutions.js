@@ -15,13 +15,5 @@ export const applications = [
   ['construction-site', 'Construction Site', 'Temporary and remote perimeter visibility for active sites.', '4g-cameras'],
 ].map(([id, name, description, categoryId]) => ({ id, name, description, categoryId, image: applicationImages[id] }));
 
-export const solutions = [
-  { id: 'home-security', title: 'Home Security', description: 'A flexible approach to entrances, indoor rooms and outdoor areas.', application: 'Homes and apartments', categoryId: 'wifi-cameras', image: applicationImages.home },
-  { id: 'office-security', title: 'Office Security', description: 'Connected camera and recording options for modern workspaces.', application: 'Offices and professional spaces', categoryId: 'ip-cameras', image: applicationImages.office },
-  { id: 'retail-security', title: 'Retail Security', description: 'Surveillance planning for customer areas, stockrooms and tills.', application: 'Shops and retail stores', categoryId: 'cctv-cameras', image: applicationImages['retail-store'] },
-  { id: 'warehouse-security', title: 'Warehouse Security', description: 'Wide-area monitoring concepts for aisles, loading zones and perimeters.', application: 'Warehouses and logistics sites', categoryId: 'bullet-cameras', image: applicationImages.warehouse },
-  { id: 'factory-security', title: 'Factory Security', description: 'Scalable site visibility for industrial and operational environments.', application: 'Factories and industrial sites', categoryId: 'ptz-cameras', image: applicationImages.factory },
-  { id: 'outdoor-security', title: 'Outdoor Security', description: '4G and solar-assisted options for remote or hard-to-connect locations.', application: 'Farms, sites and perimeters', categoryId: 'solar-cameras', image: applicationImages.farm },
-];
-
-export const getSolutionById = (id) => solutions.find((solution) => solution.id === id);
+export const solutions = [];
+export const getSolutionById = () => null;

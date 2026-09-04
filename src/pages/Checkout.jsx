@@ -15,6 +15,9 @@ import {
   submitManualVerification
 } from '../services/paymentService';
 
+import { couponService } from '../services/couponService';
+import { orderService } from '../services/orderService';
+
 const formatPrice = (price) => `₹${price.toLocaleString('en-IN')}`;
 
 export default function Checkout() {
@@ -30,6 +33,7 @@ export default function Checkout() {
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pinCode, setPinCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Payment Selection
   const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' | 'Card' | 'Net Banking' | 'QR' | 'Manual Payment' | 'Cash on Delivery'
@@ -55,10 +59,32 @@ export default function Checkout() {
   const [qrDisplayMode, setQrDisplayMode] = useState('global'); // 'global' | 'order' | 'orderCode'
   const [qrData, setQrData] = useState(null);
 
-  // Status & Transaction Handling
-  const [submitting, setSubmitting] = useState(false);
-  const [activeTransactionId, setActiveTransactionId] = useState('');
+  // Coupon State
+  const [couponCodeInput, setCouponCodeInput] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [couponApplying, setCouponApplying] = useState(false);
+  const [couponMsg, setCouponMsg] = useState({ type: '', text: '' });
   const [paymentMessage, setPaymentMessage] = useState({ type: '', text: '' });
+
+  const handleApplyCoupon = async (e) => {
+    e.preventDefault();
+    if (!couponCodeInput.trim()) return;
+    setCouponApplying(true);
+    setCouponMsg({ type: '', text: '' });
+    try {
+      const res = await couponService.applyCoupon(couponCodeInput, total);
+      if (res.valid) {
+        setAppliedCoupon(res.coupon || { code: res.code });
+        setDiscountAmount(res.discountAmount || 0);
+        setCouponMsg({ type: 'success', text: res.message || `Coupon "${res.code}" applied!` });
+      }
+    } catch (err) {
+      setCouponMsg({ type: 'error', text: err.message || 'Invalid or expired coupon code.' });
+    } finally {
+      setCouponApplying(false);
+    }
+  };
 
   if (!items.length) return <Navigate to="/cart" replace />;
 
@@ -204,7 +230,28 @@ export default function Checkout() {
         // Call Complete Payment with real transaction ID
         const compRes = await completePayment(txnId);
         if (compRes && compRes.success !== false) {
-          setPaymentMessage({ type: 'success', text: compRes.message || 'Payment processed successfully!' });
+          // Post order live to POST /api/orders
+          try {
+            await orderService.create({
+              orderNumber: currentOrderId,
+              customerName,
+              email,
+              mobile,
+              address,
+              city,
+              state,
+              pinCode,
+              totalAmount: Math.max(0, total - discountAmount),
+              paymentMethod,
+              paymentStatus: 'Verified',
+              status: 'Processing',
+              items
+            });
+          } catch (orderErr) {
+            console.warn('Order creation note:', orderErr.message);
+          }
+
+          setPaymentMessage({ type: 'success', text: compRes.message || 'Payment processed and order submitted successfully!' });
           setTimeout(() => {
             clearCart();
             navigate('/order-success', { state: { reference: currentOrderId, status: initRes.paymentStatus || 'Success' } });
@@ -449,7 +496,14 @@ export default function Checkout() {
             <div className="checkout-products">
               {items.map((item) => (
                 <div key={item.id}>
-                  <img src={item.image} alt="" />
+                  <img
+                    src={(!item.image || String(item.image).toLowerCase().includes('placeholder')) ? '/honeywell-products-logo.png' : item.image}
+                    alt={item.name || ''}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/honeywell-products-logo.png';
+                    }}
+                  />
                   <span>
                     <strong>{item.name}</strong>
                     <small>Qty {item.quantity} × {item.priceLabel}</small>
@@ -460,7 +514,46 @@ export default function Checkout() {
             </div>
             <hr />
             <div><span>Total units</span><strong>{count}</strong></div>
-            <div className="summary-total"><span>Estimated total</span><strong>{formatPrice(total)}</strong></div>
+            <div><span>Subtotal</span><strong>{formatPrice(total)}</strong></div>
+
+            {/* Coupon Code Section */}
+            <div style={{ marginTop: '12px', marginBottom: '12px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Promo / Coupon Code</label>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  type="text"
+                  placeholder="Enter code (e.g. WELCOME10)"
+                  value={couponCodeInput}
+                  onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                  style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', textTransform: 'uppercase' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCoupon}
+                  disabled={couponApplying || !couponCodeInput.trim()}
+                  style={{ padding: '6px 12px', fontSize: '12px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  {couponApplying ? 'Applying...' : 'Apply'}
+                </button>
+              </div>
+              {couponMsg.text && (
+                <div style={{ fontSize: '11px', marginTop: '4px', color: couponMsg.type === 'error' ? '#ef4444' : '#16a34a', fontWeight: 500 }}>
+                  {couponMsg.text}
+                </div>
+              )}
+            </div>
+
+            {discountAmount > 0 && (
+              <div style={{ color: '#16a34a', fontWeight: 600 }}>
+                <span>Coupon Discount ({appliedCoupon?.code})</span>
+                <strong>- {formatPrice(discountAmount)}</strong>
+              </div>
+            )}
+
+            <div className="summary-total">
+              <span>Estimated total</span>
+              <strong>{formatPrice(Math.max(0, total - discountAmount))}</strong>
+            </div>
             <button className="button" form="checkout-form" disabled={submitting}>
               {submitting ? 'Processing Payment…' : <>Complete {paymentMethod} Order <ArrowRight /></>}
             </button>

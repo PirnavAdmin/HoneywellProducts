@@ -1,14 +1,45 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Search, X, ArrowRight, ShoppingBag } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Search, X, ArrowRight, ShoppingBag, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { products } from '../../data/products';
+import { productService } from '../../services/productService';
 import ProductCard from '../products/ProductCard';
 
 const quickChips = ['CCTV Camera', 'IP Camera', 'Solar Camera', 'NVR', 'PoE Switch', 'Accessories'];
 
 export default function SearchPanel({ open, onClose }) {
   const [query, setQuery] = useState('');
-  const results = useMemo(() => query.trim().length < 2 ? [] : products.filter((product) => [product.name, product.category, product.productType, product.description, ...(product.keywords || [])].join(' ').toLowerCase().includes(query.toLowerCase())), [query]);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!query.trim() || query.trim().length < 2) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    setLoading(true);
+
+    const timer = setTimeout(() => {
+      productService.search(query.trim())
+        .then((data) => {
+          if (isMounted) setResults(Array.isArray(data) ? data : []);
+        })
+        .catch((err) => {
+          console.error('Search API error:', err);
+          if (isMounted) setResults([]);
+        })
+        .finally(() => {
+          if (isMounted) setLoading(false);
+        });
+    }, 300);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -77,10 +108,14 @@ export default function SearchPanel({ open, onClose }) {
         {query.trim().length >= 2 && (
           <div className="search-results-section">
             <div className="search-results-meta">
-              <h2>{results.length > 0 ? `${results.length} result${results.length === 1 ? '' : 's'} found for "${query}"` : `No results found for "${query}"`}</h2>
+              <h2>{loading ? 'Searching live products...' : results.length > 0 ? `${results.length} result${results.length === 1 ? '' : 's'} found for "${query}"` : `No results found for "${query}"`}</h2>
             </div>
 
-            {results.length > 0 ? (
+            {loading ? (
+              <div style={{ padding: '3rem', textAlign: 'center' }}>
+                <Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} />
+              </div>
+            ) : results.length > 0 ? (
               <div className="product-grid search-results-grid">
                 {results.map((product) => (
                   <div key={product.id} onClick={onClose}>

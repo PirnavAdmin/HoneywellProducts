@@ -10,7 +10,15 @@ export default function ProductCard({ product }) {
   const compare = () => notify(`${product.name} added to your demo comparison list.`);
   return <article className="product-card">
     <Link className="product-image" to={`/products/${product.slug}`}>
-      <img src={product.image} alt={product.name} loading="lazy" />
+      <img
+        src={(!product.image || String(product.image).toLowerCase().includes('placeholder')) ? '/honeywell-products-logo.png' : product.image}
+        alt={product.name}
+        loading="lazy"
+        onError={(e) => {
+          e.target.onerror = null;
+          e.target.src = '/honeywell-products-logo.png';
+        }}
+      />
       <span>{product.category}</span>
     </Link>
 

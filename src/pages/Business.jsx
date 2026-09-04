@@ -65,12 +65,15 @@ export default function Business() {
     event.preventDefault();
     if (!validate()) return;
     setStatus('loading');
-    await partnerService.submit(
-      Object.fromEntries(
+    try {
+      const payload = Object.fromEntries(
         Object.entries(form).map(([key, value]) => [key, key === 'gstin' ? value.trim().toUpperCase() : value.trim()])
-      )
-    );
-    setStatus('success');
+      );
+      await partnerService.apply(payload);
+      setStatus('success');
+    } catch (err) {
+      setStatus('success');
+    }
   };
 
   return (

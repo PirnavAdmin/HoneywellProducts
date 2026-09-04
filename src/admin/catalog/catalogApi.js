@@ -36,6 +36,9 @@ api.interceptors.request.use((config) => {
 /** Resolve a relative image path to a full URL */
 const resolveImageUrl = (url) => {
   if (!url) return '';
+  if (String(url).toLowerCase().includes('placeholder')) {
+    return '/honeywell-products-logo.png';
+  }
   if (url.includes('/uploads/')) {
     const uploadPath = url.slice(url.indexOf('/uploads/'));
     return `${BASE_URL}${uploadPath}`;
@@ -175,52 +178,48 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
 // ─── Category API ─────────────────────────────────────────────────────────────
 
 export const fetchCategories = async () => {
-  try {
-    const response = await api.get('/api/Category');
-    const list = unwrapList(response).map(mapCategoryFromApi);
-    if (list.length > 0) saveCategories(list);
-    return list.length > 0 ? list : getCategories();
-  } catch {
-    try {
-      const response = await api.get('/api/Categories');
-      const list = unwrapList(response).map(mapCategoryFromApi);
-      if (list.length > 0) saveCategories(list);
-      return list.length > 0 ? list : getCategories();
-    } catch {
-      return getCategories();
-    }
-  }
+  const response = await api.get('/api/Category');
+  return unwrapList(response).map(mapCategoryFromApi);
 };
 
 export const fetchCategory = async (id) => {
-  try {
-    const response = await api.get(`/api/Category/${id}`);
-    const item = unwrapItem(response);
-    return mapCategoryFromApi(item);
-  } catch {
-    const all = await fetchCategories();
-    const found = all.find((c) => String(c.id) === String(id));
-    if (found) return found;
-    throw new Error('Category not found');
-  }
+  const response = await api.get(`/api/Category/${id}`);
+  const item = unwrapItem(response);
+  return mapCategoryFromApi(item);
 };
 
 export const saveCategory = async (category) => {
   const isEditing = Boolean(category.id);
 
   const fd = new FormData();
+  if (isEditing) {
+    fd.append('Id', String(category.id));
+    fd.append('id', String(category.id));
+  }
   fd.append('Name', category.name || '');
+  fd.append('name', category.name || '');
+  fd.append('CategoryName', category.name || '');
+  fd.append('categoryName', category.name || '');
   fd.append('Description', category.description || '');
+  fd.append('description', category.description || '');
   fd.append('Slug', category.slug || '');
+  fd.append('slug', category.slug || '');
   fd.append('DisplayOrder', category.displayOrder !== undefined && category.displayOrder !== null && category.displayOrder !== '' ? String(category.displayOrder) : '0');
+  fd.append('displayOrder', category.displayOrder !== undefined && category.displayOrder !== null && category.displayOrder !== '' ? String(category.displayOrder) : '0');
   fd.append('IsActive', category.status === 'Active' ? 'true' : 'false');
+  fd.append('isActive', category.status === 'Active' ? 'true' : 'false');
   fd.append('MetaTitle', category.metaTitle || '');
+  fd.append('metaTitle', category.metaTitle || '');
   fd.append('MetaDescription', category.metaDescription || '');
+  fd.append('metaDescription', category.metaDescription || '');
 
   if (category.imageFile) {
     fd.append('ImageFile', category.imageFile);
+    fd.append('Image', category.imageFile);
+    fd.append('file', category.imageFile);
   } else if (category.imageUrl || category.image) {
     fd.append('ImageUrl', category.imageUrl || category.image || '');
+    fd.append('imageUrl', category.imageUrl || category.image || '');
   }
 
   try {
@@ -231,23 +230,38 @@ export const saveCategory = async (category) => {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
 
-    const saved = mapCategoryFromApi(unwrapItem(response));
-    upsertCategory(saved);
-    return saved;
+    const saved = unwrapItem(response);
+    return mapCategoryFromApi(saved);
   } catch (err) {
-    console.warn('API error saving category, persisting locally:', err.message);
-    return upsertCategory(category);
+    console.warn('FormData category request failed, attempting JSON payload fallback:', err.message);
   }
+
+  // Standard JSON payload fallback
+  const payload = {
+    id: isEditing ? Number(category.id) || category.id : undefined,
+    name: category.name || '',
+    categoryName: category.name || '',
+    description: category.description || '',
+    slug: category.slug || '',
+    displayOrder: Number(category.displayOrder || 0),
+    isActive: category.status === 'Active',
+    metaTitle: category.metaTitle || '',
+    metaDescription: category.metaDescription || '',
+    imageUrl: category.imageUrl || (typeof category.image === 'string' && !category.image.startsWith('data:') ? category.image : ''),
+  };
+
+  const response = await api({
+    method: isEditing ? 'PUT' : 'POST',
+    url: isEditing ? `/api/Category/${category.id}` : '/api/Category',
+    data: payload,
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  return mapCategoryFromApi(unwrapItem(response));
 };
 
 export const deleteCategory = async (id) => {
-  try {
-    await api.delete(`/api/Category/${id}`);
-  } catch (err) {
-    console.warn('API error deleting category, removing locally:', err.message);
-  }
-  const filtered = getCategories().filter((c) => String(c.id) !== String(id));
-  saveCategories(filtered);
+  await api.delete(`/api/Category/${id}`);
 };
 
 // ─── Subcategory API ──────────────────────────────────────────────────────────
