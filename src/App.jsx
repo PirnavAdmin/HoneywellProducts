@@ -87,15 +87,18 @@ const CoinsConverterScreen = lazy(() => import('./admin/coins/CoinsConverterScre
 const FormSettings = lazy(() => import('./admin/settings/FormSettings'));
 const TableOfContent = lazy(() => import('./admin/settings/TableOfContent'));
 const Users = lazy(() => import('./admin/screens/Users'));
-// Admin Profile & Config
+const PurchaseIndentList = lazy(() => import('./admin/purchaseIndent/PurchaseIndentList'));
+const AddPurchaseIndent = lazy(() => import('./admin/purchaseIndent/AddPurchaseIndent'));
+const PurchaseOrdersList = lazy(() => import('./admin/purchaseOrders/PurchaseOrdersList'));
+const CreatePurchaseOrder = lazy(() => import('./admin/purchaseOrders/CreatePurchaseOrder'));
+const PurchaseReturnsList = lazy(() => import('./admin/purchaseReturns/PurchaseReturnsList'));
+const CreatePurchaseReturn = lazy(() => import('./admin/purchaseReturns/CreatePurchaseReturn'));
+const WarrantyReturnsList = lazy(() => import('./admin/returns/WarrantyReturnsList'));
 const AdminProfile = lazy(() => import('./admin/screens/AdminProfile'));
 const AdminAccountSettings = lazy(() => import('./admin/screens/AdminAccountSettings'));
 const ContactCard = lazy(() => import('./admin/screens/ContactCard'));
 const FooterConfig = lazy(() => import('./admin/screens/FooterConfig'));
 const DescriptionManager = lazy(() => import('./admin/screens/DescriptionManager'));
-
-// New IMS Admin Pages
-const WarrantyReturnsList = lazy(() => import('./admin/returns/WarrantyReturnsList'));
 
 function LoadingScreen() {
   return <div className="route-loading" role="status"><span /><p>Loading experience…</p></div>;
@@ -114,6 +117,20 @@ export default function App() {
             <Route path="admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
+
+              {/* Purchase & Procurement Routes */}
+              <Route path="purchase/indents" element={<PurchaseIndentList />} />
+              <Route path="purchase/indents/create" element={<AddPurchaseIndent />} />
+              <Route path="purchase/orders" element={<PurchaseOrdersList />} />
+              <Route path="purchase/orders/create" element={<CreatePurchaseOrder />} />
+              <Route path="purchase/goods-receipt" element={<PurchaseOrdersList />} />
+
+              <Route path="purchase-indent" element={<PurchaseIndentList />} />
+              <Route path="purchase-indent/add" element={<AddPurchaseIndent />} />
+              <Route path="purchase-orders" element={<PurchaseOrdersList />} />
+              <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
+              <Route path="purchase-returns" element={<PurchaseReturnsList />} />
+              <Route path="purchase-returns/create" element={<CreatePurchaseReturn />} />
               <Route path="catalog" element={<Navigate to="categories" replace />} />
               <Route path="catalog/categories" element={<CategoriesList />} />
               <Route path="catalog/category" element={<Category />} />

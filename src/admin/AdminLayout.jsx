@@ -76,6 +76,9 @@ const AdminLayout = () => {
     if (path === 'dashboard' || path === 'profile' || path === 'account-settings' || path === 'testimonials' || path === 'tickets' || path === 'reports' || path === '') return true;
 
     let moduleKey = path;
+    if (path === 'purchase-indent') moduleKey = 'purchase indent';
+    if (path === 'purchase-orders') moduleKey = 'purchase order';
+    if (path === 'purchase-returns') moduleKey = 'purchase return';
     if (path === 'sales-returns') moduleKey = 'sales return';
     if (path === 'stock-updates' || path === 'stock') moduleKey = 'stockupdates';
     if (path === 'coins') moduleKey = 'coins converter';
@@ -96,7 +99,7 @@ const AdminLayout = () => {
     }
 
     if (userRole === 'manager' || userRole === 'staff') {
-      const allowed = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "reports"];
+      const allowed = ["dashboard", "catalog", "customers", "orders", "purchase indent", "purchase order", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "reports"];
       return allowed.some(p => p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '') === normKey);
     }
     return false;
