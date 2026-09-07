@@ -86,10 +86,9 @@ export default function Header() {
       </div>
 
       <header className={`header ${compact ? 'compact' : ''}`}>
-        <Brand />
+        <Brand onClick={closeMenus} />
 
         <nav aria-label="Main navigation" ref={navRef}>
-          <NavLink to="/" end onClick={closeMenus}>Home</NavLink>
 
           {/* Products Mega Menu Item */}
           <div 
@@ -192,9 +191,8 @@ export default function Header() {
       {/* Mobile Navigation Drawer */}
       <div className={`mobile-drawer ${menuOpen ? 'open' : ''}`} aria-hidden={!menuOpen}>
         <button className="icon-button drawer-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X /></button>
-        <Brand />
+        <Brand onClick={closeMenus} />
         <nav aria-label="Mobile navigation" className="mobile-nav-accordion">
-          <NavLink to="/" onClick={closeMenus}>Home</NavLink>
 
           {/* Mobile Accordion: Products */}
           <div className="mobile-acc-item">

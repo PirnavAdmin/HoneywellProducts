@@ -125,18 +125,13 @@ export default function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
 
-<<<<<<< HEAD
               {/* Purchase & Procurement Routes */}
-=======
-              {/* Purchase IMS */}
->>>>>>> 3c16d128d18ee589eb719f1cff04b855bcf40e98
               <Route path="purchase/indents" element={<PurchaseIndentsList />} />
               <Route path="purchase/indents/create" element={<PurchaseIndentForm />} />
               <Route path="purchase/orders" element={<PurchaseOrdersList />} />
               <Route path="purchase/orders/create" element={<PurchaseOrderForm />} />
               <Route path="purchase/goods-receipt" element={<GoodsReceiptList />} />
 
-<<<<<<< HEAD
               <Route path="purchase-indent" element={<PurchaseIndentList />} />
               <Route path="purchase-indent/add" element={<AddPurchaseIndent />} />
               <Route path="purchase-orders" element={<LegacyPurchaseOrdersList />} />
@@ -144,8 +139,6 @@ export default function App() {
               <Route path="purchase-returns" element={<PurchaseReturnsList />} />
               <Route path="purchase-returns/create" element={<CreatePurchaseReturn />} />
 
-=======
->>>>>>> 3c16d128d18ee589eb719f1cff04b855bcf40e98
               <Route path="catalog" element={<Navigate to="categories" replace />} />
               <Route path="catalog/categories" element={<CategoriesList />} />
               <Route path="catalog/category" element={<Category />} />
@@ -171,10 +164,7 @@ export default function App() {
               <Route path="orders/shipping" element={<ShippingOrder />} />
 
               <Route path="returns" element={<AdminReturns />} />
-<<<<<<< HEAD
               <Route path="sales-returns" element={<AdminReturns />} />
-=======
->>>>>>> 3c16d128d18ee589eb719f1cff04b855bcf40e98
               <Route path="returns/warranty" element={<WarrantyReturnsList />} />
 
               <Route path="invoice" element={<InvoicesList />} />

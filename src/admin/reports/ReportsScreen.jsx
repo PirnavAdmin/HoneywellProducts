@@ -690,7 +690,6 @@ const ReportsScreen = () => {
             className={`reports-tab-btn ${activeTab === 'sales' ? 'active' : ''}`}
             onClick={() => setActiveTab('sales')}
           >
-<<<<<<< HEAD
             <ShoppingBag size={16} /> Sales &amp; Orders Analytics
           </button>
           <button
@@ -698,15 +697,6 @@ const ReportsScreen = () => {
             onClick={() => setActiveTab('purchase')}
           >
             <FileSpreadsheet size={16} /> Procurement &amp; Purchase Analytics
-=======
-            <ShoppingBag size={16} /> Sales &amp; Orders
-          </button>
-          <button
-            className={`reports-tab-btn ${activeTab === 'purchase' ? 'active' : ''}`}
-            onClick={() => setActiveTab('purchase')}
-          >
-            <FileSpreadsheet size={16} /> Purchase &amp; Procurement
->>>>>>> 3c16d128d18ee589eb719f1cff04b855bcf40e98
           </button>
           <button
             className={`reports-tab-btn ${activeTab === 'catalog' ? 'active' : ''}`}
