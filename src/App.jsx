@@ -93,8 +93,6 @@ const ContactCard = lazy(() => import('./admin/screens/ContactCard'));
 const FooterConfig = lazy(() => import('./admin/screens/FooterConfig'));
 const DescriptionManager = lazy(() => import('./admin/screens/DescriptionManager'));
 
-const WarrantyReturnsList = lazy(() => import('./admin/returns/WarrantyReturnsList'));
-
 function LoadingScreen() {
   return <div className="route-loading" role="status"><span /><p>Loading experience…</p></div>;
 }
