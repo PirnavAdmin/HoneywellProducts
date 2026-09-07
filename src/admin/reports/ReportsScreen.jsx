@@ -679,13 +679,25 @@ const ReportsScreen = () => {
             className={`reports-tab-btn ${activeTab === 'orders' ? 'active' : ''}`}
             onClick={() => setActiveTab('orders')}
           >
-            <ShoppingBag size={16} /> Orders Analytics
+            <ShoppingBag size={16} /> Sales &amp; Orders
+          </button>
+          <button
+            className={`reports-tab-btn ${activeTab === 'purchase' ? 'active' : ''}`}
+            onClick={() => setActiveTab('purchase')}
+          >
+            <FileSpreadsheet size={16} /> Purchase &amp; Procurement
           </button>
           <button
             className={`reports-tab-btn ${activeTab === 'catalog' ? 'active' : ''}`}
             onClick={() => setActiveTab('catalog')}
           >
-            <Boxes size={16} /> Catalog Analytics
+            <Boxes size={16} /> Catalog &amp; Stock
+          </button>
+          <button
+            className={`reports-tab-btn ${activeTab === 'returns' ? 'active' : ''}`}
+            onClick={() => setActiveTab('returns')}
+          >
+            <TrendingUp size={16} /> Returns &amp; Warranty
           </button>
         </div>
 
