@@ -140,11 +140,7 @@ export default function App() {
 
               <Route path="returns" element={<AdminReturns />} />
               <Route path="sales-returns" element={<AdminReturns />} />
-<<<<<<< HEAD
               <Route path="returns/warranty" element={<WarrantyReturnsList />} />
-=======
-              <Route path="returns/warranty" element={<AdminReturns />} />
->>>>>>> c7d0e694a9c2bd90af4b3389af7dbe3f45109652
 
               <Route path="invoice" element={<InvoicesList />} />
               <Route path="invoice/add" element={<AddInvoice />} />
