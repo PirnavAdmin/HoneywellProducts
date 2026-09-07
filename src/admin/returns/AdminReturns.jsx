@@ -479,6 +479,7 @@ const AdminReturns = () => {
               <option value="All">All Types</option>
               <option value="Refund">Return & Refund</option>
               <option value="Replacement">Replacement</option>
+              <option value="Warranty">Warranty Return</option>
             </select>
             <ChevronDown size={14} style={{ position: 'absolute', right: '10px', pointerEvents: 'none', color: '#64748b' }} />
           </div>
@@ -716,6 +717,8 @@ const AdminReturns = () => {
                 <h4 className="text-xs font-black uppercase text-slate-400 tracking-wider mb-2">Claim Context</h4>
                 <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 space-y-2">
                   <p><strong>Customer:</strong> {selectedReturn.customerName || 'Rajesh Kumar'}</p>
+                  <p><strong>Linked Sales Invoice:</strong> <span className="font-mono text-[#1268a5] font-bold">#INV-{selectedReturn.orderId || 10214}</span></p>
+                  <p><strong>Warranty Status:</strong> <span className="px-2 py-0.5 bg-green-100 text-green-700 font-bold rounded text-[10px]">Warranty Validated</span></p>
                   <p><strong>Reason:</strong> {selectedReturn.reason || selectedReturn.reasonCode}</p>
                 </div>
                 

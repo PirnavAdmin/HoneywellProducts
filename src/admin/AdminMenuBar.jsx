@@ -17,6 +17,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     catalog: false,
     purchase: false,
     customers: false,
+    purchase: false,
     orders: false,
     marketing: false,
     brands: false,
@@ -42,7 +43,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       if (perms) {
         setUserPermissions(JSON.parse(perms));
       } else {
-        setUserPermissions(["dashboard", "catalog", "customers", "orders", "tickets", "reports", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"]);
+        setUserPermissions(["dashboard", "catalog", "customers", "purchase indent", "purchase order", "orders", "tickets", "reports", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"]);
       }
     } catch (e) {
       console.error("Error loading permissions", e);
@@ -52,9 +53,9 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   useEffect(() => {
     if (!expanded) {
       setOpenDropdowns({
-        catalog: false, customers: false, orders: false,
+        catalog: false, customers: false, purchase: false, orders: false,
         marketing: false, brands: false, blogs: false, settings: false,
-        staff: false, suppliers: false, coins: false, invoices: false
+        staff: false, suppliers: false, coins: false, invoices: false, testimonials: false
       });
       return;
     }
@@ -63,6 +64,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       catalog:   path.includes('/admin/catalog'),
       purchase:  path.includes('/admin/purchase'),
       customers: path.includes('/admin/customers') || path.includes('/admin/users'),
+      purchase:  path.includes('/admin/purchase'),
       orders:    path.includes('/admin/orders') || path.includes('/admin/returns'),
       marketing: path.includes('/admin/marketing'),
       brands:    path.includes('/admin/brands'),
@@ -86,31 +88,23 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   };
 
   const hasAccess = (moduleName) => {
-    if (moduleName === 'testimonials') return true;
-    if (moduleName === 'tickets') return true;
-    if (moduleName === 'enquiries') return true;
-    if (moduleName === 'contact-submissions') return true;
-    if (moduleName === 'quotes') return true;
-    if (moduleName === 'reports') return true;
-    if (moduleName === 'staff') return userRole === 'super admin' || userRole === 'admin';
+    if (!moduleName) return true;
+    if (userRole === 'super admin' || userRole === 'superadmin' || userRole === 'admin' || userRole === 'administrator') return true;
+    if (moduleName === 'testimonials' || moduleName === 'tickets' || moduleName === 'enquiries' || moduleName === 'contact-submissions' || moduleName === 'quotes' || moduleName === 'reports') return true;
+    if (moduleName === 'staff') return true;
 
-    if (userRole === 'super admin') return true;
+    const norm = moduleName.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
 
     if (userPermissions.length > 0) {
-      return userPermissions.includes(moduleName);
+      return userPermissions.some(p => {
+        const cleanP = p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
+        return cleanP === norm || cleanP.includes(norm) || norm.includes(cleanP);
+      });
     }
 
-    if (userRole === 'admin') {
-      const allowed = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "staff"];
-      return allowed.includes(moduleName);
-    }
-    if (userRole === 'manager') {
-      const allowed = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices"];
-      return allowed.includes(moduleName);
-    }
-    if (userRole === 'staff') {
-      const allowed = ["dashboard", "catalog", "customers", "orders", "call history", "invoices", "stockupdates", "marketing", "brands", "settings", "suppliers"];
-      return allowed.includes(moduleName);
+    if (userRole === 'manager' || userRole === 'staff') {
+      const allowed = ["dashboard", "catalog", "customers", "orders", "purchase indent", "purchase order", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "reports"];
+      return allowed.some(p => p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '') === norm);
     }
 
     return false;
@@ -327,18 +321,44 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
               </li>
             )}
 
+            {/* Procurement / Purchase */}
+            {(hasAccess('purchase indent') || hasAccess('purchase order')) && (
+              <li>
+                <div
+                  onClick={() => toggleDropdown('purchase', '/admin/purchase-indent')}
+                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/purchase') ? 'active-parent' : ''}`}
+                  data-tooltip="Procurement"
+                  title={!expanded ? "Procurement" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><FileText size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Procurement</span>
+                  </div>
+                  {expanded && (openDropdowns.purchase
+                    ? <ChevronDown size={15} className="nav-arrow" />
+                    : <ChevronRight size={15} className="nav-arrow" />
+                  )}
+                </div>
+                <ul className={`stroyka-submenu ${openDropdowns.purchase && expanded ? 'show-submenu' : ''}`}>
+                  {hasAccess('purchase indent') && <li><NavLink to="/admin/purchase-indent" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Indent</NavLink></li>}
+                  {hasAccess('purchase order') && <li><NavLink to="/admin/purchase-orders" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Order</NavLink></li>}
+                  {hasAccess('purchase return') && <li><NavLink to="/admin/purchase-returns" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Return</NavLink></li>}
+                </ul>
+              </li>
+            )}
+
             {/* Orders */}
             {hasAccess('orders') && (
               <li>
                 <div
                   onClick={() => toggleDropdown('orders', '/admin/orders/list')}
-                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/orders') || location.pathname.includes('/admin/returns') ? 'active-parent' : ''}`}
+                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/orders') || location.pathname.includes('/admin/returns') || location.pathname.includes('/admin/sales-returns') ? 'active-parent' : ''}`}
                   data-tooltip="Orders"
                   title={!expanded ? "Orders" : undefined}
                 >
                   <div className="nav-left">
                     <div className="icon-box"><ShoppingCart size={18} className="nav-icon" /></div>
-                    <span className="nav-label-text">Orders</span>
+                    <span className="nav-label-text">Orders & Sales</span>
                   </div>
                   {expanded && (openDropdowns.orders
                     ? <ChevronDown size={15} className="nav-arrow" />
@@ -349,7 +369,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                   <li><NavLink to="/admin/orders/list"    className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Orders List</NavLink></li>
                   <li><NavLink to="/admin/orders/tracking" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Tracking Order</NavLink></li>
                   <li><NavLink to="/admin/orders/shipping" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Shipping Order</NavLink></li>
-                  <li><NavLink to="/admin/returns"         className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Returns & Refunds</NavLink></li>
+                  <li><NavLink to="/admin/sales-returns"    className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Sales Return (Warranty)</NavLink></li>
                 </ul>
               </li>
             )}

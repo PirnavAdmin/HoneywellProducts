@@ -71,41 +71,36 @@ const AdminLayout = () => {
 
   // Helper to verify path authorization
   const isPathAllowed = (pathname) => {
-    // Normalize path to get the first segment
     const path = pathname.replace('/admin/', '').split('/')[0];
-    if (path === 'staff') return userRole === 'super admin' || userRole === 'admin';
-
-    if (userRole === 'super admin') return true;
-    
-    // Always allowed pages
+    if (userRole === 'super admin' || userRole === 'superadmin' || userRole === 'admin' || userRole === 'administrator') return true;
     if (path === 'dashboard' || path === 'profile' || path === 'account-settings' || path === 'testimonials' || path === 'tickets' || path === 'reports' || path === '') return true;
 
     let moduleKey = path;
+    if (path === 'purchase-indent') moduleKey = 'purchase indent';
+    if (path === 'purchase-orders') moduleKey = 'purchase order';
+    if (path === 'purchase-returns') moduleKey = 'purchase return';
+    if (path === 'sales-returns') moduleKey = 'sales return';
     if (path === 'stock-updates' || path === 'stock') moduleKey = 'stockupdates';
     if (path === 'coins') moduleKey = 'coins converter';
     if (path === 'call-history') moduleKey = 'call history';
     if (path === 'invoice') moduleKey = 'invoices';
-    if (path === 'returns') moduleKey = 'orders';
+    if (path === 'returns') moduleKey = 'returns';
     if (path === 'categories' || path === 'products' || path === 'descriptions' || path === 'image-categorizer') moduleKey = 'catalog';
     if (path === 'users') moduleKey = 'customers';
     if (path === 'contact-card' || path === 'footer' || path === 'payments') moduleKey = 'settings';
 
-    // If explicit permissions list exists, check it first
+    const normKey = moduleKey.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
+
     if (userPermissions.length > 0) {
-      return userPermissions.includes(moduleKey);
+      return userPermissions.some(p => {
+        const cleanP = p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
+        return cleanP === normKey || cleanP.includes(normKey) || normKey.includes(cleanP);
+      });
     }
 
-    if (userRole === 'admin') {
-      const allowed = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "staff"];
-      return allowed.includes(moduleKey);
-    }
-    if (userRole === 'manager') {
-      const allowed = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices"];
-      return allowed.includes(moduleKey);
-    }
-    if (userRole === 'staff') {
-      const allowed = ["dashboard", "catalog", "customers", "orders", "call history", "invoices", "stockupdates", "marketing", "brands", "settings", "suppliers"];
-      return allowed.includes(moduleKey);
+    if (userRole === 'manager' || userRole === 'staff') {
+      const allowed = ["dashboard", "catalog", "customers", "orders", "purchase indent", "purchase order", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "reports"];
+      return allowed.some(p => p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '') === normKey);
     }
     return false;
   };

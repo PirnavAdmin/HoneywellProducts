@@ -87,6 +87,12 @@ const CoinsConverterScreen = lazy(() => import('./admin/coins/CoinsConverterScre
 const FormSettings = lazy(() => import('./admin/settings/FormSettings'));
 const TableOfContent = lazy(() => import('./admin/settings/TableOfContent'));
 const Users = lazy(() => import('./admin/screens/Users'));
+const PurchaseIndentList = lazy(() => import('./admin/purchaseIndent/PurchaseIndentList'));
+const AddPurchaseIndent = lazy(() => import('./admin/purchaseIndent/AddPurchaseIndent'));
+const PurchaseOrdersList = lazy(() => import('./admin/purchaseOrders/PurchaseOrdersList'));
+const CreatePurchaseOrder = lazy(() => import('./admin/purchaseOrders/CreatePurchaseOrder'));
+const PurchaseReturnsList = lazy(() => import('./admin/purchaseReturns/PurchaseReturnsList'));
+const CreatePurchaseReturn = lazy(() => import('./admin/purchaseReturns/CreatePurchaseReturn'));
 const AdminProfile = lazy(() => import('./admin/screens/AdminProfile'));
 const AdminAccountSettings = lazy(() => import('./admin/screens/AdminAccountSettings'));
 const ContactCard = lazy(() => import('./admin/screens/ContactCard'));
@@ -119,12 +125,19 @@ export default function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
 
-              {/* Purchase IMS */}
+              {/* Purchase & Procurement Routes */}
               <Route path="purchase/indents" element={<PurchaseIndentsList />} />
               <Route path="purchase/indents/create" element={<PurchaseIndentForm />} />
               <Route path="purchase/orders" element={<PurchaseOrdersList />} />
               <Route path="purchase/orders/create" element={<PurchaseOrderForm />} />
               <Route path="purchase/goods-receipt" element={<GoodsReceiptList />} />
+
+              <Route path="purchase-indent" element={<PurchaseIndentList />} />
+              <Route path="purchase-indent/add" element={<AddPurchaseIndent />} />
+              <Route path="purchase-orders" element={<PurchaseOrdersList />} />
+              <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
+              <Route path="purchase-returns" element={<PurchaseReturnsList />} />
+              <Route path="purchase-returns/create" element={<CreatePurchaseReturn />} />
 
               <Route path="catalog" element={<Navigate to="categories" replace />} />
               <Route path="catalog/categories" element={<CategoriesList />} />
@@ -151,6 +164,7 @@ export default function App() {
               <Route path="orders/shipping" element={<ShippingOrder />} />
 
               <Route path="returns" element={<AdminReturns />} />
+              <Route path="sales-returns" element={<AdminReturns />} />
               <Route path="returns/warranty" element={<WarrantyReturnsList />} />
 
               <Route path="invoice" element={<InvoicesList />} />
@@ -247,4 +261,5 @@ export default function App() {
       </UIProvider>
     </CartProvider>
   );
+}
 }
