@@ -7,15 +7,76 @@ import { siteConfig } from '../../config/siteConfig';
 const socialIcons = { facebook: Facebook, instagram: Instagram, linkedin: Linkedin, youtube: Youtube, whatsapp: MessageCircle, email: Mail };
 
 export default function Footer() {
-  return <footer className="footer">
-    <div className="footer-top">
-      <div className="footer-brand"><Brand light /><p>Professional security, surveillance and solar product discovery for homes, businesses and industrial environments.</p><span>{siteConfig.tagline}</span></div>
-      <div><h3>Products</h3><Link to="/products?category=cctv-cameras">CCTV Cameras</Link><Link to="/products?category=ip-cameras">IP Cameras</Link><Link to="/products?category=ptz-cameras">PTZ Cameras</Link><Link to="/products?category=nvr">NVR</Link><Link to="/products?category=dvr">DVR</Link><Link to="/products?category=solar-cameras">Solar Security</Link><Link to="/products?category=cctv-accessories">Accessories</Link></div>
-      <div><h3>Solutions</h3><Link to="/solutions?solution=home-security">Home Security</Link><Link to="/solutions?solution=office-security">Business Security</Link><Link to="/solutions?solution=retail-security">Retail</Link><Link to="/solutions?solution=warehouse-security">Warehouse</Link><Link to="/solutions?solution=factory-security">Factory</Link></div>
-      <div><h3>Business</h3><Link to="/business#dealer">Dealer</Link><Link to="/business#distributor">Distributor</Link><Link to="/business#installer">Installer</Link><Link to="/business#partner-form">Partner</Link></div>
-      <div><h3>Company</h3><Link to="/about-us">About Us</Link><Link to="/contact">Contact Us</Link><Link to="/business#careers">Careers</Link></div>
-      <div className="footer-social"><h3>Contact &amp; Social</h3><div className="socials">{Object.entries(socialIcons).map(([name, Icon]) => { const url = socialLinks[name]; if (!url) return <span key={name} className="disabled" aria-label={`${name} link not configured`} title="Link not configured"><Icon size={18} /></span>; const isMail = url.startsWith('mailto:'); return <a key={name} href={url} target={isMail ? '_self' : '_blank'} rel={isMail ? undefined : 'noreferrer'} aria-label={`Open ${name}`}><Icon size={18} /></a>; })}</div><address className="footer-contact"><a href={siteConfig.emailLink}>{siteConfig.email}</a><a href={siteConfig.phoneLink}>{siteConfig.phone}</a><a href={siteConfig.mapLink} target="_blank" rel="noreferrer">{siteConfig.address}</a></address></div>
-    </div>
-    <div className="footer-bottom"><p>© {new Date().getFullYear()} HONEYWELL PRODUCTS. Frontend demonstration.</p><div><span>Privacy Policy</span><span>Terms & Conditions</span></div></div>
-  </footer>;
+  return (
+    <footer className="footer">
+      <div className="footer-top">
+        <div className="footer-brand">
+          <Brand light />
+          <p>Professional security, surveillance and solar product discovery for homes, businesses and industrial environments.</p>
+          <span>{siteConfig.tagline}</span>
+        </div>
+        <div>
+          <h3>Products</h3>
+          <Link to="/products">All Products</Link>
+          <Link to="/product-finder">Product Finder</Link>
+          <Link to="/compare">Compare Products</Link>
+          <Link to="/offers">Offers &amp; Deals</Link>
+          <Link to="/downloads">Downloads Center</Link>
+        </div>
+        <div>
+          <h3>Solutions</h3>
+          <Link to="/solutions">Solutions Overview</Link>
+          <Link to="/industries">Industries</Link>
+          <Link to="/solutions?solution=security-surveillance">Surveillance</Link>
+          <Link to="/solutions?solution=solar-solutions">Solar Solutions</Link>
+        </div>
+        <div>
+          <h3>Business</h3>
+          <Link to="/business#distributor">Distributor</Link>
+          <Link to="/business#partner">Partner</Link>
+          <Link to="/partner-benefits">Partner Benefits</Link>
+          <Link to="/partner/login">Partner Login</Link>
+        </div>
+        <div>
+          <h3>Resources &amp; Support</h3>
+          <Link to="/resources">Resources Hub</Link>
+          <Link to="/blogs">Blog &amp; News</Link>
+          <Link to="/case-studies">Case Studies</Link>
+          <Link to="/videos">Video Center</Link>
+          <Link to="/support">Support Center</Link>
+          <Link to="/service-request">Service Request</Link>
+          <Link to="/warranty">Warranty</Link>
+          <Link to="/order-tracking">Order Tracking</Link>
+        </div>
+        <div className="footer-social">
+          <h3>Contact &amp; Social</h3>
+          <div className="socials">
+            {Object.entries(socialIcons).map(([name, Icon]) => socialLinks[name] ? (
+              <a key={name} href={socialLinks[name]} target="_blank" rel="noreferrer" aria-label={`Open ${name}`}>
+                <Icon size={18} />
+              </a>
+            ) : (
+              <span key={name} className="disabled" aria-label={`${name} link not configured`} title="Link not configured">
+                <Icon size={18} />
+              </span>
+            ))}
+          </div>
+          <address className="footer-contact">
+            <a href={siteConfig.emailLink}>{siteConfig.email}</a>
+            <a href={siteConfig.phoneLink}>{siteConfig.phone}</a>
+            <a href={siteConfig.mapLink} target="_blank" rel="noreferrer">{siteConfig.address}</a>
+          </address>
+        </div>
+      </div>
+      <div className="footer-bottom">
+        <p>© {new Date().getFullYear()} HONEYWELL PRODUCTS. All Rights Reserved.</p>
+        <div>
+          <Link to="/privacy-policy">Privacy Policy</Link>
+          <Link to="/terms-and-conditions">Terms &amp; Conditions</Link>
+          <Link to="/cookie-policy">Cookie Policy</Link>
+          <Link to="/warranty-policy">Warranty Policy</Link>
+        </div>
+      </div>
+    </footer>
+  );
 }
