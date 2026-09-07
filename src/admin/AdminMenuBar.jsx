@@ -15,6 +15,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
 
   const [openDropdowns, setOpenDropdowns] = useState({
     catalog: false,
+    purchase: false,
     customers: false,
     orders: false,
     marketing: false,
@@ -60,6 +61,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     const path = location.pathname;
     setOpenDropdowns({
       catalog:   path.includes('/admin/catalog'),
+      purchase:  path.includes('/admin/purchase'),
       customers: path.includes('/admin/customers') || path.includes('/admin/users'),
       orders:    path.includes('/admin/orders') || path.includes('/admin/returns'),
       marketing: path.includes('/admin/marketing'),
@@ -183,6 +185,33 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                   <li><NavLink to="/admin/catalog/subcategory"  className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Subcategory</NavLink></li>
                   <li><NavLink to="/admin/catalog/products"     className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Products List</NavLink></li>
                   <li><NavLink to="/admin/catalog/products-form" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Products</NavLink></li>
+                </ul>
+              </li>
+            )}
+
+            {/* Purchase IMS */}
+            {hasAccess('suppliers') && (
+              <li>
+                <div
+                  onClick={() => toggleDropdown('purchase', '/admin/purchase/indents')}
+                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/purchase') ? 'active-parent' : ''}`}
+                  data-tooltip="Purchase"
+                  title={!expanded ? "Purchase" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><FileSpreadsheet size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Purchase</span>
+                  </div>
+                  {expanded && (openDropdowns.purchase
+                    ? <ChevronDown size={15} className="nav-arrow" />
+                    : <ChevronRight size={15} className="nav-arrow" />
+                  )}
+                </div>
+                <ul className={`stroyka-submenu ${openDropdowns.purchase && expanded ? 'show-submenu' : ''}`}>
+                  <li><NavLink to="/admin/purchase/indents" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Indents</NavLink></li>
+                  <li><NavLink to="/admin/purchase/orders" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Orders</NavLink></li>
+                  <li><NavLink to="/admin/purchase/goods-receipt" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Goods Receipt (GRN)</NavLink></li>
+                  <li><NavLink to="/admin/suppliers" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Suppliers</NavLink></li>
                 </ul>
               </li>
             )}
