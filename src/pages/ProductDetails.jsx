@@ -103,6 +103,8 @@ export default function ProductDetails() {
 
   const gallery = Array.isArray(product.gallery) && product.gallery.length > 0
     ? product.gallery
+    : Array.isArray(product.images) && product.images.length > 0
+    ? product.images
     : [product.image].filter(Boolean);
 
   const highlights = Array.isArray(product.highlights) ? product.highlights : [];

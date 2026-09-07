@@ -14,6 +14,7 @@ import { marketTrends } from '../data/marketTrends';
 import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useUI } from '../context/UIContext';
+import { socialLinks } from '../config/socialLinks';
 import businessImage from '../assets/images/capital-park2.jpg';
 
 const reasons = [
@@ -182,6 +183,6 @@ export default function Home() {
         </article>
       );
     })}</div></div></section>
-    <section className="cta-band final-security-cta"><div className="container"><span><small>PRODUCTS • PROJECTS • BUSINESS</small><strong>Looking for the Right Security Solution?</strong><p>Talk to our team about products, projects, bulk requirements and business opportunities.</p></span><div className="button-row"><button className="button light" onClick={() => openQuote()}>Get a Quote</button><Link className="button outline light-outline" to="/contact">Contact Sales</Link><a className="button outline light-outline disabled-link" aria-disabled="true" title="WhatsApp URL not configured">WhatsApp Us</a></div></div></section>
+    <section className="cta-band final-security-cta"><div className="container"><span><small>PRODUCTS • PROJECTS • BUSINESS</small><strong>Looking for the Right Security Solution?</strong><p>Talk to our team about products, projects, bulk requirements and business opportunities.</p></span><div className="button-row"><button className="button light" onClick={() => openQuote()}>Get a Quote</button><Link className="button outline light-outline" to="/contact">Contact Sales</Link>{socialLinks.whatsapp ? <a className="button outline light-outline" href={socialLinks.whatsapp} target="_blank" rel="noreferrer">WhatsApp Us</a> : <a className="button outline light-outline disabled-link" aria-disabled="true" title="WhatsApp URL not configured">WhatsApp Us</a>}</div></div></section>
   </>;
 }

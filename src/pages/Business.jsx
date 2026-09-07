@@ -18,7 +18,7 @@ const pathways = [
   { id: 'integrator', icon: Building2, title: 'System Integrator', text: 'A project-focused pathway for teams designing integrated security environments.', benefits: ['Project collaboration placeholder', 'Technical coordination placeholder', 'Solution support placeholder'] },
   { id: 'channel-partner', icon: BriefcaseBusiness, title: 'Channel Partner', text: 'A broad enquiry pathway for future channel relationships and joint opportunities.', benefits: ['Program details to be provided', 'Support details to be provided', 'Business terms to be provided'] },
 ];
-const empty = { companyName: '', gstin: '', contactPerson: '', mobile: '', email: '', address: '', city: '', state: '', businessType: '', yearsInBusiness: '' };
+const empty = { companyName: '', gstin: '', contactPerson: '', mobile: '', email: '', address: '', city: '', state: '', businessType: '', yearsInBusiness: '', description: '' };
 
 export default function Business() {
   useDocumentTitle('Business & Partner Opportunities', 'Explore distributor, dealer, installer, reseller, integrator and channel partner pathways.');
@@ -189,9 +189,10 @@ export default function Business() {
                     ['city', 'City *'],
                     ['state', 'State *'],
                     ['yearsInBusiness', 'Years in Business *'],
-                    ['address', 'Address *']
+                    ['address', 'Address *'],
+                    ['description', 'Description']
                   ].map(([name, label]) => (
-                    <label key={name} className={`field ${name === 'address' || name === 'yearsInBusiness' ? 'full' : ''}`}>
+                    <label key={name} className={`field ${name === 'address' || name === 'yearsInBusiness' || name === 'description' ? 'full' : ''}`}>
                       <span>{label}</span>
                       {name === 'businessType' ? (
                         <select
@@ -208,6 +209,16 @@ export default function Business() {
                             )
                           )}
                         </select>
+                      ) : name === 'description' ? (
+                        <textarea
+                          name={name}
+                          rows={3}
+                          placeholder="Provide details about your business, infrastructure, product requirements or partnership goals..."
+                          value={form[name]}
+                          onChange={(event) =>
+                            setForm((current) => ({ ...current, [name]: event.target.value }))
+                          }
+                        />
                       ) : (
                         <input
                           name={name}

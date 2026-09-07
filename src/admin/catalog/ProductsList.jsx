@@ -262,24 +262,13 @@ const ProductsList = () => {
               {!busy && currentPageProducts.map((product) => (
                 <tr key={product.id} style={{ fontSize: '12px' }}>
                   <td style={{ padding: '8px 10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <img
-                        src={product.image || (product.images && product.images[0]) || '/honeywell-products-logo.png'}
-                        alt={product.name}
-                        style={{ width: '40px', height: '40px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', flexShrink: 0 }}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/honeywell-products-logo.png';
-                        }}
-                      />
-                      <div>
-                        <span className="catalog-badge" style={{ fontSize: '10px' }}>
-                          <Package size={11} /> #{product.id}
-                        </span>
-                        <div className="catalog-table__title" style={{ fontSize: '12px', fontWeight: '600' }}>{product.name}</div>
-                        <div className="catalog-table__muted" style={{ fontSize: '10px' }}>
-                          Brand: <strong>{product.brand && product.brand.trim() ? product.brand : 'No Brand'}</strong> · {product.specifications?.weight || 'N/A'}
-                        </div>
+                    <div>
+                      <span className="catalog-badge" style={{ fontSize: '10px' }}>
+                        <Package size={11} /> #{product.id}
+                      </span>
+                      <div className="catalog-table__title" style={{ fontSize: '12px', fontWeight: '600' }}>{product.name}</div>
+                      <div className="catalog-table__muted" style={{ fontSize: '10px' }}>
+                        Brand: <strong>{product.brand && product.brand.trim() ? product.brand : 'No Brand'}</strong> · {product.specifications?.weight || 'N/A'}
                       </div>
                     </div>
                   </td>

@@ -3,12 +3,12 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useUI } from '../../context/UIContext';
 import { bannerService } from '../../services/bannerService';
-import productsHeroImage from '../../assets/images/products-hero.png';
-import smartSecurityImage from '../../assets/images/smart-security-sustainable-future.png';
+import productsHeroImage from '../../assets/images/cctv-solar-products-hero.jpg';
+import heroPosterImage from '../../assets/images/cctv-hero-poster.jpg';
 import smartTechnologyImage from '../../assets/images/smart-technology-trends.png';
 
 const fallbackSlides = [
-  { eyebrow: 'TECHNOLOGY • SECURITY • RELIABILITY', title: 'SMART TECHNOLOGY. STRONGER PROTECTION.', text: 'Professional security, surveillance and technology solutions designed for homes, businesses and industrial environments.', primary: 'EXPLORE PRODUCTS', to: '/products', secondary: 'CONTACT SALES', secondaryTo: '/contact', image: smartSecurityImage },
+  { eyebrow: 'TECHNOLOGY • SECURITY • RELIABILITY', title: 'SMART TECHNOLOGY. STRONGER PROTECTION.', text: 'Professional security, surveillance and technology solutions designed for homes, businesses and industrial environments.', primary: 'EXPLORE PRODUCTS', to: '/products', secondary: 'CONTACT SALES', secondaryTo: '/contact', image: heroPosterImage },
   { eyebrow: 'CCTV • IP CAMERAS • RECORDING', title: 'ADVANCED SECURITY PRODUCTS.', text: 'Discover professional surveillance products designed for reliable monitoring, intelligent security and scalable installations.', primary: 'VIEW PRODUCTS', to: '/products', secondary: 'GET A QUOTE', quote: true, image: productsHeroImage },
   { eyebrow: 'AI • IOT • REMOTE MONITORING', title: 'TECHNOLOGY TRENDS SHAPING TOMORROW.', text: 'Follow developments in intelligent security, connected infrastructure, automation and sustainable technology.', primary: 'EXPLORE SOLUTIONS', to: '/solutions', secondary: 'TALK TO OUR TEAM', secondaryTo: '/contact', image: smartTechnologyImage },
 ];

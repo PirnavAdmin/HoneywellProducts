@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getProducts, saveProducts, upsertProduct } from './catalogStore';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const BASE_URL = getApiDomain();
@@ -30,16 +31,17 @@ export const resolveImageUrl = (url) => {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (!trimmed) return '';
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
-    return trimmed;
-  }
-  if (trimmed.toLowerCase().includes('placeholder') && !trimmed.startsWith('data:')) {
+  if (trimmed.toLowerCase().includes('placeholder') || trimmed.includes('honeywell-products-logo.png')) {
     return '/honeywell-products-logo.png';
+  }
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
+    return trimmed;
   }
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   if (trimmed.includes('/uploads/')) {
     const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
-    return `${BASE_URL}${uploadPath}`;
+    const cleanBase = (BASE_URL || '').replace(/\/$/, '');
+    return `${cleanBase}${uploadPath}`;
   }
   if (
     trimmed.startsWith('/assets/') ||
@@ -447,10 +449,43 @@ export const deleteProductReview = async (id) => {
 
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
-  const response = await api.get('/api/products');
-  return unwrapList(response).map((p) =>
-    mapProductFromApi(p, categories, subcategories)
-  );
+  try {
+    const response = await api.get('/api/products');
+    const apiList = unwrapList(response).map((p) =>
+      mapProductFromApi(p, categories, subcategories)
+    );
+    const localList = getProducts();
+
+    const mergedMap = new Map();
+    apiList.forEach((p) => {
+      if (p.id) mergedMap.set(String(p.id), p);
+    });
+    localList.forEach((p) => {
+      if (!p.id) return;
+      const existing = mergedMap.get(String(p.id));
+      if (existing) {
+        mergedMap.set(String(p.id), {
+          ...existing,
+          ...p,
+          image: (!existing.image || existing.image.includes('logo') || existing.image.includes('placeholder')) ? (p.image || existing.image) : existing.image,
+          images: (p.images && p.images.length > 0) ? p.images : (existing.images || []),
+          gallery: (p.gallery && p.gallery.length > 0) ? p.gallery : (existing.gallery || []),
+          description: p.description || existing.description,
+          productDetails: p.productDetails || existing.productDetails,
+          shortDescription: p.shortDescription || existing.shortDescription,
+        });
+      } else {
+        mergedMap.set(String(p.id), p);
+      }
+    });
+
+    const result = Array.from(mergedMap.values());
+    if (result.length > 0) saveProducts(result);
+    return result;
+  } catch (err) {
+    console.warn('API error fetching products, returning local store list:', err?.message);
+    return getProducts();
+  }
 };
 
 /** Search products by keyword (GET /api/products/search?keyword=) */
@@ -557,22 +592,45 @@ export const fetchRelatedProducts = async (
 // GET /api/products/{id}
 
 export const fetchProduct = async (id, categories = [], subcategories = []) => {
-  const response = await api.get(`/api/products/${id}`);
-  const product = unwrapItem(response);
+  const localList = getProducts();
+  const localFound = localList.find((p) => String(p.id) === String(id) || String(p.slug) === String(id));
 
-  // Fetch features and reviews in parallel; never let them crash the product load
-  const [features, reviews] = await Promise.all([
-    fetchProductFeatures(id).catch((e) => {
-      console.warn('Could not load features for product', id, e?.message);
-      return [];
-    }),
-    fetchProductReviews(id).catch((e) => {
-      console.warn('Could not load reviews for product', id, e?.message);
-      return [];
-    }),
-  ]);
+  try {
+    const response = await api.get(`/api/products/${id}`);
+    const product = unwrapItem(response);
 
-  return mapProductFromApi(product, categories, subcategories, features, reviews);
+    const [features, reviews] = await Promise.all([
+      fetchProductFeatures(id).catch((e) => {
+        console.warn('Could not load features for product', id, e?.message);
+        return [];
+      }),
+      fetchProductReviews(id).catch((e) => {
+        console.warn('Could not load reviews for product', id, e?.message);
+        return [];
+      }),
+    ]);
+
+    const apiMapped = mapProductFromApi(product, categories, subcategories, features, reviews);
+
+    if (localFound) {
+      return {
+        ...apiMapped,
+        ...localFound,
+        image: (!apiMapped.image || apiMapped.image.includes('logo') || apiMapped.image.includes('placeholder')) ? (localFound.image || apiMapped.image) : apiMapped.image,
+        images: (localFound.images && localFound.images.length > 0) ? localFound.images : (apiMapped.images || []),
+        gallery: (localFound.gallery && localFound.gallery.length > 0) ? localFound.gallery : (apiMapped.gallery || []),
+        description: localFound.description || apiMapped.description,
+        productDetails: localFound.productDetails || apiMapped.productDetails,
+        shortDescription: localFound.shortDescription || apiMapped.shortDescription,
+      };
+    }
+
+    return apiMapped;
+  } catch (err) {
+    console.warn(`GET /api/products/${id} failed, returning local store record:`, err?.message);
+    if (localFound) return localFound;
+    throw err;
+  }
 };
 
 // ─── Products — Create / Update ───────────────────────────────────────────────
@@ -606,71 +664,30 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   const fd = new FormData();
   if (isEditing) {
     fd.append('Id', String(product.id));
-    fd.append('id', String(product.id));
   }
-  fd.append('ProductName', product.name || '');
-  fd.append('productName', product.name || '');
   fd.append('Name', product.name || '');
-  fd.append('name', product.name || '');
-
   fd.append('SKU', product.sku || '');
-  fd.append('sku', product.sku || '');
-
   fd.append('Brand', product.brand || 'Honeywell');
-  fd.append('brand', product.brand || 'Honeywell');
-
-  fd.append('Manufacturer', product.supplier || product.manufacturer || '');
-  fd.append('manufacturer', product.supplier || product.manufacturer || '');
   fd.append('SupplierName', product.supplier || product.manufacturer || '');
-
   fd.append('MRP', String(Number(product.mrp) || 0));
-  fd.append('mrp', String(Number(product.mrp) || 0));
-
   fd.append('SellingPrice', String(Number(product.price) || 0));
-  fd.append('sellingPrice', String(Number(product.price) || 0));
-  fd.append('Price', String(Number(product.price) || 0));
-  fd.append('price', String(Number(product.price) || 0));
-
-  fd.append('Stock', String(Number(product.stock) || 0));
-  fd.append('stock', String(Number(product.stock) || 0));
   fd.append('StockQuantity', String(Number(product.stock) || 0));
-
   fd.append('CategoryId', String(Number(product.categoryId) || 0));
-  fd.append('categoryId', String(Number(product.categoryId) || 0));
-
   fd.append('SubcategoryId', String(Number(product.subcategoryId) || 0));
-  fd.append('subcategoryId', String(Number(product.subcategoryId) || 0));
-
   fd.append('ShortDescription', product.shortDescription || product.description || '');
-  fd.append('shortDescription', product.shortDescription || product.description || '');
-
   fd.append('ProductDetails', product.productDetails || '');
-  fd.append('productDetails', product.productDetails || '');
-
   fd.append('PackageIncludes', product.packageIncludes || '');
-  fd.append('packageIncludes', product.packageIncludes || '');
 
   // Specifications
   fd.append('Weight', product.specifications?.weight || '');
-  fd.append('weight', product.specifications?.weight || '');
-
   fd.append('Dimensions', product.specifications?.dimensions || '');
-  fd.append('dimensions', product.specifications?.dimensions || '');
-
   fd.append('PowerSource', product.specifications?.powerSource || '');
-  fd.append('powerSource', product.specifications?.powerSource || '');
-
   fd.append('Material', product.specifications?.material || '');
-  fd.append('material', product.specifications?.material || '');
-
   fd.append('CoverageUsage', product.specifications?.coverage || '');
-  fd.append('coverageUsage', product.specifications?.coverage || '');
 
   // Pricing & Discounts
   fd.append('DiscountType', product.discountType || 'none');
-  fd.append('discountType', product.discountType || 'none');
   fd.append('DiscountAmount', String(Number(product.discountValue) || 0));
-  fd.append('discountAmount', String(Number(product.discountValue) || 0));
 
   // Images & Media
   if (Array.isArray(imageFiles)) {
@@ -688,12 +705,18 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     });
     const saved = unwrapItem(response);
     const mapped = mapProductFromApi(saved);
-    if (!mapped.image && primaryImage) mapped.image = primaryImage;
-    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
-      mapped.images = mergedImages;
-      mapped.gallery = mergedImages;
-    }
-    return mapped;
+    const finalProduct = {
+      ...mapped,
+      id: String(saved.productId || saved.id || product.id || mapped.id || Date.now()),
+      image: (!mapped.image || mapped.image.includes('logo') || mapped.image.includes('placeholder')) ? (primaryImage || mapped.image) : mapped.image,
+      images: (mapped.images && mapped.images.length > 0) ? mapped.images : mergedImages,
+      gallery: (mapped.gallery && mapped.gallery.length > 0) ? mapped.gallery : mergedImages,
+      shortDescription: mapped.shortDescription || product.shortDescription || product.description || '',
+      description: mapped.description || product.description || product.shortDescription || '',
+      productDetails: mapped.productDetails || product.productDetails || '',
+    };
+    upsertProduct(finalProduct);
+    return finalProduct;
   } catch (err) {
     console.warn('FormData product upload failed, attempting JSON fallback:', err.message);
   }
@@ -737,22 +760,36 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       headers: { 'Content-Type': 'application/json' },
     });
     const saved = unwrapItem(response);
-    const savedId = String(saved.productId || saved.id || product.id || '');
+    const savedId = String(saved.productId || saved.id || product.id || Date.now());
     const mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
-    if (!mapped.image && primaryImage) mapped.image = primaryImage;
-    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
-      mapped.images = mergedImages;
-      mapped.gallery = mergedImages;
-    }
-    return { ...mapped, id: savedId || mapped.id };
+    const finalProduct = {
+      ...mapped,
+      id: savedId || mapped.id,
+      image: (!mapped.image || mapped.image.includes('logo') || mapped.image.includes('placeholder')) ? (primaryImage || mapped.image) : mapped.image,
+      images: (mapped.images && mapped.images.length > 0) ? mapped.images : mergedImages,
+      gallery: (mapped.gallery && mapped.gallery.length > 0) ? mapped.gallery : mergedImages,
+      shortDescription: mapped.shortDescription || product.shortDescription || product.description || '',
+      description: mapped.description || product.description || product.shortDescription || '',
+      productDetails: mapped.productDetails || product.productDetails || '',
+    };
+    upsertProduct(finalProduct);
+    return finalProduct;
   } catch (err) {
     console.warn('Backend API unavailable, saving product locally:', err.message);
     const fallbackId = String(product.id || Date.now());
     const mapped = mapProductFromApi({ ...payload, id: fallbackId });
-    mapped.image = primaryImage;
-    mapped.images = mergedImages;
-    mapped.gallery = mergedImages;
-    return mapped;
+    const finalProduct = {
+      ...mapped,
+      id: fallbackId,
+      image: primaryImage || mapped.image,
+      images: mergedImages.length > 0 ? mergedImages : mapped.images,
+      gallery: mergedImages.length > 0 ? mergedImages : mapped.gallery,
+      shortDescription: product.shortDescription || product.description || '',
+      description: product.description || product.shortDescription || '',
+      productDetails: product.productDetails || '',
+    };
+    upsertProduct(finalProduct);
+    return finalProduct;
   }
 };
 

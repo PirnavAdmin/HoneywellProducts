@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
-import smartSecurityImage from '../../assets/images/smart-security-sustainable-future.png';
+import heroPosterImage from '../../assets/images/cctv-hero-poster.jpg';
 
 const API_BASE = `${getApiDomain()}/api/marketing/banners`;
 
@@ -32,7 +32,7 @@ export const mapBannerFromApi = (item) => {
     id: String(rawId),
     title: item.title || item.name || '',
     subtitle: item.subtitle || item.description || '',
-    imageUrl: isInvalidImage ? smartSecurityImage : rawImage,
+    imageUrl: isInvalidImage ? heroPosterImage : rawImage,
     targetUrl: item.targetUrl || item.link || item.url || '/products',
     bannerType: item.bannerType || item.type || 'Hero',
     isActive: item.isActive !== undefined ? Boolean(item.isActive) : (item.active !== undefined ? Boolean(item.active) : true),

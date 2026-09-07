@@ -44,12 +44,26 @@ const nextId = (prefix, items) => {
   return `${prefix}-${String(nextNumber).padStart(3, '0')}`;
 };
 
-export const slugify = (value) =>
-  value
+export const cleanCategoryName = (name) => {
+  if (!name || typeof name !== 'string') return '';
+  let trimmed = name.trim();
+  if (trimmed.includes(',')) {
+    const parts = trimmed.split(',').map((p) => p.trim()).filter(Boolean);
+    if (parts.length > 0 && parts.every((p) => p.toLowerCase() === parts[0].toLowerCase())) {
+      trimmed = parts[0];
+    }
+  }
+  return trimmed;
+};
+
+export const slugify = (value) => {
+  const clean = cleanCategoryName(value);
+  return clean
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+};
 
 export const getCategories = () =>
   readList(CATALOG_KEYS.categories, [])
@@ -70,18 +84,27 @@ export const saveCategories = (categories) => writeList(CATALOG_KEYS.categories,
 export const saveSubcategories = (subcategories) => writeList(CATALOG_KEYS.subcategories, subcategories);
 export const saveProducts = (products) => writeList(CATALOG_KEYS.products, products);
 
+export const deleteCategoryFromStore = (id) => {
+  const categories = getCategories().filter((c) => String(c.id) !== String(id));
+  saveCategories(categories);
+};
+
 export const upsertCategory = (category) => {
   const categories = getCategories();
+  const cleanName = cleanCategoryName(category.name);
+  const cleanSlug = category.slug ? slugify(category.slug) : slugify(cleanName);
+
   const prepared = {
     ...category,
+    name: cleanName,
     id: category.id || nextId('CAT', categories),
-    slug: category.slug || slugify(category.name),
+    slug: cleanSlug,
     displayOrder: Number(category.displayOrder) || categories.length + 1,
   };
 
-  const exists = categories.some((item) => item.id === prepared.id);
+  const exists = categories.some((item) => String(item.id) === String(prepared.id));
   const updated = exists
-    ? categories.map((item) => (item.id === prepared.id ? prepared : item))
+    ? categories.map((item) => (String(item.id) === String(prepared.id) ? prepared : item))
     : [...categories, prepared];
 
   saveCategories(updated);

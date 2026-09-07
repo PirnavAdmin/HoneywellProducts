@@ -10,7 +10,7 @@ const AdminProfile = () => {
     email: 'admin@honeywell.local',
     role: 'admin',
     mobile: '04048555758',
-    address: '302A, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana',
+    address: '101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana',
     permissions: []
   });
 
@@ -19,7 +19,11 @@ const AdminProfile = () => {
     const storedEmail = localStorage.getItem('adminEmail') || 'admin@honeywell.local';
     let storedRole = localStorage.getItem('adminRole') || 'admin';
     const storedPerms = localStorage.getItem('adminPermissions');
-    const storedAddress = localStorage.getItem('adminAddress') || '302A, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana';
+    let storedAddress = localStorage.getItem('adminAddress');
+    if (!storedAddress || storedAddress.includes('302A')) {
+      storedAddress = '101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana';
+      localStorage.setItem('adminAddress', storedAddress);
+    }
     
     // Attempt to match from local staff list to pull phone if available
     const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
@@ -97,7 +101,7 @@ const AdminProfile = () => {
           </div>
           <div className="detail-item">
             <span className="detail-label"><MapPin size={16} /> Address</span>
-            <span className="detail-value">{user.address || 'Opposite New Bustand, Nandikotkur (TQ), Nandyal (DT) - 518401'}</span>
+            <span className="detail-value">{user.address || '101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana'}</span>
           </div>
         </div>
 

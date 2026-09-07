@@ -21,16 +21,17 @@ export const resolveImageUrl = (url) => {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (!trimmed) return '';
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
-    return trimmed;
-  }
-  if (trimmed.toLowerCase().includes('placeholder') && !trimmed.startsWith('data:')) {
+  if (trimmed.toLowerCase().includes('placeholder') || trimmed.includes('honeywell-products-logo.png')) {
     return '/honeywell-products-logo.png';
+  }
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
+    return trimmed;
   }
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   if (trimmed.includes('/uploads/')) {
     const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
-    return `${getApiDomain()}${uploadPath}`;
+    const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
+    return `${cleanBase}${uploadPath}`;
   }
   if (
     trimmed.startsWith('/assets/') ||

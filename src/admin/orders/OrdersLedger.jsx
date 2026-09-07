@@ -28,13 +28,18 @@ const resolveImageUrl = (url) => {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (!trimmed) return '';
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
-    return trimmed;
-  }
-  if (trimmed.toLowerCase().includes('placeholder') && !trimmed.startsWith('data:')) {
+  if (trimmed.toLowerCase().includes('placeholder') || trimmed.includes('honeywell-products-logo.png')) {
     return '/honeywell-products-logo.png';
   }
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
+    return trimmed;
+  }
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.includes('/uploads/')) {
+    const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
+    const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
+    return `${cleanBase}${uploadPath}`;
+  }
   if (
     trimmed.startsWith('/assets/') ||
     trimmed.startsWith('assets/') ||
@@ -52,7 +57,8 @@ const resolveImageUrl = (url) => {
 export const formatCurrency = (amount) => {
   if (amount === null || amount === undefined) return 'INR 0';
   if (typeof amount === 'string' && amount.trim().startsWith('INR')) return amount;
-  const num = typeof amount === 'number' ? amount : parseFloat(String(amount || 0).replace(/[^0-9.]/g, ''));
+  let str = String(amount || 0).trim().replace(/^(rs\.?|inr|₹)\s*/i, '').replace(/,/g, '').replace(/[^0-9.]/g, '');
+  const num = typeof amount === 'number' ? amount : parseFloat(str);
   return `INR ${(isNaN(num) ? 0 : num).toLocaleString('en-IN')}`;
 };
 
@@ -135,7 +141,8 @@ export const PaymentStatusBadge = ({ paymentStatus }) => {
 export const parseAmount = (val) => {
   if (typeof val === 'number') return val;
   if (!val) return 0;
-  const num = parseFloat(String(val).replace(/[^0-9.]/g, ''));
+  let str = String(val).trim().replace(/^(rs\.?|inr|₹)\s*/i, '').replace(/,/g, '').replace(/[^0-9.]/g, '');
+  const num = parseFloat(str);
   return isNaN(num) ? 0 : num;
 };
 
@@ -594,7 +601,7 @@ const printInvoice = (order) => {
                 <div class="company-title">Honeywell</div>
                 <div class="company-subtitle">SECURITY & SURVEILLANCE SOLUTIONS</div>
                 <div class="company-meta">
-                  302A, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana<br/>
+                  101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana<br/>
                   GSTIN: <strong>24DYYPP1677P1Z6</strong> | Phone: 040 4855 5758<br/>
                   Email: info@honeywellproducts.com
                 </div>

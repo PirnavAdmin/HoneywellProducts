@@ -207,18 +207,7 @@ const CategoriesList = () => {
                     {category.id}
                   </td>
                   <td style={{ padding: '10px 16px', fontWeight: '600', color: '#1e293b' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <img
-                        src={category.image || category.imageUrl || '/honeywell-products-logo.png'}
-                        alt={category.name}
-                        style={{ width: '36px', height: '36px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc' }}
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/honeywell-products-logo.png';
-                        }}
-                      />
-                      <span>{category.name}</span>
-                    </div>
+                    {category.name}
                   </td>
                   <td style={{ padding: '10px 16px', fontWeight: '700', color: '#1268a5' }}>
                     {category.displayOrder || 0}

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, ArrowRight, LockKeyhole, CreditCard, QrCode, ShieldCheck, Check, AlertCircle, Upload } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, ArrowRight, LockKeyhole, CreditCard, QrCode, ShieldCheck, Check, AlertCircle, Upload, Info } from 'lucide-react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -24,6 +24,22 @@ export default function Checkout() {
   useDocumentTitle('Checkout', 'Submit contact and payment details for products selected in the cart.');
   const { items, count, total, clearCart } = useCart();
   const navigate = useNavigate();
+  const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
+  const popoverRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+        setShowTaxBreakdown(false);
+      }
+    };
+    if (showTaxBreakdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showTaxBreakdown]);
 
   // Form State
   const [customerName, setCustomerName] = useState('');
@@ -512,48 +528,115 @@ export default function Checkout() {
                 </div>
               ))}
             </div>
-            <hr />
-            <div><span>Total units</span><strong>{count}</strong></div>
-            <div><span>Subtotal</span><strong>{formatPrice(total)}</strong></div>
+            <hr style={{ margin: '12px 0 16px' }} />
 
-            {/* Coupon Code Section */}
-            <div style={{ marginTop: '12px', marginBottom: '12px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Promo / Coupon Code</label>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <input
-                  type="text"
-                  placeholder="Enter code (e.g. WELCOME10)"
-                  value={couponCodeInput}
-                  onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
-                  style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', textTransform: 'uppercase' }}
-                />
-                <button
-                  type="button"
-                  onClick={handleApplyCoupon}
-                  disabled={couponApplying || !couponCodeInput.trim()}
-                  style={{ padding: '6px 12px', fontSize: '12px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
-                >
-                  {couponApplying ? 'Applying...' : 'Apply'}
-                </button>
-              </div>
-              {couponMsg.text && (
-                <div style={{ fontSize: '11px', marginTop: '4px', color: couponMsg.type === 'error' ? '#ef4444' : '#16a34a', fontWeight: 500 }}>
-                  {couponMsg.text}
-                </div>
-              )}
-            </div>
+            {(() => {
+              const taxAmount = Math.round(total * 0.18);
+              const cgst = total * 0.09;
+              const sgst = total * 0.09;
+              const grandTotal = Math.max(0, total + taxAmount - discountAmount);
 
-            {discountAmount > 0 && (
-              <div style={{ color: '#16a34a', fontWeight: 600 }}>
-                <span>Coupon Discount ({appliedCoupon?.code})</span>
-                <strong>- {formatPrice(discountAmount)}</strong>
-              </div>
-            )}
+              const cgstDisplay = Number.isInteger(cgst)
+                ? `₹${cgst.toLocaleString('en-IN')}`
+                : `₹${cgst.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}`;
+              const sgstDisplay = Number.isInteger(sgst)
+                ? `₹${sgst.toLocaleString('en-IN')}`
+                : `₹${sgst.toLocaleString('en-IN', { minimumFractionDigits: 1, maximumFractionDigits: 2 })}`;
 
-            <div className="summary-total">
-              <span>Estimated total</span>
-              <strong>{formatPrice(Math.max(0, total - discountAmount))}</strong>
-            </div>
+              return (
+                <>
+                  <div className="summary-row">
+                    <span className="row-label">ITEM SUBTOTAL</span>
+                    <strong className="row-value">{formatPrice(total)}</strong>
+                  </div>
+
+                  <div className="summary-row" style={{ position: 'relative' }} ref={popoverRef}>
+                    <span className="row-label">
+                      ESTIMATED TAX (18%)
+                      <button
+                        type="button"
+                        className="info-tax-btn"
+                        onClick={() => setShowTaxBreakdown((prev) => !prev)}
+                        title="Click to view tax breakdown"
+                        aria-label="Tax breakdown info"
+                      >
+                        <Info size={11} />
+                      </button>
+                    </span>
+                    <strong className="row-value">{formatPrice(taxAmount)}</strong>
+
+                    {showTaxBreakdown && (
+                      <div className="tax-popover-card">
+                        <div className="tax-popover-title">TAX BREAKDOWN</div>
+                        <div className="tax-popover-row">
+                          <span>TAXABLE AMOUNT</span>
+                          <span>{formatPrice(total)}</span>
+                        </div>
+                        <div className="tax-popover-row">
+                          <span>CGST (9%)</span>
+                          <span>{cgstDisplay}</span>
+                        </div>
+                        <div className="tax-popover-row">
+                          <span>SGST (9%)</span>
+                          <span>{sgstDisplay}</span>
+                        </div>
+                        <div className="tax-popover-divider" />
+                        <div className="tax-popover-total">
+                          <span>TOTAL GST</span>
+                          <span>{formatPrice(taxAmount)}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="summary-row">
+                    <span className="row-label">DELIVERY CHARGES</span>
+                    <strong className="row-value delivery-free-badge">Free</strong>
+                  </div>
+
+                  {/* Coupon Code Section */}
+                  <div style={{ marginTop: '12px', marginBottom: '12px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Promo / Coupon Code</label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <input
+                        type="text"
+                        placeholder="Enter code (e.g. WELCOME10)"
+                        value={couponCodeInput}
+                        onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                        style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', textTransform: 'uppercase' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={couponApplying || !couponCodeInput.trim()}
+                        style={{ padding: '6px 12px', fontSize: '12px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                      >
+                        {couponApplying ? 'Applying...' : 'Apply'}
+                      </button>
+                    </div>
+                    {couponMsg.text && (
+                      <div style={{ fontSize: '11px', marginTop: '4px', color: couponMsg.type === 'error' ? '#ef4444' : '#16a34a', fontWeight: 500 }}>
+                        {couponMsg.text}
+                      </div>
+                    )}
+                  </div>
+
+                  {discountAmount > 0 && (
+                    <div className="summary-row" style={{ color: '#16a34a' }}>
+                      <span className="row-label" style={{ color: '#16a34a' }}>COUPON DISCOUNT ({appliedCoupon?.code})</span>
+                      <strong className="row-value" style={{ color: '#16a34a' }}>- {formatPrice(discountAmount)}</strong>
+                    </div>
+                  )}
+
+                  <hr />
+
+                  <div className="summary-total">
+                    <span>TOTAL AMOUNT</span>
+                    <strong>{formatPrice(grandTotal)}</strong>
+                  </div>
+                </>
+              );
+            })()}
             <button className="button" form="checkout-form" disabled={submitting}>
               {submitting ? 'Processing Payment…' : <>Complete {paymentMethod} Order <ArrowRight /></>}
             </button>

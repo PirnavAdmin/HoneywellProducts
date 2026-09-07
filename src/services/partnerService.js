@@ -12,6 +12,7 @@ export const mapPartnerFromApi = (raw = {}) => ({
   state: raw.state || '',
   businessType: raw.businessType || raw.partnerType || 'Distributor',
   yearsInBusiness: raw.yearsInBusiness || raw.experienceYears || '1',
+  description: raw.description || raw.details || raw.notes || raw.message || '',
   status: raw.status || raw.applicationStatus || 'Pending',
   createdAt: raw.createdAt || raw.dateSubmitted || new Date().toISOString(),
 });

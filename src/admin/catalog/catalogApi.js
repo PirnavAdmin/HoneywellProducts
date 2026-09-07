@@ -6,7 +6,10 @@ import {
   upsertCategory, 
   getProducts, 
   saveProducts, 
-  upsertProduct 
+  upsertProduct,
+  cleanCategoryName,
+  slugify,
+  deleteCategoryFromStore
 } from './catalogStore';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
@@ -38,16 +41,17 @@ const resolveImageUrl = (url) => {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim();
   if (!trimmed) return '';
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
-    return trimmed;
-  }
-  if (trimmed.toLowerCase().includes('placeholder') && !trimmed.startsWith('data:')) {
+  if (trimmed.toLowerCase().includes('placeholder') || trimmed.includes('honeywell-products-logo.png')) {
     return '/honeywell-products-logo.png';
+  }
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
+    return trimmed;
   }
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   if (trimmed.includes('/uploads/')) {
     const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
-    return `${BASE_URL}${uploadPath}`;
+    const cleanBase = (BASE_URL || '').replace(/\/$/, '');
+    return `${cleanBase}${uploadPath}`;
   }
   if (
     trimmed.startsWith('/assets/') ||
@@ -85,21 +89,41 @@ const unwrapItem = (response) => {
 
 // ─── Mappers ─────────────────────────────────────────────────────────────────
 
-export const mapCategoryFromApi = (raw = {}) => ({
-  id: String(raw.id ?? raw.categoryId ?? ''),
-  name: raw.name || raw.categoryName || '',
-  slug: raw.slug || '',
-  description: raw.description || '',
-  status: raw.isActive === false ? 'Inactive' : 'Active',
-  displayOrder: Number(raw.displayOrder ?? raw.display_order ?? 0),
-  metaTitle: raw.metaTitle || `${raw.name || ''} | Honeywell`,
-  metaDescription: raw.metaDescription || raw.description || '',
-  image: resolveImageUrl(raw.imageUrl || raw.image),
-  imageUrl: raw.imageUrl || '',
-  subCategories: raw.subCategories || raw.subcategories || [],
-  products: raw.products || [],
-  code: raw.categoryCode || String(raw.id || ''),
-});
+export const mapCategoryFromApi = (raw = {}) => {
+  const rawName = raw.name || raw.categoryName || '';
+  const cleanName = cleanCategoryName(rawName);
+  let rawSlug = raw.slug || '';
+  if (!rawSlug || (rawSlug.includes('-') && rawSlug.split('-').length > 6)) {
+    rawSlug = slugify(cleanName);
+  } else {
+    // Check if slug is repeated like "network-video-recorders-network-video-recorders"
+    const parts = rawSlug.split('-');
+    if (parts.length % 2 === 0 && parts.length >= 4) {
+      const half = parts.length / 2;
+      const first = parts.slice(0, half).join('-');
+      const second = parts.slice(half).join('-');
+      if (first === second) {
+        rawSlug = first;
+      }
+    }
+  }
+
+  return {
+    id: String(raw.id ?? raw.categoryId ?? ''),
+    name: cleanName,
+    slug: rawSlug || slugify(cleanName),
+    description: raw.description || '',
+    status: raw.isActive === false ? 'Inactive' : 'Active',
+    displayOrder: Number(raw.displayOrder ?? raw.display_order ?? 0),
+    metaTitle: raw.metaTitle || `${cleanName} | Honeywell`,
+    metaDescription: raw.metaDescription || raw.description || '',
+    image: resolveImageUrl(raw.imageUrl || raw.image),
+    imageUrl: raw.imageUrl || '',
+    subCategories: raw.subCategories || raw.subcategories || [],
+    products: raw.products || [],
+    code: raw.categoryCode || String(raw.id || ''),
+  };
+};
 
 export const mapSubcategoryFromApi = (raw = {}) => ({
   id: String(raw.id ?? raw.subcategoryId ?? ''),
@@ -194,48 +218,52 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
 // ─── Category API ─────────────────────────────────────────────────────────────
 
 export const fetchCategories = async () => {
-  const response = await api.get('/api/Category');
-  return unwrapList(response).map(mapCategoryFromApi);
+  try {
+    const response = await api.get('/api/Category');
+    const list = unwrapList(response).map(mapCategoryFromApi);
+    if (list.length > 0) saveCategories(list);
+    return list.length > 0 ? list : getCategories();
+  } catch (err) {
+    console.warn('API error fetching categories, returning store list:', err.message);
+    return getCategories();
+  }
 };
 
 export const fetchCategory = async (id) => {
-  const response = await api.get(`/api/Category/${id}`);
-  const item = unwrapItem(response);
-  return mapCategoryFromApi(item);
+  try {
+    const response = await api.get(`/api/Category/${id}`);
+    const item = unwrapItem(response);
+    return mapCategoryFromApi(item);
+  } catch (err) {
+    console.warn(`GET /api/Category/${id} unavailable (${err.message}), falling back to category list search.`);
+    const categories = await fetchCategories();
+    const found = categories.find((c) => String(c.id) === String(id));
+    if (found) return found;
+    return mapCategoryFromApi({ id });
+  }
 };
 
 export const saveCategory = async (category) => {
   const isEditing = Boolean(category.id);
+  const cleanName = cleanCategoryName(category.name);
+  const cleanSlug = category.slug ? slugify(category.slug) : slugify(cleanName);
 
   const fd = new FormData();
   if (isEditing) {
     fd.append('Id', String(category.id));
-    fd.append('id', String(category.id));
   }
-  fd.append('Name', category.name || '');
-  fd.append('name', category.name || '');
-  fd.append('CategoryName', category.name || '');
-  fd.append('categoryName', category.name || '');
+  fd.append('Name', cleanName);
   fd.append('Description', category.description || '');
-  fd.append('description', category.description || '');
-  fd.append('Slug', category.slug || '');
-  fd.append('slug', category.slug || '');
+  fd.append('Slug', cleanSlug);
   fd.append('DisplayOrder', category.displayOrder !== undefined && category.displayOrder !== null && category.displayOrder !== '' ? String(category.displayOrder) : '0');
-  fd.append('displayOrder', category.displayOrder !== undefined && category.displayOrder !== null && category.displayOrder !== '' ? String(category.displayOrder) : '0');
   fd.append('IsActive', category.status === 'Active' ? 'true' : 'false');
-  fd.append('isActive', category.status === 'Active' ? 'true' : 'false');
-  fd.append('MetaTitle', category.metaTitle || '');
-  fd.append('metaTitle', category.metaTitle || '');
-  fd.append('MetaDescription', category.metaDescription || '');
-  fd.append('metaDescription', category.metaDescription || '');
+  fd.append('MetaTitle', category.metaTitle || `${cleanName} | Honeywell`);
+  fd.append('MetaDescription', category.metaDescription || category.description || '');
 
   if (category.imageFile) {
     fd.append('ImageFile', category.imageFile);
-    fd.append('Image', category.imageFile);
-    fd.append('file', category.imageFile);
   } else if (category.imageUrl || category.image) {
     fd.append('ImageUrl', category.imageUrl || category.image || '');
-    fd.append('imageUrl', category.imageUrl || category.image || '');
   }
 
   const categoryImage = category.image || category.imageUrl || '';
@@ -254,6 +282,7 @@ export const saveCategory = async (category) => {
       mapped.image = categoryImage;
       mapped.imageUrl = categoryImage;
     }
+    upsertCategory(mapped);
     return mapped;
   } catch (err) {
     console.warn('FormData category request failed, attempting JSON payload fallback:', err.message);
@@ -262,14 +291,13 @@ export const saveCategory = async (category) => {
   // Standard JSON payload fallback
   const payload = {
     id: isEditing ? Number(category.id) || category.id : undefined,
-    name: category.name || '',
-    categoryName: category.name || '',
+    name: cleanName,
     description: category.description || '',
-    slug: category.slug || '',
+    slug: cleanSlug,
     displayOrder: Number(category.displayOrder || 0),
     isActive: category.status === 'Active',
-    metaTitle: category.metaTitle || '',
-    metaDescription: category.metaDescription || '',
+    metaTitle: category.metaTitle || `${cleanName} | Honeywell`,
+    metaDescription: category.metaDescription || category.description || '',
     imageUrl: categoryImage,
     image: categoryImage,
   };
@@ -288,18 +316,25 @@ export const saveCategory = async (category) => {
       mapped.image = categoryImage;
       mapped.imageUrl = categoryImage;
     }
+    upsertCategory(mapped);
     return mapped;
   } catch (err) {
     console.warn('Backend API unavailable, saving category locally:', err.message);
     const mapped = mapCategoryFromApi({ ...payload, id: category.id || String(Date.now()) });
     mapped.image = categoryImage;
     mapped.imageUrl = categoryImage;
+    upsertCategory(mapped);
     return mapped;
   }
 };
 
 export const deleteCategory = async (id) => {
-  await api.delete(`/api/Category/${id}`);
+  try {
+    await api.delete(`/api/Category/${id}`);
+  } catch (err) {
+    console.warn(`DELETE /api/Category/${id} failed:`, err.message);
+  }
+  deleteCategoryFromStore(id);
 };
 
 // ─── Subcategory API ──────────────────────────────────────────────────────────
@@ -334,7 +369,7 @@ export const deleteSubcategory = async (id) => {
 
 export const fetchProducts = async (categories = [], subcategories = []) => {
   try {
-    const response = await api.get('/api/Catalog/products');
+    const response = await api.get('/api/products');
     const list = unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
     if (list.length > 0) saveProducts(list);
     return list.length > 0 ? list : getProducts();
@@ -352,13 +387,18 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
 
 export const fetchProduct = async (id, categories = [], subcategories = []) => {
   try {
-    const response = await api.get(`/api/Catalog/products/${id}`);
+    const response = await api.get(`/api/products/${id}`);
     return mapProductFromApi(unwrapItem(response), categories, subcategories);
   } catch {
-    const all = getProducts();
-    const found = all.find((p) => String(p.id) === String(id));
-    if (found) return found;
-    throw new Error('Product not found');
+    try {
+      const response = await api.get(`/api/Products/${id}`);
+      return mapProductFromApi(unwrapItem(response), categories, subcategories);
+    } catch {
+      const all = getProducts();
+      const found = all.find((p) => String(p.id) === String(id));
+      if (found) return found;
+      throw new Error('Product not found');
+    }
   }
 };
 
@@ -426,7 +466,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null) =>
   try {
     const response = await api({
       method: isEditing ? 'PUT' : 'POST',
-      url: isEditing ? `/api/Catalog/products/${product.id}` : '/api/Catalog/products',
+      url: isEditing ? `/api/products/${product.id}` : '/api/products',
       data: fd,
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -443,7 +483,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null) =>
 
 export const deleteProduct = async (id) => {
   try {
-    await api.delete(`/api/Catalog/products/${id}`);
+    await api.delete(`/api/products/${id}`);
   } catch (err) {
     console.warn('API error deleting product, removing locally:', err.message);
   }

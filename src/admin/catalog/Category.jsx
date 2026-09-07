@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Layers, Save, Upload } from 'lucide-react';
 import { slugify } from './catalogStore';
-import { fetchCategory, saveCategory as saveCategoryApi } from './catalogApi';
+import { fetchCategories, fetchCategory, saveCategory as saveCategoryApi } from './catalogApi';
 import { Toast } from '../components/Toast';
 import './adminModule.css';
 
@@ -30,7 +30,10 @@ const Category = () => {
   const isEditing = Boolean(categoryId);
 
   useEffect(() => {
-    if (!categoryId) return;
+    if (!categoryId) {
+      setFormData(emptyCategory);
+      return;
+    }
     let isMounted = true;
 
     const loadCategory = async () => {
@@ -57,11 +60,14 @@ const Category = () => {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-      slug: name === 'name' && !isEditing ? slugify(value) : current.slug,
-    }));
+    setFormData((current) => {
+      const newName = name === 'name' ? value : current.name;
+      return {
+        ...current,
+        [name]: value,
+        slug: name === 'name' && !isEditing ? slugify(newName) : (name === 'slug' ? slugify(value) : current.slug),
+      };
+    });
   };
 
   const handleImageChange = (event) => {
@@ -74,8 +80,9 @@ const Category = () => {
     reader.readAsDataURL(file);
   };
 
-  const validate = () => {
-    if (!formData.name.trim()) {
+  const validate = async () => {
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
       setToast({ message: 'Category Name is required!', type: 'error' });
       return false;
     }
@@ -87,25 +94,56 @@ const Category = () => {
       setToast({ message: 'Description is required!', type: 'error' });
       return false;
     }
+
+    try {
+      const existingCategories = await fetchCategories();
+      const normalizedInput = trimmedName.toLowerCase();
+      const duplicate = existingCategories.find(
+        (c) =>
+          c.name &&
+          c.name.trim().toLowerCase() === normalizedInput &&
+          String(c.id) !== String(categoryId)
+      );
+      if (duplicate) {
+        setToast({ message: 'Category already exists.', type: 'error' });
+        return false;
+      }
+    } catch (err) {
+      // Continue if API check fails
+    }
+
     return true;
   };
 
   const handleSave = async (e) => {
     if (e) e.preventDefault();
-    if (!validate()) return;
+    if (isSaving) return;
+
     setIsSaving(true);
     try {
+      const isValid = await validate();
+      if (!isValid) {
+        setIsSaving(false);
+        return;
+      }
+
+      const cleanName = formData.name.trim();
+      const cleanSlug = formData.slug ? slugify(formData.slug) : slugify(cleanName);
+
       const saved = await saveCategoryApi({
         ...formData,
-        slug: formData.slug || slugify(formData.name),
-        metaTitle: formData.metaTitle || `${formData.name} | Honeywell`,
+        name: cleanName,
+        slug: cleanSlug,
+        metaTitle: formData.metaTitle || `${cleanName} | Honeywell`,
         metaDescription: formData.metaDescription || formData.description,
       });
+
       if (saved) {
         setToast({ message: isEditing ? 'Category updated successfully!' : 'Category saved successfully!', type: 'success' });
+        setFormData(emptyCategory);
         setTimeout(() => {
           navigate('/admin/catalog/categories');
-        }, 1500);
+        }, 1200);
       }
     } catch (apiError) {
       setToast({ message: apiError.message || (isEditing ? 'Failed to update category.' : 'Failed to save category.'), type: 'error' });

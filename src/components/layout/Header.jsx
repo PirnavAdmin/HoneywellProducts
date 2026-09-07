@@ -8,8 +8,8 @@ import { useUI } from '../../context/UIContext';
 import { socialLinks } from '../../config/socialLinks';
 import { siteConfig } from '../../config/siteConfig';
 
-const links = [['/', 'Home'], ['/products', 'Products'], ['/solutions', 'Solutions'], ['/business', 'Business'], ['/about-us', 'About Us'], ['/contact', 'Contact Us']];
-const topSocialIcons = { facebook: Facebook, whatsapp: MessageCircle, linkedin: Linkedin, instagram: Instagram, youtube: Youtube };
+const links = [['/products', 'Products'], ['/solutions', 'Solutions'], ['/business', 'Business'], ['/about-us', 'About Us'], ['/contact', 'Contact Us']];
+const topSocialIcons = { facebook: Facebook, whatsapp: MessageCircle, linkedin: Linkedin, instagram: Instagram, youtube: Youtube, email: Mail };
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -34,9 +34,12 @@ export default function Header() {
           </div>
           <div className="topbar-social">
             <span className="topbar-follow">Follow us:</span>
-            {Object.entries(topSocialIcons).map(([name, Icon]) => socialLinks[name]
-              ? <a key={name} href={socialLinks[name]} target="_blank" rel="noreferrer" aria-label={`Open ${name}`}><Icon size={15} /></a>
-              : <span key={name} className="disabled" aria-label={`${name} link not configured`} title="Link not configured"><Icon size={15} /></span>)}
+            {Object.entries(topSocialIcons).map(([name, Icon]) => {
+              const url = socialLinks[name];
+              if (!url) return <span key={name} className="disabled" aria-label={`${name} link not configured`} title="Link not configured"><Icon size={15} /></span>;
+              const isMail = url.startsWith('mailto:');
+              return <a key={name} href={url} target={isMail ? '_self' : '_blank'} rel={isMail ? undefined : 'noreferrer'} aria-label={`Open ${name}`}><Icon size={15} /></a>;
+            })}
           </div>
         </div>
       </div>

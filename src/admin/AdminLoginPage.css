@@ -74,8 +74,9 @@
 }
 
 .admin-logo-mini img {
-  width: 42px;
-  height: 42px;
+  width: min(180px, 100%);
+  height: auto;
+  max-height: 52px;
   object-fit: contain;
 }
 
