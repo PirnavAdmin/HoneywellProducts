@@ -13,10 +13,7 @@ import { useUI } from '../../context/UIContext';
 import { socialLinks } from '../../config/socialLinks';
 import { siteConfig } from '../../config/siteConfig';
 
-<<<<<<< HEAD
 const links = [['/', 'Home'], ['/products', 'Products'], ['/solutions', 'Solutions'], ['/business', 'Business'], ['/about-us', 'About Us'], ['/contact', 'Contact Us']];
-=======
->>>>>>> 3c16d128d18ee589eb719f1cff04b855bcf40e98
 const topSocialIcons = { facebook: Facebook, whatsapp: MessageCircle, linkedin: Linkedin, instagram: Instagram, youtube: Youtube };
 
 export default function Header() {
