@@ -89,7 +89,7 @@ const TableOfContent = lazy(() => import('./admin/settings/TableOfContent'));
 const Users = lazy(() => import('./admin/screens/Users'));
 const PurchaseIndentList = lazy(() => import('./admin/purchaseIndent/PurchaseIndentList'));
 const AddPurchaseIndent = lazy(() => import('./admin/purchaseIndent/AddPurchaseIndent'));
-const PurchaseOrdersList = lazy(() => import('./admin/purchaseOrders/PurchaseOrdersList'));
+const LegacyPurchaseOrdersList = lazy(() => import('./admin/purchaseOrders/PurchaseOrdersList'));
 const CreatePurchaseOrder = lazy(() => import('./admin/purchaseOrders/CreatePurchaseOrder'));
 const PurchaseReturnsList = lazy(() => import('./admin/purchaseReturns/PurchaseReturnsList'));
 const CreatePurchaseReturn = lazy(() => import('./admin/purchaseReturns/CreatePurchaseReturn'));
@@ -134,7 +134,7 @@ export default function App() {
 
               <Route path="purchase-indent" element={<PurchaseIndentList />} />
               <Route path="purchase-indent/add" element={<AddPurchaseIndent />} />
-              <Route path="purchase-orders" element={<PurchaseOrdersList />} />
+              <Route path="purchase-orders" element={<LegacyPurchaseOrdersList />} />
               <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
               <Route path="purchase-returns" element={<PurchaseReturnsList />} />
               <Route path="purchase-returns/create" element={<CreatePurchaseReturn />} />
@@ -261,5 +261,4 @@ export default function App() {
       </UIProvider>
     </CartProvider>
   );
-}
 }

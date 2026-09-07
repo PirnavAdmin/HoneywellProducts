@@ -687,6 +687,9 @@ const ReportsScreen = () => {
       <div className="reports-controls-bar">
         <div className="reports-tabs-wrapper">
           <button
+            className={`reports-tab-btn ${activeTab === 'sales' ? 'active' : ''}`}
+            onClick={() => setActiveTab('sales')}
+          >
             <ShoppingBag size={16} /> Sales &amp; Orders Analytics
           </button>
           <button
