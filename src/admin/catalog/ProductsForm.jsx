@@ -28,14 +28,28 @@ import './adminModule.css';
 import './ProductsForm.css';
 
 const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (String(url).toLowerCase().includes('placeholder')) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+  if (trimmed.toLowerCase().includes('placeholder') && !trimmed.startsWith('data:')) {
     return '/honeywell-products-logo.png';
   }
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
-    return url;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (
+    trimmed.startsWith('/assets/') ||
+    trimmed.startsWith('assets/') ||
+    trimmed.startsWith('/images/') ||
+    trimmed.startsWith('images/') ||
+    trimmed.startsWith('/honeywell-products-logo')
+  ) {
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   }
-  return `${getApiDomain().replace(/\/$/, '')}/${url.replace(/^\/+/, '')}`;
+  const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
+  if (!cleanBase) return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };
 
 const createReview = () => ({

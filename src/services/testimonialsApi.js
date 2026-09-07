@@ -18,17 +18,32 @@ const getHeaders = () => {
 };
 
 export const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (String(url).toLowerCase().includes('placeholder')) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+  if (trimmed.toLowerCase().includes('placeholder') && !trimmed.startsWith('data:')) {
     return '/honeywell-products-logo.png';
   }
-  if (url.startsWith('data:')) return url;
-  if (url.includes('/uploads/')) {
-    const uploadPath = url.slice(url.indexOf('/uploads/'));
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.includes('/uploads/')) {
+    const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
     return `${getApiDomain()}${uploadPath}`;
   }
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${getApiDomain()}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (
+    trimmed.startsWith('/assets/') ||
+    trimmed.startsWith('assets/') ||
+    trimmed.startsWith('/images/') ||
+    trimmed.startsWith('images/') ||
+    trimmed.startsWith('/honeywell-products-logo')
+  ) {
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  }
+  const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
+  if (!cleanBase) return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };
 
 /**

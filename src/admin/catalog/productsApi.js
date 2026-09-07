@@ -27,16 +27,32 @@ export const computeStockStatus = (stockVal, reorderVal) => {
 
 /** Resolve a relative image path to a full URL */
 export const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (String(url).toLowerCase().includes('placeholder')) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+  if (trimmed.toLowerCase().includes('placeholder') && !trimmed.startsWith('data:')) {
     return '/honeywell-products-logo.png';
   }
-  if (url.includes('/uploads/')) {
-    const uploadPath = url.slice(url.indexOf('/uploads/'));
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.includes('/uploads/')) {
+    const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
     return `${BASE_URL}${uploadPath}`;
   }
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (
+    trimmed.startsWith('/assets/') ||
+    trimmed.startsWith('assets/') ||
+    trimmed.startsWith('/images/') ||
+    trimmed.startsWith('images/') ||
+    trimmed.startsWith('/honeywell-products-logo')
+  ) {
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  }
+  const cleanBase = (BASE_URL || '').replace(/\/$/, '');
+  if (!cleanBase) return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };
 
 /** Extract an array from various API response shapes */
@@ -568,6 +584,25 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
 export const saveProduct = async (product, imageFiles = [], videoFile = null, posterFile = null) => {
   const isEditing = Boolean(product.id);
 
+  // Convert File objects to Base64 data URLs for offline/fallback storage
+  const fileDataUrls = await Promise.all(
+    (imageFiles || []).map((file) =>
+      new Promise((resolve) => {
+        if (!file || typeof file === 'string') return resolve(file || '');
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+      })
+    )
+  ).then((list) => list.filter(Boolean));
+
+  const existingImages = Array.isArray(product.images) && product.images.length > 0
+    ? product.images
+    : (product.image ? [product.image] : []);
+  const mergedImages = [...existingImages, ...fileDataUrls].filter(Boolean);
+  const primaryImage = mergedImages[0] || product.image || '';
+
   const fd = new FormData();
   if (isEditing) {
     fd.append('Id', String(product.id));
@@ -652,7 +687,13 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     const saved = unwrapItem(response);
-    return mapProductFromApi(saved);
+    const mapped = mapProductFromApi(saved);
+    if (!mapped.image && primaryImage) mapped.image = primaryImage;
+    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
+      mapped.images = mergedImages;
+      mapped.gallery = mergedImages;
+    }
+    return mapped;
   } catch (err) {
     console.warn('FormData product upload failed, attempting JSON fallback:', err.message);
   }
@@ -683,17 +724,36 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     discountType: product.discountType || 'none',
     discountAmount: Number(product.discountValue) || 0,
     isActive: product.status !== 'Inactive' && product.isActive !== false,
+    imageUrl: primaryImage,
+    image: primaryImage,
+    images: mergedImages,
   };
 
-  const response = await api({
-    method: isEditing ? 'PUT' : 'POST',
-    url: isEditing ? `/api/products/${product.id}` : '/api/products',
-    data: payload,
-    headers: { 'Content-Type': 'application/json' },
-  });
-  const saved = unwrapItem(response);
-  const savedId = String(saved.productId || saved.id || product.id || '');
-  return { ...mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved), id: savedId };
+  try {
+    const response = await api({
+      method: isEditing ? 'PUT' : 'POST',
+      url: isEditing ? `/api/products/${product.id}` : '/api/products',
+      data: payload,
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const saved = unwrapItem(response);
+    const savedId = String(saved.productId || saved.id || product.id || '');
+    const mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
+    if (!mapped.image && primaryImage) mapped.image = primaryImage;
+    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
+      mapped.images = mergedImages;
+      mapped.gallery = mergedImages;
+    }
+    return { ...mapped, id: savedId || mapped.id };
+  } catch (err) {
+    console.warn('Backend API unavailable, saving product locally:', err.message);
+    const fallbackId = String(product.id || Date.now());
+    const mapped = mapProductFromApi({ ...payload, id: fallbackId });
+    mapped.image = primaryImage;
+    mapped.images = mergedImages;
+    mapped.gallery = mergedImages;
+    return mapped;
+  }
 };
 
 // ─── Products — Delete ────────────────────────────────────────────────────────

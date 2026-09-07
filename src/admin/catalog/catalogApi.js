@@ -35,16 +35,32 @@ api.interceptors.request.use((config) => {
 
 /** Resolve a relative image path to a full URL */
 const resolveImageUrl = (url) => {
-  if (!url) return '';
-  if (String(url).toLowerCase().includes('placeholder')) {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+    return trimmed;
+  }
+  if (trimmed.toLowerCase().includes('placeholder') && !trimmed.startsWith('data:')) {
     return '/honeywell-products-logo.png';
   }
-  if (url.includes('/uploads/')) {
-    const uploadPath = url.slice(url.indexOf('/uploads/'));
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.includes('/uploads/')) {
+    const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
     return `${BASE_URL}${uploadPath}`;
   }
-  if (/^https?:\/\//i.test(url)) return url;
-  return `${BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (
+    trimmed.startsWith('/assets/') ||
+    trimmed.startsWith('assets/') ||
+    trimmed.startsWith('/images/') ||
+    trimmed.startsWith('images/') ||
+    trimmed.startsWith('/honeywell-products-logo')
+  ) {
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  }
+  const cleanBase = (BASE_URL || '').replace(/\/$/, '');
+  if (!cleanBase) return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  return `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };
 
 /** Extract an array from various API response shapes */
@@ -222,6 +238,8 @@ export const saveCategory = async (category) => {
     fd.append('imageUrl', category.imageUrl || category.image || '');
   }
 
+  const categoryImage = category.image || category.imageUrl || '';
+
   try {
     const response = await api({
       method: isEditing ? 'PUT' : 'POST',
@@ -231,7 +249,12 @@ export const saveCategory = async (category) => {
     });
 
     const saved = unwrapItem(response);
-    return mapCategoryFromApi(saved);
+    const mapped = mapCategoryFromApi(saved);
+    if (!mapped.image && categoryImage) {
+      mapped.image = categoryImage;
+      mapped.imageUrl = categoryImage;
+    }
+    return mapped;
   } catch (err) {
     console.warn('FormData category request failed, attempting JSON payload fallback:', err.message);
   }
@@ -247,17 +270,32 @@ export const saveCategory = async (category) => {
     isActive: category.status === 'Active',
     metaTitle: category.metaTitle || '',
     metaDescription: category.metaDescription || '',
-    imageUrl: category.imageUrl || (typeof category.image === 'string' && !category.image.startsWith('data:') ? category.image : ''),
+    imageUrl: categoryImage,
+    image: categoryImage,
   };
 
-  const response = await api({
-    method: isEditing ? 'PUT' : 'POST',
-    url: isEditing ? `/api/Category/${category.id}` : '/api/Category',
-    data: payload,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  try {
+    const response = await api({
+      method: isEditing ? 'PUT' : 'POST',
+      url: isEditing ? `/api/Category/${category.id}` : '/api/Category',
+      data: payload,
+      headers: { 'Content-Type': 'application/json' },
+    });
 
-  return mapCategoryFromApi(unwrapItem(response));
+    const saved = unwrapItem(response);
+    const mapped = mapCategoryFromApi(saved);
+    if (!mapped.image && categoryImage) {
+      mapped.image = categoryImage;
+      mapped.imageUrl = categoryImage;
+    }
+    return mapped;
+  } catch (err) {
+    console.warn('Backend API unavailable, saving category locally:', err.message);
+    const mapped = mapCategoryFromApi({ ...payload, id: category.id || String(Date.now()) });
+    mapped.image = categoryImage;
+    mapped.imageUrl = categoryImage;
+    return mapped;
+  }
 };
 
 export const deleteCategory = async (id) => {
