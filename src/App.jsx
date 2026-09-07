@@ -87,6 +87,7 @@ const CoinsConverterScreen = lazy(() => import('./admin/coins/CoinsConverterScre
 const FormSettings = lazy(() => import('./admin/settings/FormSettings'));
 const TableOfContent = lazy(() => import('./admin/settings/TableOfContent'));
 const Users = lazy(() => import('./admin/screens/Users'));
+// Admin Profile & Config
 const AdminProfile = lazy(() => import('./admin/screens/AdminProfile'));
 const AdminAccountSettings = lazy(() => import('./admin/screens/AdminAccountSettings'));
 const ContactCard = lazy(() => import('./admin/screens/ContactCard'));
@@ -139,7 +140,11 @@ export default function App() {
 
               <Route path="returns" element={<AdminReturns />} />
               <Route path="sales-returns" element={<AdminReturns />} />
+<<<<<<< HEAD
               <Route path="returns/warranty" element={<WarrantyReturnsList />} />
+=======
+              <Route path="returns/warranty" element={<AdminReturns />} />
+>>>>>>> c7d0e694a9c2bd90af4b3389af7dbe3f45109652
 
               <Route path="invoice" element={<InvoicesList />} />
               <Route path="invoice/add" element={<AddInvoice />} />
