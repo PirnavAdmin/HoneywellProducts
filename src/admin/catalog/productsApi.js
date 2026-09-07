@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getProducts, getCategories, upsertProduct, saveProducts } from './catalogStore';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const BASE_URL = getApiDomain();
@@ -448,10 +449,24 @@ export const deleteProductReview = async (id) => {
 
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
-  const response = await api.get('/api/products');
-  return unwrapList(response).map((p) =>
-    mapProductFromApi(p, categories, subcategories)
-  );
+  let apiProducts = [];
+  try {
+    const response = await api.get('/api/products');
+    apiProducts = unwrapList(response).map((p) =>
+      mapProductFromApi(p, categories, subcategories)
+    );
+  } catch (err) {
+    console.warn('Backend products fetch failed, using local store fallback:', err.message);
+  }
+
+  const localProducts = getProducts().map((p) => mapProductFromApi(p, categories, subcategories));
+  const mergedMap = new Map();
+  apiProducts.forEach((p) => { if (p.id) mergedMap.set(String(p.id), p); });
+  localProducts.forEach((p) => { if (p.id) mergedMap.set(String(p.id), p); });
+
+  const result = Array.from(mergedMap.values());
+  if (result.length > 0) saveProducts(result);
+  return result;
 };
 
 /** Search products by keyword (GET /api/products/search?keyword=) */
@@ -558,22 +573,30 @@ export const fetchRelatedProducts = async (
 // GET /api/products/{id}
 
 export const fetchProduct = async (id, categories = [], subcategories = []) => {
-  const response = await api.get(`/api/products/${id}`);
-  const product = unwrapItem(response);
+  try {
+    const response = await api.get(`/api/products/${id}`);
+    const product = unwrapItem(response);
 
-  // Fetch features and reviews in parallel; never let them crash the product load
-  const [features, reviews] = await Promise.all([
-    fetchProductFeatures(id).catch((e) => {
-      console.warn('Could not load features for product', id, e?.message);
-      return [];
-    }),
-    fetchProductReviews(id).catch((e) => {
-      console.warn('Could not load reviews for product', id, e?.message);
-      return [];
-    }),
-  ]);
+    // Fetch features and reviews in parallel; never let them crash the product load
+    const [features, reviews] = await Promise.all([
+      fetchProductFeatures(id).catch((e) => {
+        console.warn('Could not load features for product', id, e?.message);
+        return [];
+      }),
+      fetchProductReviews(id).catch((e) => {
+        console.warn('Could not load reviews for product', id, e?.message);
+        return [];
+      }),
+    ]);
 
-  return mapProductFromApi(product, categories, subcategories, features, reviews);
+    return mapProductFromApi(product, categories, subcategories, features, reviews);
+  } catch (err) {
+    console.warn(`GET /api/products/${id} unavailable (${err.message}), searching product list fallback.`);
+    const allProducts = await fetchProducts(categories, subcategories);
+    const found = allProducts.find((p) => String(p.id) === String(id) || String(p.slug) === String(id));
+    if (found) return found;
+    throw err;
+  }
 };
 
 // ─── Products — Create / Update ───────────────────────────────────────────────
@@ -653,6 +676,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       mapped.images = mergedImages;
       mapped.gallery = mergedImages;
     }
+    upsertProduct(mapped);
     return mapped;
   } catch (err) {
     console.warn('FormData product upload failed, attempting JSON fallback:', err.message);
@@ -704,7 +728,9 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       mapped.images = mergedImages;
       mapped.gallery = mergedImages;
     }
-    return { ...mapped, id: savedId || mapped.id };
+    const finalProduct = { ...mapped, id: savedId || mapped.id };
+    upsertProduct(finalProduct);
+    return finalProduct;
   } catch (err) {
     console.warn('Backend API unavailable, saving product locally:', err.message);
     const fallbackId = String(product.id || Date.now());
@@ -712,6 +738,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     mapped.image = primaryImage;
     mapped.images = mergedImages;
     mapped.gallery = mergedImages;
+    upsertProduct(mapped);
     return mapped;
   }
 };

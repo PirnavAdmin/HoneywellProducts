@@ -23,6 +23,7 @@ export default function Products() {
   useDocumentTitle('Products', 'Explore CCTV, IP, Wi-Fi, 4G, solar security, recording, storage and networking product categories.');
   const [params] = useSearchParams();
   const [productsList, setProductsList] = useState([]);
+  const [categoriesList, setCategoriesList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -32,14 +33,18 @@ export default function Products() {
   const [visible, setVisible] = useState(12);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const loadProducts = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await productService.getAll();
-      setProductsList(Array.isArray(data) ? data : []);
+      const [prods, cats] = await Promise.all([
+        productService.getAll().catch(() => []),
+        productService.categories().catch(() => []),
+      ]);
+      setProductsList(Array.isArray(prods) ? prods : []);
+      setCategoriesList(Array.isArray(cats) ? cats : []);
     } catch (err) {
-      console.error('Failed to load products:', err);
+      console.error('Failed to load products/categories:', err);
       setError(err.message || 'Unable to connect to products server. Please check backend status.');
       setProductsList([]);
     } finally {
@@ -48,15 +53,21 @@ export default function Products() {
   };
 
   useEffect(() => {
-    loadProducts();
+    loadData();
   }, []);
 
   useEffect(() => {
     const categoryId = params.get('category');
     if (!categoryId) return;
     const match = categoryFilters.find(([, ids]) => ids.includes(categoryId));
-    setFilters((current) => ({ ...current, category: match ? [match[0]] : [], subcategory: [] }));
-  }, [params]);
+    if (match) {
+      setFilters((current) => ({ ...current, category: [match[0]], subcategory: [] }));
+    } else {
+      const catObj = categoriesList.find((c) => String(c.id) === String(categoryId) || c.slug === categoryId || (c.name && c.name.toLowerCase() === categoryId.toLowerCase()));
+      const catName = catObj ? catObj.name : categoryId;
+      setFilters((current) => ({ ...current, category: [catName], subcategory: [] }));
+    }
+  }, [params, categoriesList]);
 
   useEffect(() => {
     const closeOnEscape = (event) => event.key === 'Escape' && setFiltersOpen(false);
@@ -64,10 +75,26 @@ export default function Products() {
     return () => document.removeEventListener('keydown', closeOnEscape);
   }, []);
 
+  const dynamicCategoryList = useMemo(() => {
+    const defaultLabels = categoryFilters.map(([label]) => label);
+    const customLabels = categoriesList
+      .map((c) => c.name)
+      .filter((name) => name && !defaultLabels.some((dl) => dl.toLowerCase() === name.toLowerCase()));
+    return [...defaultLabels, ...customLabels];
+  }, [categoriesList]);
+
+  const dynamicFilterGroups = useMemo(() => [
+    { key: 'category', label: 'Category', items: dynamicCategoryList },
+    { key: 'subcategory', label: 'Sub Category', items: [] },
+    { key: 'installation', label: 'Installation', items: ['Indoor', 'Outdoor'] },
+    { key: 'connectivity', label: 'Connectivity', items: ['PoE', 'Wi-Fi', '4G'] },
+    { key: 'features', label: 'Features', items: ['AI', 'Night Vision', 'Audio', 'Remote Monitoring'] },
+  ], [dynamicCategoryList]);
+
   const availableSubcategories = useMemo(() => {
     if (!filters.category.length) return [];
     const categoryIds = new Set(filters.category.flatMap((name) => categoryFilters.find(([label]) => label === name)?.[1] || []));
-    return [...new Set(productsList.filter((product) => categoryIds.has(product.categoryId)).map((product) => product.productType).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+    return [...new Set(productsList.filter((product) => categoryIds.has(product.categoryId) || filters.category.some(fc => product.category && product.category.toLowerCase() === fc.toLowerCase())).map((product) => product.productType).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   }, [filters.category, productsList]);
 
   const toggle = (key, item) => setFilters((current) => {
@@ -80,8 +107,12 @@ export default function Products() {
       const haystack = [product.name, product.category, product.productType, product.description, ...(product.keywords || []), ...(product.highlights || [])].join(' ').toLowerCase();
       const categoryMatch = !filters.category.length || filters.category.some((name) => {
         const catObj = categoryFilters.find(([label]) => label === name);
-        if (!catObj) return false;
-        return catObj[1].includes(product.categoryId) || (product.category && product.category.toLowerCase().includes(name.toLowerCase()));
+        if (catObj && (catObj[1].includes(product.categoryId) || (product.category && product.category.toLowerCase().includes(name.toLowerCase())))) {
+          return true;
+        }
+        if (product.category && product.category.toLowerCase() === name.toLowerCase()) return true;
+        if (String(product.categoryId) === String(name)) return true;
+        return false;
       });
       const subcategoryMatch = !filters.subcategory.length || filters.subcategory.includes(product.productType);
       const installationMatch = !filters.installation.length || (product.installation && filters.installation.some((item) => product.installation.includes(item)));
@@ -122,7 +153,7 @@ export default function Products() {
               </div>
             </div>
 
-            {filterGroups.map((group) => {
+            {dynamicFilterGroups.map((group) => {
               const items = group.key === 'subcategory' ? availableSubcategories : group.items;
               const isDisabled = group.key === 'subcategory' && !filters.category.length;
               return <details className={`filter-dropdown ${isDisabled ? 'disabled' : ''}`} key={group.key}>

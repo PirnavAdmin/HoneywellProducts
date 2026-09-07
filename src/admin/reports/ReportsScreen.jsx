@@ -42,7 +42,6 @@ import {
   updateReportSettings,
   clearReportCache
 } from '../api/reports';
-import { fetchPurchaseIndents, fetchPurchaseOrders, fetchPurchaseReturns } from '../api/purchase';
 import { Pagination } from '../components/ActionButtons';
 import './ReportsScreen.css';
 
@@ -85,9 +84,6 @@ const ReportsScreen = () => {
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [purchaseIndents, setPurchaseIndents] = useState([]);
-  const [purchaseOrders, setPurchaseOrders] = useState([]);
-  const [purchaseReturns, setPurchaseReturns] = useState([]);
 
   // Reports API custom states
   const [ordersReport, setOrdersReport] = useState(null);
@@ -121,7 +117,7 @@ const ReportsScreen = () => {
   const loadReportData = async () => {
     setLoading(true);
     try {
-      const [reportsOrdersData, reportsCatalogData, indentsData, posData, prsData] = await Promise.all([
+      const [reportsOrdersData, reportsCatalogData] = await Promise.all([
         getReportsOrders().catch((err) => {
           console.warn("Failed to load Reports Orders API, falling back:", err);
           return null;
@@ -129,15 +125,8 @@ const ReportsScreen = () => {
         getReportsCatalog().catch((err) => {
           console.warn("Failed to load Reports Catalog API, falling back:", err);
           return null;
-        }),
-        fetchPurchaseIndents().catch(() => []),
-        fetchPurchaseOrders().catch(() => []),
-        fetchPurchaseReturns().catch(() => [])
+        })
       ]);
-
-      setPurchaseIndents(indentsData || []);
-      setPurchaseOrders(posData || []);
-      setPurchaseReturns(prsData || []);
 
       const mapStatusLocal = (status, paymentStatus) => {
         if (!status) return 'Pending';
@@ -693,12 +682,6 @@ const ReportsScreen = () => {
             <ShoppingBag size={16} /> Sales &amp; Orders Analytics
           </button>
           <button
-            className={`reports-tab-btn ${activeTab === 'purchase' || activeTab === 'procurement' ? 'active' : ''}`}
-            onClick={() => setActiveTab('purchase')}
-          >
-            <FileSpreadsheet size={16} /> Procurement &amp; Purchase Analytics
-          </button>
-          <button
             className={`reports-tab-btn ${activeTab === 'catalog' ? 'active' : ''}`}
             onClick={() => setActiveTab('catalog')}
           >
@@ -951,163 +934,6 @@ const ReportsScreen = () => {
                           </td>
                         </tr>
                       ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          ) : activeTab === 'procurement' ? (
-            /* ==================== PROCUREMENT & PURCHASE REPORT ==================== */
-            <div className="reports-view-fadein space-y-6">
-              {/* Stat Cards */}
-              <div className="reports-stats-grid">
-                <div className="reports-stat-card">
-                  <div className="stat-icon revenue"><FileSpreadsheet size={20} /></div>
-                  <div className="stat-details">
-                    <span>Total Purchase Indents</span>
-                    <strong>{purchaseIndents.length} Indents</strong>
-                  </div>
-                </div>
-
-                <div className="reports-stat-card">
-                  <div className="stat-icon orders"><ShoppingBag size={20} /></div>
-                  <div className="stat-details">
-                    <span>Issued Purchase Orders</span>
-                    <strong>{purchaseOrders.length} Orders</strong>
-                  </div>
-                </div>
-
-                <div className="reports-stat-card">
-                  <div className="stat-icon aov"><DollarSign size={20} /></div>
-                  <div className="stat-details">
-                    <span>Total Procurement Spend</span>
-                    <strong>{formatCurrency(purchaseOrders.reduce((sum, p) => sum + Number(p.totalAmount || 0), 0))}</strong>
-                  </div>
-                </div>
-
-                <div className="reports-stat-card">
-                  <div className="stat-icon pending"><AlertTriangle size={20} /></div>
-                  <div className="stat-details">
-                    <span>Pending Indent Approvals</span>
-                    <strong style={{ color: '#d97706' }}>
-                      {purchaseIndents.filter(i => i.status === 'Pending Approval').length} Pending
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* Purchase Indents Summary */}
-              <div className="reports-table-card">
-                <h3>Purchase Indents Report Summary</h3>
-                <div className="table-wrapper">
-                  <table className="reports-data-table">
-                    <thead>
-                      <tr>
-                        <th>Indent Ref</th>
-                        <th>Date</th>
-                        <th>Requested By</th>
-                        <th>Warehouse</th>
-                        <th>Items Count</th>
-                        <th>Est Total Value</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {purchaseIndents.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="text-center py-6 text-slate-400">No purchase indents recorded yet.</td>
-                        </tr>
-                      ) : (
-                        purchaseIndents.map((indent) => (
-                          <tr key={indent.id}>
-                            <td className="font-bold text-[#1268a5]">{indent.indentNumber || `IND-${indent.id}`}</td>
-                            <td>{indent.date}</td>
-                            <td>{indent.requestedBy}</td>
-                            <td>{indent.warehouse || 'Central WH'}</td>
-                            <td>{indent.items?.length || 0}</td>
-                            <td className="font-bold">{formatCurrency(indent.totalEstimatedCost)}</td>
-                            <td><span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">{indent.status}</span></td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Purchase Orders Summary */}
-              <div className="reports-table-card">
-                <h3>Purchase Orders Procurement Summary</h3>
-                <div className="table-wrapper">
-                  <table className="reports-data-table">
-                    <thead>
-                      <tr>
-                        <th>PO Ref</th>
-                        <th>Date</th>
-                        <th>Supplier</th>
-                        <th>Linked Indent</th>
-                        <th>Warehouse</th>
-                        <th>PO Total Amount</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {purchaseOrders.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="text-center py-6 text-slate-400">No purchase orders issued yet.</td>
-                        </tr>
-                      ) : (
-                        purchaseOrders.map((po) => (
-                          <tr key={po.id}>
-                            <td className="font-bold text-[#1268a5]">{po.poNumber || `PO-${po.id}`}</td>
-                            <td>{po.date}</td>
-                            <td className="font-semibold">{po.supplierName}</td>
-                            <td className="font-mono text-xs">{po.indentId ? `IND-${po.indentId}` : 'Direct PO'}</td>
-                            <td>{po.warehouse || 'Main WH'}</td>
-                            <td className="font-bold">{formatCurrency(po.totalAmount)}</td>
-                            <td><span className="px-2 py-0.5 bg-[#1268a5]/10 text-[#1268a5] rounded text-xs font-semibold">{po.status}</span></td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Purchase Returns Summary */}
-              <div className="reports-table-card">
-                <h3>Purchase Returns & Debit Notes Summary</h3>
-                <div className="table-wrapper">
-                  <table className="reports-data-table">
-                    <thead>
-                      <tr>
-                        <th>Return Ref</th>
-                        <th>Date</th>
-                        <th>Supplier</th>
-                        <th>Linked PO</th>
-                        <th>Reason</th>
-                        <th>Return Value</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {purchaseReturns.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="text-center py-6 text-slate-400">No purchase returns recorded yet.</td>
-                        </tr>
-                      ) : (
-                        purchaseReturns.map((pr) => (
-                          <tr key={pr.id}>
-                            <td className="font-bold text-[#1268a5]">{pr.returnNumber || `PR-${pr.id}`}</td>
-                            <td>{pr.date}</td>
-                            <td className="font-semibold">{pr.supplierName}</td>
-                            <td className="font-mono text-xs">{pr.poId ? `PO-${pr.poId}` : 'Direct Return'}</td>
-                            <td>{pr.reason || 'Vendor Warranty'}</td>
-                            <td className="font-bold">{formatCurrency(pr.totalReturnAmount)}</td>
-                            <td><span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-semibold">{pr.status}</span></td>
-                          </tr>
-                        ))
-                      )}
                     </tbody>
                   </table>
                 </div>

@@ -87,12 +87,6 @@ const CoinsConverterScreen = lazy(() => import('./admin/coins/CoinsConverterScre
 const FormSettings = lazy(() => import('./admin/settings/FormSettings'));
 const TableOfContent = lazy(() => import('./admin/settings/TableOfContent'));
 const Users = lazy(() => import('./admin/screens/Users'));
-const PurchaseIndentList = lazy(() => import('./admin/purchaseIndent/PurchaseIndentList'));
-const AddPurchaseIndent = lazy(() => import('./admin/purchaseIndent/AddPurchaseIndent'));
-const LegacyPurchaseOrdersList = lazy(() => import('./admin/purchaseOrders/PurchaseOrdersList'));
-const CreatePurchaseOrder = lazy(() => import('./admin/purchaseOrders/CreatePurchaseOrder'));
-const PurchaseReturnsList = lazy(() => import('./admin/purchaseReturns/PurchaseReturnsList'));
-const CreatePurchaseReturn = lazy(() => import('./admin/purchaseReturns/CreatePurchaseReturn'));
 const AdminProfile = lazy(() => import('./admin/screens/AdminProfile'));
 const AdminAccountSettings = lazy(() => import('./admin/screens/AdminAccountSettings'));
 const ContactCard = lazy(() => import('./admin/screens/ContactCard'));
@@ -100,11 +94,6 @@ const FooterConfig = lazy(() => import('./admin/screens/FooterConfig'));
 const DescriptionManager = lazy(() => import('./admin/screens/DescriptionManager'));
 
 // New IMS Admin Pages
-const PurchaseIndentsList = lazy(() => import('./admin/purchase/PurchaseIndentsList'));
-const PurchaseIndentForm = lazy(() => import('./admin/purchase/PurchaseIndentForm'));
-const PurchaseOrdersList = lazy(() => import('./admin/purchase/PurchaseOrdersList'));
-const PurchaseOrderForm = lazy(() => import('./admin/purchase/PurchaseOrderForm'));
-const GoodsReceiptList = lazy(() => import('./admin/purchase/GoodsReceiptList'));
 const WarrantyReturnsList = lazy(() => import('./admin/returns/WarrantyReturnsList'));
 
 function LoadingScreen() {
@@ -124,21 +113,6 @@ export default function App() {
             <Route path="admin" element={<AdminLayout />}>
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
-
-              {/* Purchase & Procurement Routes */}
-              <Route path="purchase/indents" element={<PurchaseIndentsList />} />
-              <Route path="purchase/indents/create" element={<PurchaseIndentForm />} />
-              <Route path="purchase/orders" element={<PurchaseOrdersList />} />
-              <Route path="purchase/orders/create" element={<PurchaseOrderForm />} />
-              <Route path="purchase/goods-receipt" element={<GoodsReceiptList />} />
-
-              <Route path="purchase-indent" element={<PurchaseIndentList />} />
-              <Route path="purchase-indent/add" element={<AddPurchaseIndent />} />
-              <Route path="purchase-orders" element={<LegacyPurchaseOrdersList />} />
-              <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
-              <Route path="purchase-returns" element={<PurchaseReturnsList />} />
-              <Route path="purchase-returns/create" element={<CreatePurchaseReturn />} />
-
               <Route path="catalog" element={<Navigate to="categories" replace />} />
               <Route path="catalog/categories" element={<CategoriesList />} />
               <Route path="catalog/category" element={<Category />} />

@@ -218,15 +218,22 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
 // ─── Category API ─────────────────────────────────────────────────────────────
 
 export const fetchCategories = async () => {
+  let apiCategories = [];
   try {
     const response = await api.get('/api/Category');
-    const list = unwrapList(response).map(mapCategoryFromApi);
-    if (list.length > 0) saveCategories(list);
-    return list.length > 0 ? list : getCategories();
+    apiCategories = unwrapList(response).map(mapCategoryFromApi);
   } catch (err) {
     console.warn('API error fetching categories, returning store list:', err.message);
-    return getCategories();
   }
+
+  const localCategories = getCategories().map(mapCategoryFromApi);
+  const mergedMap = new Map();
+  apiCategories.forEach((c) => { if (c.id) mergedMap.set(String(c.id), c); });
+  localCategories.forEach((c) => { if (c.id) mergedMap.set(String(c.id), c); });
+
+  const result = Array.from(mergedMap.values());
+  if (result.length > 0) saveCategories(result);
+  return result;
 };
 
 export const fetchCategory = async (id) => {
