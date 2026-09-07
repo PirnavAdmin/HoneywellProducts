@@ -1,6 +1,5 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
-import { getProducts, saveProducts, upsertProduct } from './catalogStore';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const BASE_URL = getApiDomain();
@@ -449,43 +448,10 @@ export const deleteProductReview = async (id) => {
 
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
-  try {
-    const response = await api.get('/api/products');
-    const apiList = unwrapList(response).map((p) =>
-      mapProductFromApi(p, categories, subcategories)
-    );
-    const localList = getProducts();
-
-    const mergedMap = new Map();
-    apiList.forEach((p) => {
-      if (p.id) mergedMap.set(String(p.id), p);
-    });
-    localList.forEach((p) => {
-      if (!p.id) return;
-      const existing = mergedMap.get(String(p.id));
-      if (existing) {
-        mergedMap.set(String(p.id), {
-          ...existing,
-          ...p,
-          image: (!existing.image || existing.image.includes('logo') || existing.image.includes('placeholder')) ? (p.image || existing.image) : existing.image,
-          images: (p.images && p.images.length > 0) ? p.images : (existing.images || []),
-          gallery: (p.gallery && p.gallery.length > 0) ? p.gallery : (existing.gallery || []),
-          description: p.description || existing.description,
-          productDetails: p.productDetails || existing.productDetails,
-          shortDescription: p.shortDescription || existing.shortDescription,
-        });
-      } else {
-        mergedMap.set(String(p.id), p);
-      }
-    });
-
-    const result = Array.from(mergedMap.values());
-    if (result.length > 0) saveProducts(result);
-    return result;
-  } catch (err) {
-    console.warn('API error fetching products, returning local store list:', err?.message);
-    return getProducts();
-  }
+  const response = await api.get('/api/products');
+  return unwrapList(response).map((p) =>
+    mapProductFromApi(p, categories, subcategories)
+  );
 };
 
 /** Search products by keyword (GET /api/products/search?keyword=) */
@@ -592,45 +558,22 @@ export const fetchRelatedProducts = async (
 // GET /api/products/{id}
 
 export const fetchProduct = async (id, categories = [], subcategories = []) => {
-  const localList = getProducts();
-  const localFound = localList.find((p) => String(p.id) === String(id) || String(p.slug) === String(id));
+  const response = await api.get(`/api/products/${id}`);
+  const product = unwrapItem(response);
 
-  try {
-    const response = await api.get(`/api/products/${id}`);
-    const product = unwrapItem(response);
+  // Fetch features and reviews in parallel; never let them crash the product load
+  const [features, reviews] = await Promise.all([
+    fetchProductFeatures(id).catch((e) => {
+      console.warn('Could not load features for product', id, e?.message);
+      return [];
+    }),
+    fetchProductReviews(id).catch((e) => {
+      console.warn('Could not load reviews for product', id, e?.message);
+      return [];
+    }),
+  ]);
 
-    const [features, reviews] = await Promise.all([
-      fetchProductFeatures(id).catch((e) => {
-        console.warn('Could not load features for product', id, e?.message);
-        return [];
-      }),
-      fetchProductReviews(id).catch((e) => {
-        console.warn('Could not load reviews for product', id, e?.message);
-        return [];
-      }),
-    ]);
-
-    const apiMapped = mapProductFromApi(product, categories, subcategories, features, reviews);
-
-    if (localFound) {
-      return {
-        ...apiMapped,
-        ...localFound,
-        image: (!apiMapped.image || apiMapped.image.includes('logo') || apiMapped.image.includes('placeholder')) ? (localFound.image || apiMapped.image) : apiMapped.image,
-        images: (localFound.images && localFound.images.length > 0) ? localFound.images : (apiMapped.images || []),
-        gallery: (localFound.gallery && localFound.gallery.length > 0) ? localFound.gallery : (apiMapped.gallery || []),
-        description: localFound.description || apiMapped.description,
-        productDetails: localFound.productDetails || apiMapped.productDetails,
-        shortDescription: localFound.shortDescription || apiMapped.shortDescription,
-      };
-    }
-
-    return apiMapped;
-  } catch (err) {
-    console.warn(`GET /api/products/${id} failed, returning local store record:`, err?.message);
-    if (localFound) return localFound;
-    throw err;
-  }
+  return mapProductFromApi(product, categories, subcategories, features, reviews);
 };
 
 // ─── Products — Create / Update ───────────────────────────────────────────────
@@ -705,18 +648,12 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     });
     const saved = unwrapItem(response);
     const mapped = mapProductFromApi(saved);
-    const finalProduct = {
-      ...mapped,
-      id: String(saved.productId || saved.id || product.id || mapped.id || Date.now()),
-      image: (!mapped.image || mapped.image.includes('logo') || mapped.image.includes('placeholder')) ? (primaryImage || mapped.image) : mapped.image,
-      images: (mapped.images && mapped.images.length > 0) ? mapped.images : mergedImages,
-      gallery: (mapped.gallery && mapped.gallery.length > 0) ? mapped.gallery : mergedImages,
-      shortDescription: mapped.shortDescription || product.shortDescription || product.description || '',
-      description: mapped.description || product.description || product.shortDescription || '',
-      productDetails: mapped.productDetails || product.productDetails || '',
-    };
-    upsertProduct(finalProduct);
-    return finalProduct;
+    if (!mapped.image && primaryImage) mapped.image = primaryImage;
+    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
+      mapped.images = mergedImages;
+      mapped.gallery = mergedImages;
+    }
+    return mapped;
   } catch (err) {
     console.warn('FormData product upload failed, attempting JSON fallback:', err.message);
   }
@@ -760,36 +697,22 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       headers: { 'Content-Type': 'application/json' },
     });
     const saved = unwrapItem(response);
-    const savedId = String(saved.productId || saved.id || product.id || Date.now());
+    const savedId = String(saved.productId || saved.id || product.id || '');
     const mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
-    const finalProduct = {
-      ...mapped,
-      id: savedId || mapped.id,
-      image: (!mapped.image || mapped.image.includes('logo') || mapped.image.includes('placeholder')) ? (primaryImage || mapped.image) : mapped.image,
-      images: (mapped.images && mapped.images.length > 0) ? mapped.images : mergedImages,
-      gallery: (mapped.gallery && mapped.gallery.length > 0) ? mapped.gallery : mergedImages,
-      shortDescription: mapped.shortDescription || product.shortDescription || product.description || '',
-      description: mapped.description || product.description || product.shortDescription || '',
-      productDetails: mapped.productDetails || product.productDetails || '',
-    };
-    upsertProduct(finalProduct);
-    return finalProduct;
+    if (!mapped.image && primaryImage) mapped.image = primaryImage;
+    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
+      mapped.images = mergedImages;
+      mapped.gallery = mergedImages;
+    }
+    return { ...mapped, id: savedId || mapped.id };
   } catch (err) {
     console.warn('Backend API unavailable, saving product locally:', err.message);
     const fallbackId = String(product.id || Date.now());
     const mapped = mapProductFromApi({ ...payload, id: fallbackId });
-    const finalProduct = {
-      ...mapped,
-      id: fallbackId,
-      image: primaryImage || mapped.image,
-      images: mergedImages.length > 0 ? mergedImages : mapped.images,
-      gallery: mergedImages.length > 0 ? mergedImages : mapped.gallery,
-      shortDescription: product.shortDescription || product.description || '',
-      description: product.description || product.shortDescription || '',
-      productDetails: product.productDetails || '',
-    };
-    upsertProduct(finalProduct);
-    return finalProduct;
+    mapped.image = primaryImage;
+    mapped.images = mergedImages;
+    mapped.gallery = mergedImages;
+    return mapped;
   }
 };
 
