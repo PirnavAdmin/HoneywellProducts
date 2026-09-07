@@ -93,6 +93,8 @@ const ContactCard = lazy(() => import('./admin/screens/ContactCard'));
 const FooterConfig = lazy(() => import('./admin/screens/FooterConfig'));
 const DescriptionManager = lazy(() => import('./admin/screens/DescriptionManager'));
 
+const WarrantyReturnsList = lazy(() => import('./admin/returns/WarrantyReturnsList'));
+
 function LoadingScreen() {
   return <div className="route-loading" role="status"><span /><p>Loading experience…</p></div>;
 }
@@ -111,6 +113,13 @@ export default function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
 
+              {/* Procurement & Purchase Routes */}
+              <Route path="purchase-indent" element={<PurchaseIndentList />} />
+              <Route path="purchase-indent/add" element={<AddPurchaseIndent />} />
+              <Route path="purchase-orders" element={<PurchaseOrdersList />} />
+              <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
+              <Route path="purchase-returns" element={<PurchaseReturnsList />} />
+              <Route path="purchase-returns/create" element={<CreatePurchaseReturn />} />
               <Route path="catalog" element={<Navigate to="categories" replace />} />
               <Route path="catalog/categories" element={<CategoriesList />} />
               <Route path="catalog/category" element={<Category />} />
