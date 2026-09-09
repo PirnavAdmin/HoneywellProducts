@@ -139,55 +139,18 @@ export const mapProductFromApi = (
 
   // ── Brand Resolution ──────────────────────────────────────────────────────
   const resolveBrandName = (item) => {
-    const rawBrand = (item.brand || item.Brand || item.brandName || item.manufacturer || item.Manufacturer || '').toString().trim();
-    
-    // If a custom non-generic brand is explicitly stored, keep it
-    if (rawBrand && rawBrand !== 'Shyam Agro' && rawBrand !== 'Shyam Agro Tools' && rawBrand !== 'ShyamAgro' && rawBrand !== 'Honeywell') {
-      return rawBrand;
-    }
-
-    const productName = (item.productName || item.name || '').toLowerCase();
-    const categoryName = (item.category?.name || item.categoryName || item.category || '').toLowerCase();
-
-    // Map top industry brands by product domain & keywords
-    if (productName.includes('drip') || productName.includes('irrigation')) return 'Netafim';
-    if (productName.includes('sprinkler') || productName.includes('nozzle')) return 'AquaFlow';
-    if (productName.includes('reaper') || productName.includes('binder') || productName.includes('harvester')) return 'VST Shakti';
-    if (productName.includes('fertilizer') || productName.includes('spreader')) return 'GreenGrow';
-    if (productName.includes('brush cutter') || productName.includes('trimmer') || productName.includes('chainsaw')) return 'Stihl';
-    if (productName.includes('sprayer') || productName.includes('fogger')) return 'Aspee';
-    if (productName.includes('tiller') || productName.includes('cultivator') || productName.includes('weeder')) return 'Kirloskar';
-    if (productName.includes('seed') || productName.includes('drill') || productName.includes('planter')) return 'Mahindra Agri';
-    if (productName.includes('pruner') || productName.includes('shear') || productName.includes('secateur')) return 'Falcon Tools';
-    if (categoryName.includes('spray')) return 'Neptune';
-    if (categoryName.includes('garden') || categoryName.includes('farm')) return 'AgriPro';
-
+    const rawBrand = (item.brand || item.Brand || item.brandName || item.manufacturer || item.Manufacturer || item.supplier || item.SupplierName || '').toString().trim();
+    if (rawBrand) return rawBrand;
     return 'Honeywell';
   };
 
   // ── Weight Resolution ──────────────────────────────────────────────────────
   const resolveWeight = (item) => {
     const existing = (item.weight || item.Weight || item.specifications?.weight || '').toString().trim();
-    if (existing && existing !== 'N/A' && existing !== 'null' && existing !== '0') {
+    if (existing && existing !== 'N/A' && existing !== 'null') {
       return existing;
     }
-
-    const productName = (item.productName || item.name || '').toLowerCase();
-
-    if (productName.includes('fertilizer spreader') || productName.includes('spreader')) return 'Approx. 12 kg';
-    if (productName.includes('reaper') || productName.includes('binder')) return 'Approx. 85 kg';
-    if (productName.includes('sprinkler nozzle set') || productName.includes('nozzle')) return 'Approx. 1.2 kg (10 pcs)';
-    if (productName.includes('drip irrigation kit') || productName.includes('irrigation')) return 'Approx. 25 kg (Kit)';
-    if (productName.includes('tiller') || productName.includes('cultivator') || productName.includes('weeder')) return 'Approx. 113 kg';
-    if (productName.includes('blower') || productName.includes('leaf')) return 'Approx. 9-10 kg';
-    if (productName.includes('sprayer') || productName.includes('backpack')) return 'Approx. 6.5 kg (Empty)';
-    if (productName.includes('pipe') || productName.includes('hose')) return 'Approx. 15 kg (50m)';
-    if (productName.includes('seed drill') || productName.includes('planter')) return 'Approx. 140 kg';
-    if (productName.includes('brush cutter') || productName.includes('trimmer')) return 'Approx. 7.8 kg';
-    if (productName.includes('pruner') || productName.includes('shear') || productName.includes('secateur')) return 'Approx. 850 g';
-    if (productName.includes('koramandal') || productName.includes('fertilizer') || productName.includes('compost')) return '50 kg';
-
-    return 'Approx. 5-10 kg';
+    return '';
   };
 
   const brandName = resolveBrandName(raw);
@@ -267,16 +230,15 @@ export const mapProductFromApi = (
     dimensions: raw.dimensions || raw.specifications?.dimensions || '',
     powerSource: raw.powerSource || raw.specifications?.powerSource || '',
     material: raw.material || raw.specifications?.material || '',
-    coverage: raw.coverageUsage || raw.specifications?.coverage || '',
+    coverage: raw.coverageUsage || raw.specifications?.coverage || raw.specifications?.coverageUsage || '',
   };
 
-  const specsList = [
-    `Weight: ${resolvedWeight}`,
-    `Dimensions: ${specsObj.dimensions || 'Standard'}`,
-    `Power Source: ${specsObj.powerSource || 'AC/DC Power Supply'}`,
-    `Material: ${specsObj.material || 'Durable Metallic Housing'}`,
-    `Coverage / Usage: ${specsObj.coverage || 'Indoor / Outdoor'}`,
-  ];
+  const specsList = [];
+  if (specsObj.weight) specsList.push(`Weight: ${specsObj.weight}`);
+  if (specsObj.dimensions) specsList.push(`Dimensions: ${specsObj.dimensions}`);
+  if (specsObj.powerSource) specsList.push(`Power Source: ${specsObj.powerSource}`);
+  if (specsObj.material) specsList.push(`Material: ${specsObj.material}`);
+  if (specsObj.coverage) specsList.push(`Coverage / Usage: ${specsObj.coverage}`);
 
   const categoryName = raw.categoryName || raw.category?.categoryName || raw.category?.name || categories.find(c => String(c.id) === String(categoryId))?.name || 'General';
   const subcategoryName = raw.subcategoryName || raw.subcategory?.subcategoryName || raw.subcategory?.name || subcategories.find(s => String(s.id) === String(subcategoryId))?.name || 'Security Equipment';
@@ -654,6 +616,19 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   // Pricing & Discounts
   fd.append('DiscountType', product.discountType || 'none');
   fd.append('DiscountAmount', String(Number(product.discountValue) || 0));
+
+  // Delivery & Trust
+  fd.append('CountryOfOrigin', product.countryOfOrigin || 'India');
+  fd.append('CodAvailability', product.codAvailable === 'Yes' || product.codAvailable === true ? 'true' : 'false');
+  fd.append('EstimatedDelivery', product.deliveryEstimate || '3-7 business days');
+  fd.append('DeliveryReturn', product.returnPolicy || 'Easy Returns');
+  fd.append('IsActive', product.status !== 'Inactive' ? 'true' : 'false');
+
+  // Alternate key aliases for maximum backend DTO compatibility
+  fd.append('ProductName', product.name || '');
+  fd.append('Manufacturer', product.supplier || product.manufacturer || '');
+  fd.append('Price', String(Number(product.price) || 0));
+  fd.append('Stock', String(Number(product.stock) || 0));
 
   // Images & Media
   if (Array.isArray(imageFiles)) {

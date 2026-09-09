@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Linkedin, Mail, MessageCircle, Youtube } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Mail, Youtube } from 'lucide-react';
 import Brand from '../common/Brand';
+import WhatsAppIcon from '../common/WhatsAppIcon';
 import { socialLinks } from '../../config/socialLinks';
 import { siteConfig } from '../../config/siteConfig';
 
-const socialIcons = { facebook: Facebook, instagram: Instagram, linkedin: Linkedin, youtube: Youtube, whatsapp: MessageCircle, email: Mail };
+const socialIcons = { facebook: Facebook, instagram: Instagram, linkedin: Linkedin, youtube: Youtube, whatsapp: WhatsAppIcon, email: Mail };
 
 export default function Footer() {
   return (

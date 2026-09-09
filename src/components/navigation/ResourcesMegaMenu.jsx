@@ -52,20 +52,29 @@ export default function ResourcesMegaMenu({ onClose }) {
           <h4 className="mega-title">Product Resources</h4>
           <ul className="mega-list">
             <li>
-              <Link to="/downloads" onClick={onClose}>
-                <Download size={18} className="mega-icon" />
+              <Link to="/downloads?tab=documents" onClick={onClose}>
+                <FileText size={18} className="mega-icon" />
                 <div>
-                  <span className="mega-link-title">Downloads Center</span>
-                  <span className="mega-link-desc">Firmware, software &amp; manuals</span>
+                  <span className="mega-link-title">Certifications &amp; Docs</span>
+                  <span className="mega-link-desc">Specifications, datasheets &amp; certificates</span>
                 </div>
               </Link>
             </li>
             <li>
-              <Link to="/downloads?tab=documents" onClick={onClose}>
-                <FileText size={18} className="mega-icon" />
+              <Link to="/resources/software" onClick={onClose}>
+                <Download size={18} className="mega-icon" />
                 <div>
-                  <span className="mega-link-title">Product Documents</span>
-                  <span className="mega-link-desc">Specifications &amp; datasheets</span>
+                  <span className="mega-link-title">Software &amp; Downloads</span>
+                  <span className="mega-link-desc">Software, firmware, tools &amp; apps</span>
+                </div>
+              </Link>
+            </li>
+            <li>
+              <Link to="/downloads" onClick={onClose}>
+                <Download size={18} className="mega-icon" />
+                <div>
+                  <span className="mega-link-title">Downloads Center</span>
+                  <span className="mega-link-desc">Brochures &amp; user manuals</span>
                 </div>
               </Link>
             </li>

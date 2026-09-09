@@ -22,6 +22,7 @@ const ProductFinder = lazy(() => import('./pages/ProductFinder'));
 const CompareProducts = lazy(() => import('./pages/CompareProducts'));
 const Offers = lazy(() => import('./pages/Offers'));
 const DownloadsCenter = lazy(() => import('./pages/DownloadsCenter'));
+const SoftwareDownloads = lazy(() => import('./pages/SoftwareDownloads'));
 const Industries = lazy(() => import('./pages/Industries'));
 const CustomerAccount = lazy(() => import('./pages/CustomerAccount'));
 const CustomerOrders = lazy(() => import('./pages/CustomerOrders'));
@@ -239,6 +240,7 @@ export default function App() {
 
               {/* Resources & Legal */}
               <Route path="resources" element={<ResourcesHub />} />
+              <Route path="resources/software" element={<SoftwareDownloads />} />
               <Route path="case-studies" element={<CaseStudies />} />
               <Route path="videos" element={<Videos />} />
               <Route path="privacy-policy" element={<LegalPage />} />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Newspaper, FileCheck, PlaySquare, Download } from 'lucide-react';
+import { Newspaper, FileCheck, PlaySquare, FileText, DownloadCloud } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import heroImage from '../assets/images/smart-technology-trends.png';
 
@@ -17,6 +17,20 @@ export default function ResourcesHub() {
       <section className="section">
         <div className="container">
           <div className="resources-sections-grid">
+            <Link to="/downloads" className="resource-section-card">
+              <FileText size={32} className="res-icon" />
+              <h3>Certifications &amp; Docs</h3>
+              <p>Access official datasheets, user manuals, certificates, and product documentation.</p>
+              <span className="res-link">Explore Docs &rarr;</span>
+            </Link>
+
+            <Link to="/resources/software" className="resource-section-card">
+              <DownloadCloud size={32} className="res-icon" />
+              <h3>Software &amp; Downloads</h3>
+              <p>Software, firmware, tools and product applications</p>
+              <span className="res-link">Find Software &rarr;</span>
+            </Link>
+
             <Link to="/blogs" className="resource-section-card">
               <Newspaper size={32} className="res-icon" />
               <h3>Blog &amp; Technical Articles</h3>
@@ -36,13 +50,6 @@ export default function ResourcesHub() {
               <h3>Video &amp; Demonstration Center</h3>
               <p>Watch product walkthroughs, installation tutorials, and camera quality side-by-side demos.</p>
               <span className="res-link">Watch Videos &rarr;</span>
-            </Link>
-
-            <Link to="/downloads" className="resource-section-card">
-              <Download size={32} className="res-icon" />
-              <h3>Downloads &amp; Documentation</h3>
-              <p>Access official datasheets, user manuals, certificates, and software packages.</p>
-              <span className="res-link">Go to Downloads &rarr;</span>
             </Link>
           </div>
         </div>

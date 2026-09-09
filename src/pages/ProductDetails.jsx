@@ -1,14 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Check, Download, Minus, Plus, ShoppingCart, Star, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Check, Download, ExternalLink, Minus, Plus, ShoppingCart, Star, ChevronRight, Loader2, AlertCircle, FileText, Cpu, Monitor, HardDrive, Calendar, Layers } from 'lucide-react';
 import { productService } from '../services/productService';
 import { reviewService } from '../services/reviewService';
+import { softwareService } from '../services/softwareService';
 import ProductCard from '../components/products/ProductCard';
 import { useCart } from '../context/CartContext';
 import { useUI } from '../context/UIContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
-const tabs = ['Overview', 'Features', 'Specifications', 'Reviews', 'Downloads', 'FAQ'];
+const tabs = ['Overview', 'Features', 'Specifications', 'Software & Downloads', 'Documents', 'Reviews', 'FAQ'];
+
+const formatFileSize = (bytes) => {
+  if (!bytes || isNaN(bytes) || bytes <= 0) return 'N/A';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+};
 
 export default function ProductDetails() {
   const { id } = useParams();
@@ -16,6 +25,11 @@ export default function ProductDetails() {
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Software & Downloads state
+  const [productSoftware, setProductSoftware] = useState([]);
+  const [softwareLoading, setSoftwareLoading] = useState(false);
+  const [selectedNotesItem, setSelectedNotesItem] = useState(null);
 
   // Reviews state
   const [reviews, setReviews] = useState([]);
@@ -40,6 +54,22 @@ export default function ProductDetails() {
     }
   };
 
+  const loadProductSoftware = async (prodId) => {
+    try {
+      setSoftwareLoading(true);
+      const data = await softwareService.getByProductId(prodId);
+      const activeOnly = Array.isArray(data)
+        ? data.filter((s) => (s.status || 'Active').toLowerCase() === 'active')
+        : [];
+      setProductSoftware(activeOnly);
+    } catch (err) {
+      console.warn('Error loading software for product:', err);
+      setProductSoftware([]);
+    } finally {
+      setSoftwareLoading(false);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     const fetchDetails = async () => {
@@ -47,14 +77,15 @@ export default function ProductDetails() {
         setLoading(true);
         setError(null);
         setImage(0);
-        
+
         const data = await productService.getById(id);
         if (!isMounted) return;
 
         if (data) {
           setProduct(data);
           loadLiveReviews(id);
-          // Fetch related products (GET /api/products/related/{id})
+          loadProductSoftware(id);
+
           try {
             const relData = await productService.getRelated(id);
             if (isMounted) setRelated(Array.isArray(relData) ? relData.slice(0, 4) : []);
@@ -115,6 +146,23 @@ export default function ProductDetails() {
     notify(`${quantity} × ${product.name} added to cart.`);
   };
 
+  const handleDownloadSoftware = (item) => {
+    if (item.id) {
+      softwareService.download(item.id, item.externalUrl);
+    } else if (item.fileUrl) {
+      const link = document.createElement('a');
+      link.href = item.fileUrl;
+      link.download = item.softwareName || 'download';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (item.externalUrl) {
+      window.open(item.externalUrl, '_blank', 'noopener,noreferrer');
+    } else {
+      notify('This software file is currently unavailable. Please contact support.');
+    }
+  };
+
   const handleReviewSubmit = async (e) => {
     e.preventDefault();
     if (!newReview.name.trim() || !newReview.comment.trim()) {
@@ -145,7 +193,7 @@ export default function ProductDetails() {
   return (
     <>
       <div className="product-breadcrumbs container">
-        <Link to="/">Home</Link><ChevronRight /><Link to="/products">Products</Link><ChevronRight /><span>{product.name}</span>
+        <Link to="/">Home</Link><ChevronRight size={14} /><Link to="/products">Products</Link><ChevronRight size={14} /><span>{product.name}</span>
       </div>
 
       <section className="product-detail container">
@@ -243,9 +291,126 @@ export default function ProductDetails() {
                 </dl>
               </div>
             )}
+            {tab === 'Software & Downloads' && (
+              <div>
+                <h2>Software &amp; Downloads</h2>
+                <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
+                  Official software, firmware updates, and utility tools for {product.name}.
+                </p>
+
+                {softwareLoading ? (
+                  <div style={{ padding: '24px 0', color: '#64748b' }}>Loading software packages...</div>
+                ) : productSoftware.length === 0 ? (
+                  <div style={{ padding: '32px 20px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
+                    <AlertCircle size={32} style={{ color: '#94a3b8', margin: '0 auto 12px' }} />
+                    <p style={{ color: '#475569', fontWeight: 600, margin: 0, fontSize: '15px' }}>
+                      No software or downloads are currently available for this product.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {productSoftware.map((item) => (
+                      <div
+                        key={item.id}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '12px',
+                          padding: '20px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+                          <div style={{ flex: '1 1 360px' }}>
+                            <span
+                              style={{
+                                backgroundColor: '#eff6ff',
+                                color: '#1d4ed8',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                textTransform: 'uppercase',
+                                display: 'inline-block',
+                                marginBottom: '6px',
+                              }}
+                            >
+                              {item.softwareType || 'Software'}
+                            </span>
+                            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '0 0 6px 0' }}>
+                              {item.softwareName}
+                            </h3>
+                            <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                              {item.description}
+                            </p>
+
+                            <div style={{ display: 'flex', gap: '16px', rowGap: '6px', flexWrap: 'wrap', fontSize: '12px', color: '#64748b' }}>
+                              {item.version && <span>Version: <strong>{item.version}</strong></span>}
+                              {item.platform && <span>Platform: <strong>{item.platform}</strong></span>}
+                              {item.architecture && item.architecture !== 'N/A' && <span>Arch: <strong>{item.architecture}</strong></span>}
+                              {item.fileSize > 0 && <span>Size: <strong>{formatFileSize(item.fileSize)}</strong></span>}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            {item.releaseNotes && (
+                              <button
+                                className="button outline button-small"
+                                onClick={() => setSelectedNotesItem(selectedNotesItem?.id === item.id ? null : item)}
+                              >
+                                <FileText size={14} /> Release Notes
+                              </button>
+                            )}
+
+                            <button
+                              className="button button-small"
+                              onClick={() => handleDownloadSoftware(item)}
+                              style={{ backgroundColor: '#1d4ed8', color: '#ffffff' }}
+                            >
+                              {item.externalUrl ? <ExternalLink size={14} /> : <Download size={14} />} Download
+                            </button>
+                          </div>
+                        </div>
+
+                        {selectedNotesItem?.id === item.id && (
+                          <div
+                            style={{
+                              marginTop: '16px',
+                              paddingTop: '12px',
+                              borderTop: '1px solid #f1f5f9',
+                              backgroundColor: '#f8fafc',
+                              padding: '12px 16px',
+                              borderRadius: '8px',
+                              fontSize: '13px',
+                              color: '#334155',
+                              lineHeight: 1.6,
+                              whiteSpace: 'pre-wrap',
+                            }}
+                          >
+                            <strong>Release Notes (v{item.version}):</strong>
+                            <p style={{ margin: '6px 0 0 0' }}>{item.releaseNotes}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {tab === 'Documents' && (
+              <div>
+                <h2>Downloads &amp; Manuals</h2>
+                {downloads.map((document) => (
+                  <div className="document-row" key={typeof document === 'string' ? document : document.name}>
+                    <span><strong>{typeof document === 'string' ? document : document.name}</strong><small>Official Documentation</small></span>
+                    <button disabled title="Download documentation file"><Download /> Download</button>
+                  </div>
+                ))}
+              </div>
+            )}
             {tab === 'Reviews' && (
               <div>
-                <h2>Customer Reviews & Ratings</h2>
+                <h2>Customer Reviews &amp; Ratings</h2>
                 {reviews.length === 0 ? (
                   <p style={{ color: '#64748b', marginBottom: 24 }}>No reviews submitted for this product yet. Be the first to leave a review!</p>
                 ) : (
@@ -310,17 +475,6 @@ export default function ProductDetails() {
                     </button>
                   </form>
                 </div>
-              </div>
-            )}
-            {tab === 'Downloads' && (
-              <div>
-                <h2>Downloads & Manuals</h2>
-                {downloads.map((document) => (
-                  <div className="document-row" key={typeof document === 'string' ? document : document.name}>
-                    <span><strong>{typeof document === 'string' ? document : document.name}</strong><small>Official Documentation</small></span>
-                    <button disabled title="Download documentation file"><Download /> Download</button>
-                  </div>
-                ))}
               </div>
             )}
             {tab === 'FAQ' && (

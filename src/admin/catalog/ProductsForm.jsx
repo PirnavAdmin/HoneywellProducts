@@ -22,8 +22,11 @@ import {
 } from './catalogStore';
 import { fetchCategories, fetchSubcategories, fetchProduct, saveProduct as saveProductApi, computeStockStatus } from './productsApi';
 import { fetchSuppliers } from '../suppliers/suppliersApi';
+import { softwareService } from '../../services/softwareService';
+import AdminSoftwareModal from './AdminSoftwareModal';
 import { getApiDomain } from '../../utils/apiConfig';
 import { Toast } from '../components/Toast';
+import { Download, ExternalLink, Search as SearchIcon } from 'lucide-react';
 import './adminModule.css';
 import './ProductsForm.css';
 
@@ -124,31 +127,50 @@ const normalizeReviews = (reviews) => {
 
 const normalizeProduct = (product) => {
   const emptyProduct = createEmptyProduct();
+  
+  const rawSpecs = product.specificationsObj || (typeof product.specifications === 'object' && !Array.isArray(product.specifications) ? product.specifications : {});
+
   const specifications = {
-    ...emptyProduct.specifications,
-    ...(product.specifications || {}),
-    weight: product.specifications?.weight || product.weight || '',
+    weight: rawSpecs.weight || product.weight || '',
+    dimensions: rawSpecs.dimensions || product.dimensions || '',
+    powerSource: rawSpecs.powerSource || product.powerSource || '',
+    material: rawSpecs.material || product.material || '',
+    coverage: rawSpecs.coverage || rawSpecs.coverageUsage || product.coverageUsage || product.coverage || '',
   };
 
-  const currentStock = String(product.stock || '');
-  const currentReorder = String(product.reorderLevel || 10);
+  const currentStock = String(product.stock ?? product.stockQuantity ?? '');
+  const currentReorder = String(product.reorderLevel ?? 10);
 
   return {
     ...emptyProduct,
     ...product,
+    id: String(product.id || ''),
+    name: product.name || product.productName || '',
+    sku: product.sku || '',
+    brand: product.brand || 'Honeywell',
+    supplier: product.supplier || product.manufacturer || '',
     mrp: String(product.mrp || product.price || ''),
-    price: String(product.price || ''),
+    price: String(product.price || product.sellingPrice || ''),
     discountType: product.discountType || 'none',
-    discountValue: String(product.discountValue || ''),
+    discountValue: String(product.discountValue || product.discountAmount || ''),
     stock: currentStock,
     reorderLevel: currentReorder,
     status: computeStockStatus(currentStock, currentReorder),
-    rating: String(product.rating || ''),
-    totalReviews: String(product.totalReviews || ''),
+    countryOfOrigin: product.countryOfOrigin || 'India',
+    codAvailable: product.codAvailable === 'No' || product.codAvailability === false ? 'No' : 'Yes',
+    deliveryEstimate: product.deliveryEstimate || product.estimatedDelivery || '3-7 business days',
+    returnPolicy: product.returnPolicy || product.deliveryReturn || 'Easy Returns',
+    rating: String(product.rating || '4.5'),
+    totalReviews: String(product.totalReviews || '0'),
     shortDescription: product.shortDescription || product.shortDesc || product.description || '',
-    productDetails: product.productDetails || product.longDesc || product.description || '',
+    productDetails: product.productDetails || product.longDesc || '',
+    packageIncludes: product.packageIncludes || '',
     specifications,
-    keyFeatures: product.keyFeatures || product.features || [''],
+    keyFeatures: Array.isArray(product.keyFeatures) && product.keyFeatures.length > 0
+      ? product.keyFeatures
+      : Array.isArray(product.highlights) && product.highlights.length > 0
+      ? product.highlights
+      : [''],
     ratingBreakdown: {
       ...emptyProduct.ratingBreakdown,
       ...(product.ratingBreakdown || {}),
@@ -208,6 +230,50 @@ const ProductsForm = () => {
   const [toast, setToast] = useState(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
   const isEditing = Boolean(productId);
+
+  // Software & Downloads Admin State
+  const [productSoftware, setProductSoftware] = useState([]);
+  const [isSoftwareModalOpen, setIsSoftwareModalOpen] = useState(false);
+  const [editingSoftwareItem, setEditingSoftwareItem] = useState(null);
+  const [deletingSoftwareId, setDeletingSoftwareId] = useState(null);
+  const [softwareSearch, setSoftwareSearch] = useState('');
+  const [softwareStatusFilter, setSoftwareStatusFilter] = useState('All');
+  const [softwareTypeFilter, setSoftwareTypeFilter] = useState('All');
+
+  const loadProductSoftware = async (prodId) => {
+    if (!prodId) return;
+    try {
+      const data = await softwareService.getByProductId(prodId);
+      setProductSoftware(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn('Error fetching software list for product:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (productId) {
+      loadProductSoftware(productId);
+    }
+  }, [productId]);
+
+  const filteredProductSoftware = useMemo(() => {
+    return productSoftware.filter((item) => {
+      if (softwareStatusFilter !== 'All' && (item.status || 'Active').toLowerCase() !== softwareStatusFilter.toLowerCase()) {
+        return false;
+      }
+      if (softwareTypeFilter !== 'All' && (item.softwareType || '').toLowerCase() !== softwareTypeFilter.toLowerCase()) {
+        return false;
+      }
+      if (softwareSearch.trim()) {
+        const q = softwareSearch.trim().toLowerCase();
+        const nameMatch = (item.softwareName || '').toLowerCase().includes(q);
+        const verMatch = (item.version || '').toLowerCase().includes(q);
+        const descMatch = (item.description || '').toLowerCase().includes(q);
+        if (!nameMatch && !verMatch && !descMatch) return false;
+      }
+      return true;
+    });
+  }, [productSoftware, softwareStatusFilter, softwareTypeFilter, softwareSearch]);
 
   const generateMockSku = () => {
     const cat = categories.find(c => String(c.id) === String(formData.categoryId));
@@ -1198,6 +1264,165 @@ const ProductsForm = () => {
                 ))}
               </div>
             </section>
+
+            <section className="catalog-card">
+              <div className="product-section-heading product-section-heading--inline">
+                <div>
+                  <h2>Software &amp; Downloads</h2>
+                  <p>Assign software packages, firmware updates, utilities, and drivers to this product.</p>
+                </div>
+                <button
+                  type="button"
+                  className="catalog-btn catalog-btn--primary"
+                  onClick={() => {
+                    setEditingSoftwareItem(null);
+                    setIsSoftwareModalOpen(true);
+                  }}
+                  disabled={!isEditing && !formData.id}
+                  title={!isEditing && !formData.id ? 'Save product details first to add software' : 'Add Software'}
+                >
+                  <Plus size={15} /> Add Software
+                </button>
+              </div>
+
+              {!isEditing && !formData.id && (
+                <div style={{ backgroundColor: '#fffbe6', border: '1px solid #ffe58f', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', color: '#873800', marginBottom: '16px' }}>
+                  Please save the product first to enable adding software packages and downloads.
+                </div>
+              )}
+
+              {/* Software Filter Bar */}
+              <div className="catalog-filterbar" style={{ marginBottom: '16px', marginTop: '12px' }}>
+                <div className="catalog-search" style={{ minWidth: '200px', flex: 1 }}>
+                  <SearchIcon size={16} />
+                  <input
+                    type="text"
+                    placeholder="Search software name or version..."
+                    value={softwareSearch}
+                    onChange={(e) => setSoftwareSearch(e.target.value)}
+                    style={{ fontSize: '12px', padding: '6px 10px 6px 32px' }}
+                  />
+                </div>
+                <select
+                  value={softwareStatusFilter}
+                  onChange={(e) => setSoftwareStatusFilter(e.target.value)}
+                  style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                >
+                  <option value="All">All Status</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+                <select
+                  value={softwareTypeFilter}
+                  onChange={(e) => setSoftwareTypeFilter(e.target.value)}
+                  style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                >
+                  <option value="All">All Software Types</option>
+                  <option value="Software">Software</option>
+                  <option value="Firmware">Firmware</option>
+                  <option value="Driver">Driver</option>
+                  <option value="Configuration Tool">Configuration Tool</option>
+                  <option value="Utility">Utility</option>
+                  <option value="Desktop Application">Desktop Application</option>
+                  <option value="Mobile Application">Mobile Application</option>
+                  <option value="Plugin">Plugin</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* Software Table */}
+              <div className="catalog-table-wrap">
+                <table className="catalog-table">
+                  <thead>
+                    <tr>
+                      <th>Software Name</th>
+                      <th>Type</th>
+                      <th>Version</th>
+                      <th>Platform / Arch</th>
+                      <th>File Size</th>
+                      <th>Release Date</th>
+                      <th>Status</th>
+                      <th className="catalog-center-cell">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProductSoftware.length === 0 ? (
+                      <tr>
+                        <td colSpan="8" className="catalog-center-cell" style={{ fontSize: '12px', padding: '20px', color: '#64748b' }}>
+                          No software records assigned to this product. Click "+ Add Software" above.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredProductSoftware.map((item) => (
+                        <tr key={item.id} style={{ fontSize: '12px' }}>
+                          <td style={{ fontWeight: 600, color: '#0f172a' }}>{item.softwareName}</td>
+                          <td>
+                            <span className="catalog-badge" style={{ fontSize: '10px' }}>{item.softwareType}</span>
+                          </td>
+                          <td>{item.version}</td>
+                          <td>{item.platform} ({item.architecture || 'Universal'})</td>
+                          <td>{item.fileSize > 0 ? `${(item.fileSize / 1024 / 1024).toFixed(1)} MB` : 'N/A'}</td>
+                          <td>{item.releaseDate || 'N/A'}</td>
+                          <td>
+                            <span
+                              className={`catalog-badge ${item.status === 'Active' ? 'catalog-badge--stock' : 'catalog-badge--out'}`}
+                              style={{ fontSize: '10px', cursor: 'pointer' }}
+                              title="Click to toggle Active/Inactive"
+                              onClick={async () => {
+                                const nextStatus = (item.status || 'Active').toLowerCase() === 'active' ? 'Inactive' : 'Active';
+                                try {
+                                  await softwareService.updateStatus(item.id, nextStatus);
+                                  loadProductSoftware(productId || formData.id);
+                                  setToast({ message: `Software status updated to ${nextStatus}`, type: 'success' });
+                                } catch (err) {
+                                  setToast({ message: 'Failed to update software status.', type: 'error' });
+                                }
+                              }}
+                            >
+                              {item.status || 'Active'}
+                            </span>
+                          </td>
+                          <td className="catalog-center-cell">
+                            <div className="catalog-inline-actions">
+                              <button
+                                type="button"
+                                className="catalog-btn"
+                                style={{ padding: '4px 8px', fontSize: '11px' }}
+                                onClick={() => softwareService.download(item.id, item.externalUrl || item.fileUrl)}
+                                title="Download / View Software"
+                              >
+                                {item.externalUrl ? <ExternalLink size={13} /> : <Download size={13} />}
+                              </button>
+                              <button
+                                type="button"
+                                className="catalog-btn"
+                                style={{ padding: '4px 8px', fontSize: '11px' }}
+                                onClick={() => {
+                                  setEditingSoftwareItem(item);
+                                  setIsSoftwareModalOpen(true);
+                                }}
+                                title="Edit Software"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                className="catalog-btn catalog-btn--danger"
+                                style={{ padding: '4px 8px', fontSize: '11px' }}
+                                onClick={() => setDeletingSoftwareId(item.id)}
+                                title="Delete Software"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
 
           <aside className="catalog-stack product-sticky-panel">
@@ -1521,6 +1746,88 @@ const ProductsForm = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Software Confirmation Modal */}
+      {deletingSoftwareId && (
+        <div
+          onClick={() => setDeletingSoftwareId(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1200,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '420px',
+              width: '90%',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0' }}>
+              Confirm Delete
+            </h3>
+            <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 20px 0' }}>
+              Are you sure you want to delete this software?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="catalog-btn"
+                onClick={() => setDeletingSoftwareId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="catalog-btn catalog-btn--danger"
+                onClick={async () => {
+                  const idToDelete = deletingSoftwareId;
+                  setDeletingSoftwareId(null);
+                  try {
+                    await softwareService.delete(idToDelete);
+                    setToast({ message: 'Software deleted successfully.', type: 'success' });
+                    loadProductSoftware(productId || formData.id);
+                  } catch (err) {
+                    setToast({ message: 'Failed to delete software.', type: 'error' });
+                  }
+                }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Software Add/Edit Modal */}
+      <AdminSoftwareModal
+        isOpen={isSoftwareModalOpen}
+        onClose={() => {
+          setIsSoftwareModalOpen(false);
+          setEditingSoftwareItem(null);
+        }}
+        productId={productId || formData.id}
+        productName={formData.name}
+        productModel={formData.sku || formData.model}
+        editingItem={editingSoftwareItem}
+        onSaved={() => {
+          setToast({ message: 'Software package saved successfully!', type: 'success' });
+          loadProductSoftware(productId || formData.id);
+        }}
+      />
 
       {toast && (
         <Toast

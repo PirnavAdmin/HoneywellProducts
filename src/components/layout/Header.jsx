@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { ChevronDown, Facebook, Instagram, Linkedin, Mail, MapPin, Menu, MessageCircle, Phone, Search, ShoppingBag, X, Youtube } from 'lucide-react';
+import { ChevronDown, Facebook, Instagram, Linkedin, Mail, MapPin, Menu, Phone, Search, ShoppingBag, X, Youtube } from 'lucide-react';
 import Brand from '../common/Brand';
+import WhatsAppIcon from '../common/WhatsAppIcon';
 import SearchPanel from '../common/SearchPanel';
 import ProductsMegaMenu from '../navigation/ProductsMegaMenu';
 import SolutionsMegaMenu from '../navigation/SolutionsMegaMenu';
@@ -14,7 +15,7 @@ import { socialLinks } from '../../config/socialLinks';
 import { siteConfig } from '../../config/siteConfig';
 
 const links = [['/', 'Home'], ['/products', 'Products'], ['/solutions', 'Solutions'], ['/business', 'Business'], ['/about-us', 'About Us'], ['/contact', 'Contact Us']];
-const topSocialIcons = { facebook: Facebook, whatsapp: MessageCircle, linkedin: Linkedin, instagram: Instagram, youtube: Youtube };
+const topSocialIcons = { facebook: Facebook, whatsapp: WhatsAppIcon, linkedin: Linkedin, instagram: Instagram, youtube: Youtube };
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -256,10 +257,11 @@ export default function Header() {
             {mobileExpanded['resources'] && (
               <div className="mobile-acc-body">
                 <Link to="/resources" onClick={closeMenus}>Resource Hub</Link>
+                <Link to="/resources/software" onClick={closeMenus}>Software &amp; Downloads</Link>
                 <Link to="/blogs" onClick={closeMenus}>Blog &amp; News</Link>
                 <Link to="/case-studies" onClick={closeMenus}>Case Studies</Link>
                 <Link to="/videos" onClick={closeMenus}>Videos</Link>
-                <Link to="/downloads" onClick={closeMenus}>Downloads</Link>
+                <Link to="/downloads" onClick={closeMenus}>Downloads &amp; Docs</Link>
                 <Link to="/support" onClick={closeMenus}>Support Center</Link>
                 <Link to="/service-request" onClick={closeMenus}>Service Request</Link>
                 <Link to="/warranty" onClick={closeMenus}>Warranty</Link>

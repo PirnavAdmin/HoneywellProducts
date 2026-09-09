@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { ArrowUp, MessageCircle } from 'lucide-react';
+import { ArrowUp } from 'lucide-react';
 import Header from './Header';
 import Footer from './Footer';
 import EnquiryModal from '../forms/EnquiryModal';
 import BulkQuoteModal from '../forms/BulkQuoteModal';
 import Chatbot from '../chatbot/Chatbot';
+import WhatsAppIcon from '../common/WhatsAppIcon';
 import { socialLinks } from '../../config/socialLinks';
 import { useUI } from '../../context/UIContext';
 
@@ -23,7 +24,7 @@ export default function Layout() {
       <EnquiryModal />
       <BulkQuoteModal />
       <Chatbot />
-      <button className={`whatsapp-button ${!socialLinks.whatsapp ? 'disabled' : ''}`} onClick={() => socialLinks.whatsapp && window.open(socialLinks.whatsapp, '_blank', 'noopener')} aria-label={socialLinks.whatsapp ? 'Contact on WhatsApp' : 'WhatsApp link not configured'} title={socialLinks.whatsapp ? 'WhatsApp' : 'WhatsApp link will be added by the client'}><MessageCircle /></button>
+      <button className={`whatsapp-button ${!socialLinks.whatsapp ? 'disabled' : ''}`} onClick={() => socialLinks.whatsapp && window.open(socialLinks.whatsapp, '_blank', 'noopener')} aria-label={socialLinks.whatsapp ? 'Contact on WhatsApp' : 'WhatsApp link not configured'} title={socialLinks.whatsapp ? 'WhatsApp' : 'WhatsApp link will be added by the client'}><WhatsAppIcon size={24} /></button>
       {showTop && <button className="back-to-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to top"><ArrowUp /></button>}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
