@@ -78,7 +78,6 @@ const AdminLayout = () => {
     let moduleKey = path;
     if (path === 'purchase-indent') moduleKey = 'purchase indent';
     if (path === 'purchase-orders') moduleKey = 'purchase order';
-    if (path === 'purchase-returns') moduleKey = 'purchase return';
     if (path === 'sales-returns') moduleKey = 'sales return';
     if (path === 'stock-updates' || path === 'stock') moduleKey = 'stockupdates';
     if (path === 'coins') moduleKey = 'coins converter';

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
-import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore } from './catalogStore';
+import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore, defaultProducts } from './catalogStore';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const BASE_URL = getApiDomain();
@@ -243,24 +243,44 @@ export const mapProductFromApi = (
   const categoryName = raw.categoryName || raw.category?.categoryName || raw.category?.name || categories.find(c => String(c.id) === String(categoryId))?.name || 'General';
   const subcategoryName = raw.subcategoryName || raw.subcategory?.subcategoryName || raw.subcategory?.name || subcategories.find(s => String(s.id) === String(subcategoryId))?.name || 'Security Equipment';
 
+  const resolvedName = (
+    raw.productName || 
+    raw.name || 
+    raw.Name || 
+    raw.ProductName || 
+    raw.title || 
+    raw.Title || 
+    (subcategoryName && subcategoryName !== 'Security Equipment' ? subcategoryName : '') || 
+    (categoryName && categoryName !== 'General' ? categoryName : '') || 
+    `Honeywell Product #${raw.id || '1'}`
+  ).trim();
+
+  const resolvedSku = (
+    raw.sku || 
+    raw.SKU || 
+    raw.productCode || 
+    raw.code || 
+    `HON-PRD-${String(raw.id || '001').padStart(3, '0')}`
+  ).trim();
+
   const defaultHighlights = keyFeatures.length > 0 ? keyFeatures : [
     raw.shortDescription || raw.description || 'High performance professional surveillance product',
     `Brand: ${brandName}`,
-    `Model SKU: ${raw.sku || brandName}`
+    `Model SKU: ${resolvedSku || brandName}`
   ];
 
   return {
     id: String(raw.id ?? ''),
     slug: raw.slug || String(raw.id ?? ''),
-    name: raw.productName || raw.name || '',
-    sku: raw.sku || '',
+    name: resolvedName,
+    sku: resolvedSku,
     brand: brandName,
     supplier: raw.manufacturer || raw.supplier || '',
     categoryId: categoryId || (categories[0]?.id ?? ''),
     subcategoryId: subcategoryId || (subcategories[0]?.id ?? ''),
     category: categoryName,
     productType: subcategoryName,
-    model: raw.sku || raw.model || brandName || 'GEN-PRO',
+    model: resolvedSku || brandName || 'GEN-PRO',
 
     // Pricing
     mrp: String(numericMrp),
@@ -423,8 +443,10 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
 
   const localProducts = getProducts().map((p) => mapProductFromApi(p, categories, subcategories));
   const mergedMap = new Map();
-  apiProducts.forEach((p) => { if (p.id) mergedMap.set(String(p.id), p); });
+  // 1. Add local store products (if added via form)
   localProducts.forEach((p) => { if (p.id) mergedMap.set(String(p.id), p); });
+  // 2. Add live API products (API products take priority)
+  apiProducts.forEach((p) => { if (p.id) mergedMap.set(String(p.id), p); });
 
   const result = Array.from(mergedMap.values());
   if (result.length > 0) saveProducts(result);

@@ -37,12 +37,13 @@ import { getOrders } from '../api/orders';
 import { fetchProducts, fetchCategories } from '../catalog/productsApi';
 import {
   getReportsOrders,
+  getReportsProcurement,
   getReportsCatalog,
   exportReport,
   updateReportSettings,
   clearReportCache
 } from '../api/reports';
-import { fetchPurchaseIndents, fetchPurchaseOrders, fetchPurchaseReturns } from '../api/purchase';
+import { fetchPurchaseIndents, fetchPurchaseOrders } from '../api/purchase';
 import { Pagination } from '../components/ActionButtons';
 import './ReportsScreen.css';
 
@@ -87,10 +88,10 @@ const ReportsScreen = () => {
   const [categories, setCategories] = useState([]);
   const [purchaseIndents, setPurchaseIndents] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
-  const [purchaseReturns, setPurchaseReturns] = useState([]);
 
   // Reports API custom states
   const [ordersReport, setOrdersReport] = useState(null);
+  const [procurementReport, setProcurementReport] = useState(null);
   const [catalogReport, setCatalogReport] = useState(null);
   const [settings, setSettings] = useState({ lowStockAlertLimit: 5, defaultCurrency: 'INR' });
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -121,9 +122,13 @@ const ReportsScreen = () => {
   const loadReportData = async () => {
     setLoading(true);
     try {
-      const [reportsOrdersData, reportsCatalogData, indentsData, posData, prsData] = await Promise.all([
+      const [reportsOrdersData, reportsProcurementData, reportsCatalogData, indentsData, posData] = await Promise.all([
         getReportsOrders().catch((err) => {
           console.warn("Failed to load Reports Orders API, falling back:", err);
+          return null;
+        }),
+        getReportsProcurement().catch((err) => {
+          console.warn("Failed to load Reports Procurement API, falling back:", err);
           return null;
         }),
         getReportsCatalog().catch((err) => {
@@ -131,13 +136,15 @@ const ReportsScreen = () => {
           return null;
         }),
         fetchPurchaseIndents().catch(() => []),
-        fetchPurchaseOrders().catch(() => []),
-        fetchPurchaseReturns().catch(() => [])
+        fetchPurchaseOrders().catch(() => [])
       ]);
+
+      if (reportsProcurementData) {
+        setProcurementReport(reportsProcurementData);
+      }
 
       setPurchaseIndents(indentsData || []);
       setPurchaseOrders(posData || []);
-      setPurchaseReturns(prsData || []);
 
       const mapStatusLocal = (status, paymentStatus) => {
         if (!status) return 'Pending';
@@ -619,7 +626,11 @@ const ReportsScreen = () => {
   // --- CSV Export Handler ---
   const handleExportCSV = async () => {
     try {
-      const reportType = activeTab;
+      const reportType = activeTab === 'procurement' || activeTab === 'purchase' 
+        ? 'procurement' 
+        : activeTab === 'catalog' 
+          ? 'catalog' 
+          : 'orders';
       showNotification(`Initiating ${reportType} report export on backend...`, "success");
       const data = await exportReport(reportType);
       
@@ -1066,45 +1077,6 @@ const ReportsScreen = () => {
                             <td>{po.warehouse || 'Main WH'}</td>
                             <td className="font-bold">{formatCurrency(po.totalAmount)}</td>
                             <td><span className="px-2 py-0.5 bg-[#1268a5]/10 text-[#1268a5] rounded text-xs font-semibold">{po.status}</span></td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Purchase Returns Summary */}
-              <div className="reports-table-card">
-                <h3>Purchase Returns & Debit Notes Summary</h3>
-                <div className="table-wrapper">
-                  <table className="reports-data-table">
-                    <thead>
-                      <tr>
-                        <th>Return Ref</th>
-                        <th>Date</th>
-                        <th>Supplier</th>
-                        <th>Linked PO</th>
-                        <th>Reason</th>
-                        <th>Return Value</th>
-                        <th>Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {purchaseReturns.length === 0 ? (
-                        <tr>
-                          <td colSpan="7" className="text-center py-6 text-slate-400">No purchase returns recorded yet.</td>
-                        </tr>
-                      ) : (
-                        purchaseReturns.map((pr) => (
-                          <tr key={pr.id}>
-                            <td className="font-bold text-[#1268a5]">{pr.returnNumber || `PR-${pr.id}`}</td>
-                            <td>{pr.date}</td>
-                            <td className="font-semibold">{pr.supplierName}</td>
-                            <td className="font-mono text-xs">{pr.poId ? `PO-${pr.poId}` : 'Direct Return'}</td>
-                            <td>{pr.reason || 'Vendor Warranty'}</td>
-                            <td className="font-bold">{formatCurrency(pr.totalReturnAmount)}</td>
-                            <td><span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-xs font-semibold">{pr.status}</span></td>
                           </tr>
                         ))
                       )}

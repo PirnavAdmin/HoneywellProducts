@@ -183,32 +183,6 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
               </li>
             )}
 
-            {/* Purchase IMS */}
-            {hasAccess('suppliers') && (
-              <li>
-                <div
-                  onClick={() => toggleDropdown('purchase', '/admin/purchase/indents')}
-                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/purchase') ? 'active-parent' : ''}`}
-                  data-tooltip="Purchase"
-                  title={!expanded ? "Purchase" : undefined}
-                >
-                  <div className="nav-left">
-                    <div className="icon-box"><FileSpreadsheet size={18} className="nav-icon" /></div>
-                    <span className="nav-label-text">Purchase</span>
-                  </div>
-                  {expanded && (openDropdowns.purchase
-                    ? <ChevronDown size={15} className="nav-arrow" />
-                    : <ChevronRight size={15} className="nav-arrow" />
-                  )}
-                </div>
-                <ul className={`stroyka-submenu ${openDropdowns.purchase && expanded ? 'show-submenu' : ''}`}>
-                  <li><NavLink to="/admin/purchase/indents" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Indents</NavLink></li>
-                  <li><NavLink to="/admin/purchase/orders" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Orders</NavLink></li>
-                  <li><NavLink to="/admin/purchase/goods-receipt" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Goods Receipt (GRN)</NavLink></li>
-                  <li><NavLink to="/admin/suppliers" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Suppliers</NavLink></li>
-                </ul>
-              </li>
-            )}
 
             {/* Customers */}
             {hasAccess('customers') && (
@@ -342,7 +316,6 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                 <ul className={`stroyka-submenu ${openDropdowns.purchase && expanded ? 'show-submenu' : ''}`}>
                   {hasAccess('purchase indent') && <li><NavLink to="/admin/purchase-indent" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Indent</NavLink></li>}
                   {hasAccess('purchase order') && <li><NavLink to="/admin/purchase-orders" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Order</NavLink></li>}
-                  {hasAccess('purchase return') && <li><NavLink to="/admin/purchase-returns" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Return</NavLink></li>}
                 </ul>
               </li>
             )}

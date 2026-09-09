@@ -11,7 +11,6 @@ const ALL_PERMISSION_MODULES = [
   { key: 'customers', label: 'Customers' },
   { key: 'purchase indent', label: 'Purchase Indent' },
   { key: 'purchase order', label: 'Purchase Order' },
-  { key: 'purchase return', label: 'Purchase Return' },
   { key: 'invoices', label: 'Sales Invoice' },
   { key: 'sales return', label: 'Sales Return / Warranty' },
   { key: 'returns', label: 'Returns & Refunds' },
@@ -29,7 +28,7 @@ const ALL_PERMISSION_MODULES = [
 ];
 
 const DEFAULT_USER_PERMISSIONS = [
-  'dashboard', 'catalog', 'customers', 'purchase indent', 'purchase order', 'purchase return',
+  'dashboard', 'catalog', 'customers', 'purchase indent', 'purchase order',
   'invoices', 'sales return', 'returns', 'reports', 'orders', 'stockupdates', 'marketing',
   'brands', 'blogs', 'settings', 'suppliers', 'coins converter', 'call history', 'staff'
 ];

@@ -11,7 +11,8 @@ export const defaultProducts = [];
 const MOCK_IDS = new Set([
   'CAT-001', 'CAT-002', 'CAT-003', 'CAT-004', 'CAT-005',
   'SUB-001', 'SUB-002', 'SUB-003', 'SUB-004', 'SUB-005', 'SUB-006',
-  'PRD-001', 'PRD-002', 'PRD-003', 'PRD-004'
+  'PRD-001', 'PRD-002', 'PRD-003', 'PRD-004',
+  '1', '2', '3', '5', '6', '7'
 ]);
 
 const isStorageAvailable = () => typeof window !== 'undefined' && window.localStorage;
@@ -67,17 +68,17 @@ export const slugify = (value) => {
 
 export const getCategories = () =>
   readList(CATALOG_KEYS.categories, [])
-    .filter((c) => !MOCK_IDS.has(c.id))
+    .filter((c) => !MOCK_IDS.has(String(c.id)))
     .sort((a, b) => Number(a.displayOrder) - Number(b.displayOrder));
 
 export const getSubcategories = () =>
   readList(CATALOG_KEYS.subcategories, [])
-    .filter((s) => !MOCK_IDS.has(s.id))
+    .filter((s) => !MOCK_IDS.has(String(s.id)))
     .sort((a, b) => Number(a.displayOrder) - Number(b.displayOrder));
 
 export const getProducts = () =>
   readList(CATALOG_KEYS.products, [])
-    .filter((p) => !MOCK_IDS.has(p.id));
+    .filter((p) => !MOCK_IDS.has(String(p.id)));
 
 
 export const saveCategories = (categories) => writeList(CATALOG_KEYS.categories, categories);

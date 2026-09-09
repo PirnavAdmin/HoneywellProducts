@@ -176,10 +176,33 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
 
   const media = Array.isArray(raw.media) ? raw.media : [];
 
+  const categoryName = raw.categoryName || raw.category?.categoryName || raw.category?.name || categories.find(c => String(c.id) === String(categoryId))?.name || 'General';
+  const subcategoryName = raw.subcategoryName || raw.subcategory?.subcategoryName || raw.subcategory?.name || subcategories.find(s => String(s.id) === String(subcategoryId))?.name || 'Security Equipment';
+
+  const resolvedName = (
+    raw.productName || 
+    raw.name || 
+    raw.Name || 
+    raw.ProductName || 
+    raw.title || 
+    raw.Title || 
+    (subcategoryName && subcategoryName !== 'Security Equipment' ? subcategoryName : '') || 
+    (categoryName && categoryName !== 'General' ? categoryName : '') || 
+    `Honeywell Product #${raw.id || '1'}`
+  ).trim();
+
+  const resolvedSku = (
+    raw.sku || 
+    raw.SKU || 
+    raw.productCode || 
+    raw.code || 
+    `HON-PRD-${String(raw.id || '001').padStart(3, '0')}`
+  ).trim();
+
   return {
     id: String(raw.id ?? ''),
-    name: raw.name || raw.productName || '',
-    sku: raw.sku || '',
+    name: resolvedName,
+    sku: resolvedSku,
     brand: brandName,
     supplier: raw.supplier || raw.manufacturer || '',
     categoryId: categoryId || categories[0]?.id || '',

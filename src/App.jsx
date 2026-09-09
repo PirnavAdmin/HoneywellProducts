@@ -92,8 +92,6 @@ const PurchaseIndentList = lazy(() => import('./admin/purchaseIndent/PurchaseInd
 const AddPurchaseIndent = lazy(() => import('./admin/purchaseIndent/AddPurchaseIndent'));
 const PurchaseOrdersList = lazy(() => import('./admin/purchaseOrders/PurchaseOrdersList'));
 const CreatePurchaseOrder = lazy(() => import('./admin/purchaseOrders/CreatePurchaseOrder'));
-const PurchaseReturnsList = lazy(() => import('./admin/purchaseReturns/PurchaseReturnsList'));
-const CreatePurchaseReturn = lazy(() => import('./admin/purchaseReturns/CreatePurchaseReturn'));
 const WarrantyReturnsList = lazy(() => import('./admin/returns/WarrantyReturnsList'));
 const AdminProfile = lazy(() => import('./admin/screens/AdminProfile'));
 const AdminAccountSettings = lazy(() => import('./admin/screens/AdminAccountSettings'));
@@ -119,19 +117,11 @@ export default function App() {
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
 
-              {/* Purchase & Procurement Routes */}
-              <Route path="purchase/indents" element={<PurchaseIndentList />} />
-              <Route path="purchase/indents/create" element={<AddPurchaseIndent />} />
-              <Route path="purchase/orders" element={<PurchaseOrdersList />} />
-              <Route path="purchase/orders/create" element={<CreatePurchaseOrder />} />
-              <Route path="purchase/goods-receipt" element={<PurchaseOrdersList />} />
-
+              {/* Procurement Routes */}
               <Route path="purchase-indent" element={<PurchaseIndentList />} />
               <Route path="purchase-indent/add" element={<AddPurchaseIndent />} />
               <Route path="purchase-orders" element={<PurchaseOrdersList />} />
               <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
-              <Route path="purchase-returns" element={<PurchaseReturnsList />} />
-              <Route path="purchase-returns/create" element={<CreatePurchaseReturn />} />
               <Route path="catalog" element={<Navigate to="categories" replace />} />
               <Route path="catalog/categories" element={<CategoriesList />} />
               <Route path="catalog/category" element={<Category />} />

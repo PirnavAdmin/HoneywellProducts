@@ -21,6 +21,16 @@ export const getReportsOrders = async () => {
 };
 
 /**
+ * Fetch report data for procurement analytics & ledger.
+ * GET /api/Reports/procurement
+ */
+export const getReportsProcurement = async () => {
+  const res = await fetch(`${getApiDomain()}/api/Reports/procurement`, { headers: getHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch procurement report (${res.status})`);
+  return await res.json();
+};
+
+/**
  * Fetch report data for catalog.
  * GET /api/Reports/catalog
  */
