@@ -89,6 +89,11 @@ export const deleteCategoryFromStore = (id) => {
   saveCategories(categories);
 };
 
+export const deleteProductFromStore = (id) => {
+  const products = getProducts().filter((p) => String(p.id) !== String(id));
+  saveProducts(products);
+};
+
 export const upsertCategory = (category) => {
   const categories = getCategories();
   const cleanName = cleanCategoryName(category.name);

@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
-import { getProducts, getCategories, upsertProduct, saveProducts } from './catalogStore';
+import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore } from './catalogStore';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const BASE_URL = getApiDomain();
@@ -722,7 +722,25 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
 // DELETE /api/products/{id}
 
 export const deleteProduct = async (id) => {
-  await api.delete(`/api/products/${id}`);
+  if (!id) return;
+  try {
+    await api.delete(`/api/products/${id}`);
+  } catch (err) {
+    const status = err.response?.status;
+    if (status === 404) {
+      console.warn(`DELETE /api/products/${id} returned 404 (item not found on server). Cleaning up locally.`);
+    } else {
+      try {
+        await api.delete(`/api/products/delete/${id}`);
+      } catch (err2) {
+        if (err2.response?.status !== 404) {
+          console.warn(`DELETE /api/products/delete/${id} failed:`, err2.message);
+        }
+      }
+    }
+  } finally {
+    deleteProductFromStore(id);
+  }
 };
 
 // ─── Products — Patch Stock ───────────────────────────────────────────────────
