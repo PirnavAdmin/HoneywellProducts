@@ -185,6 +185,8 @@ export default function App() {
               <Route path="suppliers/list" element={<SuppliersList />} />
               <Route path="suppliers/add" element={<SuppliersForm />} />
               <Route path="suppliers/new" element={<SuppliersForm />} />
+              <Route path="suppliers/edit/:id" element={<SuppliersForm />} />
+              <Route path="suppliers/form/:id" element={<SuppliersForm />} />
               <Route path="suppliers/registrations" element={<NewSuppliersList />} />
               <Route path="coins" element={<CoinsConverterScreen />} />
               <Route path="settings" element={<Navigate to="form" replace />} />

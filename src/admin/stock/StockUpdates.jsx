@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { generateStandardizedSku } from '../../utils/skuGenerator';
+import { fetchProducts } from '../catalog/productsApi';
 import {
   Search,
   Filter,
@@ -292,10 +294,29 @@ const AddEntryModal = ({ categories = [], onClose, onSave }) => {
     });
   };
 
-  const generateMockSku = () => {
-    const catCode = category ? category.substring(0, 3).toUpperCase() : 'GEN';
-    const randNum = Math.floor(100 + Math.random() * 900);
-    setSku(`SAT-${catCode}-${randNum}`);
+  const handleGenerateSku = async () => {
+    let existingProducts = [];
+    try {
+      existingProducts = await fetchProducts();
+    } catch (e) {
+      console.warn('Could not fetch products for sequence:', e);
+    }
+
+    const result = generateStandardizedSku({
+      brand: supplier || 'Honeywell',
+      categoryName: category,
+      subcategoryName: subcategory,
+      specification: name,
+      productName: name,
+      existingProducts,
+    });
+
+    if (!result.success) {
+      alert(result.error);
+      return;
+    }
+
+    setSku(result.sku);
   };
 
   return (
@@ -338,7 +359,7 @@ const AddEntryModal = ({ categories = [], onClose, onSave }) => {
                     onChange={(e) => setSku(e.target.value)}
                     required
                   />
-                  <button className="sku-gen-btn" onClick={generateMockSku} type="button" title="Generate SKU Code">
+                  <button className="sku-gen-btn" onClick={handleGenerateSku} type="button" title="Generate Standardized SKU Code">
                     Generate
                   </button>
                 </div>

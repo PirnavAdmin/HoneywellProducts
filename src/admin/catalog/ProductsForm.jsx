@@ -20,7 +20,8 @@ import {
   getCategoryName,
   getSubcategoryName,
 } from './catalogStore';
-import { fetchCategories, fetchSubcategories, fetchProduct, saveProduct as saveProductApi, computeStockStatus } from './productsApi';
+import { fetchCategories, fetchSubcategories, fetchProduct, fetchProducts, saveProduct as saveProductApi, computeStockStatus } from './productsApi';
+import { generateStandardizedSku } from '../../utils/skuGenerator';
 import { fetchSuppliers } from '../suppliers/suppliersApi';
 import { softwareService } from '../../services/softwareService';
 import AdminSoftwareModal from './AdminSoftwareModal';
@@ -275,11 +276,47 @@ const ProductsForm = () => {
     });
   }, [productSoftware, softwareStatusFilter, softwareTypeFilter, softwareSearch]);
 
-  const generateMockSku = () => {
-    const cat = categories.find(c => String(c.id) === String(formData.categoryId));
-    const catCode = cat ? cat.name.substring(0, 3).toUpperCase() : 'GEN';
-    const randNum = Math.floor(100 + Math.random() * 900);
-    setFormData((current) => ({ ...current, sku: `SAT-${catCode}-${randNum}` }));
+  const handleGenerateSku = async () => {
+    const cat = categories.find((c) => String(c.id) === String(formData.categoryId));
+    const subcat = subcategories.find((s) => String(s.id) === String(formData.subcategoryId));
+    const brandObj = brandsList.find((b) => String(b.id) === String(formData.brand) || b.name === formData.brand);
+
+    const brandName = brandObj ? (brandObj.name || brandObj.brandName) : (formData.brand || 'Honeywell');
+    const categoryName = cat ? (cat.name || cat.categoryName) : '';
+    const subcategoryName = subcat ? (subcat.name || subcat.subcategoryName) : '';
+
+    const specInput = [
+      formData.specifications?.weight,
+      formData.specifications?.dimensions,
+      formData.specifications?.powerSource,
+      formData.specifications?.material,
+      formData.specifications?.coverage,
+    ].filter(Boolean).join(' ');
+
+    let existingProducts = [];
+    try {
+      existingProducts = await fetchProducts(categories, subcategories);
+    } catch (err) {
+      console.warn('Could not load existing products for sequence calculation:', err);
+    }
+
+    const result = generateStandardizedSku({
+      brand: brandName,
+      categoryName,
+      subcategoryName,
+      specification: specInput,
+      productName: formData.name,
+      description: formData.shortDescription || formData.productDetails,
+      existingProducts,
+    });
+
+    if (!result.success) {
+      setToast({ message: result.error, type: 'error' });
+      return;
+    }
+
+    setFormData((current) => ({ ...current, sku: result.sku }));
+    setToast({ message: `Generated SKU: ${result.sku}`, type: 'success' });
   };
 
   useEffect(() => {
@@ -916,7 +953,7 @@ const ProductsForm = () => {
                       style={{ padding: '6px 10px', fontSize: '13px' }}
                       required
                     />
-                    <button className="sku-gen-btn" onClick={generateMockSku} type="button" title="Generate SKU Code" style={{ padding: '6px 10px', fontSize: '12px' }}>
+                    <button className="sku-gen-btn" onClick={handleGenerateSku} type="button" title="Generate Standardized SKU Code" style={{ padding: '6px 10px', fontSize: '12px' }}>
                       Generate
                     </button>
                   </div>

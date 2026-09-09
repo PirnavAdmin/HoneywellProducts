@@ -7,20 +7,8 @@ import { productService } from '../services/productService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import productsHeroImage from '../assets/images/products-hero.png';
 
-const categoryFilters = [
-  ['CCTV', ['cctv-cameras']], ['IP Camera', ['ip-cameras']], ['Analog Camera', ['cctv-cameras', 'dome-cameras', 'bullet-cameras']], ['Dome', ['dome-cameras']], ['Bullet', ['bullet-cameras']], ['PTZ', ['ptz-cameras']], ['Wi-Fi', ['wifi-cameras']], ['4G', ['4g-cameras']], ['Solar Security', ['solar-cameras']], ['Solar Panels', ['solar-panels']], ['Solar Inverters', ['solar-inverters']], ['Solar Batteries', ['solar-batteries']], ['Solar Accessories', ['solar-controllers']], ['NVR', ['nvr']], ['DVR', ['dvr']], ['Storage', ['surveillance-storage']], ['Networking', ['networking']], ['Accessories', ['cctv-accessories']],
-];
-
-const filterGroups = [
-  { key: 'category', label: 'Category', items: categoryFilters.map(([label]) => label) },
-  { key: 'subcategory', label: 'Sub Category', items: [] },
-  { key: 'installation', label: 'Installation', items: ['Indoor', 'Outdoor'] },
-  { key: 'connectivity', label: 'Connectivity', items: ['PoE', 'Wi-Fi', '4G'] },
-  { key: 'features', label: 'Features', items: ['AI', 'Night Vision', 'Audio', 'Remote Monitoring'] },
-];
-
 export default function Products() {
-  useDocumentTitle('Products', 'Explore CCTV, IP, Wi-Fi, 4G, solar security, recording, storage and networking product categories.');
+  useDocumentTitle('Products', 'Explore professional surveillance, recording, networking and security product categories.');
   const [params] = useSearchParams();
   const [productsList, setProductsList] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
@@ -57,16 +45,16 @@ export default function Products() {
   }, []);
 
   useEffect(() => {
-    const categoryId = params.get('category');
-    if (!categoryId) return;
-    const match = categoryFilters.find(([, ids]) => ids.includes(categoryId));
-    if (match) {
-      setFilters((current) => ({ ...current, category: [match[0]], subcategory: [] }));
-    } else {
-      const catObj = categoriesList.find((c) => String(c.id) === String(categoryId) || c.slug === categoryId || (c.name && c.name.toLowerCase() === categoryId.toLowerCase()));
-      const catName = catObj ? catObj.name : categoryId;
-      setFilters((current) => ({ ...current, category: [catName], subcategory: [] }));
-    }
+    const categoryParam = params.get('category');
+    if (!categoryParam) return;
+    const match = categoriesList.find(
+      (c) =>
+        String(c.id) === String(categoryParam) ||
+        (c.slug && c.slug.toLowerCase() === categoryParam.toLowerCase()) ||
+        (c.name && c.name.toLowerCase() === categoryParam.toLowerCase())
+    );
+    const catName = match ? match.name : categoryParam;
+    setFilters((current) => ({ ...current, category: [catName], subcategory: [] }));
   }, [params, categoriesList]);
 
   useEffect(() => {
@@ -75,59 +63,150 @@ export default function Products() {
     return () => document.removeEventListener('keydown', closeOnEscape);
   }, []);
 
+  // 1. Dynamic Categories from API + real products
   const dynamicCategoryList = useMemo(() => {
-    const defaultLabels = categoryFilters.map(([label]) => label);
-    const customLabels = categoriesList
-      .map((c) => c.name)
-      .filter((name) => name && !defaultLabels.some((dl) => dl.toLowerCase() === name.toLowerCase()));
-    return [...defaultLabels, ...customLabels];
-  }, [categoriesList]);
+    const apiCatNames = categoriesList.map((c) => c.name).filter(Boolean);
+    const prodCatNames = productsList.map((p) => p.category).filter(Boolean);
+    const combined = [...new Set([...apiCatNames, ...prodCatNames])];
+    return combined.sort((a, b) => a.localeCompare(b));
+  }, [categoriesList, productsList]);
 
-  const dynamicFilterGroups = useMemo(() => [
-    { key: 'category', label: 'Category', items: dynamicCategoryList },
-    { key: 'subcategory', label: 'Sub Category', items: [] },
-    { key: 'installation', label: 'Installation', items: ['Indoor', 'Outdoor'] },
-    { key: 'connectivity', label: 'Connectivity', items: ['PoE', 'Wi-Fi', '4G'] },
-    { key: 'features', label: 'Features', items: ['AI', 'Night Vision', 'Audio', 'Remote Monitoring'] },
-  ], [dynamicCategoryList]);
-
+  // 2. Dynamic Subcategories based on selected category or all loaded products
   const availableSubcategories = useMemo(() => {
-    if (!filters.category.length) return [];
-    const categoryIds = new Set(filters.category.flatMap((name) => categoryFilters.find(([label]) => label === name)?.[1] || []));
-    return [...new Set(productsList.filter((product) => categoryIds.has(product.categoryId) || filters.category.some(fc => product.category && product.category.toLowerCase() === fc.toLowerCase())).map((product) => product.productType).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  }, [filters.category, productsList]);
+    let sourceProducts = productsList;
+    if (filters.category.length > 0) {
+      sourceProducts = productsList.filter((product) =>
+        filters.category.some((catName) => {
+          if (product.category && product.category.toLowerCase() === catName.toLowerCase()) return true;
+          const catObj = categoriesList.find((c) => c.name.toLowerCase() === catName.toLowerCase());
+          if (catObj && String(product.categoryId) === String(catObj.id)) return true;
+          return String(product.categoryId) === String(catName);
+        })
+      );
+    }
+    const subcats = sourceProducts.map((p) => p.productType).filter(Boolean);
+    return [...new Set(subcats)].sort((a, b) => a.localeCompare(b));
+  }, [filters.category, productsList, categoriesList]);
+
+  // 3. Dynamic Installation options from products
+  const availableInstallation = useMemo(() => {
+    const options = new Set();
+    productsList.forEach((p) => {
+      if (Array.isArray(p.installation)) {
+        p.installation.forEach((item) => item && options.add(String(item).trim()));
+      } else if (typeof p.installation === 'string' && p.installation.trim()) {
+        options.add(p.installation.trim());
+      }
+    });
+    return [...options].sort((a, b) => a.localeCompare(b));
+  }, [productsList]);
+
+  // 4. Dynamic Connectivity options from products
+  const availableConnectivity = useMemo(() => {
+    const options = new Set();
+    productsList.forEach((p) => {
+      if (Array.isArray(p.connectivity)) {
+        p.connectivity.forEach((item) => item && options.add(String(item).trim()));
+      } else if (typeof p.connectivity === 'string' && p.connectivity.trim()) {
+        options.add(p.connectivity.trim());
+      }
+    });
+    return [...options].sort((a, b) => a.localeCompare(b));
+  }, [productsList]);
+
+  // 5. Dynamic Features options from products
+  const availableFeatures = useMemo(() => {
+    const options = new Set();
+    productsList.forEach((p) => {
+      const featList = Array.isArray(p.features)
+        ? p.features
+        : Array.isArray(p.keyFeatures)
+        ? p.keyFeatures
+        : Array.isArray(p.highlights)
+        ? p.highlights
+        : [];
+      featList.forEach((item) => {
+        if (typeof item === 'string' && item.trim() && item.length < 35) {
+          options.add(item.trim());
+        }
+      });
+    });
+    return [...options].sort((a, b) => a.localeCompare(b));
+  }, [productsList]);
+
+  // 6. Filter Groups built dynamically
+  const dynamicFilterGroups = useMemo(() => {
+    const groups = [
+      { key: 'category', label: 'Category', items: dynamicCategoryList },
+      { key: 'subcategory', label: 'Sub Category', items: availableSubcategories },
+    ];
+    if (availableInstallation.length > 0) {
+      groups.push({ key: 'installation', label: 'Installation', items: availableInstallation });
+    }
+    if (availableConnectivity.length > 0) {
+      groups.push({ key: 'connectivity', label: 'Connectivity', items: availableConnectivity });
+    }
+    if (availableFeatures.length > 0) {
+      groups.push({ key: 'features', label: 'Features', items: availableFeatures });
+    }
+    return groups;
+  }, [dynamicCategoryList, availableSubcategories, availableInstallation, availableConnectivity, availableFeatures]);
 
   const toggle = (key, item) => setFilters((current) => {
-    const nextItems = current[key].includes(item) ? current[key].filter((value) => value !== item) : [...current[key], item];
+    const currentList = current[key] || [];
+    const nextItems = currentList.includes(item) ? currentList.filter((value) => value !== item) : [...currentList, item];
     return key === 'category' ? { ...current, category: nextItems, subcategory: [] } : { ...current, [key]: nextItems };
   });
 
   const filtered = useMemo(() => {
     const result = productsList.filter((product) => {
-      const haystack = [product.name, product.category, product.productType, product.description, ...(product.keywords || []), ...(product.highlights || [])].join(' ').toLowerCase();
+      const haystack = [
+        product.name,
+        product.category,
+        product.productType,
+        product.description,
+        product.brand,
+        product.sku,
+        ...(product.keywords || []),
+        ...(product.highlights || []),
+        ...(product.keyFeatures || []),
+      ].filter(Boolean).join(' ').toLowerCase();
+
       const categoryMatch = !filters.category.length || filters.category.some((name) => {
-        const catObj = categoryFilters.find(([label]) => label === name);
-        if (catObj && (catObj[1].includes(product.categoryId) || (product.category && product.category.toLowerCase().includes(name.toLowerCase())))) {
-          return true;
-        }
         if (product.category && product.category.toLowerCase() === name.toLowerCase()) return true;
-        if (String(product.categoryId) === String(name)) return true;
-        return false;
+        const catObj = categoriesList.find((c) => c.name.toLowerCase() === name.toLowerCase());
+        if (catObj && String(product.categoryId) === String(catObj.id)) return true;
+        return String(product.categoryId) === String(name);
       });
-      const subcategoryMatch = !filters.subcategory.length || filters.subcategory.includes(product.productType);
-      const installationMatch = !filters.installation.length || (product.installation && filters.installation.some((item) => product.installation.includes(item)));
-      const connectivityMatch = !filters.connectivity.length || (product.connectivity && filters.connectivity.some((item) => product.connectivity.includes(item)));
-      const featureMatch = !filters.features.length || (product.features && filters.features.some((item) => product.features.includes(item)));
+
+      const subcategoryMatch = !filters.subcategory.length || filters.subcategory.some((subName) => {
+        if (product.productType && product.productType.toLowerCase() === subName.toLowerCase()) return true;
+        return String(product.subcategoryId) === String(subName);
+      });
+
+      const installationMatch = !filters.installation.length || (product.installation && filters.installation.some((item) =>
+        Array.isArray(product.installation) ? product.installation.includes(item) : String(product.installation).includes(item)
+      ));
+
+      const connectivityMatch = !filters.connectivity.length || (product.connectivity && filters.connectivity.some((item) =>
+        Array.isArray(product.connectivity) ? product.connectivity.includes(item) : String(product.connectivity).includes(item)
+      ));
+
+      const featureMatch = !filters.features.length || filters.features.some((item) => {
+        const feats = Array.isArray(product.features) ? product.features : Array.isArray(product.keyFeatures) ? product.keyFeatures : Array.isArray(product.highlights) ? product.highlights : [];
+        return feats.some((f) => String(f).toLowerCase().includes(item.toLowerCase()));
+      });
+
       return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && categoryMatch && subcategoryMatch && installationMatch && connectivityMatch && featureMatch;
     });
 
-    if (sort === 'name') result.sort((a, b) => a.name.localeCompare(b.name));
+    if (sort === 'name') result.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     if (sort === 'new') result.sort((a, b) => Number(b.newProduct || 0) - Number(a.newProduct || 0));
     if (sort === 'price-low') result.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
     if (sort === 'price-high') result.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
     if (sort === 'rating') result.sort((a, b) => (Number(b.rating) || 0) - (Number(a.rating) || 0) || (Number(b.reviewCount) || 0) - (Number(a.reviewCount) || 0));
     return result;
-  }, [productsList, query, filters, sort]);
+  }, [productsList, categoriesList, query, filters, sort]);
 
   const activeFilterCount = Object.values(filters).reduce((total, items) => total + items.length, 0) + (query.trim() ? 1 : 0) + (sort !== 'featured' ? 1 : 0);
   const reset = () => { setQuery(''); setFilters({ category: [], subcategory: [], installation: [], connectivity: [], features: [] }); setSort('featured'); setVisible(12); };
@@ -154,22 +233,23 @@ export default function Products() {
             </div>
 
             {dynamicFilterGroups.map((group) => {
-              const items = group.key === 'subcategory' ? availableSubcategories : group.items;
-              const isDisabled = group.key === 'subcategory' && !filters.category.length;
-              return <details className={`filter-dropdown ${isDisabled ? 'disabled' : ''}`} key={group.key}>
-                <summary aria-disabled={isDisabled} onClick={(event) => isDisabled && event.preventDefault()}>
+              const items = group.items || [];
+              const selectedList = filters[group.key] || [];
+              const selectedCount = selectedList.length;
+              return <details className="filter-dropdown" key={group.key}>
+                <summary>
                   <span>{group.label}</span>
-                  <span className="filter-dropdown-meta">{isDisabled ? <small>Select Category First</small> : filters[group.key].length > 0 && <small>{filters[group.key].length} selected</small>}<ChevronDown size={17} /></span>
+                  <span className="filter-dropdown-meta">{selectedCount > 0 && <small>{selectedCount} selected</small>}<ChevronDown size={17} /></span>
                 </summary>
                 <div className="filter-dropdown-panel">
                   <div className="filter-options" role="group" aria-label={group.label}>
                     {items.length ? items.map((item) => (
                       <label className="filter-option" key={item}>
-                        <input type="checkbox" checked={filters[group.key].includes(item)} onChange={() => { toggle(group.key, item); setVisible(12); }} />
+                        <input type="checkbox" checked={selectedList.includes(item)} onChange={() => { toggle(group.key, item); setVisible(12); }} />
                         <span className="filter-checkbox" aria-hidden="true"><Check size={12} strokeWidth={3} /></span>
                         <span className="filter-option-label">{item}</span>
                       </label>
-                    )) : <p className="filter-options-empty">No sub categories available.</p>}
+                    )) : <p className="filter-options-empty">No options available.</p>}
                   </div>
                 </div>
               </details>;
@@ -212,7 +292,7 @@ export default function Products() {
                 <AlertCircle size={40} color="#ef4444" />
                 <h2>Product Service Connection Issue</h2>
                 <p>{error}</p>
-                <button className="button outline" onClick={loadProducts}>Try Refreshing</button>
+                <button className="button outline" onClick={loadData}>Try Refreshing</button>
               </div>
             ) : filtered.length ? (
               <>
