@@ -1,13 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import axios from 'axios';
-import { getApiDomain } from '../utils/apiConfig';
+import { adminAuthApi } from './api/adminAuthApi';
 import adminPortalImage from '../assets/images/products-hero.png';
 import './AdminForgotPassword.css';
-
-const ADMIN_AUTH_API = `${getApiDomain()}/api/Auth`;
-const HEADERS  = { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' };
 
 const AdminForgotPassword = () => {
   const [email, setEmail]                     = useState('');
@@ -36,25 +32,17 @@ const AdminForgotPassword = () => {
 
     setIsLoading(true);
     try {
-      // ForgotPasswordDto only accepts { email }
-      const response = await axios.post(
-        `${ADMIN_AUTH_API}/forgot-password`,
-        { email: email.trim() },
-        { headers: HEADERS }
-      );
+      // Send real API request to POST /api/Auth/forgot-password
+      await adminAuthApi.forgotPassword(email);
 
-      if (response.status === 200 || response.data?.success !== false) {
-        // Pass newPassword in state so OTP screen can call /reset-password
-        navigate('/admin/verify-otp', { state: { email: email.trim(), newPassword, confirmPassword } });
-      } else {
-        setError(response.data?.message || 'Request failed. Please try again.');
-      }
+      // Pass newPassword in state so OTP screen can call /api/Auth/reset-password
+      navigate('/admin/verify-otp', { state: { email: email.trim(), newPassword, confirmPassword } });
     } catch (err) {
-      console.error('Forgot Password Error:', err.response?.data || err.message);
+      console.error('Forgot Password Error:', err);
       setError(
         err.response?.data?.message ||
         err.response?.data?.title ||
-        'Something went wrong. Please try again.'
+        'Failed to request password reset. Please check your email and try again.'
       );
     } finally {
       setIsLoading(false);

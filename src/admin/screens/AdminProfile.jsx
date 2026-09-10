@@ -1,42 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { User, Shield, Mail, Phone, BadgeCheck, MapPin } from 'lucide-react';
+import { User, Shield, Mail, Phone, BadgeCheck, MapPin, Loader2 } from 'lucide-react';
+import { adminAuthApi } from '../api/adminAuthApi';
 import './AdminProfile.css';
 
 const AdminProfile = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({
     name: 'Admin User',
-    email: 'admin@honeywell.local',
+    email: '',
     role: 'admin',
-    mobile: '04048555758',
-    address: '101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana',
+    mobile: '',
+    address: '',
     permissions: []
   });
 
   useEffect(() => {
-    const storedName = localStorage.getItem('adminName') || 'Admin User';
-    const storedEmail = localStorage.getItem('adminEmail') || 'admin@honeywell.local';
-    let storedRole = localStorage.getItem('adminRole') || 'admin';
-    const storedPerms = localStorage.getItem('adminPermissions');
-    let storedAddress = localStorage.getItem('adminAddress');
-    if (!storedAddress || storedAddress.includes('302A')) {
-      storedAddress = '101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana';
-      localStorage.setItem('adminAddress', storedAddress);
-    }
-    
-    // Attempt to match from local staff list to pull phone if available
-    const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-    const matched = localAccounts.find(acc => acc.email.toLowerCase() === storedEmail.toLowerCase());
+    async function loadProfile() {
+      try {
+        setLoading(true);
+        const data = await adminAuthApi.getProfile();
+        const profile = data?.data || data?.value || data;
 
-    setUser({
-      name: storedName,
-      email: storedEmail,
-      role: storedRole,
-      mobile: matched?.mobile || '9912649265',
-      address: storedAddress || matched?.address || 'Opposite New Bustand, Nandikotkur (TQ), Nandyal (DT) - 518401',
-      permissions: storedPerms ? JSON.parse(storedPerms) : (matched?.permissions || [])
-    });
+        if (profile) {
+          const name = `${profile.firstName || ''} ${profile.lastName || ''}`.trim() || profile.email || 'Admin User';
+          setUser({
+            name,
+            email: profile.email || localStorage.getItem('adminEmail') || '',
+            role: profile.role || localStorage.getItem('adminRole') || 'admin',
+            mobile: profile.mobile || profile.phone || profile.phoneNumber || '',
+            address: profile.address || '',
+            permissions: Array.isArray(profile.permissions) ? profile.permissions : JSON.parse(localStorage.getItem('adminPermissions') || '[]')
+          });
+        }
+      } catch (err) {
+        console.warn('Live AdminProfile API fetch error:', err.message);
+        setUser({
+          name: localStorage.getItem('adminName') || 'Admin User',
+          email: localStorage.getItem('adminEmail') || '',
+          role: localStorage.getItem('adminRole') || 'admin',
+          mobile: '',
+          address: '',
+          permissions: JSON.parse(localStorage.getItem('adminPermissions') || '[]')
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadProfile();
   }, []);
 
   const getRoleLabel = (role) => {

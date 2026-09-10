@@ -34,8 +34,8 @@ const AdminTopBar = ({ onToggleSidebar, sidebarExpanded }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Read actual admin login details
-  const [adminEmail, setAdminEmail] = useState('admin@honeywell.local');
-  const [adminName, setAdminName] = useState('Admin');
+  const [adminEmail, setAdminEmail] = useState(() => localStorage.getItem('adminEmail') || '');
+  const [adminName, setAdminName] = useState(() => localStorage.getItem('adminName') || 'Admin');
 
   useEffect(() => {
     const storedEmail = localStorage.getItem('adminEmail');
