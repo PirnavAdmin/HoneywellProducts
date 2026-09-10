@@ -27,6 +27,31 @@ export default function Header() {
   const { count } = useCart();
   const { openQuote } = useUI();
   const navRef = useRef(null);
+  const dropdownTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (dropdownTimeoutRef.current) {
+        clearTimeout(dropdownTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleMouseEnterDropdown = (name) => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+    }
+    setActiveDropdown(name);
+  };
+
+  const handleMouseLeaveDropdown = () => {
+    if (dropdownTimeoutRef.current) {
+      clearTimeout(dropdownTimeoutRef.current);
+    }
+    dropdownTimeoutRef.current = setTimeout(() => {
+      setActiveDropdown(null);
+    }, 180);
+  };
 
   useEffect(() => {
     const onScroll = () => setCompact(window.scrollY > 36);
@@ -39,11 +64,13 @@ export default function Header() {
     const closeOnEscape = (event) => {
       if (event.key === 'Escape') {
         setMenuOpen(false);
+        if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
         setActiveDropdown(null);
       }
     };
     const handleClickOutside = (e) => {
       if (navRef.current && !navRef.current.contains(e.target)) {
+        if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
         setActiveDropdown(null);
       }
     };
@@ -56,10 +83,12 @@ export default function Header() {
   }, []);
 
   const toggleDropdown = (name) => {
+    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
     setActiveDropdown((prev) => (prev === name ? null : name));
   };
 
   const closeMenus = () => {
+    if (dropdownTimeoutRef.current) clearTimeout(dropdownTimeoutRef.current);
     setActiveDropdown(null);
     setMenuOpen(false);
   };
@@ -94,8 +123,8 @@ export default function Header() {
           {/* Products Mega Menu Item */}
           <div 
             className={`nav-dropdown-wrapper ${activeDropdown === 'products' ? 'open' : ''}`}
-            onMouseEnter={() => setActiveDropdown('products')}
-            onMouseLeave={() => setActiveDropdown(null)}
+            onMouseEnter={() => handleMouseEnterDropdown('products')}
+            onMouseLeave={handleMouseLeaveDropdown}
           >
             <NavLink 
               to="/products" 
@@ -115,8 +144,8 @@ export default function Header() {
           {/* Solutions Mega Menu Item */}
           <div 
             className={`nav-dropdown-wrapper ${activeDropdown === 'solutions' ? 'open' : ''}`}
-            onMouseEnter={() => setActiveDropdown('solutions')}
-            onMouseLeave={() => setActiveDropdown(null)}
+            onMouseEnter={() => handleMouseEnterDropdown('solutions')}
+            onMouseLeave={handleMouseLeaveDropdown}
           >
             <NavLink 
               to="/solutions" 
@@ -136,8 +165,8 @@ export default function Header() {
           {/* Business Mega Menu Item */}
           <div 
             className={`nav-dropdown-wrapper ${activeDropdown === 'business' ? 'open' : ''}`}
-            onMouseEnter={() => setActiveDropdown('business')}
-            onMouseLeave={() => setActiveDropdown(null)}
+            onMouseEnter={() => handleMouseEnterDropdown('business')}
+            onMouseLeave={handleMouseLeaveDropdown}
           >
             <NavLink 
               to="/business" 
@@ -154,13 +183,13 @@ export default function Header() {
             {activeDropdown === 'business' && <BusinessMegaMenu onClose={closeMenus} />}
           </div>
 
-          <NavLink to="/about-us" onClick={closeMenus}>About Us</NavLink>
+          <NavLink to="/about-us" onClick={closeMenus} onMouseEnter={() => handleMouseEnterDropdown(null)}>About Us</NavLink>
 
           {/* Resources Mega Menu Item */}
           <div 
             className={`nav-dropdown-wrapper ${activeDropdown === 'resources' ? 'open' : ''}`}
-            onMouseEnter={() => setActiveDropdown('resources')}
-            onMouseLeave={() => setActiveDropdown(null)}
+            onMouseEnter={() => handleMouseEnterDropdown('resources')}
+            onMouseLeave={handleMouseLeaveDropdown}
           >
             <NavLink 
               to="/resources" 
@@ -177,7 +206,7 @@ export default function Header() {
             {activeDropdown === 'resources' && <ResourcesMegaMenu onClose={closeMenus} />}
           </div>
 
-          <NavLink to="/contact" onClick={closeMenus}>Contact Us</NavLink>
+          <NavLink to="/contact" onClick={closeMenus} onMouseEnter={() => handleMouseEnterDropdown(null)}>Contact Us</NavLink>
         </nav>
 
         <div className="header-actions">
@@ -261,7 +290,6 @@ export default function Header() {
                 <Link to="/blogs" onClick={closeMenus}>Blog &amp; News</Link>
                 <Link to="/case-studies" onClick={closeMenus}>Case Studies</Link>
                 <Link to="/videos" onClick={closeMenus}>Videos</Link>
-                <Link to="/downloads" onClick={closeMenus}>Downloads &amp; Docs</Link>
                 <Link to="/support" onClick={closeMenus}>Support Center</Link>
                 <Link to="/service-request" onClick={closeMenus}>Service Request</Link>
                 <Link to="/warranty" onClick={closeMenus}>Warranty</Link>

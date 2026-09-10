@@ -89,7 +89,7 @@ export default function ProductsMegaMenu({ onClose }) {
                 <Download size={18} className="mega-icon" />
                 <div>
                   <span className="mega-link-title">Downloads</span>
-                  <span className="mega-link-desc">Brochures, Software &amp; Manuals</span>
+                  <span className="mega-link-desc">Brochures &amp; User Manuals</span>
                 </div>
               </Link>
             </li>

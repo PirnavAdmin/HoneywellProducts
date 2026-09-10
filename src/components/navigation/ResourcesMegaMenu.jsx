@@ -70,15 +70,6 @@ export default function ResourcesMegaMenu({ onClose }) {
               </Link>
             </li>
             <li>
-              <Link to="/downloads" onClick={onClose}>
-                <Download size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Downloads Center</span>
-                  <span className="mega-link-desc">Brochures &amp; user manuals</span>
-                </div>
-              </Link>
-            </li>
-            <li>
               <Link to="/support?tab=faqs" onClick={onClose}>
                 <HelpCircle size={18} className="mega-icon" />
                 <div>

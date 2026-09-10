@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Package, MapPin, ShieldAlert } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
+import { Package, MapPin, ShieldAlert, ArrowLeft } from 'lucide-react';
+import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
 import { orderService } from '../services/orderService';
-import heroImage from '../assets/images/capital-park2.jpg';
 
 export default function CustomerOrderDetails() {
   const { id } = useParams();
@@ -27,101 +26,121 @@ export default function CustomerOrderDetails() {
     if (id) loadOrder();
   }, [id]);
 
-  return (
-    <>
-      <PageHero
-        eyebrow="ORDER DETAILS"
-        title={order ? `Order #${order.id || order.orderNumber}` : 'Order Summary'}
-        description={order ? `Placed on ${order.createdDate ? new Date(order.createdDate).toLocaleDateString() : 'N/A'}` : 'View order breakdown and fulfillment status.'}
-        image={heroImage}
-      />
+  const statusClass = (order?.status || 'processing').toLowerCase().replace(/\s+/g, '-');
 
-      <section className="section">
-        <div className="container">
-          <div className="mb-4">
-            <Link to="/account/orders" className="button-text">&larr; Back to Order History</Link>
+  return (
+    <CustomerAccountLayout
+      title={order ? `Order #${order.id || order.orderNumber}` : 'Order Summary'}
+      subtitle={order ? `Placed on ${order.createdDate ? new Date(order.createdDate).toLocaleDateString() : 'N/A'}` : 'View order breakdown and fulfillment status.'}
+    >
+      <div className="portal-card-header">
+        <div className="flex items-center gap-3">
+          <Link to="/account/orders" className="btn-portal-secondary p-2">
+            <ArrowLeft size={16} />
+          </Link>
+          <h2>
+            <Package size={22} />
+            <span>{order ? `Order #${order.id || order.orderNumber}` : 'Order Details'}</span>
+          </h2>
+        </div>
+        {order && (
+          <span className={`badge-status ${statusClass}`}>
+            {order.status || 'Confirmed'}
+          </span>
+        )}
+      </div>
+
+      {loading ? (
+        <div className="py-12 text-center" role="status">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-sky-600 border-t-transparent mb-3" />
+          <p className="text-slate-600 font-medium text-sm">Loading order details...</p>
+        </div>
+      ) : error || !order ? (
+        <div className="portal-empty-state">
+          <div className="empty-state-icon">
+            <Package size={32} />
+          </div>
+          <h3 className="empty-state-title">Order Not Found</h3>
+          <p className="empty-state-desc">
+            {error || 'The requested order details could not be retrieved.'}
+          </p>
+          <Link to="/account/orders" className="btn-portal-primary">
+            Back to Orders List
+          </Link>
+        </div>
+      ) : (
+        <div className="order-details-content">
+          {/* Order Items Table */}
+          <div className="mb-6">
+            <h3 className="text-base font-bold text-slate-800 mb-3">Itemized Purchased Products</h3>
+            <div className="order-table-wrapper">
+              <table className="portal-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.isArray(order.items) && order.items.map((item, idx) => (
+                    <tr key={idx}>
+                      <td>
+                        <div className="font-bold text-slate-800">{item.name || item.productName || 'Honeywell Product'}</div>
+                        {item.sku && <div className="text-xs text-slate-500 font-mono mt-0.5">SKU: {item.sku}</div>}
+                      </td>
+                      <td className="font-semibold text-slate-700">{item.quantity || 1}</td>
+                      <td className="font-medium text-slate-700">${Number(item.price || item.unitPrice || 0).toFixed(2)}</td>
+                      <td className="font-bold text-slate-800">${((item.quantity || 1) * Number(item.price || item.unitPrice || 0)).toFixed(2)}</td>
+                      <td>
+                        <Link 
+                          to={`/warranty?orderId=${order.id}&itemId=${item.id || idx}`} 
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-700 hover:text-sky-900"
+                        >
+                          <ShieldAlert size={14} />
+                          <span>Claim Warranty</span>
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
-          {loading ? (
-            <div className="route-loading" style={{ minHeight: '200px' }}>
-              <p>Loading order details...</p>
-            </div>
-          ) : error || !order ? (
-            <div className="empty-state">
-              <Package size={48} className="empty-icon" />
-              <h3>Order Not Found</h3>
-              <p>{error || 'The requested order details could not be retrieved.'}</p>
-              <Link to="/account/orders" className="button button-small">&larr; Back to Orders List</Link>
-            </div>
-          ) : (
-            <div className="order-details-grid">
-              <div className="order-main-info">
-                <div className="order-status-card mb-4">
-                  <h3>Status: <span className="status-badge">{order.status || 'Confirmed'}</span></h3>
-                  <p>Current Fulfillment Phase: <strong>{order.fulfillmentStatus || order.status || 'Processing'}</strong></p>
-                </div>
-
-                <div className="order-items-table-box">
-                  <h3>Order Items</h3>
-                  <table className="order-items-table">
-                    <thead>
-                      <tr>
-                        <th>Product</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Total</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Array.isArray(order.items) && order.items.map((item, idx) => (
-                        <tr key={idx}>
-                          <td>
-                            <strong>{item.name || item.productName || 'Honeywell Product'}</strong>
-                            {item.sku && <small className="display-block text-muted">SKU: {item.sku}</small>}
-                          </td>
-                          <td>{item.quantity || 1}</td>
-                          <td>${Number(item.price || item.unitPrice || 0).toFixed(2)}</td>
-                          <td>${((item.quantity || 1) * Number(item.price || item.unitPrice || 0)).toFixed(2)}</td>
-                          <td>
-                            <Link to={`/warranty?orderId=${order.id}&itemId=${item.id || idx}`} className="button-text text-small">
-                              <ShieldAlert size={12} /> Claim Warranty
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+          {/* Payment Breakdown & Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
+            <div className="order-summary-card-box">
+              <h3 className="text-sm font-bold text-slate-800 mb-3">Payment &amp; Totals Breakdown</h3>
+              <div className="summary-line-item">
+                <span>Subtotal</span>
+                <span>${Number(order.subtotal || order.totalAmount || 0).toFixed(2)}</span>
               </div>
-
-              <aside className="order-side-info">
-                <div className="order-summary-box mb-4">
-                  <h3>Payment &amp; Totals</h3>
-                  <div className="summary-row">
-                    <span>Subtotal:</span>
-                    <span>${Number(order.subtotal || order.totalAmount || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="summary-row">
-                    <span>Shipping:</span>
-                    <span>${Number(order.shippingFee || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="summary-row summary-total">
-                    <span>Grand Total:</span>
-                    <strong>${Number(order.totalAmount || 0).toFixed(2)}</strong>
-                  </div>
-                </div>
-
-                <div className="order-actions-box">
-                  <Link to={`/order-tracking?orderId=${order.id}`} className="button button-full">
-                    <MapPin size={16} /> Track Shipment
-                  </Link>
-                </div>
-              </aside>
+              <div className="summary-line-item">
+                <span>Estimated Shipping</span>
+                <span>${Number(order.shippingFee || 0).toFixed(2)}</span>
+              </div>
+              <div className="summary-line-item grand-total">
+                <span>Grand Total</span>
+                <span>${Number(order.totalAmount || 0).toFixed(2)}</span>
+              </div>
             </div>
-          )}
+
+            <div className="flex flex-direction-column justify-center gap-3">
+              <Link to={`/order-tracking?orderId=${order.id}`} className="btn-portal-primary w-full text-center">
+                <MapPin size={16} />
+                <span>Track Live Delivery Shipment</span>
+              </Link>
+              <Link to="/account/orders" className="btn-portal-secondary w-full text-center">
+                <ArrowLeft size={16} />
+                <span>Back to Order History</span>
+              </Link>
+            </div>
+          </div>
         </div>
-      </section>
-    </>
+      )}
+    </CustomerAccountLayout>
   );
 }
