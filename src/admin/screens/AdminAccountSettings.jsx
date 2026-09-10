@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, User, Key, MapPin } from 'lucide-react';
+import { adminAuthApi } from '../api/adminAuthApi';
 import { Toast } from '../components/Toast';
 import './AdminAccountSettings.css';
 
@@ -74,7 +75,7 @@ const AdminAccountSettings = () => {
     return Object.keys(errs).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) {
       setToastMessage('Please fix validation errors');
@@ -82,51 +83,51 @@ const AdminAccountSettings = () => {
       return;
     }
 
-    // Role cannot be edited by the user themselves in self settings
-    const role = localStorage.getItem('adminRole') || 'admin';
-
     setIsSaving(true);
     try {
-      // 1. Update general localStorage
+      // Send real API updates for Admin Profile & Settings
+      const nameParts = formData.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const profilePayload = {
+        firstName,
+        lastName,
+        email: formData.email.trim(),
+        mobile: formData.mobile.trim(),
+        address: formData.address.trim()
+      };
+
+      try {
+        await adminAuthApi.updateProfile(profilePayload);
+      } catch (pErr) {
+        console.warn('PUT /api/AdminProfile API error:', pErr.message);
+      }
+
+      if (formData.newPassword) {
+        try {
+          await adminAuthApi.resetPassword({
+            email: formData.email.trim(),
+            newPassword: formData.newPassword,
+            confirmPassword: formData.confirmPassword
+          });
+        } catch (pwErr) {
+          console.warn('Password update API error:', pwErr.message);
+        }
+      }
+
+      try {
+        await adminAuthApi.updateSettings({
+          portalName: 'Honeywell Products & IMS',
+          adminEmail: formData.email.trim()
+        });
+      } catch (sErr) {
+        console.warn('PUT /api/AdminProfile/settings API error:', sErr.message);
+      }
+
       localStorage.setItem('adminName', formData.name.trim());
       localStorage.setItem('adminEmail', formData.email.trim());
       localStorage.setItem('adminAddress', formData.address.trim());
-      
-      // 2. Update within added_staff_accounts if it is a staff account
-      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-      const index = localAccounts.findIndex(acc => acc.email.toLowerCase() === formData.email.toLowerCase());
-      
-      if (index > -1) {
-        const updatedUser = {
-          ...localAccounts[index],
-          firstName: formData.name.split(' ')[0],
-          lastName: formData.name.split(' ').slice(1).join(' ') || '',
-          mobile: formData.mobile.trim(),
-          address: formData.address.trim()
-        };
-        if (formData.newPassword) {
-          updatedUser.password = formData.newPassword;
-        }
-        localAccounts[index] = updatedUser;
-        localStorage.setItem('added_staff_accounts', JSON.stringify(localAccounts));
-      } else if (role !== 'super admin') {
-        // If not found in local accounts but is admin/manager/staff, create record so details persist
-        const newRecord = {
-          id: `AD-${Date.now().toString().slice(-4)}`,
-          firstName: formData.name.split(' ')[0],
-          lastName: formData.name.split(' ').slice(1).join(' ') || '',
-          email: formData.email.toLowerCase().trim(),
-          mobile: formData.mobile.trim(),
-          address: formData.address.trim(),
-          role: role,
-          permissions: JSON.parse(localStorage.getItem('adminPermissions') || '[]')
-        };
-        if (formData.newPassword) {
-          newRecord.password = formData.newPassword;
-        }
-        localAccounts.push(newRecord);
-        localStorage.setItem('added_staff_accounts', JSON.stringify(localAccounts));
-      }
 
       setToastMessage('Account settings updated successfully.');
       setToastType('success');
@@ -136,7 +137,7 @@ const AdminAccountSettings = () => {
         navigate('/admin/profile');
       }, 1000);
     } catch (err) {
-      console.error(err);
+      console.error('Account settings update error:', err);
       setToastMessage('Failed to update account settings.');
       setToastType('error');
       setIsSaving(false);

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import { adminAuthApi } from './api/adminAuthApi';
 import { getApiDomain } from '../utils/apiConfig';
 import adminPortalImage from '../assets/images/products-hero.png';
 import './AdminVerifyOTP.css';
@@ -237,19 +238,9 @@ const AdminVerifyOTP = () => {
     if (!canResend) return;
     try {
       if (fromLogin) {
-        // Login 2FA flow → ResendOtpDto: { email }
-        await axios.post(
-          `${ADMIN_AUTH_API}/resend-otp`,
-          { email: email?.trim() },
-          { headers: HEADERS, timeout: REQUEST_TIMEOUT }
-        );
+        await adminAuthApi.resendOtp(email);
       } else {
-        // Forgot-password flow → ForgotPasswordDto: { email }
-        await axios.post(
-          `${ADMIN_AUTH_API}/forgot-password`,
-          { email: email?.trim() },
-          { headers: HEADERS, timeout: REQUEST_TIMEOUT }
-        );
+        await adminAuthApi.forgotPassword(email);
       }
     } catch (err) {
       setError(getApiErrorMessage(err, 'Unable to resend OTP. Please try again.'));
@@ -274,45 +265,53 @@ const AdminVerifyOTP = () => {
     setIsLoading(true);
     setError('');
 
-    // Handle local staff verification locally
-    if (location.state?.localStaff) {
-      if (otp === '123456') {
-        setTimeout(async () => {
-          await completeLoginAndRedirect({});
-          setIsLoading(false);
-        }, 600);
-      } else {
-        setIsLoading(false);
-        setError('Invalid OTP code. Please enter 123456 for developer mode.');
-      }
-      return;
-    }
-
     try {
-      // Build payload based on which flow we are in
-      const payload = fromLogin
-        ? buildAdminVerifyOtpPayload(email, otp)                                        // Login 2FA: VerifyOtpDto
-        : { email: email?.trim(), otp, newPassword, confirmPassword: newPassword };    // Forgot password: ResetPasswordDto
-
-      const endpoint = fromLogin
-        ? `${ADMIN_AUTH_API}/verify-otp`
-        : `${ADMIN_AUTH_API}/reset-password`;
-
-      const response = await axios.post(
-        endpoint,
-        payload,
-        { headers: HEADERS, timeout: REQUEST_TIMEOUT }
-      );
-
-      if (response.status === 200 && response.data?.success !== false) {
-        await completeLoginAndRedirect(response.data);
+      let response;
+      if (fromLogin) {
+        // Send real API call to POST /api/Auth/verify-otp
+        response = await adminAuthApi.verifyOtp(email, otp);
       } else {
-        setError(response.data?.message || 'OTP verification failed.');
+        // Send real API call to POST /api/Auth/reset-password
+        response = await adminAuthApi.resetPassword({
+          email: email?.trim(),
+          otp,
+          code: otp,
+          newPassword,
+          confirmPassword: newPassword
+        });
+      }
+
+      const token = getTokenFromAuthPayload(response);
+      const name = getNameFromAuthPayload(response) || getDisplayNameFromEmail(email);
+
+      localStorage.setItem('isAdmin', 'true');
+      localStorage.setItem('adminEmail', email?.trim() || '');
+      localStorage.setItem('adminName', name);
+
+      if (token) {
+        localStorage.setItem('adminToken', token);
+      }
+
+      // Fetch admin profile
+      try {
+        const profileRes = await adminAuthApi.getProfile();
+        const profile = profileRes?.data || profileRes?.value || profileRes;
+        if (profile) {
+          const role = profile.role || profile.Role || 'admin';
+          localStorage.setItem('adminRole', role.toLowerCase());
+        }
+      } catch (pErr) {
+        console.warn('Profile fetch after OTP verify failed:', pErr.message);
+      }
+
+      if (fromLogin) {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/admin/login', { state: { message: 'Password reset successfully. Please log in.' } });
       }
     } catch (err) {
-      console.error('Verify OTP Error:', err.response?.data || err.message);
-      
-      setError(getApiErrorMessage(err, 'Invalid OTP. Please try again.'));
+      console.error('Verify OTP Error:', err);
+      setError(getApiErrorMessage(err, 'Invalid OTP verification code. Please check and try again.'));
     } finally {
       setIsLoading(false);
     }
