@@ -1,4 +1,4 @@
-import { getApiDomain } from '../utils/apiConfig';
+import { getApiDomain, DEFAULT_BACKEND_URL } from '../utils/apiConfig';
 
 const getBaseUrl = () => {
   const domain = getApiDomain();
@@ -21,7 +21,7 @@ export const resolveBlogImageUrl = (url) => {
   if (!url) return null;
   if (url.startsWith('data:')) return url;
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const domain = getApiDomain();
+  const domain = getApiDomain() || DEFAULT_BACKEND_URL;
   return `${domain}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 

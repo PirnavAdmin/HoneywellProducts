@@ -39,6 +39,14 @@ export default defineConfig({
           'ngrok-skip-browser-warning': 'true',
         },
       },
+      '/uploads': {
+        target: 'https://wildlife-unwieldy-devotee.ngrok-free.dev',
+        changeOrigin: true,
+        secure: false,
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
+      },
     },
   },
 });

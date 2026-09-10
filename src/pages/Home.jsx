@@ -162,7 +162,7 @@ export default function Home() {
     <TestimonialsSection />
     <GrowthSection />
     <section className="section insights-section"><div className="container"><div className="split-heading"><SectionHeading eyebrow="MARKET TRENDS" title="Technology Trends Shaping Tomorrow" description="Featured blog articles and market technology trends." /><Link className="arrow-link" to="/solutions">Explore solutions <ArrowRight /></Link></div><div className="insights-grid">{(blogsList.length > 0 ? blogsList : marketTrends).slice(0, 3).map((item) => {
-      const imgUrl = resolveBlogImageUrl(item.imageUrl || item.image) || item.image || '/honeywell-products-logo.png';
+      const imgUrl = resolveBlogImageUrl(item.coverImage || item.imageUrl || item.image) || item.image || '/honeywell-products-logo.png';
       return (
         <article key={item.id || item.title}>
           <img
