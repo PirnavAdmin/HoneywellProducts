@@ -25,7 +25,7 @@ const AdminAccountSettings = () => {
 
   useEffect(() => {
     const storedName = localStorage.getItem('adminName') || 'Admin User';
-    const storedEmail = localStorage.getItem('adminEmail') || 'admin@honeywell.local';
+    const storedEmail = localStorage.getItem('adminEmail') || '';
     const storedRole = localStorage.getItem('adminRole') || 'admin';
     let storedAddress = localStorage.getItem('adminAddress');
     if (!storedAddress || storedAddress.includes('302A')) {

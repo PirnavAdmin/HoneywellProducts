@@ -173,29 +173,6 @@ const AdminVerifyOTP = () => {
     let registeredRole = 'admin';
     let permissionsList = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "staff"];
 
-    // Set role and permissions based on login email
-    if (email.toLowerCase().trim() === 'admin@honeywell.local') {
-      registeredRole = 'admin';
-      permissionsList = ["dashboard", "catalog", "customers", "orders", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"];
-    } else if (location.state?.localStaff) {
-      const ls = location.state.localStaff;
-      registeredRole = ls.role || 'staff';
-      name = `${ls.firstName} ${ls.lastName}`;
-      permissionsList = ls.permissions || [];
-    }
-
-    // Force JWT token generation containing claims (email, role, name, permissions) only if no token is returned by backend
-    if (!token) {
-      const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-      const payload = btoa(JSON.stringify({
-        email: email.trim(),
-        role: registeredRole,
-        name: name,
-        permissions: permissionsList
-      }));
-      token = `${header}.${payload}.mocksignature`;
-    }
-
     localStorage.setItem('adminPermissions', JSON.stringify(permissionsList));
 
     // Adjust redirect: all admin phase logins route to /admin/dashboard
