@@ -30,6 +30,8 @@ import {
   AlertCircle,
   ShieldCheck,
   ExternalLink,
+  ChevronRight,
+  ArrowUpRight,
 } from 'lucide-react';
 import { getOrders } from '../api/orders';
 import { fetchProducts, fetchCategories } from '../catalog/productsApi';
@@ -80,35 +82,29 @@ const PaymentStatusBadge = ({ paymentStatus, isCancelled }) => {
   }
 
   let Icon = Clock3;
-  let bg = '#fff7df';
-  let color = '#b45309';
+  let statusClass = 'pay-status--pending';
 
   const normalizedPs = ps.toUpperCase();
 
   if (normalizedPs === 'VERIFIED' || normalizedPs === 'VERIFIED PAID' || normalizedPs === 'PAID' || normalizedPs === 'SUCCESS' || normalizedPs === 'PAID VERIFIED') {
     Icon = ShieldCheck;
-    bg = '#dcfce7';
-    color = '#15803d';
+    statusClass = 'pay-status--verified';
   } else if (normalizedPs === 'PENDING VERIFICATION' || normalizedPs === 'PENDINGVERIFICATION' || normalizedPs === 'PENDING') {
     Icon = Clock3;
-    bg = '#fff7df';
-    color = '#b45309';
+    statusClass = 'pay-status--pending';
   } else if (normalizedPs === 'REFUNDED') {
     Icon = AlertCircle;
-    bg = '#e0e7ff';
-    color = '#3730a3';
+    statusClass = 'pay-status--refunded';
   } else if (normalizedPs === 'PAYMENT NOT APPLICABLE' || normalizedPs === 'N/A') {
     Icon = AlertCircle;
-    bg = '#f1f5f9';
-    color = '#64748b';
+    statusClass = 'pay-status--na';
   } else if (normalizedPs === 'CANCELLED' || normalizedPs === 'CANCELED') {
     Icon = XCircle;
-    bg = '#fee2e2';
-    color = '#b91c1c';
+    statusClass = 'pay-status--cancelled';
   }
 
   return (
-    <span className="pay-status-pill" style={{ backgroundColor: bg, color: color }}>
+    <span className={`pay-status-pill ${statusClass}`}>
       <Icon size={12} aria-hidden="true" />
       <span>{ps}</span>
     </span>
@@ -119,6 +115,21 @@ const statusClassName = (status) => {
   const s = (status || 'Pending').toLowerCase().replace(/\s+/g, '-');
   if (s === 'cancelled') return 'canceled';
   return s;
+};
+
+/* Custom Chart Tooltip */
+const CustomChartTooltip = ({ active, payload, label, isCurrency = false }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    const displayVal = isCurrency ? formatCurrency(data.value) : `${data.value} ${data.name ? `(${data.name})` : ''}`;
+    return (
+      <div className="custom-chart-tooltip">
+        <span className="tooltip-label">{label || data.name}</span>
+        <strong className="tooltip-value">{displayVal}</strong>
+      </div>
+    );
+  }
+  return null;
 };
 
 const AdminDashboard = () => {
@@ -242,7 +253,7 @@ const AdminDashboard = () => {
       counts.Pending = 1;
     }
 
-    const colors = { Pending: '#d97706', Processing: '#2563eb', Completed: '#16a34a', Canceled: '#dc2626' };
+    const colors = { Pending: '#f59e0b', Processing: '#0284c7', Completed: '#10b981', Canceled: '#ef4444' };
     return Object.entries(counts)
       .map(([name, value]) => ({ name, value, color: colors[name] }))
       .filter(item => item.value > 0);
@@ -261,7 +272,7 @@ const AdminDashboard = () => {
       counts['Farm and Garden'] = 1;
     }
 
-    const colors = ['#2563eb', '#0891b2', '#10b981', '#f59e0b', '#8b5cf6'];
+    const colors = ['#1268a5', '#0284c7', '#10b981', '#f59e0b', '#8b5cf6'];
     return Object.entries(counts).map(([name, value], idx) => ({
       name,
       value,
@@ -380,154 +391,180 @@ const AdminDashboard = () => {
 
   return (
     <div className="admin-dashboard">
-      {/* TIER 1: Header Hero Banner */}
+      {/* TIER 1: Modern Header Banner */}
       <section className="dashboard-hero">
         <div className="dashboard-heading">
-          <span className="dashboard-eyebrow">STOREFRONT MANAGEMENT CONSOLE</span>
+          <div className="dashboard-eyebrow-container">
+            <span className="dashboard-eyebrow">STOREFRONT MANAGEMENT CONSOLE</span>
+            <span className="system-status-indicator">
+              <span className="status-live-dot"></span>
+              Live Sync
+            </span>
+          </div>
           <h1>Admin Overview</h1>
           <p>Real-time orders metrics, product catalog stats, supplier statuses, and employee operations for Honeywell.</p>
         </div>
 
         <div className="dashboard-controls">
+          <button type="button" className="refresh-btn" onClick={loadDashboardData} title="Refresh Dashboard Data">
+            <RefreshCw size={14} aria-hidden="true" />
+            <span>Refresh</span>
+          </button>
           <button type="button" className="export-button" onClick={handleExport}>
-            <Download size={15} aria-hidden="true" />
-            Export CSV Report
+            <Download size={14} aria-hidden="true" />
+            <span>Export CSV Report</span>
           </button>
         </div>
       </section>
 
-      {/* TIER 2: Quick Stat Cards (Row 1) */}
-      <section className="quick-stats-row">
-        <div className="stat-card-item" onClick={() => navigate('/admin/orders/list')}>
-          <div className="stat-icon-wrapper bg-light-blue text-blue">
-            <Truck size={19} />
+      {/* TIER 2: KPI Summary Cards (Row 1 - Operations Snapshot) */}
+      <section className="kpi-grid">
+        <div className="kpi-card" onClick={() => navigate('/admin/orders/list')} role="button" tabIndex={0}>
+          <div className="kpi-header">
+            <div className="kpi-icon-box kpi-icon-blue">
+              <Truck size={18} />
+            </div>
+            <span className="kpi-arrow-link"><ArrowUpRight size={15} /></span>
           </div>
-          <div className="stat-content">
-            <span className="stat-kicker">ACTIVE ORDERS</span>
-            <strong className="stat-value">{metrics.activeOrdersCount}</strong>
-            <p className="stat-subtext">Awaiting fulfillment pack</p>
-          </div>
-        </div>
-
-        <div className="stat-card-item" onClick={() => navigate('/admin/stock-updates')}>
-          <div className="stat-icon-wrapper bg-light-amber text-amber">
-            <Boxes size={19} />
-          </div>
-          <div className="stat-content">
-            <span className="stat-kicker">STOCK ALERTS</span>
-            <strong className="stat-value">{metrics.lowStockCount}</strong>
-            <p className="stat-subtext">Items below reorder levels</p>
+          <div className="kpi-body">
+            <span className="kpi-label">ACTIVE ORDERS</span>
+            <strong className="kpi-value">{metrics.activeOrdersCount}</strong>
+            <span className="kpi-subtext">Awaiting fulfillment pack</span>
           </div>
         </div>
 
-        <div className="stat-card-item" onClick={() => navigate('/admin/suppliers/new')}>
-          <div className="stat-icon-wrapper bg-light-pink text-pink">
-            <Users size={19} />
+        <div className="kpi-card" onClick={() => navigate('/admin/stock-updates')} role="button" tabIndex={0}>
+          <div className="kpi-header">
+            <div className="kpi-icon-box kpi-icon-amber">
+              <Boxes size={18} />
+            </div>
+            <span className="kpi-arrow-link"><ArrowUpRight size={15} /></span>
           </div>
-          <div className="stat-content">
-            <span className="stat-kicker">NEW SUPPLIERS</span>
-            <strong className="stat-value">{metrics.newSuppliersCount}</strong>
-            <p className="stat-subtext">Applications in verification</p>
+          <div className="kpi-body">
+            <span className="kpi-label">STOCK ALERTS</span>
+            <strong className="kpi-value">{metrics.lowStockCount}</strong>
+            <span className="kpi-subtext">Items below reorder levels</span>
           </div>
         </div>
 
-        <div className="stat-card-item" onClick={() => navigate('/admin/reports')}>
-          <div className="stat-icon-wrapper bg-light-blue text-blue">
-            <Clock3 size={19} />
+        <div className="kpi-card" onClick={() => navigate('/admin/suppliers/new')} role="button" tabIndex={0}>
+          <div className="kpi-header">
+            <div className="kpi-icon-box kpi-icon-purple">
+              <Users size={18} />
+            </div>
+            <span className="kpi-arrow-link"><ArrowUpRight size={15} /></span>
           </div>
-          <div className="stat-content">
-            <span className="stat-kicker">FULFILLMENT RATE</span>
-            <strong className="stat-value">{metrics.fulfillmentRate}%</strong>
-            <p className="stat-subtext">Orders successfully completed</p>
+          <div className="kpi-body">
+            <span className="kpi-label">NEW SUPPLIERS</span>
+            <strong className="kpi-value">{metrics.newSuppliersCount}</strong>
+            <span className="kpi-subtext">Applications in verification</span>
+          </div>
+        </div>
+
+        <div className="kpi-card" onClick={() => navigate('/admin/reports')} role="button" tabIndex={0}>
+          <div className="kpi-header">
+            <div className="kpi-icon-box kpi-icon-emerald">
+              <Clock3 size={18} />
+            </div>
+            <span className="kpi-arrow-link"><ArrowUpRight size={15} /></span>
+          </div>
+          <div className="kpi-body">
+            <span className="kpi-label">FULFILLMENT RATE</span>
+            <strong className="kpi-value">{metrics.fulfillmentRate}%</strong>
+            <span className="kpi-subtext">Orders successfully completed</span>
           </div>
         </div>
       </section>
 
-      {/* TIER 2: Quick Stat Cards (Row 2) */}
-      <section className="quick-stats-row">
-        <div className="stat-card-item" onClick={() => navigate('/admin/orders/list')}>
-          <div className="stat-card-top-row">
-            <div className="stat-icon-wrapper bg-light-blue text-blue">
-              <CreditCard size={19} />
+      {/* TIER 2: KPI Summary Cards (Row 2 - Business & Catalog Metrics) */}
+      <section className="kpi-grid">
+        <div className="kpi-card kpi-card-featured" onClick={() => navigate('/admin/orders/list')} role="button" tabIndex={0}>
+          <div className="kpi-header">
+            <div className="kpi-icon-box kpi-icon-blue">
+              <CreditCard size={18} />
             </div>
-            <span className="live-pill">
-              <i className="live-dot" /> Live
+            <span className="live-badge">
+              <span className="live-dot" /> Live
             </span>
           </div>
-          <div className="stat-content">
-            <span className="stat-kicker">TOTAL REVENUE</span>
-            <strong className="stat-value">{formatCurrency(metrics.totalSales)}</strong>
-            <p className="stat-subtext">Excluding canceled orders</p>
+          <div className="kpi-body">
+            <span className="kpi-label">TOTAL REVENUE</span>
+            <strong className="kpi-value">{formatCurrency(metrics.totalSales)}</strong>
+            <span className="kpi-subtext">Excluding canceled orders</span>
           </div>
         </div>
 
-        <div className="stat-card-item" onClick={() => navigate('/admin/orders/list')}>
-          <div className="stat-card-top-row">
-            <div className="stat-icon-wrapper bg-light-blue text-blue">
-              <FileText size={19} />
+        <div className="kpi-card" onClick={() => navigate('/admin/orders/list')} role="button" tabIndex={0}>
+          <div className="kpi-header">
+            <div className="kpi-icon-box kpi-icon-indigo">
+              <FileText size={18} />
             </div>
+            <span className="kpi-arrow-link"><ArrowUpRight size={15} /></span>
           </div>
-          <div className="stat-content">
-            <span className="stat-kicker">TOTAL ORDERS</span>
-            <strong className="stat-value">{metrics.totalOrders}</strong>
-            <p className="stat-subtext">Total logged purchases</p>
+          <div className="kpi-body">
+            <span className="kpi-label">TOTAL ORDERS</span>
+            <strong className="kpi-value">{metrics.totalOrders}</strong>
+            <span className="kpi-subtext">Total logged purchases</span>
           </div>
         </div>
 
-        <div className="stat-card-item" onClick={() => navigate('/admin/catalog/products')}>
-          <div className="stat-card-top-row">
-            <div className="stat-icon-wrapper bg-light-amber text-amber">
-              <Package size={19} />
+        <div className="kpi-card" onClick={() => navigate('/admin/catalog/products')} role="button" tabIndex={0}>
+          <div className="kpi-header">
+            <div className="kpi-icon-box kpi-icon-teal">
+              <Package size={18} />
             </div>
+            <span className="kpi-arrow-link"><ArrowUpRight size={15} /></span>
           </div>
-          <div className="stat-content">
-            <span className="stat-kicker">CATALOG PRODUCTS</span>
-            <strong className="stat-value">{metrics.productsCount}</strong>
-            <p className="stat-subtext">Across {categories.length || 1} categories</p>
+          <div className="kpi-body">
+            <span className="kpi-label">CATALOG PRODUCTS</span>
+            <strong className="kpi-value">{metrics.productsCount}</strong>
+            <span className="kpi-subtext">Across {categories.length || 1} categories</span>
           </div>
         </div>
 
-        <div className="stat-card-item" onClick={() => navigate('/admin/staff')}>
-          <div className="stat-card-top-row">
-            <div className="stat-icon-wrapper bg-light-pink text-pink">
-              <Shield size={19} />
+        <div className="kpi-card" onClick={() => navigate('/admin/staff')} role="button" tabIndex={0}>
+          <div className="kpi-header">
+            <div className="kpi-icon-box kpi-icon-slate">
+              <Shield size={18} />
             </div>
+            <span className="kpi-arrow-link"><ArrowUpRight size={15} /></span>
           </div>
-          <div className="stat-content">
-            <span className="stat-kicker">STAFF DIRECTORY</span>
-            <strong className="stat-value">{staffCount}</strong>
-            <p className="stat-subtext">Authorized console users</p>
+          <div className="kpi-body">
+            <span className="kpi-label">STAFF DIRECTORY</span>
+            <strong className="kpi-value">{staffCount}</strong>
+            <span className="kpi-subtext">Authorized console users</span>
           </div>
         </div>
       </section>
 
       {/* TIER 3: Income Overview + Fulfillment Mix Charts */}
       <section className="dashboard-grid-row grid-main-charts">
-        <article className="dash-panel revenue-distribution-panel">
+        <article className="dash-panel revenue-panel">
           <div className="dash-panel-header">
             <div>
               <span className="dash-kicker">INCOME OVERVIEW</span>
               <h2>Revenue Distribution</h2>
             </div>
-            <span className="sales-value-badge" onClick={() => navigate('/admin/reports')}>
-              <TrendingUp size={13} /> Sales Value
-            </span>
+            <button type="button" className="sales-value-badge" onClick={() => navigate('/admin/reports')}>
+              <TrendingUp size={13} />
+              <span>Sales Reports</span>
+            </button>
           </div>
 
           <div className="chart-wrapper">
             <ResponsiveContainer width="100%" height={230}>
-              <AreaChart data={salesSeriesData} margin={{ top: 12, right: 12, left: -20, bottom: 0 }}>
+              <AreaChart data={salesSeriesData} margin={{ top: 12, right: 12, left: -16, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#1268a5" stopOpacity={0.12}/>
-                    <stop offset="95%" stopColor="#1268a5" stopOpacity={0.0}/>
+                    <stop offset="5%" stopColor="#1268a5" stopOpacity={0.2} />
+                    <stop offset="95%" stopColor="#1268a5" stopOpacity={0.0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 11 }} />
-                <Tooltip formatter={(value) => [formatCurrency(value), 'Revenue']} />
-                <Area type="monotone" dataKey="value" stroke="#1268a5" strokeWidth={2} fillOpacity={1} fill="url(#revenueGrad)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11, fontWeight: 500 }} />
+                <Tooltip content={<CustomChartTooltip isCurrency={true} />} />
+                <Area type="monotone" dataKey="value" stroke="#1268a5" strokeWidth={2.5} fillOpacity={1} fill="url(#revenueGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -548,16 +585,16 @@ const AdminDashboard = () => {
                   data={orderStatusSeriesData}
                   dataKey="value"
                   nameKey="name"
-                  innerRadius={52}
-                  outerRadius={72}
-                  paddingAngle={3}
+                  innerRadius={54}
+                  outerRadius={74}
+                  paddingAngle={4}
                   stroke="none"
                 >
                   {orderStatusSeriesData.map((item, idx) => (
                     <Cell key={`cell-${idx}`} fill={item.color} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [value, 'Orders']} />
+                <Tooltip content={<CustomChartTooltip />} />
               </PieChart>
             </ResponsiveContainer>
             <div className="donut-center-label">
@@ -570,7 +607,7 @@ const AdminDashboard = () => {
             {orderStatusSeriesData.map((item, idx) => (
               <div key={idx} className="legend-item">
                 <span className="legend-dot" style={{ backgroundColor: item.color }} />
-                <span>{item.name}: {item.value}</span>
+                <span className="legend-text">{item.name}: <strong>{item.value}</strong></span>
               </div>
             ))}
           </div>
@@ -595,16 +632,16 @@ const AdminDashboard = () => {
                     data={categorySeriesData}
                     dataKey="value"
                     nameKey="name"
-                    innerRadius={45}
-                    outerRadius={65}
-                    paddingAngle={3}
+                    innerRadius={46}
+                    outerRadius={66}
+                    paddingAngle={4}
                     stroke="none"
                   >
                     {categorySeriesData.map((item, idx) => (
                       <Cell key={`cell-${idx}`} fill={item.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value) => [value, 'Products']} />
+                  <Tooltip content={<CustomChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="donut-center-label">
@@ -643,7 +680,9 @@ const AdminDashboard = () => {
           <div className="audit-activities-list">
             {recentActivitiesList.map((act, idx) => (
               <div key={idx} className="audit-activity-row">
-                <span className="audit-time-col">{act.time}</span>
+                <div className="audit-time-col">
+                  <span className="audit-time-pill">{act.time}</span>
+                </div>
                 <div className="audit-detail-col">
                   <strong className="audit-title">{act.title}</strong>
                   <p className="audit-text">{act.detail}</p>
@@ -662,8 +701,8 @@ const AdminDashboard = () => {
             <h2>Recent Orders</h2>
           </div>
           <button type="button" className="table-action-btn" onClick={() => navigate('/admin/orders/list')}>
+            <span>View All Orders</span>
             <ExternalLink size={13} aria-hidden="true" />
-            View All Orders
           </button>
         </div>
 
@@ -699,7 +738,7 @@ const AdminDashboard = () => {
                       <td>
                         <div className="customer-cell">
                           <span className="avatar-circle">{customerInitials}</span>
-                          <strong>{order.customerName}</strong>
+                          <strong className="customer-name">{order.customerName}</strong>
                         </div>
                       </td>
                       <td>
@@ -733,7 +772,8 @@ const AdminDashboard = () => {
             className="table-action-btn"
             onClick={() => navigate('/admin/stock-updates')}
           >
-            Manage Inventory
+            <span>Manage Inventory</span>
+            <ChevronRight size={14} aria-hidden="true" />
           </button>
         </div>
 
@@ -741,14 +781,14 @@ const AdminDashboard = () => {
           <table className="stock-alerts-table">
             <thead>
               <tr>
-                <th>PRODUCT NAME</th>
+                <th>Product Name</th>
                 <th>SKU</th>
-                <th>SUPPLIER</th>
-                <th>CURRENT STOCK</th>
-                <th>REORDER LEVEL</th>
-                <th>DEFICIT</th>
-                <th>SEVERITY</th>
-                <th>RESTOCK COST</th>
+                <th>Supplier</th>
+                <th>Current Stock</th>
+                <th>Reorder Level</th>
+                <th>Deficit</th>
+                <th>Severity</th>
+                <th>Restock Cost</th>
               </tr>
             </thead>
             <tbody>
@@ -778,7 +818,7 @@ const AdminDashboard = () => {
                         <strong>{product.name}</strong>
                       </td>
                       <td className="sku-cell">
-                        <strong>{product.sku}</strong>
+                        <span className="sku-badge">{product.sku}</span>
                       </td>
                       <td className="supplier-cell">
                         {product.supplier || 'Honeywell Supplies'}
@@ -824,7 +864,8 @@ const AdminDashboard = () => {
               <h2>Registered Suppliers</h2>
             </div>
             <button type="button" className="table-action-btn" onClick={() => navigate('/admin/suppliers/list')}>
-              View Suppliers
+              <span>View Suppliers</span>
+              <ChevronRight size={14} aria-hidden="true" />
             </button>
           </div>
 
@@ -832,7 +873,7 @@ const AdminDashboard = () => {
             {suppliers.length > 0 ? (
               suppliers.slice(0, 4).map((s, idx) => (
                 <div className="review-row-item" key={idx}>
-                  <div>
+                  <div className="supplier-info">
                     <strong className="supplier-name-title">{s.name}</strong>
                     <span className="supplier-meta-text">Contact: {s.contactPerson || 'N/A'} | {s.phone || 'N/A'}</span>
                   </div>
@@ -861,7 +902,7 @@ const AdminDashboard = () => {
             {systemInsights.map((insight, idx) => (
               <div className="insight-item-row" key={idx}>
                 <span className="insight-dot-marker" style={{
-                  backgroundColor: insight.type === 'warning' ? '#d97706' : insight.type === 'error' ? '#dc2626' : '#1268a5'
+                  backgroundColor: insight.type === 'warning' ? '#f59e0b' : insight.type === 'error' ? '#ef4444' : '#1268a5'
                 }} />
                 <strong className="insight-text-label">{insight.text}</strong>
               </div>
