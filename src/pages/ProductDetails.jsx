@@ -136,8 +136,12 @@ export default function ProductDetails() {
     ? product.gallery
     : [product.image].filter(Boolean);
 
-  const highlights = Array.isArray(product.highlights) ? product.highlights : [];
-  const specifications = Array.isArray(product.specifications) ? product.specifications : [];
+  const rawSpecifications = product.specifications || product.specificationsObj || [];
+  const specifications = Array.isArray(rawSpecifications)
+    ? rawSpecifications
+    : typeof rawSpecifications === 'object' && rawSpecifications !== null
+    ? Object.entries(rawSpecifications).map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase())}: ${v}`)
+    : [];
   const downloads = Array.isArray(product.downloads) ? product.downloads : [];
   const faq = Array.isArray(product.faq) ? product.faq : [];
 
@@ -281,14 +285,35 @@ export default function ProductDetails() {
             {tab === 'Specifications' && (
               <div>
                 <h2>Technical Specifications</h2>
-                <dl>
-                  {specifications.map((item) => {
-                    const parts = typeof item === 'string' ? item.split(':') : ['Spec', String(item)];
-                    const key = parts[0];
-                    const value = parts.slice(1).join(':').trim();
-                    return <div key={item}><dt>{key}</dt><dd>{value || 'N/A'}</dd></div>;
-                  })}
-                </dl>
+                {specifications.length > 0 ? (
+                  <dl>
+                    {specifications.map((item, idx) => {
+                      let key = '';
+                      let value = '';
+                      if (typeof item === 'string') {
+                        const colonIdx = item.indexOf(':');
+                        if (colonIdx > 0) {
+                          key = item.slice(0, colonIdx).trim();
+                          value = item.slice(colonIdx + 1).trim();
+                        } else {
+                          key = 'Specification';
+                          value = item.trim();
+                        }
+                      } else if (typeof item === 'object' && item !== null) {
+                        key = item.label || item.key || 'Specification';
+                        value = String(item.value || '');
+                      }
+                      return (
+                        <div key={`${key}-${idx}`}>
+                          <dt>{key}</dt>
+                          <dd>{value || 'N/A'}</dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
+                ) : (
+                  <p style={{ color: '#64748b', fontStyle: 'italic' }}>Detailed technical specification sheet available upon project request.</p>
+                )}
               </div>
             )}
             {tab === 'Software & Downloads' && (

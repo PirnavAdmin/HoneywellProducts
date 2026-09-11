@@ -224,21 +224,72 @@ export const mapProductFromApi = (
   const priceLabel = `₹${numericPrice.toLocaleString('en-IN')}`;
   const priceNote = numericMrp > numericPrice ? `MRP ₹${numericMrp.toLocaleString('en-IN')}` : 'Incl. taxes';
 
-  // ── Specifications Array ──────────────────────────────────────────────────
-  const specsObj = {
-    weight: resolvedWeight,
-    dimensions: raw.dimensions || raw.specifications?.dimensions || '',
-    powerSource: raw.powerSource || raw.specifications?.powerSource || '',
-    material: raw.material || raw.specifications?.material || '',
-    coverage: raw.coverageUsage || raw.specifications?.coverage || raw.specifications?.coverageUsage || '',
-  };
+  // ── Specifications Resolution (Array / Object / String / DTO fields) ──────
+  let rawSpecs = raw.specifications ?? raw.specificationsObj ?? raw.Specifications ?? {};
+  if (typeof rawSpecs === 'string' && rawSpecs.trim()) {
+    try {
+      rawSpecs = JSON.parse(rawSpecs);
+    } catch {
+      rawSpecs = [rawSpecs];
+    }
+  }
 
+  const specsObj = {};
   const specsList = [];
-  if (specsObj.weight) specsList.push(`Weight: ${specsObj.weight}`);
-  if (specsObj.dimensions) specsList.push(`Dimensions: ${specsObj.dimensions}`);
-  if (specsObj.powerSource) specsList.push(`Power Source: ${specsObj.powerSource}`);
-  if (specsObj.material) specsList.push(`Material: ${specsObj.material}`);
-  if (specsObj.coverage) specsList.push(`Coverage / Usage: ${specsObj.coverage}`);
+
+  if (Array.isArray(rawSpecs)) {
+    rawSpecs.forEach((item) => {
+      if (typeof item === 'string' && item.trim()) {
+        specsList.push(item.trim());
+        const colonIdx = item.indexOf(':');
+        if (colonIdx > 0) {
+          const k = item.slice(0, colonIdx).trim().toLowerCase().replace(/[^a-z0-9]/g, '');
+          const v = item.slice(colonIdx + 1).trim();
+          if (k) specsObj[k] = v;
+        }
+      }
+    });
+  } else if (rawSpecs && typeof rawSpecs === 'object') {
+    Object.entries(rawSpecs).forEach(([key, val]) => {
+      if (val !== undefined && val !== null && String(val).trim()) {
+        const formattedKey = key
+          .replace(/([A-Z])/g, ' $1')
+          .replace(/^./, (str) => str.toUpperCase())
+          .trim();
+        specsList.push(`${formattedKey}: ${val}`);
+        specsObj[key] = String(val);
+      }
+    });
+  }
+
+  // Fallback: Check direct DTO properties if not already present
+  const weight = resolvedWeight || raw.weight || raw.Weight || '';
+  const dimensions = raw.dimensions || raw.Dimensions || '';
+  const powerSource = raw.powerSource || raw.PowerSource || '';
+  const material = raw.material || raw.Material || '';
+  const coverage = raw.coverageUsage || raw.CoverageUsage || raw.coverage || raw.Coverage || '';
+
+  if (weight && !specsList.some((s) => s.toLowerCase().startsWith('weight'))) {
+    specsList.push(`Weight: ${weight}`);
+  }
+  if (dimensions && !specsList.some((s) => s.toLowerCase().startsWith('dimensions'))) {
+    specsList.push(`Dimensions: ${dimensions}`);
+  }
+  if (powerSource && !specsList.some((s) => s.toLowerCase().startsWith('power source'))) {
+    specsList.push(`Power Source: ${powerSource}`);
+  }
+  if (material && !specsList.some((s) => s.toLowerCase().startsWith('material'))) {
+    specsList.push(`Material: ${material}`);
+  }
+  if (coverage && !specsList.some((s) => s.toLowerCase().startsWith('coverage'))) {
+    specsList.push(`Coverage / Usage: ${coverage}`);
+  }
+
+  if (weight) specsObj.weight = weight;
+  if (dimensions) specsObj.dimensions = dimensions;
+  if (powerSource) specsObj.powerSource = powerSource;
+  if (material) specsObj.material = material;
+  if (coverage) specsObj.coverage = coverage;
 
   const categoryName = raw.categoryName || raw.category?.categoryName || raw.category?.name || categories.find(c => String(c.id) === String(categoryId))?.name || 'General';
   const subcategoryName = raw.subcategoryName || raw.subcategory?.subcategoryName || raw.subcategory?.name || subcategories.find(s => String(s.id) === String(subcategoryId))?.name || 'Security Equipment';
@@ -629,11 +680,19 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   fd.append('PackageIncludes', product.packageIncludes || '');
 
   // Specifications
-  fd.append('Weight', product.specifications?.weight || '');
-  fd.append('Dimensions', product.specifications?.dimensions || '');
-  fd.append('PowerSource', product.specifications?.powerSource || '');
-  fd.append('Material', product.specifications?.material || '');
-  fd.append('CoverageUsage', product.specifications?.coverage || '');
+  const specWeight = product.specifications?.weight || '';
+  const specDimensions = product.specifications?.dimensions || '';
+  const specPower = product.specifications?.powerSource || '';
+  const specMaterial = product.specifications?.material || '';
+  const specCoverage = product.specifications?.coverage || product.specifications?.coverageUsage || '';
+  const specJsonStr = JSON.stringify(product.specifications || {});
+
+  fd.append('Weight', specWeight);
+  fd.append('Dimensions', specDimensions);
+  fd.append('PowerSource', specPower);
+  fd.append('Material', specMaterial);
+  fd.append('CoverageUsage', specCoverage);
+  fd.append('Specifications', specJsonStr);
 
   // Pricing & Discounts
   fd.append('DiscountType', product.discountType || 'none');
@@ -697,11 +756,12 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     shortDescription: product.shortDescription || product.description || '',
     productDetails: product.productDetails || '',
     packageIncludes: product.packageIncludes || '',
-    weight: product.specifications?.weight || '',
-    dimensions: product.specifications?.dimensions || '',
-    powerSource: product.specifications?.powerSource || '',
-    material: product.specifications?.material || '',
-    coverageUsage: product.specifications?.coverage || '',
+    weight: specWeight,
+    dimensions: specDimensions,
+    powerSource: specPower,
+    material: specMaterial,
+    coverageUsage: specCoverage,
+    specifications: product.specifications || {},
     discountType: product.discountType || 'none',
     discountAmount: Number(product.discountValue) || 0,
     isActive: product.status !== 'Inactive' && product.isActive !== false,
