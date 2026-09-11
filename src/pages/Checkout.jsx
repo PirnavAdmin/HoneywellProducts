@@ -19,6 +19,8 @@ import {
 
 import { couponService } from '../services/couponService';
 import { orderService } from '../services/orderService';
+import { useAuth } from '../context/AuthContext';
+import { getAddresses } from '../services/customerApi';
 
 const formatPrice = (price) => `₹${price.toLocaleString('en-IN')}`;
 
@@ -26,33 +28,59 @@ export default function Checkout() {
   useDocumentTitle('Checkout', 'Submit contact and payment details for products selected in the cart.');
   const { items, count, total, clearCart } = useCart();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
   const popoverRef = useRef(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
-        setShowTaxBreakdown(false);
-      }
-    };
-    if (showTaxBreakdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showTaxBreakdown]);
-
-  // Form State
-  const [customerName, setCustomerName] = useState('');
-  const [mobile, setMobile] = useState('');
-  const [email, setEmail] = useState('');
+  // Form State - auto-populated from logged-in customer if available
+  const [customerName, setCustomerName] = useState(
+    user?.name || user?.fullName || localStorage.getItem('customerName') || ''
+  );
+  const [mobile, setMobile] = useState(
+    user?.phone || user?.mobileNumber || localStorage.getItem('customerPhone') || ''
+  );
+  const [email, setEmail] = useState(
+    user?.email || localStorage.getItem('customerEmail') || ''
+  );
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
   const [pinCode, setPinCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [activeTransactionId, setActiveTransactionId] = useState('');
+
+  // Prepopulate saved addresses from API or profile
+  useEffect(() => {
+    if (user) {
+      if (!customerName && (user.name || user.fullName)) {
+        setCustomerName(user.name || user.fullName);
+      }
+      if (!email && user.email) {
+        setEmail(user.email);
+      }
+      if (!mobile && (user.phone || user.mobileNumber)) {
+        setMobile(user.phone || user.mobileNumber);
+      }
+
+      const activeCustId = user.customerId || user.id || localStorage.getItem('customerId');
+      if (activeCustId) {
+        getAddresses(activeCustId).then((addr) => {
+          if (addr) {
+            const a = Array.isArray(addr) ? addr[0] : addr;
+            const fullAddr = a.shippingAddress || a.address || '';
+            if (fullAddr && !address) {
+              setAddress(fullAddr);
+              const parts = fullAddr.split(',').map((p) => p.trim());
+              if (parts.length >= 2 && !city) setCity(parts[1]);
+              if (parts.length >= 3 && !state) setState(parts[2]);
+              const pinMatch = fullAddr.match(/\b\d{6}\b/);
+              if (pinMatch && !pinCode) setPinCode(pinMatch[0]);
+            }
+          }
+        }).catch(() => {});
+      }
+    }
+  }, [user]);
 
   // Payment Selection
   const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' | 'Card' | 'Net Banking' | 'QR' | 'Manual Payment' | 'Cash on Delivery' | 'Razorpay Online Gateway'
@@ -318,7 +346,41 @@ export default function Checkout() {
         }
       }
 
-      // 3. INITIATE PAYMENT (UPI, Card, QR, COD)
+      // 3. CASH ON DELIVERY FLOW (DIRECT PLACEMENT)
+      if (paymentMethod === 'Cash on Delivery') {
+        const activeCustId = user?.customerId || user?.id || localStorage.getItem('customerId');
+        const finalOrderTotal = Math.max(0, total - discountAmount);
+
+        try {
+          await orderService.create({
+            orderNumber: currentOrderId,
+            customerId: activeCustId ? Number(activeCustId) : undefined,
+            customerName: customerName.trim(),
+            email: email.trim(),
+            mobile: mobile.trim(),
+            address: address.trim(),
+            city: city.trim(),
+            state: state.trim(),
+            pinCode: pinCode.trim(),
+            totalAmount: finalOrderTotal,
+            paymentMethod: 'Cash on Delivery',
+            paymentStatus: 'Pending',
+            status: 'Processing',
+            items
+          });
+        } catch (orderErr) {
+          console.warn('Order creation note:', orderErr.message);
+        }
+
+        setPaymentMessage({ type: 'success', text: 'Order placed successfully with Cash on Delivery!' });
+        setTimeout(() => {
+          clearCart();
+          navigate('/order-success', { state: { reference: currentOrderId, status: 'Success' } });
+        }, 1200);
+        return;
+      }
+
+      // 4. INITIATE ONLINE PAYMENT (UPI, Card, QR)
       const initPayload = {
         paymentMethod,
         amount: total,
@@ -343,16 +405,18 @@ export default function Checkout() {
         const compRes = await completePayment(txnId);
         if (compRes && compRes.success !== false) {
           // Post order live to POST /api/orders
+          const activeCustId = user?.customerId || user?.id || localStorage.getItem('customerId');
           try {
             await orderService.create({
               orderNumber: currentOrderId,
-              customerName,
-              email,
-              mobile,
-              address,
-              city,
-              state,
-              pinCode,
+              customerId: activeCustId ? Number(activeCustId) : undefined,
+              customerName: customerName.trim(),
+              email: email.trim(),
+              mobile: mobile.trim(),
+              address: address.trim(),
+              city: city.trim(),
+              state: state.trim(),
+              pinCode: pinCode.trim(),
               totalAmount: Math.max(0, total - discountAmount),
               paymentMethod,
               paymentStatus: 'Verified',

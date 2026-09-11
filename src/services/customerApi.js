@@ -417,6 +417,40 @@ export async function getMyOrders({ customerId, email, status, search } = {}) {
       const data2 = await handleResponse(res2);
       return Array.isArray(data2) ? data2 : (data2.orders || data2.items || data2.data || []);
     } catch (err) {
+      try {
+        const res3 = await fetch(url(`/api/Orders/my-orders${q}`), {
+          method: 'GET',
+          headers: authHeaders(),
+        });
+        if (res3.ok) {
+          const data3 = await handleResponse(res3);
+          if (Array.isArray(data3) && data3.length > 0) return data3;
+          if (data3 && (data3.orders || data3.items || data3.data)) return data3.orders || data3.items || data3.data;
+        }
+      } catch (e3) {}
+
+      // Fallback: Query all system orders from /api/orders
+      try {
+        const res4 = await fetch(url('/api/orders'), {
+          method: 'GET',
+          headers: authHeaders(),
+        });
+        if (res4.ok) {
+          const data4 = await handleResponse(res4);
+          const list4 = Array.isArray(data4) ? data4 : (data4.orders || data4.items || data4.data || []);
+          if (list4.length > 0) return list4;
+        }
+      } catch (e4) {}
+
+      // Fallback: Read client-side saved orders from local storage
+      try {
+        const local = localStorage.getItem('honeywell_orders') || localStorage.getItem('my_recent_orders');
+        if (local) {
+          const parsed = JSON.parse(local);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e5) {}
+
       return [];
     }
   }
