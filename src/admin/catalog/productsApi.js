@@ -645,8 +645,25 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
   } catch (err) {
     console.warn(`GET /api/products/${id} unavailable (${err.message}), searching product list fallback.`);
     const allProducts = await fetchProducts(categories, subcategories);
-    const found = allProducts.find((p) => String(p.id) === String(id) || String(p.slug) === String(id));
-    if (found) return found;
+    let found = allProducts.find(
+      (p) =>
+        String(p.id) === String(id) ||
+        String(p.slug) === String(id) ||
+        String(p.id).toLowerCase() === String(id).toLowerCase() ||
+        String(p.slug).toLowerCase() === String(id).toLowerCase()
+    );
+
+    if (!found && Array.isArray(demoProducts)) {
+      found = demoProducts.find(
+        (p) =>
+          String(p.id) === String(id) ||
+          String(p.slug) === String(id) ||
+          String(p.id).toLowerCase() === String(id).toLowerCase() ||
+          String(p.slug).toLowerCase() === String(id).toLowerCase()
+      );
+    }
+
+    if (found) return mapProductFromApi(found, categories, subcategories);
     throw err;
   }
 };

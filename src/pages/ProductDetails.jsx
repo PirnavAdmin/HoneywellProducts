@@ -19,7 +19,16 @@ const formatFileSize = (bytes) => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
-export default function ProductDetails() {
+const safeString = (val, fallback = '') => {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'string' || typeof val === 'number') return String(val);
+  if (typeof val === 'object') {
+    return val.name || val.categoryName || val.title || val.label || val.feature || val.value || fallback;
+  }
+  return fallback;
+};
+
+export function ProductDetailsContent() {
   const { id } = useParams();
   const [product, setProduct] = useState(null);
   const [related, setRelated] = useState([]);
@@ -43,7 +52,7 @@ export default function ProductDetails() {
   const { addItem } = useCart();
   const { openEnquiry, openQuote, notify } = useUI();
 
-  useDocumentTitle(product?.name || 'Product Details', product?.description);
+  useDocumentTitle(safeString(product?.name, 'Product Details'), safeString(product?.description, 'Product details page'));
 
   const loadLiveReviews = async (prodId) => {
     try {
@@ -144,10 +153,18 @@ export default function ProductDetails() {
     : [];
   const downloads = Array.isArray(product.downloads) ? product.downloads : [];
   const faq = Array.isArray(product.faq) ? product.faq : [];
+  const highlights = Array.isArray(product.highlights)
+    ? product.highlights.map((h) => safeString(h)).filter(Boolean)
+    : [];
+
+  const categoryText = safeString(product.category, 'General');
+  const productNameText = safeString(product.name, 'Product Details');
+  const productModelText = safeString(product.model || product.sku, 'GEN-PRO');
+  const productDescriptionText = safeString(product.description || product.productDetails || product.shortDescription, 'No description available.');
 
   const add = () => {
     addItem(product, quantity);
-    notify(`${quantity} × ${product.name} added to cart.`);
+    notify(`${quantity} × ${productNameText} added to cart.`);
   };
 
   const handleDownloadSoftware = (item) => {
@@ -197,7 +214,7 @@ export default function ProductDetails() {
   return (
     <>
       <div className="product-breadcrumbs container">
-        <Link to="/">Home</Link><ChevronRight size={14} /><Link to="/products">Products</Link><ChevronRight size={14} /><span>{product.name}</span>
+        <Link to="/">Home</Link><ChevronRight size={14} /><Link to="/products">Products</Link><ChevronRight size={14} /><span>{productNameText}</span>
       </div>
 
       <section className="product-detail container">
@@ -205,7 +222,7 @@ export default function ProductDetails() {
           <div className="gallery-main">
             <img
               src={(!gallery[image] && !product.image) || String(gallery[image] || product.image).toLowerCase().includes('placeholder') ? '/honeywell-products-logo.png' : (gallery[image] || product.image)}
-              alt={product.name}
+              alt={productNameText}
               onError={(e) => {
                 e.target.onerror = null;
                 e.target.src = '/honeywell-products-logo.png';
@@ -231,22 +248,22 @@ export default function ProductDetails() {
         </div>
 
         <div className="product-info">
-          <p className="eyebrow dark">{product.category}</p>
-          <h1>{product.name}</h1>
-          <p className="product-model"><strong>{product.model || product.sku}</strong></p>
-          <div className="product-rating" aria-label={`${product.rating} out of 5 from ${reviews.length || product.reviewCount} reviews`}>
+          <p className="eyebrow dark">{categoryText}</p>
+          <h1>{productNameText}</h1>
+          <p className="product-model"><strong>{productModelText}</strong></p>
+          <div className="product-rating" aria-label={`${product.rating || 4.5} out of 5 from ${reviews.length || product.reviewCount || 0} reviews`}>
             <span className="product-stars"><Star size={15} fill="currentColor" /></span>
-            <strong>{product.rating}</strong>
-            <span>({reviews.length || product.reviewCount} reviews)</span>
+            <strong>{product.rating || '4.5'}</strong>
+            <span>({reviews.length || product.reviewCount || 0} reviews)</span>
           </div>
-          <span className="availability"><i /> {product.availability}</span>
-          <p className="product-description">{product.description}</p>
+          <span className="availability"><i /> {safeString(product.availability, 'In Stock')}</span>
+          <p className="product-description">{productDescriptionText}</p>
 
           {highlights.length > 0 && (
             <>
               <h2 className="detail-subtitle">Highlights</h2>
               <ul className="feature-list">
-                {highlights.map((item) => <li key={item}><Check size={17} />{item}</li>)}
+                {highlights.map((item, idx) => <li key={`${item}-${idx}`}><Check size={17} />{item}</li>)}
               </ul>
             </>
           )}
@@ -530,5 +547,44 @@ export default function ProductDetails() {
         </section>
       )}
     </>
+  );
+}
+
+class ProductErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('ProductDetails Render Crash:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="container" style={{ padding: '6rem 1rem', textAlign: 'center' }}>
+          <div className="empty-state large">
+            <AlertCircle size={44} color="#ef4444" style={{ margin: '0 auto 16px' }} />
+            <h2>Unable to Display Product</h2>
+            <p>An unexpected formatting issue occurred while rendering this product details page.</p>
+            <Link className="button" to="/products">Return to Catalogue</Link>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function ProductDetails(props) {
+  return (
+    <ProductErrorBoundary>
+      <ProductDetailsContent {...props} />
+    </ProductErrorBoundary>
   );
 }

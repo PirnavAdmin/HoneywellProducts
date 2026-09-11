@@ -38,6 +38,7 @@ const ResourcesHub = lazy(() => import('./pages/ResourcesHub'));
 const CaseStudies = lazy(() => import('./pages/CaseStudies'));
 const Videos = lazy(() => import('./pages/Videos'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
+const BlogDetails = lazy(() => import('./pages/BlogDetails'));
 
 // Existing Admin Pages
 const AdminLayout = lazy(() => import('./admin/AdminLayout'));
@@ -233,6 +234,9 @@ export default function App() {
               {/* Resources & Legal */}
               <Route path="resources" element={<ResourcesHub />} />
               <Route path="resources/software" element={<SoftwareDownloads />} />
+              <Route path="blogs/:id" element={<BlogDetails />} />
+              <Route path="blog/:id" element={<BlogDetails />} />
+              <Route path="blogs" element={<BlogDetails />} />
               <Route path="case-studies" element={<CaseStudies />} />
               <Route path="videos" element={<Videos />} />
               <Route path="privacy-policy" element={<LegalPage />} />
