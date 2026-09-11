@@ -170,7 +170,24 @@ export default function Home() {
         </div>
       </div>
     </section>
-    <section className="section why-section"><div className="container"><SectionHeading eyebrow="WHY CHOOSE US" title="Technology Designed Around Your Security" description="A practical, conservative framework for product discovery, project planning and support." inverse /><div className="reason-grid">{reasons.map(({ icon: Icon, ...item }) => <article key={item.title}><Icon /><h3>{item.title}</h3><p>{item.text}</p></article>)}</div></div></section>
+    <section className="section why-section">
+      <div className="container">
+        <SectionHeading eyebrow="WHY CHOOSE US" title="Technology Designed Around Your Security" description="A practical, conservative framework for product discovery, project planning and support." inverse />
+      </div>
+      <div className="why-scroll-container">
+        <div className="why-scroll-track">
+          {[...reasons, ...reasons].map(({ icon: Icon, ...item }, index) => (
+            <article key={`${item.title}-${index}`} className="why-scroll-card">
+              <div className="why-icon-wrap">
+                <Icon size={24} />
+              </div>
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
     <section className="section business-banner"><div className="container business-banner-grid"><div><SectionHeading eyebrow="BUSINESS PARTNERSHIPS" title="Grow Your Business With Honeywell Products" description="Explore client-editable partnership pathways for channel and project professionals." /><div className="partner-chip-list">{partnerTypes.map((type) => <span key={type}>{type}</span>)}</div><div className="button-row"><Link className="button" to="/business#partner-form">Become a Partner</Link><Link className="button outline" to="/business">Request Business Details</Link></div></div><img src={businessImage} alt="Modern commercial buildings" loading="lazy" /></div></section>
     <TestimonialsSection />
     <GrowthSection />

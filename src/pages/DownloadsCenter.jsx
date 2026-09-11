@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Download, FileText, Search, FileCheck, BookOpen } from 'lucide-react';
+import { Download, FileText, Search, FileCheck, BookOpen, Eye } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import { productService } from '../services/productService';
+import { generateProductPdf } from '../utils/pdfGenerator';
 import heroImage from '../assets/images/smart-technology-trends.png';
 
 export default function DownloadsCenter() {
@@ -42,6 +43,7 @@ export default function DownloadsCenter() {
         type: 'datasheets',
         fileUrl: product.datasheetUrl || product.datasheet,
         format: 'PDF',
+        productObj: product,
       });
     }
     if (product.manualUrl || product.manual) {
@@ -54,6 +56,7 @@ export default function DownloadsCenter() {
         type: 'manuals',
         fileUrl: product.manualUrl || product.manual,
         format: 'PDF',
+        productObj: product,
       });
     }
     if (product.brochureUrl || product.brochure) {
@@ -66,18 +69,34 @@ export default function DownloadsCenter() {
         type: 'brochures',
         fileUrl: product.brochureUrl || product.brochure,
         format: 'PDF',
+        productObj: product,
       });
     }
-    if (docs.length === 0) {
+
+    // Always include Certification & Quality document for EVERY product
+    docs.push({
+      id: `${product.id}-certification`,
+      productId: product.id,
+      productName: product.name,
+      category: product.category || 'Surveillance',
+      title: `${product.name} — Certificate of Quality & Compliance`,
+      type: 'documents',
+      fileUrl: product.certificationUrl || product.certification || `/docs/${product.id}-certification.pdf`,
+      format: 'PDF',
+      productObj: product,
+    });
+
+    if (!product.datasheetUrl && !product.datasheet) {
       docs.push({
         id: `${product.id}-spec-doc`,
         productId: product.id,
         productName: product.name,
         category: product.category || 'Surveillance',
-        title: `${product.name} — Product Specification Document`,
-        type: 'documents',
+        title: `${product.name} — Technical Specification Sheet`,
+        type: 'datasheets',
         fileUrl: `/docs/${product.id}-specifications.pdf`,
         format: 'PDF',
+        productObj: product,
       });
     }
     return docs;
@@ -99,6 +118,28 @@ export default function DownloadsCenter() {
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setSearchParams(tab === 'all' ? {} : { tab });
+  };
+
+  const handleDocumentAction = (doc, mode = 'download') => {
+    const url = doc.fileUrl || '';
+    const isRealExternalPdf = (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) && !url.includes('/docs/');
+
+    if (isRealExternalPdf) {
+      if (mode === 'view') {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      } else {
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = '_blank';
+        link.setAttribute('download', `${doc.title}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+      return;
+    }
+
+    generateProductPdf(doc.productObj || { name: doc.productName, category: doc.category, id: doc.productId }, doc.type, mode);
   };
 
   return (
@@ -171,15 +212,24 @@ export default function DownloadsCenter() {
                     <h4>{doc.title}</h4>
                     <span className="doc-category">{doc.category} • Format: {doc.format}</span>
                   </div>
-                  <a
-                    href={doc.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    download
-                    className="button button-outline button-small"
-                  >
-                    <Download size={14} /> Download
-                  </a>
+                  <div className="download-card-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: 'auto' }}>
+                    <button
+                      type="button"
+                      className="button button-outline button-small"
+                      onClick={() => handleDocumentAction(doc, 'view')}
+                      title="Open & view PDF in browser"
+                    >
+                      <Eye size={14} /> View
+                    </button>
+                    <button
+                      type="button"
+                      className="button button-small"
+                      onClick={() => handleDocumentAction(doc, 'download')}
+                      title="Download official PDF file"
+                    >
+                      <Download size={14} /> Download PDF
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

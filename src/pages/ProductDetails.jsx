@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Check, Download, ExternalLink, Minus, Plus, ShoppingCart, Star, ChevronRight, Loader2, AlertCircle, FileText, Cpu, Monitor, HardDrive, Calendar, Layers } from 'lucide-react';
+import { ArrowLeft, Check, Download, ExternalLink, Minus, Plus, ShoppingCart, Star, ChevronRight, Loader2, AlertCircle, FileText, Cpu, Monitor, HardDrive, Calendar, Layers, ShieldCheck, Truck, RotateCcw, Eye } from 'lucide-react';
 import { productService } from '../services/productService';
 import { reviewService } from '../services/reviewService';
 import { softwareService } from '../services/softwareService';
+import { generateProductPdf } from '../utils/pdfGenerator';
 import ProductCard from '../components/products/ProductCard';
 import { useCart } from '../context/CartContext';
 import { useUI } from '../context/UIContext';
@@ -251,10 +252,10 @@ export function ProductDetailsContent() {
           <p className="eyebrow dark">{categoryText}</p>
           <h1>{productNameText}</h1>
           <p className="product-model"><strong>{productModelText}</strong></p>
-          <div className="product-rating" aria-label={`${product.rating || 4.5} out of 5 from ${reviews.length || product.reviewCount || 0} reviews`}>
+          <div className="product-rating" aria-label={`${reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / reviews.length).toFixed(1) : (product.rating || '4.8')} out of 5 from ${reviews.length > 0 ? reviews.length : (product.reviewCount || 0)} reviews`}>
             <span className="product-stars"><Star size={15} fill="currentColor" /></span>
-            <strong>{product.rating || '4.5'}</strong>
-            <span>({reviews.length || product.reviewCount || 0} reviews)</span>
+            <strong>{reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / reviews.length).toFixed(1) : (product.rating || '4.8')}</strong>
+            <span>({reviews.length > 0 ? reviews.length : (product.reviewCount || 0)} reviews)</span>
           </div>
           <span className="availability"><i /> {safeString(product.availability, 'In Stock')}</span>
           <p className="product-description">{productDescriptionText}</p>
@@ -285,6 +286,24 @@ export function ProductDetailsContent() {
           <div className="detail-enquiry-actions">
             <button className="button outline" onClick={() => openEnquiry(product)}>Enquire Now</button>
             <button className="button secondary" onClick={() => openQuote(product)}>Request Bulk Quote</button>
+          </div>
+
+          <div className="product-trust-badges" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' }}>
+            <div style={{ background: '#f8fafc', padding: '12px 8px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+              <ShieldCheck size={20} style={{ color: '#0284c7', margin: '0 auto 6px' }} />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e293b', display: 'block' }}>100% Genuine</span>
+              <small style={{ fontSize: '10px', color: '#64748b' }}>Brand Warranty</small>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '12px 8px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+              <Truck size={20} style={{ color: '#16a34a', margin: '0 auto 6px' }} />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e293b', display: 'block' }}>Express Shipping</span>
+              <small style={{ fontSize: '10px', color: '#64748b' }}>3-7 Business Days</small>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '12px 8px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+              <RotateCcw size={20} style={{ color: '#e30613', margin: '0 auto 6px' }} />
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e293b', display: 'block' }}>Easy Returns</span>
+              <small style={{ fontSize: '10px', color: '#64748b' }}>Hassle-Free Policy</small>
+            </div>
           </div>
         </div>
       </section>
@@ -441,13 +460,72 @@ export function ProductDetailsContent() {
             )}
             {tab === 'Documents' && (
               <div>
-                <h2>Downloads &amp; Manuals</h2>
-                {downloads.map((document) => (
-                  <div className="document-row" key={typeof document === 'string' ? document : document.name}>
-                    <span><strong>{typeof document === 'string' ? document : document.name}</strong><small>Official Documentation</small></span>
-                    <button disabled title="Download documentation file"><Download /> Download</button>
+                <h2>Product Documents &amp; Certificates</h2>
+                <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
+                  Official datasheets, compliance certificates, and technical manuals for {productNameText}.
+                </p>
+
+                <div style={{ display: 'grid', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '15px', color: '#0f172a' }}>Technical Specification Datasheet</strong>
+                      <small style={{ color: '#64748b' }}>Includes comprehensive product specs, electrical data, and dimension drawings (PDF)</small>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="button outline button-small" onClick={() => generateProductPdf(product, 'datasheet', 'view')}>
+                        <Eye size={14} /> View PDF
+                      </button>
+                      <button className="button button-small" onClick={() => generateProductPdf(product, 'datasheet', 'download')}>
+                        <Download size={14} /> Download PDF
+                      </button>
+                    </div>
                   </div>
-                ))}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '15px', color: '#0f172a' }}>Certificate of Conformity &amp; Compliance</strong>
+                      <small style={{ color: '#64748b' }}>ISO 9001, CE, FCC &amp; RoHS Honeywell quality assurance certificate (PDF)</small>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="button outline button-small" onClick={() => generateProductPdf(product, 'certification', 'view')}>
+                        <Eye size={14} /> View PDF
+                      </button>
+                      <button className="button button-small" onClick={() => generateProductPdf(product, 'certification', 'download')}>
+                        <Download size={14} /> Download PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '15px', color: '#0f172a' }}>Installation &amp; Operating Manual</strong>
+                      <small style={{ color: '#64748b' }}>Setup guide, wiring diagrams, and maintenance instructions (PDF)</small>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="button outline button-small" onClick={() => generateProductPdf(product, 'manual', 'view')}>
+                        <Eye size={14} /> View PDF
+                      </button>
+                      <button className="button button-small" onClick={() => generateProductPdf(product, 'manual', 'download')}>
+                        <Download size={14} /> Download PDF
+                      </button>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
+                    <div>
+                      <strong style={{ display: 'block', fontSize: '15px', color: '#0f172a' }}>Official Commercial Brochure</strong>
+                      <small style={{ color: '#64748b' }}>Enterprise product brochure &amp; feature overview (PDF)</small>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button className="button outline button-small" onClick={() => generateProductPdf(product, 'brochure', 'view')}>
+                        <Eye size={14} /> View PDF
+                      </button>
+                      <button className="button button-small" onClick={() => generateProductPdf(product, 'brochure', 'download')}>
+                        <Download size={14} /> Download PDF
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
             {tab === 'Reviews' && (
