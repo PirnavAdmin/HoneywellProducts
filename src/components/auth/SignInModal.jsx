@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import './SignInModal.css';
 import brandLogo from '../../../public/honeywell-products-logo.png';
+import { useAuth } from '../../context/AuthContext';
+import { forgotPassword as forgotPasswordApi } from '../../services/customerApi';
 
 export default function SignInModal({ isOpen, onClose, initialMode = 'login', onSuccess }) {
   const [authMode, setAuthMode] = useState(initialMode);
@@ -23,6 +25,7 @@ export default function SignInModal({ isOpen, onClose, initialMode = 'login', on
   const [touched, setTouched] = useState({});
   const [generalAlert, setGeneralAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const auth = useAuth();
 
   useEffect(() => {
     setAuthMode(initialMode);
@@ -160,13 +163,7 @@ export default function SignInModal({ isOpen, onClose, initialMode = 'login', on
     setIsLoading(true);
 
     try {
-      // Simulate realistic authentication API latency
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
       const cleanEmail = inputEmail.trim();
-      const displayName = authMode === 'register' 
-        ? inputFullName.trim() 
-        : (cleanEmail.split('@')[0] || 'Valued Customer');
 
       if (rememberMe) {
         localStorage.setItem('rememberedCustomerEmail', cleanEmail);
@@ -174,39 +171,49 @@ export default function SignInModal({ isOpen, onClose, initialMode = 'login', on
         localStorage.removeItem('rememberedCustomerEmail');
       }
 
-      // Update customer authentication token and user details
-      localStorage.setItem('customerToken', 'demo-customer-token-' + Date.now());
-      localStorage.setItem('customerEmail', cleanEmail);
-      localStorage.setItem('customerName', displayName);
-
-      if (onSuccess) {
-        onSuccess({ email: cleanEmail, name: displayName });
+      if (authMode === 'register') {
+        await auth.register({
+          name: inputFullName.trim(),
+          email: cleanEmail,
+          password: inputPassword,
+        });
+      } else {
+        await auth.login(cleanEmail, inputPassword);
       }
 
+      if (onSuccess) {
+        onSuccess();
+      }
       onClose();
-      // Refresh page so header and authenticated components immediately sync state
-      window.location.reload();
     } catch (err) {
       console.error('Sign In error:', err);
       setGeneralAlert({
         type: 'error',
-        message: 'The email or password is incorrect. Please try again.'
+        message: err.message || 'The email or password is incorrect. Please try again.'
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
     if (!inputEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail.trim())) {
       setErrors((prev) => ({ ...prev, email: 'Please enter a valid email address first.' }));
       setTouched((prev) => ({ ...prev, email: true }));
       return;
     }
-    setGeneralAlert({
-      type: 'info',
-      message: `Password reset instructions have been sent to ${inputEmail.trim()}. Please check your email.`
-    });
+    try {
+      await forgotPasswordApi(inputEmail.trim());
+      setGeneralAlert({
+        type: 'info',
+        message: `Password reset instructions have been sent to ${inputEmail.trim()}. Please check your email.`
+      });
+    } catch (err) {
+      setGeneralAlert({
+        type: 'error',
+        message: err.message || 'Failed to send reset email. Please try again.'
+      });
+    }
   };
 
   return (

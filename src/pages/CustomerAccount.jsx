@@ -7,6 +7,13 @@ import {
 } from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
 import brandLogo from '../../public/honeywell-products-logo.png';
+import { useAuth } from '../context/AuthContext';
+import { 
+  getProfile, updateProfile, 
+  getAddresses, saveAddresses, updateAddresses, 
+  getBankDetails, saveBankDetails, updateBankDetails,
+  changePassword, forgotPassword
+} from '../services/customerApi';
 
 export default function CustomerAccount() {
   const location = useLocation();
@@ -18,13 +25,17 @@ export default function CustomerAccount() {
   // Active section tab: 'personal' | 'addresses' | 'bank'
   const [activeTab, setActiveTab] = useState('personal');
 
+  const auth = useAuth();
+  const { user, isLoggedIn } = auth;
+
   // Logged-in Profile State
-  const [customerName, setCustomerName] = useState(localStorage.getItem('customerName') || 'Valued Customer');
-  const [customerEmail, setCustomerEmail] = useState(localStorage.getItem('customerEmail') || '');
-  const [customerPhone, setCustomerPhone] = useState(localStorage.getItem('customerPhone') || '');
-  const [customerGender, setCustomerGender] = useState(localStorage.getItem('customerGender') || 'Male');
-  const [customerCompany, setCustomerCompany] = useState(localStorage.getItem('customerCompany') || '');
-  const [customerAvatar, setCustomerAvatar] = useState(localStorage.getItem('customerAvatar') || '');
+  const rawCustomerName = localStorage.getItem('customerName') || '';
+  const [customerName, setCustomerName] = useState(user?.name || user?.fullName || (rawCustomerName && rawCustomerName.toLowerCase() !== 'admin' ? rawCustomerName : 'Valued Customer'));
+  const [customerEmail, setCustomerEmail] = useState(user?.email || localStorage.getItem('customerEmail') || '');
+  const [customerPhone, setCustomerPhone] = useState(user?.phone || localStorage.getItem('customerPhone') || '');
+  const [customerGender, setCustomerGender] = useState(user?.gender || localStorage.getItem('customerGender') || 'Male');
+  const [customerCompany, setCustomerCompany] = useState(user?.company || localStorage.getItem('customerCompany') || '');
+  const [customerAvatar, setCustomerAvatar] = useState(user?.avatarUrl || localStorage.getItem('customerAvatar') || '');
 
   // Shipping Address State
   const [shippingAddress, setShippingAddress] = useState(localStorage.getItem('shippingAddress') || '');
@@ -40,17 +51,12 @@ export default function CustomerAccount() {
   const [billingState, setBillingState] = useState(localStorage.getItem('billingState') || '');
   const [billingPincode, setBillingPincode] = useState(localStorage.getItem('billingPincode') || '');
 
-  // Bank Details State
-  const [bankAccountHolder, setBankAccountHolder] = useState(localStorage.getItem('bankAccountHolder') || '');
-  const [bankName, setBankName] = useState(localStorage.getItem('bankName') || '');
-  const [bankAccountNumber, setBankAccountNumber] = useState(localStorage.getItem('bankAccountNumber') || '');
-  const [bankIfscCode, setBankIfscCode] = useState(localStorage.getItem('bankIfscCode') || '');
-  const [bankUpiId, setBankUpiId] = useState(localStorage.getItem('bankUpiId') || '');
-
-  // Edit Mode state
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccessMsg, setSaveSuccessMsg] = useState(null);
+  // Bank Details State (Default to empty, populated exclusively by live backend API)
+  const [bankAccountHolder, setBankAccountHolder] = useState('');
+  const [bankName, setBankName] = useState('');
+  const [bankAccountNumber, setBankAccountNumber] = useState('');
+  const [bankIfscCode, setBankIfscCode] = useState('');
+  const [bankUpiId, setBankUpiId] = useState('');
 
   // Edit Form Fields
   const [editName, setEditName] = useState(customerName);
@@ -85,13 +91,150 @@ export default function CustomerAccount() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(Boolean(localStorage.getItem('rememberedCustomerEmail')));
 
-  // Validation & Submission States for Guest Auth
+  // Validation & Submission States
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState({});
+  const [bankErrors, setBankErrors] = useState({});
   const [generalAlert, setGeneralAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState(null);
 
-  const isLoggedIn = Boolean(localStorage.getItem('customerToken') || localStorage.getItem('customerEmail'));
+  // Change Password State
+  const [currentPasswordInput, setCurrentPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmNewPasswordInput, setConfirmNewPasswordInput] = useState('');
+  const [changePasswordLoading, setChangePasswordLoading] = useState(false);
+  const [changePasswordMsg, setChangePasswordMsg] = useState(null);
+
+  const handleChangePasswordSubmit = async (e) => {
+    e.preventDefault();
+    setChangePasswordMsg(null);
+    if (!currentPasswordInput) {
+      setChangePasswordMsg({ type: 'error', text: 'Current password is required.' });
+      return;
+    }
+    if (newPasswordInput.length < 6) {
+      setChangePasswordMsg({ type: 'error', text: 'New password must be at least 6 characters.' });
+      return;
+    }
+    if (newPasswordInput !== confirmNewPasswordInput) {
+      setChangePasswordMsg({ type: 'error', text: 'New passwords do not match.' });
+      return;
+    }
+    setChangePasswordLoading(true);
+    try {
+      await changePassword(currentPasswordInput, newPasswordInput, confirmNewPasswordInput, customerEmail);
+      setChangePasswordMsg({ type: 'success', text: 'Password changed successfully!' });
+      setCurrentPasswordInput('');
+      setNewPasswordInput('');
+      setConfirmNewPasswordInput('');
+    } catch (err) {
+      setChangePasswordMsg({ type: 'error', text: err.message || 'Failed to change password. Please verify your current password.' });
+    } finally {
+      setChangePasswordLoading(false);
+    }
+  };
+
+  // Sync component state when user context changes
+  useEffect(() => {
+    if (user) {
+      if (user.email) setCustomerEmail(user.email);
+      const name = user.name || user.fullName || (user.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '');
+      if (name) setCustomerName(name);
+      if (user.phone || user.mobileNumber) setCustomerPhone(user.phone || user.mobileNumber);
+      if (user.gender) setCustomerGender(user.gender);
+      if (user.company || user.companyOrganization) setCustomerCompany(user.company || user.companyOrganization);
+    }
+  }, [user]);
+
+  // Fetch real data on mount
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    const email = user?.email || localStorage.getItem('customerEmail');
+    const storedId = user?.customerId || user?.id || localStorage.getItem('customerId');
+
+    async function loadAllData() {
+      try {
+        // Fetch profile first (by email if available, or storedId)
+        const profileData = await getProfile(undefined, email).catch(() => null);
+        const resolvedId = profileData?.id || profileData?.customerId || storedId || '3';
+
+        if (profileData) {
+          const name = profileData.name || profileData.fullName ||
+            (((profileData.firstName || '') + ' ' + (profileData.lastName || '')).trim()) || '';
+          if (name) {
+            setCustomerName(name);
+            localStorage.setItem('customerName', name);
+          }
+          if (profileData.email || profileData.emailAddress) {
+            const pEmail = profileData.email || profileData.emailAddress;
+            setCustomerEmail(pEmail);
+            localStorage.setItem('customerEmail', pEmail);
+          }
+          if (profileData.phone || profileData.mobileNumber) {
+            setCustomerPhone(profileData.phone || profileData.mobileNumber);
+            localStorage.setItem('customerPhone', profileData.phone || profileData.mobileNumber);
+          }
+          if (profileData.gender) setCustomerGender(profileData.gender);
+          if (profileData.companyOrganization || profileData.company || profileData.companyName) {
+            setCustomerCompany(profileData.companyOrganization || profileData.company || profileData.companyName);
+          }
+          if (profileData.id) {
+            localStorage.setItem('customerId', String(profileData.id));
+          }
+        }
+
+        // Fetch addresses and bank details with the resolved customerId
+        const [addressData, bankData] = await Promise.all([
+          getAddresses(resolvedId).catch(() => null),
+          getBankDetails(resolvedId).catch(() => null),
+        ]);
+
+        if (addressData) {
+          const addr = Array.isArray(addressData) ? addressData[0] : addressData;
+          if (addr) {
+            const rawShip = String(addr.shippingAddress || addr.address || '').replace(/^["']|["']$/g, '').trim();
+            const rawBill = String(addr.billingAddress || rawShip || '').replace(/^["']|["']$/g, '').trim();
+            setShippingAddress(rawShip);
+            setBillingAddress(rawBill);
+
+            if (rawShip) {
+              const parts = rawShip.split(',').map((p) => p.trim());
+              if (parts.length >= 2) setShippingCity(parts[1]);
+              if (parts.length >= 3) setShippingState(parts[2]);
+              const pinMatch = rawShip.match(/\b\d{6}\b/);
+              if (pinMatch) setShippingPincode(pinMatch[0]);
+            }
+          }
+        }
+
+        if (bankData) {
+          const bank = Array.isArray(bankData) ? bankData[0] : bankData;
+          if (bank) {
+            const bInfo = bank.bankAccountInfo || bank;
+            const uInfo = bank.upiPaymentHandle || bank;
+
+            const holder = bInfo.accountHolderName || bank.accountHolderName || bank.bankAccountHolder || '';
+            const bName = bInfo.bankName || bank.bankName || '';
+            const accNum = bInfo.accountNumber || bank.accountNumber || bank.bankAccountNumber || '';
+            const ifsc = bInfo.ifscCode || bank.ifscCode || bank.bankIfscCode || '';
+            const upi = uInfo.upiId || bank.upiId || bank.bankUpiId || '';
+
+            setBankAccountHolder(holder);
+            setBankName(bName);
+            setBankAccountNumber(accNum);
+            setBankIfscCode(ifsc);
+            setBankUpiId(upi);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load profile data:', err);
+      }
+    }
+    loadAllData();
+  }, [isLoggedIn, user]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -164,12 +307,59 @@ export default function CustomerAccount() {
       return;
     }
 
+    const cleanBankHolder = editBankAccountHolder.trim();
+    const cleanBankName = editBankName.trim();
+    const cleanBankAcc = editBankAccountNumber.trim();
+    const cleanBankIfsc = editBankIfscCode.trim().toUpperCase();
+    const cleanBankUpi = editBankUpiId.trim();
+
+    // Reset bank errors
+    const newBankErrors = {};
+
+    // Validate Bank Details if any bank field is filled
+    const hasAnyBankField = Boolean(cleanBankHolder || cleanBankName || cleanBankAcc || cleanBankIfsc);
+    if (hasAnyBankField) {
+      if (!cleanBankHolder) {
+        newBankErrors.holder = 'Account holder name is required.';
+      } else if (cleanBankHolder.length < 2) {
+        newBankErrors.holder = 'Account holder name must be at least 2 characters.';
+      }
+
+      if (!cleanBankName) {
+        newBankErrors.bankName = 'Bank name is required.';
+      }
+
+      if (!cleanBankAcc) {
+        newBankErrors.accountNumber = 'Account number is required.';
+      } else if (!/^\d{9,18}$/.test(cleanBankAcc)) {
+        newBankErrors.accountNumber = 'Invalid account number (must be 9 to 18 digits).';
+      }
+
+      if (!cleanBankIfsc) {
+        newBankErrors.ifsc = 'IFSC code is required.';
+      } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(cleanBankIfsc)) {
+        newBankErrors.ifsc = 'Invalid IFSC code format (e.g. SBIN0001234 or HDFC0001234).';
+      }
+    }
+
+    // Validate UPI ID format if provided
+    if (cleanBankUpi) {
+      if (!/^[\w.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(cleanBankUpi)) {
+        newBankErrors.upi = 'Invalid UPI ID format (e.g. username@okhdfcbank or 9876543210@paytm).';
+      }
+    }
+
+    if (Object.keys(newBankErrors).length > 0) {
+      setBankErrors(newBankErrors);
+      setSaveSuccessMsg({ type: 'error', text: 'Please correct the invalid bank & payment details before saving.' });
+      return;
+    }
+    setBankErrors({});
+
     setIsSaving(true);
     setSaveSuccessMsg(null);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
       const cleanName = editName.trim();
       const cleanEmail = editEmail.trim();
       const cleanPhone = editPhone.trim();
@@ -187,35 +377,36 @@ export default function CustomerAccount() {
       const cleanBillState = sameAsShipping ? cleanShipState : editBillingState.trim();
       const cleanBillPin = sameAsShipping ? cleanShipPin : editBillingPincode.trim();
 
-      const cleanBankHolder = editBankAccountHolder.trim();
-      const cleanBankName = editBankName.trim();
-      const cleanBankAcc = editBankAccountNumber.trim();
-      const cleanBankIfsc = editBankIfscCode.trim();
-      const cleanBankUpi = editBankUpiId.trim();
+      const activeCustomerId = user?.customerId || user?.id || localStorage.getItem('customerId') || '3';
 
-      // Persist to localStorage
-      localStorage.setItem('customerName', cleanName);
-      localStorage.setItem('customerEmail', cleanEmail);
-      localStorage.setItem('customerPhone', cleanPhone);
-      localStorage.setItem('customerGender', cleanGender);
-      localStorage.setItem('customerCompany', cleanCompany);
+      const fullShipAddr = [cleanShipAddr, cleanShipCity, cleanShipState, cleanShipPin, cleanShipCountry].filter(Boolean).join(', ');
+      const fullBillAddr = sameAsShipping 
+        ? fullShipAddr 
+        : [cleanBillAddr, cleanBillCity, cleanBillState, cleanBillPin].filter(Boolean).join(', ');
 
-      localStorage.setItem('shippingAddress', cleanShipAddr);
-      localStorage.setItem('shippingCity', cleanShipCity);
-      localStorage.setItem('shippingState', cleanShipState);
-      localStorage.setItem('shippingPincode', cleanShipPin);
-      localStorage.setItem('shippingCountry', cleanShipCountry);
-
-      localStorage.setItem('billingAddress', cleanBillAddr);
-      localStorage.setItem('billingCity', cleanBillCity);
-      localStorage.setItem('billingState', cleanBillState);
-      localStorage.setItem('billingPincode', cleanBillPin);
-
-      localStorage.setItem('bankAccountHolder', cleanBankHolder);
-      localStorage.setItem('bankName', cleanBankName);
-      localStorage.setItem('bankAccountNumber', cleanBankAcc);
-      localStorage.setItem('bankIfscCode', cleanBankIfsc);
-      localStorage.setItem('bankUpiId', cleanBankUpi);
+      // Persist to real API
+      await Promise.all([
+        updateProfile(activeCustomerId, {
+          firstName: cleanName.split(' ')[0] || cleanName,
+          lastName: cleanName.split(' ').slice(1).join(' ') || '',
+          name: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone,
+          gender: cleanGender,
+          company: cleanCompany,
+        }).catch((err) => console.warn('Profile update warning:', err)),
+        updateAddresses(activeCustomerId, {
+          shippingAddress: fullShipAddr || cleanShipAddr,
+          billingAddress: fullBillAddr || cleanBillAddr,
+        }).catch((err) => console.warn('Address update warning:', err)),
+        updateBankDetails(activeCustomerId, {
+          accountHolderName: cleanBankHolder,
+          bankName: cleanBankName,
+          accountNumber: cleanBankAcc,
+          ifscCode: cleanBankIfsc,
+          upiId: cleanBankUpi,
+        }).catch((err) => console.warn('Bank update warning:', err)),
+      ]);
 
       // Update state
       setCustomerName(cleanName);
@@ -350,12 +541,7 @@ export default function CustomerAccount() {
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
-
       const cleanEmail = inputEmail.trim();
-      const displayName = authMode === 'register' 
-        ? inputFullName.trim() 
-        : (cleanEmail.split('@')[0] || 'Valued Customer');
 
       if (rememberMe) {
         localStorage.setItem('rememberedCustomerEmail', cleanEmail);
@@ -363,32 +549,44 @@ export default function CustomerAccount() {
         localStorage.removeItem('rememberedCustomerEmail');
       }
 
-      localStorage.setItem('customerToken', 'demo-customer-token-' + Date.now());
-      localStorage.setItem('customerEmail', cleanEmail);
-      localStorage.setItem('customerName', displayName);
-
-      window.location.reload();
+      if (authMode === 'register') {
+        await auth.register({
+          name: inputFullName.trim(),
+          email: cleanEmail,
+          password: inputPassword,
+        });
+      } else {
+        await auth.login(cleanEmail, inputPassword);
+      }
     } catch (err) {
       console.error('Authentication Error:', err);
       setGeneralAlert({
         type: 'error',
-        message: 'Unable to process authentication request. Please check your credentials.'
+        message: err.message || 'Unable to process authentication request. Please check your credentials.'
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleForgotPassword = () => {
+  const handleForgotPassword = async () => {
     if (!inputEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail.trim())) {
       setErrors((prev) => ({ ...prev, email: 'Please enter a valid email address first.' }));
       setTouched((prev) => ({ ...prev, email: true }));
       return;
     }
-    setGeneralAlert({
-      type: 'info',
-      message: `Password reset instructions have been sent to ${inputEmail.trim()}.`
-    });
+    try {
+      await forgotPassword(inputEmail.trim());
+      setGeneralAlert({
+        type: 'info',
+        message: `Password reset instructions have been sent to ${inputEmail.trim()}. Please check your inbox.`
+      });
+    } catch (err) {
+      setGeneralAlert({
+        type: 'error',
+        message: err.message || 'Failed to send password reset email. Please try again.'
+      });
+    }
   };
 
   // Get user initials for fallback avatar
@@ -402,9 +600,10 @@ export default function CustomerAccount() {
   };
 
   const userInitials = getInitials(customerName);
-  const nameParts = customerName.split(' ');
-  const firstName = nameParts[0] || 'Valued';
-  const lastName = nameParts.slice(1).join(' ') || 'Customer';
+  const nameParts = (customerName || '').trim().split(' ').filter(Boolean);
+  const firstName = nameParts[0] || '';
+  const rawLastName = nameParts.slice(1).join(' ');
+  const lastName = (rawLastName && rawLastName.toLowerCase() !== firstName.toLowerCase()) ? rawLastName : '';
 
   return (
     <>
@@ -518,6 +717,16 @@ export default function CustomerAccount() {
               <Landmark size={14} />
               <span>Bank &amp; Payment Details</span>
             </button>
+
+            <button 
+              className={`profile-tab-pill ${activeTab === 'security' ? 'active' : ''}`}
+              onClick={() => setActiveTab('security')}
+              role="tab"
+              aria-selected={activeTab === 'security'}
+            >
+              <Lock size={14} />
+              <span>Password &amp; Security</span>
+            </button>
           </div>
 
           {/* TAB 1: PERSONAL DETAILS */}
@@ -622,7 +831,7 @@ export default function CustomerAccount() {
                   <div className="portal-info-box">
                     <span className="portal-info-label">Last Name</span>
                     <div className="portal-info-value">
-                      <span>{lastName}</span>
+                      <span>{lastName || <span className="muted">Not provided</span>}</span>
                     </div>
                   </div>
 
@@ -879,12 +1088,20 @@ export default function CustomerAccount() {
                         <input
                           id="edit-bank-holder"
                           type="text"
-                          className="portal-input has-icon"
+                          className={`portal-input has-icon ${bankErrors.holder ? 'has-error' : ''}`}
                           value={editBankAccountHolder}
-                          onChange={(e) => setEditBankAccountHolder(e.target.value)}
+                          onChange={(e) => {
+                            setEditBankAccountHolder(e.target.value);
+                            if (bankErrors.holder) setBankErrors(prev => ({ ...prev, holder: null }));
+                          }}
                           placeholder="Name as in Bank Account"
                         />
                       </div>
+                      {bankErrors.holder && (
+                        <span className="portal-field-error">
+                          <AlertCircle size={12} /> {bankErrors.holder}
+                        </span>
+                      )}
                     </div>
 
                     <div className="portal-form-group">
@@ -894,12 +1111,20 @@ export default function CustomerAccount() {
                         <input
                           id="edit-bank-name"
                           type="text"
-                          className="portal-input has-icon"
+                          className={`portal-input has-icon ${bankErrors.bankName ? 'has-error' : ''}`}
                           value={editBankName}
-                          onChange={(e) => setEditBankName(e.target.value)}
+                          onChange={(e) => {
+                            setEditBankName(e.target.value);
+                            if (bankErrors.bankName) setBankErrors(prev => ({ ...prev, bankName: null }));
+                          }}
                           placeholder="e.g. HDFC Bank / State Bank of India"
                         />
                       </div>
+                      {bankErrors.bankName && (
+                        <span className="portal-field-error">
+                          <AlertCircle size={12} /> {bankErrors.bankName}
+                        </span>
+                      )}
                     </div>
 
                     <div className="portal-form-group">
@@ -909,12 +1134,20 @@ export default function CustomerAccount() {
                         <input
                           id="edit-bank-acc"
                           type="text"
-                          className="portal-input has-icon"
+                          className={`portal-input has-icon ${bankErrors.accountNumber ? 'has-error' : ''}`}
                           value={editBankAccountNumber}
-                          onChange={(e) => setEditBankAccountNumber(e.target.value)}
-                          placeholder="Enter Account Number"
+                          onChange={(e) => {
+                            setEditBankAccountNumber(e.target.value);
+                            if (bankErrors.accountNumber) setBankErrors(prev => ({ ...prev, accountNumber: null }));
+                          }}
+                          placeholder="Enter Account Number (9-18 digits)"
                         />
                       </div>
+                      {bankErrors.accountNumber && (
+                        <span className="portal-field-error">
+                          <AlertCircle size={12} /> {bankErrors.accountNumber}
+                        </span>
+                      )}
                     </div>
 
                     <div className="portal-form-group">
@@ -922,11 +1155,19 @@ export default function CustomerAccount() {
                       <input
                         id="edit-bank-ifsc"
                         type="text"
-                        className="portal-input"
+                        className={`portal-input ${bankErrors.ifsc ? 'has-error' : ''}`}
                         value={editBankIfscCode}
-                        onChange={(e) => setEditBankIfscCode(e.target.value)}
-                        placeholder="e.g. HDFC0001234"
+                        onChange={(e) => {
+                          setEditBankIfscCode(e.target.value.toUpperCase());
+                          if (bankErrors.ifsc) setBankErrors(prev => ({ ...prev, ifsc: null }));
+                        }}
+                        placeholder="e.g. SBIN0001234 / HDFC0001234"
                       />
+                      {bankErrors.ifsc && (
+                        <span className="portal-field-error">
+                          <AlertCircle size={12} /> {bankErrors.ifsc}
+                        </span>
+                      )}
                     </div>
 
                     <div className="portal-form-group full-width">
@@ -934,22 +1175,68 @@ export default function CustomerAccount() {
                       <input
                         id="edit-bank-upi"
                         type="text"
-                        className="portal-input"
+                        className={`portal-input ${bankErrors.upi ? 'has-error' : ''}`}
                         value={editBankUpiId}
-                        onChange={(e) => setEditBankUpiId(e.target.value)}
+                        onChange={(e) => {
+                          setEditBankUpiId(e.target.value);
+                          if (bankErrors.upi) setBankErrors(prev => ({ ...prev, upi: null }));
+                        }}
                         placeholder="e.g. customer@upi / mobile@okhdfcbank"
                       />
+                      {bankErrors.upi && (
+                        <span className="portal-field-error">
+                          <AlertCircle size={12} /> {bankErrors.upi}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <div className="portal-form-actions">
+                  <div className="portal-form-actions flex flex-wrap items-center gap-3">
                     <button type="submit" className="btn-portal-primary" disabled={isSaving}>
                       {isSaving ? <span>Saving...</span> : <><Save size={15} /><span>Save Bank Details</span></>}
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-portal-secondary"
+                      onClick={() => {
+                        setEditBankAccountHolder('');
+                        setEditBankName('');
+                        setEditBankAccountNumber('');
+                        setEditBankIfscCode('');
+                        setEditBankUpiId('');
+                        setBankErrors({});
+                      }}
+                      title="Clear all bank form fields"
+                    >
+                      <Trash2 size={14} />
+                      <span>Clear All Fields</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-portal-secondary"
+                      onClick={() => {
+                        setIsEditing(false);
+                        setBankErrors({});
+                      }}
+                    >
+                      <X size={14} />
+                      <span>Cancel</span>
                     </button>
                   </div>
                 </form>
               ) : (
                 <div className="portal-cards-stack space-y-4">
+                  <div className="flex justify-end mb-2">
+                    <button
+                      type="button"
+                      className="btn-portal-primary"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      <Edit3 size={14} />
+                      <span>Edit Bank &amp; UPI Details</span>
+                    </button>
+                  </div>
+
                   {/* View Bank Details Card */}
                   <div className="portal-card-box">
                     <div className="portal-card-section-header">
@@ -1015,6 +1302,91 @@ export default function CustomerAccount() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TAB 4: PASSWORD & SECURITY */}
+          {activeTab === 'security' && (
+            <div className="portal-card-box">
+              <div className="portal-card-section-header mb-4">
+                <div className="portal-card-section-title">
+                  <Lock size={16} />
+                  <span>Change Password</span>
+                </div>
+                <span className="portal-status-badge info">
+                  Customer Security
+                </span>
+              </div>
+
+              {changePasswordMsg && (
+                <div className={`portal-toast ${changePasswordMsg.type} mb-4`} role="alert">
+                  {changePasswordMsg.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                  <span>{changePasswordMsg.text}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleChangePasswordSubmit} className="portal-form-grid" noValidate>
+                <div className="portal-form-group full-width">
+                  <label htmlFor="current-pwd">Current Password *</label>
+                  <div className="portal-input-wrap">
+                    <Lock size={16} className="portal-input-icon" />
+                    <input
+                      id="current-pwd"
+                      type="password"
+                      className="portal-input has-icon"
+                      required
+                      value={currentPasswordInput}
+                      onChange={(e) => setCurrentPasswordInput(e.target.value)}
+                      placeholder="Enter your current password"
+                    />
+                  </div>
+                </div>
+
+                <div className="portal-form-group">
+                  <label htmlFor="new-pwd">New Password *</label>
+                  <div className="portal-input-wrap">
+                    <Lock size={16} className="portal-input-icon" />
+                    <input
+                      id="new-pwd"
+                      type="password"
+                      className="portal-input has-icon"
+                      required
+                      value={newPasswordInput}
+                      onChange={(e) => setNewPasswordInput(e.target.value)}
+                      placeholder="Minimum 6 characters"
+                    />
+                  </div>
+                </div>
+
+                <div className="portal-form-group">
+                  <label htmlFor="confirm-new-pwd">Confirm New Password *</label>
+                  <div className="portal-input-wrap">
+                    <Lock size={16} className="portal-input-icon" />
+                    <input
+                      id="confirm-new-pwd"
+                      type="password"
+                      className="portal-input has-icon"
+                      required
+                      value={confirmNewPasswordInput}
+                      onChange={(e) => setConfirmNewPasswordInput(e.target.value)}
+                      placeholder="Re-enter new password"
+                    />
+                  </div>
+                </div>
+
+                <div className="portal-form-actions full-width mt-2">
+                  <button type="submit" className="btn-portal-primary" disabled={changePasswordLoading}>
+                    {changePasswordLoading ? (
+                      <span>Updating Password...</span>
+                    ) : (
+                      <>
+                        <ShieldCheck size={16} />
+                        <span>Update Password</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </CustomerAccountLayout>

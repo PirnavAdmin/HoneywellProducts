@@ -8,19 +8,19 @@ const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const DEFAULT_RETURNS = [];
+const MOCK_RETURNS = [];
 
 
 const getLocalReturns = () => {
-  const local = localStorage.getItem('honeywell_returns');
+  const local = localStorage.getItem('honeywell_returns') || localStorage.getItem('shyam_agro_returns');
   if (!local) {
-    localStorage.setItem('honeywell_returns', JSON.stringify(DEFAULT_RETURNS));
-    return DEFAULT_RETURNS;
+    localStorage.setItem('honeywell_returns', JSON.stringify(MOCK_RETURNS));
+    return MOCK_RETURNS;
   }
   try {
     return JSON.parse(local);
   } catch (e) {
-    return DEFAULT_RETURNS;
+    return MOCK_RETURNS;
   }
 };
 
@@ -33,22 +33,37 @@ export const getReturnsConfig = async () => {
   try {
     const response = await fetch(`${BASE_URL}/config`, { headers: DEFAULT_HEADERS });
     if (!response.ok) throw new Error('Failed to fetch returns config');
-    return await response.json();
-  } catch (error) {
-    console.warn('Backend unavailable, using default returns config:', error.message);
+    const data = await response.json();
     return {
-      returnWindowDays: 15,
-      allowableRefundMethods: ['Wallet', 'Original Payment Method', 'Bank Transfer'],
+      returnWindowDays: data.returnWindowDays || 7,
+      allowableRefundMethods: data.refundMethods?.map(m => m.title || m.code) || ['Original Payment Method'],
+      reasonCodes: (data.reasons || []).map(r => ({
+        code: r.code,
+        label: r.title || r.label || r.code
+      })),
+      requestTypes: (data.requestTypes || []).map(t => ({
+        code: t.code,
+        label: t.title || t.label || t.code
+      })),
+      maximumEvidenceFiles: data.maximumEvidenceFiles || 4,
+      maximumDescriptionLength: data.maximumDescriptionLength || 600,
+    };
+  } catch (error) {
+    console.warn('Backend unavailable, using default config:', error.message);
+    return {
+      returnWindowDays: 7,
+      allowableRefundMethods: ['Original Payment Method'],
       reasonCodes: [
-        { code: 'DAMAGED', label: 'Damaged Product' },
-        { code: 'DEFECTIVE', label: 'Defective / Faulty' },
-        { code: 'WRONG_ITEM', label: 'Incorrect / Wrong Item Delivered' },
-        { code: 'QTY_MISMATCH', label: 'Missing / Short Quantity' },
-        { code: 'QUALITY_POOR', label: 'Quality Not as Expected' }
+        { code: 'PRODUCT_DAMAGED', label: 'Product arrived damaged' },
+        { code: 'WRONG_PRODUCT', label: 'Wrong product received' },
+        { code: 'PRODUCT_NOT_WORKING', label: 'Product is not working' },
+        { code: 'MISSING_PARTS', label: 'Missing parts or accessories' },
+        { code: 'NOT_AS_DESCRIBED', label: 'Product is different from description' },
+        { code: 'QUALITY_ISSUE', label: 'Quality issue' }
       ],
       requestTypes: [
-        { code: 'Refund', label: 'Return & Refund' },
-        { code: 'Replacement', label: 'Product Replacement' }
+        { code: 'RETURN_REFUND', label: 'Return & Refund' },
+        { code: 'REPLACEMENT_EXCHANGE', label: 'Replacement / Exchange' }
       ]
     };
   }
@@ -56,50 +71,121 @@ export const getReturnsConfig = async () => {
 
 // GET /api/Returns/eligibility/order-item/{orderItemId}
 export const checkReturnEligibility = async (orderItemId) => {
-  try {
-    const response = await fetch(`${BASE_URL}/eligibility/order-item/${orderItemId}`, { headers: DEFAULT_HEADERS });
-    if (!response.ok) throw new Error('Eligibility check failed');
-    return await response.json();
-  } catch (error) {
-    console.warn('Backend unavailable, checking local order eligibility:', error.message);
-    
-    // Fallback simulation: fetch local orders to find matching item
-    const localOrdersStr = localStorage.getItem('honeywell_orders');
-    if (localOrdersStr) {
-      try {
-        const orders = JSON.parse(localOrdersStr);
-        for (const order of orders) {
-          const itemIdx = order.items.findIndex((_, index) => (index + 1) === Number(orderItemId) || orderItemId === `${order.id}-${index + 1}`);
-          if (itemIdx !== -1 || orderItemId.toString().length < 5) {
-            return {
-              eligible: true,
-              maxQuantity: 2,
-              orderId: order.id || 10214,
-              orderItemId: orderItemId,
-              reason: 'Eligible for return within the 15-day window.',
-              productName: order.items[0]?.name || 'Honeywell Product',
-              sku: order.items[0]?.sku || 'HON-001',
-              unitPrice: order.items[0]?.unitPrice || 1000
-            };
-          }
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    
-    // Default response if local orders not found
+  const raw = String(orderItemId || '').trim();
+  if (!raw) {
     return {
-      eligible: true,
-      maxQuantity: 1,
-      orderId: 10214,
-      orderItemId: orderItemId,
-      reason: 'Eligible for return within the 15-day window.',
-      productName: 'Honeywell Security Camera',
-      sku: 'HON-CAM-001',
-      unitPrice: 3499
+      eligible: false,
+      reason: 'Please enter an Order Item ID, Order Number, or Product Serial Number.'
     };
   }
+
+  // Normalize input: strip prefixes and any trailing punctuation like '.'
+  const clean = raw
+    .replace(/^(Order\s*#*|#)+/i, '')
+    .replace(/[.,;:\s]+$/, '')
+    .trim();
+
+  // 1. Direct check against ASP.NET Returns eligibility endpoint if numeric
+  if (/^\d+$/.test(clean)) {
+    try {
+      const response = await fetch(`${BASE_URL}/eligibility/order-item/${clean}`, { headers: DEFAULT_HEADERS });
+      if (response.ok) {
+        const d = await response.json();
+        return {
+          eligible: !!d.eligible,
+          canSubmit: !!d.canSubmit,
+          reason: d.message || (d.eligible ? 'Product eligible for warranty & return service.' : 'Warranty / Return window expired.'),
+          reasonCode: d.reasonCode,
+          orderItemId: clean,
+          productName: d.productName,
+          sku: d.sku
+        };
+      }
+    } catch (e) {
+      console.warn('Direct eligibility endpoint error:', e.message);
+    }
+  }
+
+  // 2. Query live Orders in database to match by Order ID, Order Number (#ORD-211406), or Invoice
+  try {
+    const ordersRes = await fetch(`${getApiDomain()}/api/Orders`, { headers: DEFAULT_HEADERS });
+    if (ordersRes.ok) {
+      const oData = await ordersRes.json();
+      const orders = oData.orders || (Array.isArray(oData) ? oData : []);
+      const matchedOrder = orders.find(o => {
+        const oNum = (o.orderNumber || '').replace(/^(Order\s*#*|#)+/i, '').replace(/[.,;:\s]+$/, '').trim().toLowerCase();
+        const oInv = (o.invoiceNumber || '').replace(/^(Order\s*#*|#)+/i, '').replace(/[.,;:\s]+$/, '').trim().toLowerCase();
+        const rawLower = raw.replace(/[.,;:\s]+$/, '').toLowerCase();
+        const cleanLower = clean.toLowerCase();
+
+        return (
+          String(o.id) === clean ||
+          (o.orderNumber && o.orderNumber.toLowerCase() === rawLower) ||
+          oNum === cleanLower ||
+          oInv === cleanLower ||
+          (o.invoiceNumber && o.invoiceNumber.toLowerCase() === rawLower)
+        );
+      });
+
+      if (matchedOrder && matchedOrder.items?.length > 0) {
+        const item = matchedOrder.items[0];
+        let eligData = null;
+        try {
+          const eligRes = await fetch(`${BASE_URL}/eligibility/order-item/${item.id}`, { headers: DEFAULT_HEADERS });
+          if (eligRes.ok) eligData = await eligRes.json();
+        } catch(e) {}
+
+        const isDelivered = matchedOrder.fulfillment === 'DELIVERED' || matchedOrder.status === 'Delivered';
+        const isPaid = matchedOrder.paymentStatus === 'Paid' || matchedOrder.paymentStatus === 'Verified Paid';
+        const isEligible = eligData ? !!eligData.eligible : (item.returnEligible || (isDelivered && isPaid));
+
+        return {
+          eligible: isEligible,
+          canSubmit: eligData ? !!eligData.canSubmit : isEligible,
+          orderId: matchedOrder.id,
+          orderNumber: matchedOrder.orderNumber,
+          orderItemId: item.id,
+          productName: item.productName || 'Honeywell Product',
+          sku: item.productCode || item.sku || 'HW-UNIT',
+          status: matchedOrder.fulfillment || matchedOrder.status,
+          reason: eligData?.message || (isEligible 
+            ? 'Hardware covered under Honeywell standard warranty. Eligible for return or replacement request.'
+            : 'Order is currently processing. Full warranty and return service opens upon delivery verification.')
+        };
+      }
+    }
+  } catch(e) {
+    console.warn('Orders lookup error:', e.message);
+  }
+
+  // 3. Query live Product Catalog in database by SKU or Product Name
+  try {
+    const prodRes = await fetch(`${getApiDomain()}/api/products/search?keyword=${encodeURIComponent(clean)}`, { headers: DEFAULT_HEADERS });
+    if (prodRes.ok) {
+      const prods = await prodRes.json();
+      const matchedProd = prods.find(p => 
+        p.sku?.toLowerCase() === clean.toLowerCase() || 
+        p.productName?.toLowerCase().includes(clean.toLowerCase())
+      ) || prods[0];
+      if (matchedProd) {
+        return {
+          eligible: true,
+          canSubmit: true,
+          productName: matchedProd.productName,
+          sku: matchedProd.sku,
+          brand: matchedProd.brand || 'Honeywell',
+          reason: 'Official Honeywell hardware record verified in database. Covered under standard manufacturer warranty against hardware or component defects.'
+        };
+      }
+    }
+  } catch (e) {
+    console.warn('Product catalog lookup error:', e.message);
+  }
+
+  return {
+    eligible: false,
+    reason: 'No matching order item, invoice, or hardware serial record found in the database. Please verify your reference number.'
+  };
 };
 
 // POST /api/Returns
@@ -381,7 +467,7 @@ export const updateReturnRefund = async (id, data) => {
       };
       list[idx].status = 'Refunded';
       
-      // Update customer wallet balance in user session if method is Wallet
+      // Update customer wallet balance in mock user session if method is Wallet
       if (data.refundMethod === 'Wallet' && list[idx].refundDetails.refundStatus === 'Success') {
         const userStr = localStorage.getItem('user');
         if (userStr) {

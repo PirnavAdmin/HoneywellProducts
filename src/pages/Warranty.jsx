@@ -14,9 +14,6 @@ export default function Warranty() {
   const [error, setError] = useState(null);
   const [config, setConfig] = useState(null);
 
-  // Sample IDs for quick interactive testing
-  const sampleTestIds = ['ORD-10214-1', 'SN-HW-9082', 'ORD-10190-2'];
-
   useEffect(() => {
     async function loadConfig() {
       try {
@@ -34,7 +31,7 @@ export default function Warranty() {
     const queryId = (customId !== undefined ? customId : orderItemId).trim();
 
     if (!queryId) {
-      setError('Please enter an Order Item ID or Serial Number.');
+      setError('Please enter an Order Item ID, Order Number, or Product Serial Number.');
       return;
     }
 
@@ -58,11 +55,6 @@ export default function Warranty() {
       handleCheckWarranty(null, initialItemId);
     }
   }, [initialItemId]);
-
-  const handleSampleClick = (sampleId) => {
-    setOrderItemId(sampleId);
-    handleCheckWarranty(null, sampleId);
-  };
 
   return (
     <CustomerAccountLayout
@@ -122,49 +114,24 @@ export default function Warranty() {
             Enter your Order Item Reference ID or Product Serial Number below to check live coverage status.
           </p>
 
-          <form onSubmit={handleCheckWarranty} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-3">
-            <div className="portal-input-wrap flex-1">
-              <Search size={16} className="portal-input-icon" />
+          <form onSubmit={handleCheckWarranty} className="warranty-search-form">
+            <div className="warranty-search-input-wrap">
+              <Search size={17} className="portal-input-icon" />
               <input
                 type="text"
-                className="portal-input has-icon"
+                className="warranty-search-input"
                 required
-                placeholder="Enter Order Item ID or Serial # (e.g. ORD-10214-1)"
+                placeholder="Enter Order # (e.g. ORD-211406), Item ID, or Serial / SKU"
                 value={orderItemId}
                 onChange={(e) => setOrderItemId(e.target.value)}
               />
             </div>
-            <button type="submit" className="btn-portal-primary whitespace-nowrap" disabled={loading}>
+            <button type="submit" className="warranty-search-btn" disabled={loading}>
               {loading ? <span>Verifying...</span> : <><Search size={15} /><span>Check Eligibility</span></>}
             </button>
           </form>
 
-          {/* Quick Sample Test Tags */}
-          <div className="flex items-center gap-2 flex-wrap mb-2">
-            <span className="text-[11.5px] font-semibold text-slate-500 flex items-center gap-1">
-              <Tag size={13} /> Try sample IDs:
-            </span>
-            {sampleTestIds.map((sampleId) => (
-              <button
-                key={sampleId}
-                type="button"
-                onClick={() => handleSampleClick(sampleId)}
-                style={{
-                  background: '#f0f9ff',
-                  border: '1px solid #bae6fd',
-                  color: '#0284c7',
-                  borderRadius: '6px',
-                  padding: '3px 9px',
-                  fontSize: '11.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {sampleId}
-              </button>
-            ))}
-          </div>
+
 
           {/* Result States */}
           {loading ? (
@@ -181,8 +148,22 @@ export default function Warranty() {
             <div className={`portal-toast mt-3 ${eligibilityResult.eligible ? 'success' : 'error'}`}>
               <div className="flex-1">
                 <div className="flex items-center gap-2 font-bold mb-1 text-sm">
-                  {eligibilityResult.eligible ? <CheckCircle2 size={18} className="text-emerald-700" /> : <AlertCircle size={18} className="text-red-700" />}
-                  <span>{eligibilityResult.eligible ? 'Product Eligible for Warranty & Return Service' : 'Warranty / Return Window Expired'}</span>
+                  {eligibilityResult.eligible ? (
+                    <>
+                      <CheckCircle2 size={18} className="text-emerald-700" />
+                      <span>Product Eligible for Warranty & Return Service</span>
+                    </>
+                  ) : eligibilityResult.orderNumber ? (
+                    <>
+                      <AlertCircle size={18} className="text-amber-700" />
+                      <span>Order Verified — Fulfillment Pending Delivery</span>
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={18} className="text-red-700" />
+                      <span>Warranty Record Not Found or Inactive</span>
+                    </>
+                  )}
                 </div>
                 <p className="text-xs text-slate-700 leading-relaxed">{eligibilityResult.reason}</p>
                 

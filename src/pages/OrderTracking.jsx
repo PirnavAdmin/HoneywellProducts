@@ -2,7 +2,36 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MapPin, Package, Clock, Truck, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
-import { orderService } from '../services/orderService';
+import { trackOrder } from '../services/customerApi';
+
+const formatOrderTitle = (order) => {
+  if (!order) return 'Order Details';
+  const val = String(order.orderNumber || order.orderNo || (order.id ? `ORD-${order.id}` : '')).trim();
+  if (!val) return 'Order Details';
+  const clean = val.replace(/^(Order\s*#*|#)+/i, '').trim();
+  if (/^\d+$/.test(clean)) {
+    return `Order #ORD-${clean}`;
+  }
+  return `Order #${clean}`;
+};
+
+const formatOrderDate = (order) => {
+  if (!order) return 'Placed on Recent';
+  const rawDate = order.orderDate || order.createdDate;
+  if (rawDate) {
+    try {
+      const d = new Date(rawDate);
+      if (!isNaN(d.getTime())) {
+        return `Placed on ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      }
+    } catch (e) {}
+  }
+  if (order.orderDateFormatted) {
+    const clean = String(order.orderDateFormatted).replace(/^Placed\s+on\s+/i, '').trim();
+    return `Placed on ${clean}`;
+  }
+  return 'Placed on Recent';
+};
 
 export default function OrderTracking() {
   const [searchParams] = useSearchParams();
@@ -15,9 +44,10 @@ export default function OrderTracking() {
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
 
-  const handleTrack = async (e) => {
+  const handleTrack = async (e, targetId = null) => {
     if (e) e.preventDefault();
-    if (!orderId.trim()) {
+    const queryId = (targetId !== null ? targetId : orderId).trim();
+    if (!queryId) {
       setError('Please enter your order number.');
       return;
     }
@@ -27,8 +57,8 @@ export default function OrderTracking() {
     setSearched(true);
 
     try {
-      const data = await orderService.trackOrder(orderId.trim());
-      if (data) {
+      const data = await trackOrder(queryId, contactInfo.trim());
+      if (data && data.found !== false) {
         setOrder(data);
       } else {
         setOrder(null);
@@ -45,7 +75,8 @@ export default function OrderTracking() {
 
   useEffect(() => {
     if (initialOrderId) {
-      handleTrack();
+      setOrderId(initialOrderId);
+      handleTrack(null, initialOrderId);
     }
   }, [initialOrderId]);
 
@@ -57,8 +88,8 @@ export default function OrderTracking() {
     return 1;
   };
 
-  const activeStep = order ? getStatusStep(order.status) : 0;
-  const statusClass = (order?.status || 'processing').toLowerCase().replace(/\s+/g, '-');
+  const activeStep = order ? getStatusStep(order.status || order.currentStatus) : 0;
+  const statusClass = (order?.status || order?.currentStatus || 'processing').toLowerCase().replace(/\s+/g, '-');
 
   return (
     <CustomerAccountLayout
@@ -131,69 +162,123 @@ export default function OrderTracking() {
       ) : order ? (
         /* TRACKING RESULT DISPLAY */
         <div className="tracking-results-card">
-          <div className="flex items-center justify-between p-4 bg-slate-100 border border-slate-200 rounded-lg mb-6">
+          <div className="tracking-order-header">
             <div>
-              <h3 className="font-extrabold text-slate-900 text-lg">Order #{order.id || order.orderNumber}</h3>
-              <p className="text-xs text-slate-500 font-medium">Placed on {order.createdDate ? new Date(order.createdDate).toLocaleDateString() : 'Recent'}</p>
+              <h3 className="tracking-order-title">{formatOrderTitle(order)}</h3>
+              <p className="tracking-order-date">{formatOrderDate(order)}</p>
             </div>
             <span className={`badge-status ${statusClass}`}>
-              {order.status || 'Processing'}
+              {order.status || order.currentStatus || 'Processing'}
             </span>
           </div>
 
-          {/* Stepper Timeline */}
-          <div className="tracking-stepper-container">
-            <div className={`tracking-step-item ${activeStep >= 1 ? 'completed' : ''}`}>
-              <div className="step-circle-icon">
-                <Clock size={18} />
-              </div>
-              <span className="step-title-text">Order Confirmed</span>
-            </div>
-
-            <div className={`tracking-step-item ${activeStep >= 2 ? 'completed' : ''}`}>
-              <div className="step-circle-icon">
-                <Package size={18} />
-              </div>
-              <span className="step-title-text">Processing</span>
-            </div>
-
-            <div className={`tracking-step-item ${activeStep >= 3 ? 'completed' : ''}`}>
-              <div className="step-circle-icon">
-                <Truck size={18} />
-              </div>
-              <span className="step-title-text">Shipped</span>
-            </div>
-
-            <div className={`tracking-step-item ${activeStep >= 4 ? 'completed' : ''}`}>
-              <div className="step-circle-icon">
-                <CheckCircle2 size={18} />
-              </div>
-              <span className="step-title-text">Delivered</span>
-            </div>
+          {/* Stepper Timeline (Dynamic from Live Backend API) */}
+          <div 
+            className="tracking-stepper-container" 
+            style={{ 
+              gridTemplateColumns: `repeat(${Array.isArray(order.timeline) && order.timeline.length ? order.timeline.length : 4}, minmax(0, 1fr))` 
+            }}
+          >
+            {Array.isArray(order.timeline) && order.timeline.length > 0 ? (
+              order.timeline.map((item, idx) => {
+                const isDone = Boolean(item.isCompleted || item.completed);
+                const isCurrent = Boolean(item.isCurrent || item.current);
+                const stepClass = isDone ? 'completed' : isCurrent ? 'current' : '';
+                return (
+                  <div key={idx} className={`tracking-step-item ${stepClass}`}>
+                    <div className="step-circle-icon">
+                      {idx === 0 ? <Clock size={18} /> :
+                       idx === 1 ? <Package size={18} /> :
+                       idx === 2 ? <Truck size={18} /> :
+                       idx === 3 ? <MapPin size={18} /> :
+                       <CheckCircle2 size={18} />}
+                    </div>
+                    <span className="step-title-text">{item.title || `Step ${idx + 1}`}</span>
+                    {item.date && item.date !== 'Pending' && (
+                      <span className="text-[11px] text-slate-500 font-medium block mt-0.5">{item.date}</span>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              [
+                { title: 'Order Confirmed', icon: <Clock size={18} />, active: activeStep >= 1 },
+                { title: 'Processing', icon: <Package size={18} />, active: activeStep >= 2 },
+                { title: 'Shipped', icon: <Truck size={18} />, active: activeStep >= 3 },
+                { title: 'Delivered', icon: <CheckCircle2 size={18} />, active: activeStep >= 4 }
+              ].map((step, idx) => (
+                <div key={idx} className={`tracking-step-item ${step.active ? 'completed' : ''}`}>
+                  <div className="step-circle-icon">{step.icon}</div>
+                  <span className="step-title-text">{step.title}</span>
+                </div>
+              ))
+            )}
           </div>
 
-          {/* Shipment Product List */}
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <h4 className="font-bold text-slate-800 text-sm mb-3">Items Included in Shipment</h4>
-            <div className="space-y-2">
-              {Array.isArray(order.items) && order.items.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm">
-                  <span className="font-semibold text-slate-800">{item.name || item.productName || 'Honeywell Unit'}</span>
-                  <span className="text-slate-600 font-medium">Qty: {item.quantity || 1}</span>
+          {/* Tracking Meta (Carrier, Tracking No, Estimated Delivery, Address) */}
+          {(order.carrierName || order.trackingNumber || order.estimatedDelivery || order.shippingAddress) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 my-5 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+              {order.carrierName && (
+                <div>
+                  <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-0.5">Carrier Partner</span>
+                  <span className="font-semibold text-slate-800">{order.carrierName}</span>
                 </div>
-              ))}
+              )}
+              {order.trackingNumber && (
+                <div>
+                  <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-0.5">Tracking AWB #</span>
+                  <span className="font-semibold text-slate-800 font-mono">{order.trackingNumber}</span>
+                </div>
+              )}
+              {order.estimatedDelivery && (
+                <div>
+                  <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-0.5">Estimated Delivery</span>
+                  <span className="font-semibold text-slate-800">{order.estimatedDelivery}</span>
+                </div>
+              )}
+              {order.shippingAddress && (
+                <div className="sm:col-span-2 md:col-span-3 pt-2 border-t border-slate-200">
+                  <span className="text-xs text-slate-500 font-semibold block uppercase tracking-wider mb-0.5">Delivery Address</span>
+                  <span className="text-slate-700 font-medium">{order.shippingAddress}</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Shipment Product List */}
+          <div className="tracking-products-section">
+            <h4 className="tracking-products-title">Items Included in Shipment</h4>
+            <div>
+              {Array.isArray(order.items) && order.items.length > 0 ? (
+                order.items.map((item, idx) => (
+                  <div key={idx} className="tracking-product-row">
+                    <div>
+                      <div className="tracking-product-name">{item.name || item.productName || 'Honeywell Unit'}</div>
+                      {item.productCode && <div className="text-xs text-slate-500 font-mono mt-0.5">Code: {item.productCode}</div>}
+                    </div>
+                    <div className="text-right">
+                      <span className="tracking-product-qty block">Qty: {item.quantity || 1}</span>
+                      {Number(item.price) > 0 && <span className="text-xs text-slate-600 font-semibold">${Number(item.price).toFixed(2)}</span>}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-slate-500 py-2">Standard Shipment Package</div>
+              )}
             </div>
           </div>
         </div>
-      ) : searched ? null : (
-        /* Empty State before searching */
+      ) : (
+        /* Default State (initial or searched with no order) */
         <div className="portal-empty-state">
           <div className="empty-state-icon">
-            <MapPin size={32} />
+            {searched ? <Package size={32} /> : <MapPin size={32} />}
           </div>
-          <h3 className="empty-state-title">Track Your Package Status</h3>
+          <h3 className="empty-state-title">{searched ? 'Order Not Found' : 'Track Your Package Status'}</h3>
           <p className="empty-state-desc">
-            Enter your Order Number in the search box above to view step-by-step fulfillment and shipment updates.
+            {searched 
+              ? (error || "We couldn't find an order matching that reference number. Please check your order number and try again.")
+              : 'Enter your Order Number in the search box above to view step-by-step fulfillment and shipment updates.'}
           </p>
         </div>
       )}
