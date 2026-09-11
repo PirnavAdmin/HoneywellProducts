@@ -27,6 +27,8 @@ const ALL_PERMISSION_MODULES = [
   { key: 'staff', label: 'Staff' }
 ];
 
+const DEFAULT_USER_PERMISSIONS = ALL_PERMISSION_MODULES.map((m) => m.key);
+
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
