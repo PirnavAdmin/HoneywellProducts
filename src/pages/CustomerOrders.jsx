@@ -2,7 +2,37 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, MapPin, Eye, Calendar, Search } from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
-import { orderService } from '../services/orderService';
+import { getMyOrders } from '../services/customerApi';
+import { useAuth } from '../context/AuthContext';
+
+const formatOrderTitle = (order) => {
+  if (!order) return 'Order';
+  const val = String(order.orderNumber || order.orderNo || (order.id ? `ORD-${order.id}` : '')).trim();
+  if (!val) return 'Order';
+  const clean = val.replace(/^(Order\s*#*|#)+/i, '').trim();
+  if (/^\d+$/.test(clean)) {
+    return `Order #ORD-${clean}`;
+  }
+  return `Order #${clean}`;
+};
+
+const formatOrderDate = (order) => {
+  if (!order) return 'Placed on Recent';
+  const rawDate = order.orderDate || order.createdDate;
+  if (rawDate) {
+    try {
+      const d = new Date(rawDate);
+      if (!isNaN(d.getTime())) {
+        return `Placed on ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+      }
+    } catch (e) {}
+  }
+  if (order.orderDateFormatted) {
+    const clean = String(order.orderDateFormatted).replace(/^Placed\s+on\s+/i, '').trim();
+    return `Placed on ${clean}`;
+  }
+  return 'Placed on Recent';
+};
 
 export default function CustomerOrders() {
   const [orders, setOrders] = useState([]);
@@ -13,30 +43,68 @@ export default function CustomerOrders() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
+  const { user } = useAuth();
+
   useEffect(() => {
     async function fetchOrders() {
       try {
         setLoading(true);
-        const data = await orderService.getMyOrders();
-        setOrders(Array.isArray(data) ? data : []);
+        setError(null);
+        const customerId = user?.customerId || user?.id || localStorage.getItem('customerId');
+        const email = user?.email || localStorage.getItem('customerEmail');
+        const data = await getMyOrders({ customerId, email, status: statusFilter, search: searchQuery });
+
+        const rawList = Array.isArray(data) ? data : [];
+        const userEmail = (email || '').toLowerCase().trim();
+        const userPhone = (user?.phone || localStorage.getItem('customerPhone') || '').replace(/\D/g, '');
+        const userName = (user?.name || localStorage.getItem('customerName') || '').toLowerCase().trim();
+
+        // Strict customer isolation filter: exclude orders that explicitly belong to other customers
+        const validOrders = rawList.filter((o) => {
+          const orderEmail = (o.email || o.customerEmail || '').toLowerCase().trim();
+          const orderPhone = (o.phone || o.customerPhone || o.mobile || '').replace(/\D/g, '');
+          const orderCustomerName = (o.customerName || o.customer || '').toLowerCase().trim();
+
+          if (orderEmail && userEmail && orderEmail !== userEmail) return false;
+          if (orderPhone && userPhone && orderPhone !== userPhone && orderEmail !== userEmail) return false;
+          if (orderCustomerName && userName && !orderCustomerName.includes(userName) && !userName.includes(orderCustomerName)) {
+            if (userEmail && orderEmail !== userEmail) return false;
+          }
+          return true;
+        });
+
+        setOrders(validOrders);
       } catch (err) {
         console.error('Error fetching customer orders:', err);
-        setError('Unable to load order history. Please try again.');
+        setOrders([]);
       } finally {
         setLoading(false);
       }
     }
     fetchOrders();
-  }, []);
+  }, [user]);
 
   // Filter orders by search query and status pill
   const filteredOrders = orders.filter((order) => {
-    const orderIdStr = String(order.id || order.orderNumber || '').toLowerCase();
     const query = searchQuery.toLowerCase().trim();
-    const matchesSearch = !query || orderIdStr.includes(query);
+    let matchesSearch = true;
+    if (query) {
+      const cleanQ = query.replace(/^(Order\s*#*|#)+/i, '').trim();
+      const idStr = String(order.id || '').toLowerCase();
+      const orderNum = String(order.orderNumber || '').toLowerCase();
+      const formattedTitle = formatOrderTitle(order).toLowerCase();
+      const itemsMatch = Array.isArray(order.items) && order.items.some((item) =>
+        (item.name || item.productName || '').toLowerCase().includes(query) ||
+        (item.productCode || item.sku || '').toLowerCase().includes(query)
+      );
+      matchesSearch = idStr.includes(query) || idStr.includes(cleanQ) ||
+        orderNum.includes(query) || orderNum.includes(cleanQ) ||
+        formattedTitle.includes(query) ||
+        itemsMatch;
+    }
 
-    const statusStr = (order.status || 'PROCESSING').toUpperCase();
-    const matchesStatus = statusFilter === 'ALL' || statusStr.includes(statusFilter);
+    const statusStr = (order.status || order.statusBadge || 'PROCESSING').toUpperCase();
+    const matchesStatus = statusFilter === 'ALL' || statusStr === statusFilter || statusStr.includes(statusFilter);
 
     return matchesSearch && matchesStatus;
   });
@@ -84,14 +152,14 @@ export default function CustomerOrders() {
               <Search size={16} className="orders-search-icon" />
               <input
                 type="text"
-                placeholder="Search by Order ID..."
+                placeholder="Search by Order ID or Product..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
             <div className="orders-status-pills">
-              {['ALL', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((status) => (
+              {['ALL', 'PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED'].map((status) => (
                 <button
                   key={status}
                   className={`status-pill-btn ${statusFilter === status ? 'active' : ''}`}
@@ -126,10 +194,10 @@ export default function CustomerOrders() {
                     {/* Top Row: Order ID & Status */}
                     <div className="order-card-top">
                       <div>
-                        <div className="order-number">Order #{order.id || order.orderNumber}</div>
+                        <div className="order-number">{formatOrderTitle(order)}</div>
                         <div className="order-date-meta">
                           <Calendar size={13} />
-                          <span>Placed on {order.createdDate ? new Date(order.createdDate).toLocaleDateString() : 'Recent'}</span>
+                          <span>{formatOrderDate(order)}</span>
                         </div>
                       </div>
                       <span className={`badge-status ${statusClass}`}>
@@ -163,7 +231,7 @@ export default function CustomerOrders() {
                           <Eye size={14} />
                           <span>View Details</span>
                         </Link>
-                        <Link to={`/order-tracking?orderId=${order.id}`} className="btn-portal-primary">
+                        <Link to={`/order-tracking?orderId=${encodeURIComponent(order.orderNumber || order.id)}`} className="btn-portal-primary">
                           <MapPin size={14} />
                           <span>Track Order</span>
                         </Link>

@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from 'lucide-react';
 import SignInModal from '../auth/SignInModal';
+import { useAuth } from '../../context/AuthContext';
 
 export default function AccountMenu() {
   const [isSignInOpen, setIsSignInOpen] = useState(false);
   const navigate = useNavigate();
+  const { isLoggedIn, user } = useAuth();
 
-  const customerName = localStorage.getItem('customerName') || 'Valued Customer';
-  const isLoggedIn = Boolean(localStorage.getItem('customerToken') || localStorage.getItem('customerEmail'));
+  const customerName = user?.name || user?.fullName || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '') || 'Valued Customer';
 
   // Click handler for Header User Icon
   const handleUserIconClick = () => {

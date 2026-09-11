@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import { CartProvider } from './context/CartContext';
 import { UIProvider } from './context/UIContext';
+import { AuthProvider } from './context/AuthContext';
 
 // Existing Pages
 const Home = lazy(() => import('./pages/Home'));
@@ -108,7 +109,8 @@ export default function App() {
   return (
     <CartProvider>
       <UIProvider>
-        <Suspense fallback={<LoadingScreen />}>
+        <AuthProvider>
+          <Suspense fallback={<LoadingScreen />}>
           <Routes>
             {/* Admin Console Routes */}
             <Route path="admin/login" element={<AdminLoginPage />} />
@@ -248,6 +250,7 @@ export default function App() {
             </Route>
           </Routes>
         </Suspense>
+        </AuthProvider>
       </UIProvider>
     </CartProvider>
   );

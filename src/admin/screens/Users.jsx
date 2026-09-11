@@ -1,7 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { User, Trash2, RefreshCw, Shield, Check, X, Lock } from 'lucide-react';
+import { 
+  User, 
+  Trash2, 
+  RefreshCw, 
+  Shield, 
+  Check, 
+  X, 
+  Lock, 
+  Search, 
+  UserPlus, 
+  Users as UsersIcon, 
+  ShieldCheck, 
+  Layers
+} from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
+import './Users.css';
 
 const API_BASE = `${getApiDomain()}/api/Auth`;
 
@@ -27,10 +41,13 @@ const ALL_PERMISSION_MODULES = [
   { key: 'staff', label: 'Staff' }
 ];
 
+const DEFAULT_USER_PERMISSIONS = ALL_PERMISSION_MODULES.map((m) => m.key);
+
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Permission management modal state
   const [selectedUser, setSelectedUser] = useState(null);
@@ -120,6 +137,14 @@ const Users = () => {
     }));
   };
 
+  const handleSelectAllPermissions = (select) => {
+    const permObj = {};
+    ALL_PERMISSION_MODULES.forEach(mod => {
+      permObj[mod.key] = select;
+    });
+    setUserPerms(permObj);
+  };
+
   const savePermissions = async () => {
     if (!selectedUser) return;
     const enabledList = Object.keys(userPerms).filter(k => userPerms[k]);
@@ -180,84 +205,185 @@ const Users = () => {
     fetchUsers();
   }, []);
 
+  const filteredUsers = users.filter(user => {
+    const query = searchTerm.toLowerCase();
+    const name = (user.name || '').toLowerCase();
+    const email = (user.email || '').toLowerCase();
+    const phone = (user.phoneNumber || '').toLowerCase();
+    const id = String(user.id || '').toLowerCase();
+    return name.includes(query) || email.includes(query) || phone.includes(query) || id.includes(query);
+  });
+
+  const fullAccessCount = users.filter(u => u.permissions && u.permissions.length === ALL_PERMISSION_MODULES.length).length;
+
   return (
-    <div className="admin-screen p-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-dark">User Management</h1>
-          <p className="text-gray-500">View registered users and assign module permissions.</p>
+    <div className="users-container">
+      {/* Page Header */}
+      <div className="users-header">
+        <div className="users-title">
+          <h1>User Management</h1>
+          <p>View registered system users, register staff, and manage granular module access control.</p>
         </div>
-        <button 
-          onClick={fetchUsers} 
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-[#5eaa28] transition-colors"
-          disabled={isLoading}
-        >
-          <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-          Refresh Data
-        </button>
+        <div className="users-header-actions">
+          <button 
+            onClick={() => setShowAddUserModal(true)}
+            className="btn-users-primary"
+          >
+            <UserPlus size={18} />
+            Add New User
+          </button>
+          <button 
+            onClick={fetchUsers} 
+            className="btn-users-secondary"
+            disabled={isLoading}
+          >
+            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+        </div>
       </div>
 
-      {error && <div className="bg-red-50 text-red-500 p-4 rounded-lg mb-6">{error}</div>}
+      {error && (
+        <div style={{ padding: '14px 18px', background: '#fef2f2', color: '#dc2626', borderRadius: '12px', marginBottom: '24px', border: '1px solid #fee2e2', fontWeight: 600, fontSize: '14px' }}>
+          {error}
+        </div>
+      )}
 
-      <div className="bg-white border border-border shadow-sm overflow-hidden rounded-xl">
-        <table className="w-full text-left border-collapse">
+      {/* Analytics Stat Cards */}
+      <div className="users-stats-grid">
+        <div className="users-stat-card">
+          <div className="users-stat-info">
+            <label>Total Registered Users</label>
+            <span>{users.length}</span>
+          </div>
+          <div className="users-stat-icon blue">
+            <UsersIcon size={22} />
+          </div>
+        </div>
+
+        <div className="users-stat-card">
+          <div className="users-stat-info">
+            <label>Full Admin Access</label>
+            <span>{fullAccessCount}</span>
+          </div>
+          <div className="users-stat-icon green">
+            <ShieldCheck size={22} />
+          </div>
+        </div>
+
+        <div className="users-stat-card">
+          <div className="users-stat-info">
+            <label>Custom Module Scopes</label>
+            <span>{users.length - fullAccessCount}</span>
+          </div>
+          <div className="users-stat-icon amber">
+            <Shield size={22} />
+          </div>
+        </div>
+
+        <div className="users-stat-card">
+          <div className="users-stat-info">
+            <label>Total Modules Scope</label>
+            <span>{ALL_PERMISSION_MODULES.length}</span>
+          </div>
+          <div className="users-stat-icon purple">
+            <Layers size={22} />
+          </div>
+        </div>
+      </div>
+
+      {/* Controls Bar */}
+      <div className="users-controls">
+        <div className="users-search-wrap">
+          <Search size={18} className="users-search-icon" />
+          <input 
+            type="text"
+            placeholder="Search users by name, email, phone or ID..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="users-search-input"
+          />
+        </div>
+        <div className="users-filter-count">
+          Showing {filteredUsers.length} of {users.length} users
+        </div>
+      </div>
+
+      {/* Users Table Card */}
+      <div className="users-table-card">
+        <table className="users-table">
           <thead>
-            <tr className="bg-light border-b border-border text-xs font-bold uppercase tracking-wider text-slate-600">
-              <th className="px-6 py-4">User ID</th>
-              <th className="px-6 py-4">Name</th>
-              <th className="px-6 py-4">Phone / Email</th>
-              <th className="px-6 py-4">Active Scope</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4 text-center">Actions</th>
+            <tr>
+              <th>User ID</th>
+              <th>User Details</th>
+              <th>Contact Info</th>
+              <th>Active Scope</th>
+              <th>Status</th>
+              <th style={{ textAlign: 'right' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {users.length > 0 ? users.map((user) => (
-              <tr key={user.id} className="border-b border-border hover:bg-gray-50 transition-colors text-sm">
-                <td className="px-6 py-4 font-medium text-slate-800">#{user.id}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                      <User size={16} />
-                    </div>
-                    <span className="font-bold text-dark">{user.name || 'N/A'}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="text-dark">{user.phoneNumber}</div>
-                  <div className="text-xs text-gray-400">{user.email || 'No Email'}</div>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="text-xs font-semibold text-[#1268a5]">
-                    {user.permissions ? `${user.permissions.length} modules granted` : 'Default Scope'}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className="px-2 py-1 bg-green-100 text-green-700 text-[10px] font-bold uppercase rounded">Active</span>
-                </td>
-                <td className="px-6 py-4 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <button 
-                      onClick={() => openPermissionModal(user)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-[#1268a5] text-white rounded text-xs font-semibold hover:bg-[#0e5486] transition-colors"
-                      title="Manage User Module Permissions"
-                    >
-                      <Shield size={14} /> Manage Permissions
-                    </button>
-                    <button 
-                      onClick={() => deleteUser(user.id)}
-                      className="text-red-400 hover:text-red-600 transition-colors p-1.5"
-                      title="Delete User"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            )) : (
+            {filteredUsers.length > 0 ? (
+              filteredUsers.map((user) => {
+                const initial = (user.name && user.name !== 'N/A') ? user.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U');
+                const permCount = user.permissions ? user.permissions.length : ALL_PERMISSION_MODULES.length;
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <span className="user-id-badge">#{String(user.id).slice(0, 14)}</span>
+                    </td>
+                    <td>
+                      <div className="user-info-cell">
+                        <div className="user-avatar-circle">
+                          {initial}
+                        </div>
+                        <div>
+                          <span className="user-name-text">{user.name || 'User'}</span>
+                          <span className="user-contact-email">{user.email || 'No email attached'}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <div className="user-contact-phone">{user.phoneNumber || 'N/A'}</div>
+                    </td>
+                    <td>
+                      <span className="user-scope-badge">
+                        <Shield size={12} />
+                        {permCount} / {ALL_PERMISSION_MODULES.length} Granted
+                      </span>
+                    </td>
+                    <td>
+                      <span className="user-status-active">
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }}></span>
+                        Active
+                      </span>
+                    </td>
+                    <td>
+                      <div className="user-actions">
+                        <button 
+                          onClick={() => openPermissionModal(user)}
+                          className="btn-manage-perms"
+                          title="Configure Module Access Permissions"
+                        >
+                          <Shield size={14} />
+                          Manage Scope
+                        </button>
+                        <button 
+                          onClick={() => deleteUser(user)}
+                          className="btn-delete-user"
+                          title="Delete User Account"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
               <tr>
-                <td colSpan="6" className="px-6 py-10 text-center text-gray-400">
-                  {isLoading ? 'Loading users...' : 'No users found in the system.'}
+                <td colSpan="6" style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
+                  {isLoading ? 'Loading registered users...' : (searchTerm ? 'No users matching search query.' : 'No registered users found.')}
                 </td>
               </tr>
             )}
@@ -265,47 +391,140 @@ const Users = () => {
         </table>
       </div>
 
-      {/* Manage Permissions Modal */}
-      {selectedUser && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-100 space-y-6">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#1268a5]/10 text-[#1268a5] flex items-center justify-center">
-                  <Lock size={20} />
+      {/* Add User Modal */}
+      {showAddUserModal && (
+        <div className="users-modal-overlay">
+          <div className="users-modal-card" style={{ maxWidth: 480 }}>
+            <div className="users-modal-header">
+              <div className="users-modal-header-info">
+                <div className="users-modal-header-icon">
+                  <UserPlus size={22} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">Manage Module Permissions</h3>
-                  <p className="text-xs text-slate-500">Configure feature access for <strong>{selectedUser.name || 'User'}</strong> (#{selectedUser.id})</p>
+                  <h3>Add New Admin / Staff</h3>
+                  <p>Create a user account with default system privileges</p>
+                </div>
+              </div>
+              <button onClick={() => setShowAddUserModal(false)} className="users-modal-close">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateUser}>
+              <div className="form-group-users">
+                <label>Full Name *</label>
+                <input 
+                  type="text"
+                  required
+                  placeholder="e.g. John Doe"
+                  value={newUser.name}
+                  onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                  className="form-input-users"
+                />
+              </div>
+
+              <div className="form-group-users">
+                <label>Email Address *</label>
+                <input 
+                  type="email"
+                  required
+                  placeholder="e.g. admin@company.com"
+                  value={newUser.email}
+                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                  className="form-input-users"
+                />
+              </div>
+
+              <div className="form-group-users">
+                <label>Phone Number</label>
+                <input 
+                  type="text"
+                  placeholder="e.g. +91 9876543210"
+                  value={newUser.phoneNumber}
+                  onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
+                  className="form-input-users"
+                />
+              </div>
+
+              <div className="form-group-users">
+                <label>Initial Password</label>
+                <input 
+                  type="password"
+                  placeholder="Default: User@123"
+                  value={newUser.password}
+                  onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                  className="form-input-users"
+                />
+              </div>
+
+              <div className="users-modal-footer">
+                <button 
+                  type="button"
+                  onClick={() => setShowAddUserModal(false)}
+                  className="btn-users-secondary"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="btn-users-primary"
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Permissions Modal */}
+      {selectedUser && (
+        <div className="users-modal-overlay">
+          <div className="users-modal-card">
+            <div className="users-modal-header">
+              <div className="users-modal-header-info">
+                <div className="users-modal-header-icon">
+                  <Lock size={22} />
+                </div>
+                <div>
+                  <h3>Configure Scope & Permissions</h3>
+                  <p>Modifying permissions for <strong>{selectedUser.name || selectedUser.email || 'User'}</strong></p>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedUser(null)}
-                className="text-slate-400 hover:text-slate-600 p-1"
+                className="users-modal-close"
               >
                 <X size={20} />
               </button>
             </div>
 
+            <div className="perms-quick-actions">
+              <span>Select Active Modules</span>
+              <div className="perms-quick-btn-group">
+                <button type="button" onClick={() => handleSelectAllPermissions(true)} className="btn-quick-toggle">
+                  Select All
+                </button>
+                <button type="button" onClick={() => handleSelectAllPermissions(false)} className="btn-quick-toggle">
+                  Clear All
+                </button>
+              </div>
+            </div>
+
             {/* Permissions Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="perms-grid">
               {ALL_PERMISSION_MODULES.map(mod => {
                 const isEnabled = userPerms[mod.key] || false;
                 return (
                   <div 
                     key={mod.key}
                     onClick={() => handleTogglePermission(mod.key)}
-                    className={`p-3 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                      isEnabled 
-                        ? 'bg-blue-50/60 border-[#1268a5] text-[#1268a5]' 
-                        : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
-                    }`}
+                    className={`perm-item-card ${isEnabled ? 'enabled' : ''}`}
                   >
-                    <span className="text-xs font-bold capitalize">{mod.label}</span>
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-colors ${
-                      isEnabled ? 'bg-[#1268a5] text-white' : 'bg-slate-200 text-transparent'
-                    }`}>
-                      <Check size={14} />
+                    <span className="perm-label">{mod.label}</span>
+                    <div className="perm-checkbox">
+                      {isEnabled && <Check size={14} />}
                     </div>
                   </div>
                 );
@@ -313,18 +532,18 @@ const Users = () => {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex justify-end gap-3 border-t border-slate-100 pt-4">
+            <div className="users-modal-footer">
               <button 
                 onClick={() => setSelectedUser(null)}
-                className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-xs font-bold hover:bg-slate-50 transition-colors"
+                className="btn-users-secondary"
               >
                 Cancel
               </button>
               <button 
                 onClick={savePermissions}
-                className="px-5 py-2 bg-[#1268a5] text-white rounded-lg text-xs font-bold hover:bg-[#0e5486] transition-colors"
+                className="btn-users-primary"
               >
-                Save Permissions
+                Save Scope Changes
               </button>
             </div>
           </div>
@@ -335,3 +554,4 @@ const Users = () => {
 };
 
 export default Users;
+

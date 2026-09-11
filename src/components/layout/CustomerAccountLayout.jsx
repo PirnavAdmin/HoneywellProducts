@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { User, Package, MapPin, ShieldAlert, LogOut, ChevronRight } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import '../../styles/CustomerAccount.css';
 
 export default function CustomerAccountLayout({ 
@@ -10,10 +11,15 @@ export default function CustomerAccountLayout({
 }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-  const customerName = localStorage.getItem('customerName') || 'Valued Customer';
-  const customerEmail = localStorage.getItem('customerEmail') || '';
-  const customerAvatar = localStorage.getItem('customerAvatar') || '';
+  const rawName = user?.name || user?.fullName || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '') || (localStorage.getItem('customerName') && localStorage.getItem('customerName').toLowerCase() !== 'admin' ? localStorage.getItem('customerName') : 'Valued Customer');
+  const nameParts = rawName.trim().split(' ').filter(Boolean);
+  const customerName = (nameParts.length >= 2 && nameParts[0].toLowerCase() === nameParts[1].toLowerCase())
+    ? nameParts[0]
+    : rawName;
+  const customerEmail = user?.email || localStorage.getItem('customerEmail') || '';
+  const customerAvatar = user?.avatarUrl || localStorage.getItem('customerAvatar') || '';
 
   // Get user initials for avatar badge
   const getInitials = (name) => {
@@ -28,16 +34,8 @@ export default function CustomerAccountLayout({
   const userInitials = getInitials(customerName);
 
   const handleLogout = () => {
-    const keysToRemove = [
-      'customerToken', 'customerEmail', 'customerName', 'customerPhone',
-      'customerGender', 'customerCompany', 'customerAvatar',
-      'shippingAddress', 'shippingCity', 'shippingState', 'shippingPincode', 'shippingCountry',
-      'billingAddress', 'billingCity', 'billingState', 'billingPincode',
-      'bankAccountHolder', 'bankName', 'bankAccountNumber', 'bankIfscCode', 'bankUpiId'
-    ];
-    keysToRemove.forEach((k) => localStorage.removeItem(k));
+    logout();
     navigate('/');
-    window.location.reload();
   };
 
   const navItems = [
