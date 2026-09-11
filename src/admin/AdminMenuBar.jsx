@@ -205,6 +205,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                 <ul className={`stroyka-submenu ${openDropdowns.customers && expanded ? 'show-submenu' : ''}`}>
                   <li><NavLink to="/admin/customers/list"     className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Customers List</NavLink></li>
                   <li><NavLink to="/admin/customers/customer" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Customer Profile</NavLink></li>
+                  <li><NavLink to="/admin/users"              className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>User Management</NavLink></li>
                   <li><NavLink to="/admin/call-history"       className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>CRM & Call Logs</NavLink></li>
                 </ul>
               </li>
@@ -534,6 +535,9 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                 <ul className={`stroyka-submenu ${openDropdowns.settings && expanded ? 'show-submenu' : ''}`}>
                   <li><NavLink to="/admin/settings/toc"  className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Table of Content</NavLink></li>
                   <li><NavLink to="/admin/settings/form" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Settings</NavLink></li>
+                  <li><NavLink to="/admin/contact-card" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Contact Card</NavLink></li>
+                  <li><NavLink to="/admin/footer"       className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Footer Config</NavLink></li>
+                  <li><NavLink to="/admin/descriptions" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Description Manager</NavLink></li>
                 </ul>
               </li>
             )}

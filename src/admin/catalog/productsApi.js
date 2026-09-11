@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
 import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore, defaultProducts } from './catalogStore';
+import { products as demoProducts } from '../../data/products';
+import { categories as demoCategories } from '../../data/categories';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const BASE_URL = getApiDomain();
@@ -399,8 +401,24 @@ export const mapProductFromApi = (
 // GET /api/Category
 
 export const fetchCategories = async () => {
-  const response = await api.get('/api/Category');
-  return unwrapList(response).map(mapCategoryFromApi);
+  try {
+    const response = await api.get('/api/Category');
+    const apiCategories = unwrapList(response).map(mapCategoryFromApi);
+    if (apiCategories && apiCategories.length > 0) {
+      return apiCategories;
+    }
+  } catch (err) {
+    console.warn('Backend categories fetch failed, using fallback:', err.message);
+  }
+
+  const mergedMap = new Map();
+  if (Array.isArray(demoCategories)) {
+    demoCategories.forEach((c) => {
+      const key = String(c.slug || c.id || c.name);
+      mergedMap.set(key, mapCategoryFromApi(c));
+    });
+  }
+  return Array.from(mergedMap.values());
 };
 
 // ─── Subcategories ────────────────────────────────────────────────────────────
@@ -482,26 +500,25 @@ export const deleteProductReview = async (id) => {
 
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
-  let apiProducts = [];
   try {
     const response = await api.get('/api/products');
-    apiProducts = unwrapList(response).map((p) =>
+    const apiProducts = unwrapList(response).map((p) =>
       mapProductFromApi(p, categories, subcategories)
     );
+    if (apiProducts && apiProducts.length > 0) {
+      saveProducts(apiProducts);
+      return apiProducts;
+    }
   } catch (err) {
     console.warn('Backend products fetch failed, using local store fallback:', err.message);
   }
 
   const localProducts = getProducts().map((p) => mapProductFromApi(p, categories, subcategories));
-  const mergedMap = new Map();
-  // 1. Add local store products (if added via form)
-  localProducts.forEach((p) => { if (p.id) mergedMap.set(String(p.id), p); });
-  // 2. Add live API products (API products take priority)
-  apiProducts.forEach((p) => { if (p.id) mergedMap.set(String(p.id), p); });
+  if (localProducts && localProducts.length > 0) {
+    return localProducts;
+  }
 
-  const result = Array.from(mergedMap.values());
-  if (result.length > 0) saveProducts(result);
-  return result;
+  return Array.isArray(demoProducts) ? demoProducts : [];
 };
 
 /** Search products by keyword (GET /api/products/search?keyword=) */

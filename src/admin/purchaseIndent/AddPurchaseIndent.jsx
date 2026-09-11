@@ -3,12 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Plus, Trash2, Save, RefreshCw } from 'lucide-react';
 import { fetchProducts } from '../catalog/productsApi';
 import { createPurchaseIndent } from '../api/purchase';
+import { Toast } from '../components/Toast';
 
 const AddPurchaseIndent = () => {
   const navigate = useNavigate();
   const [productsList, setProductsList] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const [formData, setFormData] = useState({
     requestedBy: 'Operations Team',
@@ -75,7 +77,7 @@ const AddPurchaseIndent = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (selectedItems.some(item => !item.name)) {
-      alert("Please select a valid product for all item rows.");
+      setToast({ message: "Please select a valid product for all item rows.", type: 'warning' });
       return;
     }
     setIsSubmitting(true);
@@ -84,11 +86,13 @@ const AddPurchaseIndent = () => {
         ...formData,
         items: selectedItems
       });
-      alert("Purchase Indent created successfully!");
-      navigate('/admin/purchase-indent');
+      setToast({ message: "Purchase Indent created successfully!", type: 'success' });
+      setTimeout(() => {
+        navigate('/admin/purchase-indent');
+      }, 1500);
     } catch (err) {
       console.error("Error creating purchase indent:", err);
-      alert("Failed to create purchase indent.");
+      setToast({ message: "Failed to create purchase indent.", type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -104,6 +108,7 @@ const AddPurchaseIndent = () => {
       maxWidth: '1440px',
       margin: '0 auto'
     }}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {/* Top Banner Card */}
       <section style={{ 
         background: '#ffffff', 

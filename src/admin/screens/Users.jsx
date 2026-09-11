@@ -27,12 +27,6 @@ const ALL_PERMISSION_MODULES = [
   { key: 'staff', label: 'Staff' }
 ];
 
-const DEFAULT_USER_PERMISSIONS = [
-  'dashboard', 'catalog', 'customers', 'purchase indent', 'purchase order',
-  'invoices', 'sales return', 'returns', 'reports', 'orders', 'stockupdates', 'marketing',
-  'brands', 'blogs', 'settings', 'suppliers', 'coins converter', 'call history', 'staff'
-];
-
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -42,6 +36,11 @@ const Users = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [userPerms, setUserPerms] = useState({});
 
+  // Add user modal state
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({ name: '', email: '', phoneNumber: '', password: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const fetchUsers = async () => {
     setIsLoading(true);
     setError('');
@@ -50,19 +49,33 @@ const Users = () => {
         headers: { 'ngrok-skip-browser-warning': 'true' }
       });
 
-      // Load saved user permissions map from localStorage
-      let savedMap = {};
-      try {
-        savedMap = JSON.parse(localStorage.getItem('user_permissions_map') || '{}');
-      } catch (e) {}
+      const rawData = Array.isArray(response.data) ? response.data : (response.data?.users || response.data?.data || []);
 
-      const userList = (response.data || []).map(u => {
-        const customPerms = savedMap[u.id] || u.permissions || DEFAULT_USER_PERMISSIONS;
+      const userList = await Promise.all(rawData.map(async (u) => {
+        let perms = u.permissions || u.Permissions || [];
+        const userEmail = u.email || u.Email;
+        if ((!perms || perms.length === 0) && userEmail) {
+          try {
+            const permRes = await axios.get(`${API_BASE}/users/${encodeURIComponent(userEmail)}/permissions`, {
+              headers: { 'ngrok-skip-browser-warning': 'true' }
+            });
+            const fetchedPerms = permRes.data?.permissions || permRes.data || [];
+            if (Array.isArray(fetchedPerms) && fetchedPerms.length > 0) {
+              perms = fetchedPerms;
+            }
+          } catch (e) {
+            // Keep default/empty permissions
+          }
+        }
         return {
           ...u,
-          permissions: customPerms
+          id: u.id || u.Id || u.email,
+          email: userEmail || '',
+          name: u.name || u.Name || 'N/A',
+          phoneNumber: u.phoneNumber || u.Phone || u.mobile || 'N/A',
+          permissions: Array.isArray(perms) && perms.length > 0 ? perms : DEFAULT_USER_PERMISSIONS
         };
-      });
+      }));
 
       setUsers(userList);
     } catch (err) {
@@ -73,12 +86,16 @@ const Users = () => {
     }
   };
 
-  const deleteUser = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this user?")) return;
+  const deleteUser = async (user) => {
+    const identifier = user.email || user.id;
+    if (!identifier) return;
+    if (!window.confirm(`Are you sure you want to delete user ${user.name || identifier}?`)) return;
     
     try {
-      await axios.delete(`${API_BASE}/delete-user/${id}`);
-      setUsers(users.filter(u => u.id !== id));
+      await axios.delete(`${API_BASE}/users/${encodeURIComponent(identifier)}`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+      });
+      setUsers(users.filter(u => u.id !== user.id && u.email !== user.email));
       alert("User deleted successfully.");
     } catch (err) {
       console.error("Delete User Error:", err);
@@ -103,34 +120,60 @@ const Users = () => {
     }));
   };
 
-  const savePermissions = () => {
+  const savePermissions = async () => {
     if (!selectedUser) return;
     const enabledList = Object.keys(userPerms).filter(k => userPerms[k]);
+    const userEmail = selectedUser.email || selectedUser.id;
 
-    // Save in user list state
-    const updatedUsers = users.map(u => {
-      if (u.id === selectedUser.id) {
-        return { ...u, permissions: enabledList };
-      }
-      return u;
-    });
-    setUsers(updatedUsers);
-
-    // Save to persistent user permissions map in localStorage
     try {
-      const savedMap = JSON.parse(localStorage.getItem('user_permissions_map') || '{}');
-      savedMap[selectedUser.id] = enabledList;
-      localStorage.setItem('user_permissions_map', JSON.stringify(savedMap));
+      await axios.put(`${API_BASE}/users/${encodeURIComponent(userEmail)}/permissions`, enabledList, {
+        headers: { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
+      });
 
-      // Also update adminPermissions if modifying active user permissions
-      localStorage.setItem('adminPermissions', JSON.stringify(enabledList));
-      window.dispatchEvent(new Event('storage'));
-    } catch (e) {
-      console.error("Error saving user permissions map:", e);
+      const updatedUsers = users.map(u => {
+        if (u.id === selectedUser.id || u.email === selectedUser.email) {
+          return { ...u, permissions: enabledList };
+        }
+        return u;
+      });
+      setUsers(updatedUsers);
+      alert(`Permissions for ${selectedUser.name || 'User'} updated successfully!`);
+      setSelectedUser(null);
+    } catch (err) {
+      console.error("Save Permissions Error:", err);
+      alert("Failed to save permissions to backend API.");
+    }
+  };
+
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    if (!newUser.name || !newUser.email) {
+      alert("Please fill in Name and Email.");
+      return;
     }
 
-    alert(`Permissions for ${selectedUser.name || 'User'} updated successfully!`);
-    setSelectedUser(null);
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        name: newUser.name,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+        password: newUser.password || 'User@123',
+        permissions: DEFAULT_USER_PERMISSIONS
+      };
+      await axios.post(`${API_BASE}/users`, payload, {
+        headers: { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
+      });
+      alert("Admin user created successfully!");
+      setShowAddUserModal(false);
+      setNewUser({ name: '', email: '', phoneNumber: '', password: '' });
+      fetchUsers();
+    } catch (err) {
+      console.error("Create User Error:", err);
+      alert(err.response?.data?.message || "Failed to create user.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   useEffect(() => {

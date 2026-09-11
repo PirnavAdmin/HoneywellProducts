@@ -4,6 +4,7 @@ import { ArrowLeft, Plus, Trash2, Save, RefreshCw, FileCheck } from 'lucide-reac
 import { fetchSuppliers } from '../suppliers/suppliersApi';
 import { fetchProducts } from '../catalog/productsApi';
 import { fetchPurchaseIndents, createPurchaseOrder } from '../api/purchase';
+import { Toast } from '../components/Toast';
 
 const CreatePurchaseOrder = () => {
   const navigate = useNavigate();
@@ -16,6 +17,7 @@ const CreatePurchaseOrder = () => {
   
   const [loadingData, setLoadingData] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toast, setToast] = useState(null);
 
   const [formData, setFormData] = useState({
     indentId: indentIdParam || '',
@@ -140,11 +142,11 @@ const CreatePurchaseOrder = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.supplierId && !formData.supplierName) {
-      alert("Please select a Supplier for the Purchase Order.");
+      setToast({ message: "Please select a Supplier for the Purchase Order.", type: 'warning' });
       return;
     }
     if (selectedItems.some(item => !item.name)) {
-      alert("Please select valid products for all item rows.");
+      setToast({ message: "Please select valid products for all item rows.", type: 'warning' });
       return;
     }
     setIsSubmitting(true);
@@ -153,11 +155,13 @@ const CreatePurchaseOrder = () => {
         ...formData,
         items: selectedItems
       });
-      alert("Purchase Order created successfully!");
-      navigate('/admin/purchase-orders');
+      setToast({ message: "Purchase Order created successfully!", type: 'success' });
+      setTimeout(() => {
+        navigate('/admin/purchase-orders');
+      }, 1500);
     } catch (err) {
       console.error("Error creating Purchase Order:", err);
-      alert("Failed to create Purchase Order.");
+      setToast({ message: "Failed to create Purchase Order.", type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
@@ -173,6 +177,7 @@ const CreatePurchaseOrder = () => {
       maxWidth: '1440px',
       margin: '0 auto'
     }}>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {/* Top Banner Card */}
       <section style={{ 
         background: '#ffffff', 

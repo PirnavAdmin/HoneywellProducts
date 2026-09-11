@@ -27,7 +27,7 @@ export default function OrderTracking() {
     setSearched(true);
 
     try {
-      const data = await orderService.getById(orderId.trim());
+      const data = await orderService.trackOrder(orderId.trim());
       if (data) {
         setOrder(data);
       } else {

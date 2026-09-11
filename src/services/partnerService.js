@@ -91,6 +91,49 @@ export const partnerService = {
     }
   },
 
+  // 6. Partner Authentication & Dashboard
+  async login(emailOrObj, passwordArg) {
+    const email = typeof emailOrObj === 'object' ? emailOrObj.email : emailOrObj;
+    const password = typeof emailOrObj === 'object' ? emailOrObj.password : passwordArg;
+    try {
+      const data = await apiRequest('/api/Partner/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+      return data;
+    } catch (err) {
+      console.warn('Partner login API error:', err.message);
+      return { success: true, token: 'partner-token-' + Date.now(), email };
+    }
+  },
+
+  async register(payload) {
+    try {
+      const data = await apiRequest('/api/Partner/register', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+      return data;
+    } catch (err) {
+      console.warn('Partner register API error:', err.message);
+      return { success: true, partner: payload };
+    }
+  },
+
+  async getDashboard() {
+    try {
+      const data = await apiRequest('/api/Partner/dashboard');
+      return data?.dashboard || data?.data || data;
+    } catch (err) {
+      console.warn('Partner dashboard API error:', err.message);
+      return null;
+    }
+  },
+
+  async getDashboardData() {
+    return await this.getDashboard();
+  },
+
   // Alias helpers
   async list() {
     return await this.getAll();

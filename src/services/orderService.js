@@ -179,5 +179,30 @@ export const orderService = {
     }
 
     return { success: true, id };
+  },
+
+  /** GET (Customer My Orders) — GET /api/Customer/my-orders */
+  async getMyOrders() {
+    try {
+      const data = await apiRequest('/api/Customer/my-orders');
+      const list = Array.isArray(data) ? data : (data.orders || data.items || data.data || []);
+      return list.map(mapOrderFromApi).filter(Boolean);
+    } catch (err) {
+      console.warn('Customer my-orders error:', err.message);
+      return this.getAll();
+    }
+  },
+
+  /** GET (Track Order) — GET /api/Customer/track-order?orderNumber={number} */
+  async trackOrder(orderNumber) {
+    if (!orderNumber) return null;
+    try {
+      const data = await apiRequest(`/api/Customer/track-order?orderNumber=${encodeURIComponent(orderNumber)}`);
+      const item = data?.data || data?.order || data;
+      return mapOrderFromApi(item);
+    } catch (err) {
+      console.warn(`trackOrder(${orderNumber}) error:`, err.message);
+      return this.getById(orderNumber);
+    }
   }
 };

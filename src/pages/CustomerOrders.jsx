@@ -17,7 +17,7 @@ export default function CustomerOrders() {
     async function fetchOrders() {
       try {
         setLoading(true);
-        const data = await orderService.getAll();
+        const data = await orderService.getMyOrders();
         setOrders(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Error fetching customer orders:', err);

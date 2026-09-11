@@ -48,22 +48,36 @@ export default function ContactSubmissionsScreen() {
   });
 
   // Load submissions from live API
-  const loadSubmissions = async () => {
-    setLoading(true);
+  const loadSubmissions = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     setError(null);
     try {
       const data = await getContactSubmissions();
       setSubmissions(data);
     } catch (err) {
       console.error('Failed to load contact submissions:', err);
-      setError('Could not connect to live contact submissions endpoint. Please try again.');
+      if (!isBackground) setError('Could not connect to live contact submissions endpoint. Please try again.');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadSubmissions();
+
+    const handleUpdate = () => loadSubmissions(true);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+    window.addEventListener('sat_contacts_updated', handleUpdate);
+
+    const interval = setInterval(() => loadSubmissions(true), 5000);
+
+    return () => {
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+      window.removeEventListener('sat_contacts_updated', handleUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   // Filtered Submissions
