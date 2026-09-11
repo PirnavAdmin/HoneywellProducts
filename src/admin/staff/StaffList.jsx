@@ -191,7 +191,7 @@ const StaffList = () => {
       email: item.email || item.Email || "",
       mobileNumber: item.mobile || item.Mobile || item.mobileNumber || item.MobileNumber || "",
       role: item.role || item.Role || "staff",
-      password: item.password || "DummyPassword123!",
+      password: item.password || item.Password || "",
       isActive: newIsActive
     };
 

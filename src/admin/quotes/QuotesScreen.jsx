@@ -45,22 +45,36 @@ export default function QuotesScreen() {
   });
 
   // Load quotes from live API
-  const loadQuotes = async () => {
-    setLoading(true);
+  const loadQuotes = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     setError(null);
     try {
       const data = await getQuotes();
       setQuotes(data);
     } catch (err) {
       console.error('Failed to load quotes:', err);
-      setError('Could not connect to live quotes endpoint. Please try again.');
+      if (!isBackground) setError('Could not connect to live quotes endpoint. Please try again.');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadQuotes();
+
+    const handleUpdate = () => loadQuotes(true);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+    window.addEventListener('sat_quotes_updated', handleUpdate);
+
+    const interval = setInterval(() => loadQuotes(true), 5000);
+
+    return () => {
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+      window.removeEventListener('sat_quotes_updated', handleUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   // Filtered Quotes

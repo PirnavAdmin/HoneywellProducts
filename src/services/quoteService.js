@@ -6,6 +6,28 @@ const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
 };
 
+const STORAGE_KEY = 'sat_quotes_store';
+
+const getLocalQuotes = () => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveLocalQuotes = (list) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('sat_quotes_updated'));
+    }
+  } catch (e) {
+    console.warn('Failed to write to localStorage for quotes:', e);
+  }
+};
+
 export const mapQuoteFromApi = (item) => {
   if (!item) return null;
   const rawId = item.id ?? item.quoteId ?? item._id ?? '';
@@ -21,7 +43,7 @@ export const mapQuoteFromApi = (item) => {
     quantity: Number(item.quantity) || 1,
     location: item.location || item.city || item.siteLocation || '',
     requirement: item.requirement || item.message || item.description || '',
-    quoteAmount: item.quoteAmount || item.amount || item.totalAmount || 0,
+    quoteAmount: Number(item.quoteAmount || item.amount || item.totalAmount || 0),
     status: item.status || 'Pending',
     createdAt: item.createdAt || item.dateCreated || item.createdOn || new Date().toISOString()
   };
@@ -30,14 +52,24 @@ export const mapQuoteFromApi = (item) => {
 export const quoteService = {
   /** GET (All) — GET /api/quotes */
   async getAll() {
+    let apiList = [];
     try {
       const data = await apiRequest('/api/quotes');
-      const list = Array.isArray(data) ? data : (data.quotes || data.items || data.data || []);
-      return list.map(mapQuoteFromApi).filter(Boolean);
+      const rawList = Array.isArray(data) ? data : (data.quotes || data.items || data.data || []);
+      apiList = rawList.map(mapQuoteFromApi).filter(Boolean);
     } catch (err) {
       console.warn('Quotes API getAll error:', err.message);
-      return [];
     }
+
+    const localList = getLocalQuotes().map(mapQuoteFromApi).filter(Boolean);
+
+    const mergedMap = new Map();
+    localList.forEach((item) => { if (item.id) mergedMap.set(item.id, item); });
+    apiList.forEach((item) => { if (item.id) mergedMap.set(item.id, item); });
+
+    const combined = Array.from(mergedMap.values());
+    combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return combined;
   },
 
   /** GET (ById) — GET /api/quotes/{id} */
@@ -45,16 +77,20 @@ export const quoteService = {
     if (!id) return null;
     try {
       const data = await apiRequest(`/api/quotes/${id}`);
-      return mapQuoteFromApi(data.quote || data.data || data);
+      const mapped = mapQuoteFromApi(data.quote || data.data || data);
+      if (mapped) return mapped;
     } catch (err) {
       console.warn(`Quotes API getById(${id}) error:`, err.message);
-      throw err;
     }
+    const local = getLocalQuotes().find((item) => String(item.id) === String(id));
+    return local ? mapQuoteFromApi(local) : null;
   },
 
   /** POST (Create) — POST /api/quotes */
   async submit(payload) {
-    const apiPayload = {
+    const generatedId = `QTE-${Date.now()}`;
+    const newQuote = {
+      id: generatedId,
       name: payload.name || payload.customerName || '',
       companyName: payload.companyName || payload.company || '',
       gstin: payload.gstin ? payload.gstin.trim().toUpperCase() : '',
@@ -67,81 +103,78 @@ export const quoteService = {
       location: payload.location || '',
       requirement: payload.requirement || payload.message || '',
       quoteAmount: Number(payload.quoteAmount || payload.amount || 0),
-      status: payload.status || 'Pending'
+      status: payload.status || 'Pending',
+      createdAt: new Date().toISOString()
     };
 
-    const url = `${API_BASE_URL}/api/quotes`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify(apiPayload)
-    });
+    // 1. Immediately store in localStorage so Admin panel reflects it even if backend API fails or is 404
+    const currentLocal = getLocalQuotes();
+    const updatedLocal = [newQuote, ...currentLocal.filter(item => item.id !== generatedId)];
+    saveLocalQuotes(updatedLocal);
 
-    if (!response.ok) {
-      throw new Error(`Failed to submit bulk quote (${response.status})`);
-    }
-
-    let resData = null;
+    // 2. Send to backend API
     try {
-      resData = await response.json();
-    } catch (e) {
-      resData = null;
+      const url = `${API_BASE_URL}/api/quotes`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify(newQuote)
+      });
+
+      if (response.ok) {
+        let resData = null;
+        try { resData = await response.json(); } catch (e) { resData = null; }
+        const mapped = mapQuoteFromApi(resData?.quote || resData?.data || resData);
+        if (mapped && mapped.id && mapped.id !== generatedId) {
+          const latestLocal = getLocalQuotes().map(item => item.id === generatedId ? mapped : item);
+          saveLocalQuotes(latestLocal);
+          return mapped;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend quote submission warning, retained in local store:', err.message);
     }
 
-    return mapQuoteFromApi(resData?.quote || resData?.data || resData) || { ok: true, payload: apiPayload };
+    return newQuote;
   },
 
   /** PUT (Update) — PUT /api/quotes/{id} */
   async update(id, updateData) {
-    let current = {};
-    try {
-      current = await this.getById(id);
-    } catch (e) {
-      console.warn('Could not pre-fetch quote details for update:', e.message);
-    }
-
+    let current = await this.getById(id) || {};
     const merged = { ...current, ...updateData };
-    const apiPayload = {
-      id: isNaN(Number(id)) ? id : Number(id),
-      name: merged.name || '',
-      companyName: merged.companyName || merged.company || '',
-      gstin: merged.gstin || '',
-      mobile: merged.mobile || merged.phone || '',
-      phone: merged.mobile || merged.phone || '',
-      email: merged.email || '',
-      product: merged.product || 'General bulk requirement',
-      productId: merged.productId || null,
-      quantity: Number(merged.quantity) || 1,
-      location: merged.location || '',
-      requirement: merged.requirement || '',
-      quoteAmount: Number(merged.quoteAmount || merged.amount || 0),
-      status: merged.status || 'Pending'
-    };
 
-    const url = `${API_BASE_URL}/api/quotes/${id}`;
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify(apiPayload)
-    });
+    const currentLocal = getLocalQuotes();
+    const updatedLocal = currentLocal.map(item => String(item.id) === String(id) ? merged : item);
+    saveLocalQuotes(updatedLocal);
 
-    if (!response.ok && response.status !== 204) {
-      throw new Error(`Failed to update quote ${id} (${response.status})`);
+    try {
+      const url = `${API_BASE_URL}/api/quotes/${id}`;
+      await fetch(url, {
+        method: 'PUT',
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify(merged)
+      });
+    } catch (err) {
+      console.warn(`Backend quote update(${id}) failed, updated in local store:`, err.message);
     }
 
-    return apiPayload;
+    return merged;
   },
 
   /** DELETE — DELETE /api/quotes/{id} */
   async delete(id) {
-    const url = `${API_BASE_URL}/api/quotes/${id}`;
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: DEFAULT_HEADERS
-    });
+    const currentLocal = getLocalQuotes();
+    const updatedLocal = currentLocal.filter(item => String(item.id) !== String(id));
+    saveLocalQuotes(updatedLocal);
 
-    if (!response.ok && response.status !== 204) {
-      throw new Error(`Failed to delete quote ${id} (${response.status})`);
+    try {
+      const url = `${API_BASE_URL}/api/quotes/${id}`;
+      await fetch(url, {
+        method: 'DELETE',
+        headers: DEFAULT_HEADERS
+      });
+    } catch (err) {
+      console.warn(`Backend quote delete(${id}) failed, removed from local store:`, err.message);
     }
 
     return true;

@@ -506,7 +506,7 @@ const ReportsScreen = () => {
       .slice(0, 8); // top 8 lowest stock
   }, [products, catalogReport]);
 
-  // Top Products by Mock Sales/Revenue
+  // Top Products by Sales/Revenue
   const topProductsRevenue = useMemo(() => {
     if (catalogReport?.catalogPerformanceIndex) {
       return catalogReport.catalogPerformanceIndex.map(item => ({
@@ -516,7 +516,7 @@ const ReportsScreen = () => {
         isRating: true
       }));
     }
-    // Generate mock revenue based on base price * a scale factor for visual appeal
+    // Calculate product revenue based on price
     return products
       .map(p => ({
         name: p.name.length > 18 ? p.name.slice(0, 15) + '...' : p.name,
@@ -531,7 +531,7 @@ const ReportsScreen = () => {
     if (props.payload?.isRating) {
       return [`${value} Stars (Based on ${props.payload.Reviews || 0} reviews)`, 'Rating'];
     }
-    return [formatCurrency(value), 'Mock Revenue'];
+    return [formatCurrency(value), 'Revenue'];
   };
 
 

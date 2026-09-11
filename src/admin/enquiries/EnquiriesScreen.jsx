@@ -43,22 +43,36 @@ export default function EnquiriesScreen() {
   });
 
   // Load enquiries from live API
-  const loadEnquiries = async () => {
-    setLoading(true);
+  const loadEnquiries = async (isBackground = false) => {
+    if (!isBackground) setLoading(true);
     setError(null);
     try {
       const data = await getEnquiries();
       setEnquiries(data);
     } catch (err) {
       console.error('Failed to load enquiries:', err);
-      setError('Could not connect to live enquiries endpoint. Please try again.');
+      if (!isBackground) setError('Could not connect to live enquiries endpoint. Please try again.');
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
     loadEnquiries();
+
+    const handleUpdate = () => loadEnquiries(true);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+    window.addEventListener('sat_enquiries_updated', handleUpdate);
+
+    const interval = setInterval(() => loadEnquiries(true), 5000);
+
+    return () => {
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+      window.removeEventListener('sat_enquiries_updated', handleUpdate);
+      clearInterval(interval);
+    };
   }, []);
 
   // Filtered Enquiries

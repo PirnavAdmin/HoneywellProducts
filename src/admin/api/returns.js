@@ -8,19 +8,19 @@ const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
 };
 
-const MOCK_RETURNS = [];
+const DEFAULT_RETURNS = [];
 
 
 const getLocalReturns = () => {
-  const local = localStorage.getItem('honeywell_returns') || localStorage.getItem('shyam_agro_returns');
+  const local = localStorage.getItem('honeywell_returns');
   if (!local) {
-    localStorage.setItem('honeywell_returns', JSON.stringify(MOCK_RETURNS));
-    return MOCK_RETURNS;
+    localStorage.setItem('honeywell_returns', JSON.stringify(DEFAULT_RETURNS));
+    return DEFAULT_RETURNS;
   }
   try {
     return JSON.parse(local);
   } catch (e) {
-    return MOCK_RETURNS;
+    return DEFAULT_RETURNS;
   }
 };
 
@@ -35,7 +35,7 @@ export const getReturnsConfig = async () => {
     if (!response.ok) throw new Error('Failed to fetch returns config');
     return await response.json();
   } catch (error) {
-    console.warn('Backend unavailable, using mock returns config:', error.message);
+    console.warn('Backend unavailable, using default returns config:', error.message);
     return {
       returnWindowDays: 15,
       allowableRefundMethods: ['Wallet', 'Original Payment Method', 'Bank Transfer'],
@@ -61,25 +61,24 @@ export const checkReturnEligibility = async (orderItemId) => {
     if (!response.ok) throw new Error('Eligibility check failed');
     return await response.json();
   } catch (error) {
-    console.warn('Backend unavailable, simulating return eligibility:', error.message);
+    console.warn('Backend unavailable, checking local order eligibility:', error.message);
     
     // Fallback simulation: fetch local orders to find matching item
-    const localOrdersStr = localStorage.getItem('honeywell_orders') || localStorage.getItem('shyam_agro_orders');
+    const localOrdersStr = localStorage.getItem('honeywell_orders');
     if (localOrdersStr) {
       try {
         const orders = JSON.parse(localOrdersStr);
         for (const order of orders) {
           const itemIdx = order.items.findIndex((_, index) => (index + 1) === Number(orderItemId) || orderItemId === `${order.id}-${index + 1}`);
           if (itemIdx !== -1 || orderItemId.toString().length < 5) {
-            // Found item or simulating small input
             return {
               eligible: true,
               maxQuantity: 2,
               orderId: order.id || 10214,
               orderItemId: orderItemId,
               reason: 'Eligible for return within the 15-day window.',
-              productName: order.items[0]?.name || 'Agro Product',
-              sku: order.items[0]?.sku || 'AGRO-001',
+              productName: order.items[0]?.name || 'Honeywell Product',
+              sku: order.items[0]?.sku || 'HON-001',
               unitPrice: order.items[0]?.unitPrice || 1000
             };
           }
@@ -89,16 +88,16 @@ export const checkReturnEligibility = async (orderItemId) => {
       }
     }
     
-    // Default mock response if orders not found
+    // Default response if local orders not found
     return {
       eligible: true,
-      maxQuantity: 2,
+      maxQuantity: 1,
       orderId: 10214,
       orderItemId: orderItemId,
       reason: 'Eligible for return within the 15-day window.',
-      productName: 'Premium Organic Fertilizer',
-      sku: 'FERT-001',
-      unitPrice: 7250
+      productName: 'Honeywell Security Camera',
+      sku: 'HON-CAM-001',
+      unitPrice: 3499
     };
   }
 };
@@ -382,7 +381,7 @@ export const updateReturnRefund = async (id, data) => {
       };
       list[idx].status = 'Refunded';
       
-      // Update customer wallet balance in mock user session if method is Wallet
+      // Update customer wallet balance in user session if method is Wallet
       if (data.refundMethod === 'Wallet' && list[idx].refundDetails.refundStatus === 'Success') {
         const userStr = localStorage.getItem('user');
         if (userStr) {

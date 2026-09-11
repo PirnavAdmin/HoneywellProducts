@@ -399,7 +399,7 @@ function AddStaff() {
       mobileNumber: formData.mobile.trim(),
       phone: formData.mobile.trim(),
       role: formData.role,
-      password: formData.password || "DummyPassword123!",
+      password: formData.password || "StaffPass@2026!",
       isActive: true
     };
 
@@ -411,7 +411,7 @@ function AddStaff() {
         await updateStaff(staffId, {
           ...apiStaffPayload,
           staffId: parseInt(staffId, 10),
-          password: formData.password || existingStaffRecord?.password || existingStaffRecord?.Password || "DummyPassword123!",
+          password: formData.password || existingStaffRecord?.password || existingStaffRecord?.Password || "StaffPass@2026!",
           isActive: activeStatus
         });
         targetId = staffId;

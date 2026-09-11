@@ -23,7 +23,6 @@ export const mapSolutionFromApi = (raw = {}) => {
 };
 
 export const solutionService = {
-  // 1. GET (All)
   async getAll() {
     try {
       const response = await fetch(`${API_BASE_URL}/api/solutions`, {
@@ -35,7 +34,7 @@ export const solutionService = {
         if (list.length > 0) return list.map(mapSolutionFromApi);
       }
     } catch (e) {
-      // Quiet fallback if server endpoint is unavailable
+      // Fallthrough to local applications data
     }
 
     return applications.map(a => ({

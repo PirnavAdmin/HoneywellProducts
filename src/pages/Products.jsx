@@ -7,6 +7,114 @@ import { productService } from '../services/productService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import productsHeroImage from '../assets/images/products-hero.png';
 
+const normalizeCategory = (str) => {
+  if (!str) return '';
+  return String(str).toLowerCase().replace(/[^a-z0-9]/g, '');
+};
+
+const formatCategoryName = (cat) => {
+  if (!cat) return '';
+  const catLower = String(cat).toLowerCase();
+  const map = {
+    'cctv-cameras': 'CCTV Cameras',
+    'bullet-cameras': 'Bullet Cameras',
+    'dome-cameras': 'Dome Cameras',
+    'ip-cameras': 'IP Cameras',
+    'ptz-cameras': 'PTZ Cameras',
+    'wifi-cameras': 'Wi-Fi Cameras',
+    '4g-cameras': '4G Cameras',
+    'solar-cameras': 'Solar Cameras',
+    'solar-panels': 'Solar Panels',
+    'solar-inverters': 'Solar Inverters',
+    'solar-batteries': 'Solar Batteries',
+    'solar-controllers': 'Solar Charge Controllers',
+    'nvr': 'NVR',
+    'dvr': 'DVR',
+    'surveillance-storage': 'Surveillance Storage',
+    'networking': 'Networking',
+    'cctv-accessories': 'CCTV Accessories',
+    'security-products': 'Security Products',
+    'accessories': 'Accessories',
+  };
+  if (map[catLower]) return map[catLower];
+  if (String(cat).includes('-')) {
+    return String(cat).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+  return String(cat);
+};
+
+const checkCategoryMatch = (product, filterCategoryName, categoriesList = []) => {
+  if (!filterCategoryName) return true;
+
+  const targetNorm = normalizeCategory(filterCategoryName);
+  const prodCatNorm = normalizeCategory(product.category);
+  const prodCatIdNorm = normalizeCategory(product.categoryId);
+  const prodTypeNorm = normalizeCategory(product.productType);
+  const prodNameNorm = normalizeCategory(product.name);
+
+  // 1. CCTV Cameras & Camera Family Match (cctv-cameras, CCTV Cameras, cctv, cameras)
+  if (['cctvcameras', 'cctv', 'cctvcamera', 'cameras', 'surveillancecameras', 'securitycameras'].includes(targetNorm)) {
+    const cameraCatSlugs = [
+      'cctvcameras',
+      'bulletcameras',
+      'domecameras',
+      'ipcameras',
+      'ptzcameras',
+      'wificameras',
+      '4gcameras',
+      'solarcameras',
+      'cameras',
+      'analogcameras'
+    ];
+    if (cameraCatSlugs.includes(prodCatNorm) || cameraCatSlugs.includes(prodCatIdNorm)) return true;
+    if (prodTypeNorm.includes('camera') || prodTypeNorm.includes('cctv')) return true;
+    if (prodNameNorm.includes('camera') || prodNameNorm.includes('cctv')) return true;
+    return false;
+  }
+
+  // 2. Solar Panels family match
+  if (['solarpanels', 'solarpanel', 'solarpanelmodule'].includes(targetNorm)) {
+    if (prodCatNorm === 'solarpanels' || prodCatIdNorm === 'solarpanels') return true;
+    if (prodTypeNorm.includes('solarpanel') || prodNameNorm.includes('solarpanel')) return true;
+  }
+
+  // 3. Security Products family match
+  if (['securityproducts', 'securityequipment', 'securitysystems'].includes(targetNorm)) {
+    const secSlugs = ['nvr', 'dvr', 'surveillance-storage', 'surveillancestorage', 'surveillance', 'security'];
+    if (secSlugs.some(s => prodCatNorm.includes(s) || prodCatIdNorm.includes(s))) return true;
+    if (prodTypeNorm.includes('nvr') || prodTypeNorm.includes('dvr') || prodTypeNorm.includes('storage') || prodTypeNorm.includes('security')) return true;
+  }
+
+  // 4. Accessories family match
+  if (['accessories', 'cctvaccessories', 'cctvaccessoriesmounting'].includes(targetNorm)) {
+    if (prodCatNorm.includes('accessori') || prodCatIdNorm.includes('accessori') || prodCatNorm.includes('network') || prodCatIdNorm.includes('network')) return true;
+    if (prodTypeNorm.includes('accessori') || prodTypeNorm.includes('network') || prodTypeNorm.includes('switch')) return true;
+  }
+
+  // 5. Direct Normalized Match
+  if (prodCatNorm && prodCatNorm === targetNorm) return true;
+  if (prodCatIdNorm && prodCatIdNorm === targetNorm) return true;
+
+  // 6. Check categoriesList objects
+  const catObj = categoriesList.find((c) => {
+    const cIdNorm = normalizeCategory(c.id);
+    const cSlugNorm = normalizeCategory(c.slug);
+    const cNameNorm = normalizeCategory(c.name);
+    return cIdNorm === targetNorm || cSlugNorm === targetNorm || cNameNorm === targetNorm;
+  });
+
+  if (catObj) {
+    if (String(product.categoryId) === String(catObj.id)) return true;
+    if (normalizeCategory(product.category) === normalizeCategory(catObj.name)) return true;
+    if (normalizeCategory(product.category) === normalizeCategory(catObj.slug)) return true;
+  }
+
+  // Substring fallback
+  if (prodCatNorm && (prodCatNorm.includes(targetNorm) || targetNorm.includes(prodCatNorm))) return true;
+
+  return false;
+};
+
 export default function Products() {
   useDocumentTitle('Products', 'Explore professional surveillance, recording, networking and security product categories.');
   const [params] = useSearchParams();
@@ -50,10 +158,10 @@ export default function Products() {
     const match = categoriesList.find(
       (c) =>
         String(c.id) === String(categoryParam) ||
-        (c.slug && c.slug.toLowerCase() === categoryParam.toLowerCase()) ||
-        (c.name && c.name.toLowerCase() === categoryParam.toLowerCase())
+        normalizeCategory(c.slug) === normalizeCategory(categoryParam) ||
+        normalizeCategory(c.name) === normalizeCategory(categoryParam)
     );
-    const catName = match ? match.name : categoryParam;
+    const catName = match ? match.name : formatCategoryName(categoryParam);
     setFilters((current) => ({ ...current, category: [catName], subcategory: [] }));
   }, [params, categoriesList]);
 
@@ -66,7 +174,7 @@ export default function Products() {
   // 1. Dynamic Categories from API + real products
   const dynamicCategoryList = useMemo(() => {
     const apiCatNames = categoriesList.map((c) => c.name).filter(Boolean);
-    const prodCatNames = productsList.map((p) => p.category).filter(Boolean);
+    const prodCatNames = productsList.map((p) => formatCategoryName(p.category)).filter(Boolean);
     const combined = [...new Set([...apiCatNames, ...prodCatNames])];
     return combined.sort((a, b) => a.localeCompare(b));
   }, [categoriesList, productsList]);
@@ -76,12 +184,7 @@ export default function Products() {
     let sourceProducts = productsList;
     if (filters.category.length > 0) {
       sourceProducts = productsList.filter((product) =>
-        filters.category.some((catName) => {
-          if (product.category && product.category.toLowerCase() === catName.toLowerCase()) return true;
-          const catObj = categoriesList.find((c) => c.name.toLowerCase() === catName.toLowerCase());
-          if (catObj && String(product.categoryId) === String(catObj.id)) return true;
-          return String(product.categoryId) === String(catName);
-        })
+        filters.category.some((catName) => checkCategoryMatch(product, catName, categoriesList))
       );
     }
     const subcats = sourceProducts.map((p) => p.productType).filter(Boolean);
@@ -172,12 +275,9 @@ export default function Products() {
         ...(product.keyFeatures || []),
       ].filter(Boolean).join(' ').toLowerCase();
 
-      const categoryMatch = !filters.category.length || filters.category.some((name) => {
-        if (product.category && product.category.toLowerCase() === name.toLowerCase()) return true;
-        const catObj = categoriesList.find((c) => c.name.toLowerCase() === name.toLowerCase());
-        if (catObj && String(product.categoryId) === String(catObj.id)) return true;
-        return String(product.categoryId) === String(name);
-      });
+      const categoryMatch = !filters.category.length || filters.category.some((name) =>
+        checkCategoryMatch(product, name, categoriesList)
+      );
 
       const subcategoryMatch = !filters.subcategory.length || filters.subcategory.some((subName) => {
         if (product.productType && product.productType.toLowerCase() === subName.toLowerCase()) return true;

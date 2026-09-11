@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
 import heroPosterImage from '../../assets/images/cctv-hero-poster.jpg';
 
-const API_BASE = `${getApiDomain()}/api/marketing/banners`;
+const API_BASE = `${getApiDomain()}/api/Banners`;
 
 const getHeaders = () => {
   const token = localStorage.getItem('adminToken');
@@ -42,24 +42,33 @@ export const mapBannerFromApi = (item) => {
 };
 
 /**
- * GET /api/marketing/banners
+ * GET /api/Banners/admin
  * Fetch all banners for admin panel
  */
 export const fetchAdminBanners = async () => {
   try {
-    const response = await api.get('', { headers: getHeaders() });
+    const response = await api.get('/admin', { headers: getHeaders() });
     if (response.status === 200) {
       const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
       return list.map(mapBannerFromApi).filter(Boolean);
     }
   } catch (err) {
-    // Quiet fallback
+    // Fallback to GET /api/Banners
+    try {
+      const response = await api.get('', { headers: getHeaders() });
+      if (response.status === 200) {
+        const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
+        return list.map(mapBannerFromApi).filter(Boolean);
+      }
+    } catch (e) {
+      console.warn('Fetch Admin Banners Error:', e.message);
+    }
   }
   return [];
 };
 
 /**
- * GET /api/marketing/banners
+ * GET /api/Banners
  * Fetch active banners for public frontend
  */
 export const fetchActiveBanners = async (type = '') => {
@@ -70,13 +79,13 @@ export const fetchActiveBanners = async (type = '') => {
       return list.map(mapBannerFromApi).filter(Boolean);
     }
   } catch (err) {
-    // Quiet fallback
+    console.warn('Fetch Active Banners Error:', err.message);
   }
   return [];
 };
 
 /**
- * GET /api/marketing/banners/{id}
+ * GET /api/Banners/{id}
  * Fetch single banner by ID
  */
 export const fetchBannerById = async (id) => {
@@ -86,13 +95,13 @@ export const fetchBannerById = async (id) => {
       return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
     }
   } catch (err) {
-    // Quiet fallback
+    console.warn(`Fetch Banner By ID ${id} Error:`, err.message);
   }
   return null;
 };
 
 /**
- * POST /api/marketing/banners
+ * POST /api/Banners
  * Create a new banner
  */
 export const createBanner = async (bannerData) => {
@@ -110,7 +119,7 @@ export const createBanner = async (bannerData) => {
 };
 
 /**
- * PUT /api/marketing/banners/{id}
+ * PUT /api/Banners/{id}
  * Update banner
  */
 export const updateBanner = async (id, bannerData) => {
@@ -129,33 +138,44 @@ export const updateBanner = async (id, bannerData) => {
 };
 
 /**
+ * PUT /api/Banners/{id}/toggle
  * Toggle active status
  */
 export const toggleBannerActive = async (id, currentActiveState) => {
+  try {
+    const response = await api.put(`/${id}/toggle`, {}, { headers: getHeaders() });
+    if (response.status === 200) {
+      return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+    }
+  } catch (err) {
+    console.warn(`Toggle banner ${id} error:`, err.message);
+  }
   return await updateBanner(id, { isActive: !currentActiveState });
 };
 
 /**
+ * POST /api/Banners/upload-image
  * Upload banner image helper
  */
 export const uploadBannerImage = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
   try {
-    const response = await axios.post(`${getApiDomain()}/api/upload/image`, formData, {
+    const response = await axios.post(`${API_BASE}/upload-image`, formData, {
       headers: {
         'ngrok-skip-browser-warning': 'true',
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data?.url || response.data?.imageUrl || '';
-  } catch {
+    return response.data?.url || response.data?.imageUrl || response.data?.path || '';
+  } catch (err) {
+    console.warn('Upload banner image error:', err.message);
     return URL.createObjectURL(file);
   }
 };
 
 /**
- * DELETE /api/marketing/banners/{id}
+ * DELETE /api/Banners/{id}
  * Delete banner
  */
 export const deleteBanner = async (id) => {

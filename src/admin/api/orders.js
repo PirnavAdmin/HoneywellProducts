@@ -46,8 +46,11 @@ export const updateOrderPaymentStatus = async (id, paymentStatus, paidAmount) =>
     headers: DEFAULT_HEADERS,
     body: JSON.stringify({ paymentStatus, paidAmount }),
   });
-  if (!response.ok) return { success: true };
-  return { success: true };
+  if (!response.ok && response.status !== 204) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Failed to update order payment status (${response.status}): ${errorText}`);
+  }
+  return { success: true, id, paymentStatus, paidAmount };
 };
 
 /** Tracking endpoints */
@@ -77,8 +80,11 @@ export const postOrderTracking = async (id, trackingData) => {
     headers: DEFAULT_HEADERS,
     body: JSON.stringify(trackingData),
   });
-  if (!response.ok) return { success: true };
-  return await response.json();
+  if (!response.ok && response.status !== 204) {
+    const errorText = await response.text().catch(() => '');
+    throw new Error(`Failed to save tracking info for order ${id} (${response.status}): ${errorText}`);
+  }
+  return await response.json().catch(() => ({ success: true }));
 };
 
 /** Shipping endpoints */

@@ -12,7 +12,9 @@ import {
   getQrCode,
   getQrByOrderId,
   getQrCodeByOrderId,
-  submitManualVerification
+  submitManualVerification,
+  createRazorpayOrder,
+  verifyRazorpayPayment
 } from '../services/paymentService';
 
 import { couponService } from '../services/couponService';
@@ -50,9 +52,10 @@ export default function Checkout() {
   const [state, setState] = useState('');
   const [pinCode, setPinCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [activeTransactionId, setActiveTransactionId] = useState('');
 
   // Payment Selection
-  const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' | 'Card' | 'Net Banking' | 'QR' | 'Manual Payment' | 'Cash on Delivery'
+  const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' | 'Card' | 'Net Banking' | 'QR' | 'Manual Payment' | 'Cash on Delivery' | 'Razorpay Online Gateway'
   
   // Specific Payment Inputs
   const [upiId, setUpiId] = useState('');
@@ -133,6 +136,99 @@ export default function Checkout() {
     setPaymentMessage({ type: 'info', text: 'Processing payment request...' });
 
     try {
+      // 0. RAZORPAY / ONLINE GATEWAY FLOW
+      if (paymentMethod === 'Razorpay Gateway' || paymentMethod === 'Online Gateway') {
+        const finalAmount = Math.max(0, total - discountAmount);
+        const razorRes = await createRazorpayOrder(finalAmount, 'INR', currentOrderId);
+
+        if (!razorRes || razorRes.success === false) {
+          setPaymentMessage({ type: 'error', text: razorRes?.message || 'Could not initialize Razorpay online gateway.' });
+          setSubmitting(false);
+          return;
+        }
+
+        const razorpayOrderId = razorRes.razorpayOrderId || razorRes.orderId || razorRes.id;
+        const razorpayKey = razorRes.keyId || razorRes.key || 'rzp_test_honeywell';
+
+        const loadScript = () => new Promise((resolve) => {
+          if (window.Razorpay) return resolve(true);
+          const script = document.createElement('script');
+          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
+
+        const loaded = await loadScript();
+        if (!loaded) {
+          setPaymentMessage({ type: 'error', text: 'Razorpay SDK failed to load. Please check internet connection.' });
+          setSubmitting(false);
+          return;
+        }
+
+        const options = {
+          key: razorpayKey,
+          amount: finalAmount * 100,
+          currency: 'INR',
+          name: 'Honeywell Products',
+          description: `Order #${currentOrderId}`,
+          order_id: razorpayOrderId,
+          prefill: {
+            name: customerName,
+            email: email,
+            contact: mobile,
+          },
+          handler: async (response) => {
+            setPaymentMessage({ type: 'info', text: 'Verifying payment signature...' });
+            const verifyRes = await verifyRazorpayPayment({
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+              orderId: currentOrderId
+            });
+
+            if (verifyRes && verifyRes.success !== false) {
+              try {
+                await orderService.create({
+                  orderNumber: currentOrderId,
+                  customerName,
+                  email,
+                  mobile,
+                  address,
+                  city,
+                  state,
+                  pinCode,
+                  totalAmount: finalAmount,
+                  paymentMethod: 'Razorpay Online Gateway',
+                  paymentStatus: 'Paid',
+                  status: 'Processing',
+                  items
+                });
+              } catch (e) {}
+
+              setPaymentMessage({ type: 'success', text: 'Razorpay payment verified & order placed!' });
+              setTimeout(() => {
+                clearCart();
+                navigate('/order-success', { state: { reference: currentOrderId, status: 'Paid' } });
+              }, 1200);
+            } else {
+              setPaymentMessage({ type: 'error', text: verifyRes?.message || 'Razorpay payment verification failed.' });
+              setSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setPaymentMessage({ type: 'error', text: 'Payment cancelled by user.' });
+              setSubmitting(false);
+            }
+          }
+        };
+
+        const rzp = new window.Razorpay(options);
+        rzp.open();
+        return;
+      }
+
       // 1. MANUAL VERIFICATION FLOW
       if (paymentMethod === 'Manual Payment') {
         const amt = Number(manualAmount || total);
@@ -358,7 +454,7 @@ export default function Checkout() {
               <div className="field full" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
                 <p className="eyebrow dark" style={{ marginBottom: '8px' }}>PAYMENT METHOD</p>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '16px' }}>
-                  {['UPI', 'Card', 'Net Banking', 'QR', 'Manual Payment', 'Cash on Delivery'].map((method) => (
+                  {['UPI', 'Card', 'Net Banking', 'QR', 'Razorpay Gateway', 'Manual Payment', 'Cash on Delivery'].map((method) => (
                     <button
                       key={method}
                       type="button"
@@ -415,6 +511,13 @@ export default function Checkout() {
                       <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>CVV *</label>
                       <input required type="password" maxLength="4" value={cvv} onChange={(e) => setCvv(e.target.value)} placeholder="•••" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
                     </div>
+                  </div>
+                )}
+
+                {paymentMethod === 'Razorpay Gateway' && (
+                  <div style={{ background: '#eff6ff', padding: '14px', borderRadius: '8px', border: '1px solid #93c5fd', color: '#1e40af', fontSize: '13px', fontWeight: '600' }}>
+                    <ShieldCheck size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
+                    Pay securely using Razorpay (Credit/Debit Card, Netbanking, UPI, Wallets).
                   </div>
                 )}
 

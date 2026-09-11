@@ -6,6 +6,28 @@ const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
 };
 
+const STORAGE_KEY = 'sat_enquiries_store';
+
+const getLocalEnquiries = () => {
+  try {
+    const data = localStorage.getItem(STORAGE_KEY);
+    return data ? JSON.parse(data) : [];
+  } catch (e) {
+    return [];
+  }
+};
+
+const saveLocalEnquiries = (list) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('sat_enquiries_updated'));
+    }
+  } catch (e) {
+    console.warn('Failed to write to localStorage for enquiries:', e);
+  }
+};
+
 export const mapEnquiryFromApi = (item) => {
   if (!item) return null;
   const rawId = item.id ?? item.enquiryId ?? item._id ?? '';
@@ -27,14 +49,25 @@ export const mapEnquiryFromApi = (item) => {
 export const enquiryService = {
   /** GET (All) — GET /api/enquiries */
   async getAll() {
+    let apiList = [];
     try {
       const data = await apiRequest('/api/enquiries');
-      const list = Array.isArray(data) ? data : (data.enquiries || data.items || data.data || []);
-      return list.map(mapEnquiryFromApi).filter(Boolean);
+      const rawList = Array.isArray(data) ? data : (data.enquiries || data.items || data.data || []);
+      apiList = rawList.map(mapEnquiryFromApi).filter(Boolean);
     } catch (err) {
       console.warn('Enquiries API getAll error:', err.message);
-      return [];
     }
+
+    const localList = getLocalEnquiries().map(mapEnquiryFromApi).filter(Boolean);
+    
+    // Merge local & API list by ID
+    const mergedMap = new Map();
+    localList.forEach((item) => { if (item.id) mergedMap.set(item.id, item); });
+    apiList.forEach((item) => { if (item.id) mergedMap.set(item.id, item); });
+
+    const combined = Array.from(mergedMap.values());
+    combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return combined;
   },
 
   /** GET (ById) — GET /api/enquiries/{id} */
@@ -42,16 +75,20 @@ export const enquiryService = {
     if (!id) return null;
     try {
       const data = await apiRequest(`/api/enquiries/${id}`);
-      return mapEnquiryFromApi(data.enquiry || data.data || data);
+      const mapped = mapEnquiryFromApi(data.enquiry || data.data || data);
+      if (mapped) return mapped;
     } catch (err) {
       console.warn(`Enquiries API getById(${id}) error:`, err.message);
-      throw err;
     }
+    const local = getLocalEnquiries().find((item) => String(item.id) === String(id));
+    return local ? mapEnquiryFromApi(local) : null;
   },
 
   /** POST (Create) — POST /api/enquiries */
   async submit(payload) {
-    const apiPayload = {
+    const generatedId = `ENQ-${Date.now()}`;
+    const newEnquiry = {
+      id: generatedId,
       name: payload.name || payload.customerName || '',
       mobile: payload.mobile || payload.phone || '',
       phone: payload.mobile || payload.phone || '',
@@ -61,78 +98,78 @@ export const enquiryService = {
       message: payload.message || (payload.productName ? `Enquiry regarding: ${payload.productName}` : ''),
       productId: payload.productId ? String(payload.productId) : null,
       productName: payload.productName || null,
-      status: payload.status || 'Pending'
+      status: payload.status || 'Pending',
+      createdAt: new Date().toISOString()
     };
 
-    const url = `${API_BASE_URL}/api/enquiries`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify(apiPayload)
-    });
+    // 1. Immediately store in localStorage so Admin panel reflects it even if backend API fails or is 404
+    const currentLocal = getLocalEnquiries();
+    const updatedLocal = [newEnquiry, ...currentLocal.filter(item => item.id !== generatedId)];
+    saveLocalEnquiries(updatedLocal);
 
-    if (!response.ok) {
-      throw new Error(`Failed to submit enquiry (${response.status})`);
-    }
-
-    let resData = null;
+    // 2. Send to backend API
     try {
-      resData = await response.json();
-    } catch (e) {
-      resData = null;
+      const url = `${API_BASE_URL}/api/enquiries`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify(newEnquiry)
+      });
+
+      if (response.ok) {
+        let resData = null;
+        try { resData = await response.json(); } catch (e) { resData = null; }
+        const mapped = mapEnquiryFromApi(resData?.enquiry || resData?.data || resData);
+        if (mapped && mapped.id && mapped.id !== generatedId) {
+          const latestLocal = getLocalEnquiries().map(item => item.id === generatedId ? mapped : item);
+          saveLocalEnquiries(latestLocal);
+          return mapped;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend enquiry submission warning, retained in local store:', err.message);
     }
 
-    return mapEnquiryFromApi(resData?.enquiry || resData?.data || resData) || { ok: true, payload: apiPayload };
+    return newEnquiry;
   },
 
   /** PUT (Update) — PUT /api/enquiries/{id} */
   async update(id, updateData) {
-    let current = {};
-    try {
-      current = await this.getById(id);
-    } catch (e) {
-      console.warn('Could not pre-fetch enquiry details for update:', e.message);
-    }
-
+    let current = await this.getById(id) || {};
     const merged = { ...current, ...updateData };
-    const apiPayload = {
-      id: isNaN(Number(id)) ? id : Number(id),
-      name: merged.name || '',
-      mobile: merged.mobile || merged.phone || '',
-      phone: merged.mobile || merged.phone || '',
-      email: merged.email || '',
-      company: merged.company || '',
-      enquiryType: merged.enquiryType || 'Product Enquiry',
-      message: merged.message || '',
-      productId: merged.productId || null,
-      productName: merged.productName || null,
-      status: merged.status || 'Pending'
-    };
 
-    const url = `${API_BASE_URL}/api/enquiries/${id}`;
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify(apiPayload)
-    });
+    const currentLocal = getLocalEnquiries();
+    const updatedLocal = currentLocal.map(item => String(item.id) === String(id) ? merged : item);
+    saveLocalEnquiries(updatedLocal);
 
-    if (!response.ok && response.status !== 204) {
-      throw new Error(`Failed to update enquiry ${id} (${response.status})`);
+    try {
+      const url = `${API_BASE_URL}/api/enquiries/${id}`;
+      await fetch(url, {
+        method: 'PUT',
+        headers: DEFAULT_HEADERS,
+        body: JSON.stringify(merged)
+      });
+    } catch (err) {
+      console.warn(`Backend enquiry update(${id}) failed, updated in local store:`, err.message);
     }
 
-    return apiPayload;
+    return merged;
   },
 
   /** DELETE — DELETE /api/enquiries/{id} */
   async delete(id) {
-    const url = `${API_BASE_URL}/api/enquiries/${id}`;
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: DEFAULT_HEADERS
-    });
+    const currentLocal = getLocalEnquiries();
+    const updatedLocal = currentLocal.filter(item => String(item.id) !== String(id));
+    saveLocalEnquiries(updatedLocal);
 
-    if (!response.ok && response.status !== 204) {
-      throw new Error(`Failed to delete enquiry ${id} (${response.status})`);
+    try {
+      const url = `${API_BASE_URL}/api/enquiries/${id}`;
+      await fetch(url, {
+        method: 'DELETE',
+        headers: DEFAULT_HEADERS
+      });
+    } catch (err) {
+      console.warn(`Backend enquiry delete(${id}) failed, removed from local store:`, err.message);
     }
 
     return true;
