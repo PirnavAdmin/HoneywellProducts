@@ -95,35 +95,58 @@ export const orderService = {
 
   /** POST (Create) — POST /api/orders */
   async create(payload) {
+    const activeCustomerId = payload.customerId || Number(localStorage.getItem('customerId') || 0);
     const apiPayload = {
       orderNumber: payload.orderNumber || `ORD-${Date.now()}`,
+      customerId: activeCustomerId ? Number(activeCustomerId) : undefined,
       customerName: payload.customerName || payload.name || 'Customer',
       email: payload.email || '',
       mobile: payload.mobile || payload.phone || '',
-      shippingAddress: payload.address || payload.shippingAddress || '',
+      shippingAddress: [payload.address || payload.shippingAddress, payload.city, payload.state, payload.pinCode].filter(Boolean).join(', ') || payload.address || '',
       city: payload.city || '',
       state: payload.state || '',
       pinCode: payload.pinCode || payload.pincode || '',
       totalAmount: Number(payload.totalAmount || payload.total || 0),
-      paymentMethod: payload.paymentMethod || 'UPI',
+      finalAmount: Number(payload.totalAmount || payload.total || 0),
+      paymentMethod: payload.paymentMethod || 'Cash on Delivery',
       paymentStatus: payload.paymentStatus || 'Pending',
-      status: payload.status || 'Pending',
+      status: payload.status || 'Processing',
       items: Array.isArray(payload.items) ? payload.items.map(item => ({
-        productId: isNaN(Number(item.id || item.productId)) ? (item.id || item.productId) : Number(item.id || item.productId),
-        name: item.name || 'Honeywell Product',
+        productId: isNaN(Number(item.id || item.productId)) ? 1 : Number(item.id || item.productId),
+        productName: item.name || item.productName || 'Honeywell Product',
+        name: item.name || item.productName || 'Honeywell Product',
         quantity: Number(item.quantity || 1),
-        price: Number(item.price || 0)
+        price: Number(item.price || 0),
+        subtotal: Number(item.price || 0) * Number(item.quantity || 1)
       })) : []
     };
 
     const url = `${API_BASE_URL}/api/orders`;
-    const response = await fetch(url, {
+    let response = await fetch(url, {
       method: 'POST',
       headers: DEFAULT_HEADERS,
       body: JSON.stringify(apiPayload)
     });
 
     if (!response.ok) {
+      // Fallback: try Checkout/place-order endpoint
+      try {
+        const checkoutUrl = `${API_BASE_URL}/api/Checkout/place-order`;
+        const checkoutRes = await fetch(checkoutUrl, {
+          method: 'POST',
+          headers: DEFAULT_HEADERS,
+          body: JSON.stringify({
+            paymentMethod: apiPayload.paymentMethod,
+            paymentStatus: apiPayload.paymentStatus,
+            transactionId: apiPayload.orderNumber
+          })
+        });
+        if (checkoutRes.ok) {
+          const cData = await checkoutRes.json();
+          return mapOrderFromApi(cData) || apiPayload;
+        }
+      } catch (e) {}
+
       throw new Error(`Failed to create order (${response.status})`);
     }
 
@@ -134,7 +157,16 @@ export const orderService = {
       resData = null;
     }
 
-    return mapOrderFromApi(resData?.order || resData?.data || resData) || apiPayload;
+    const createdOrder = mapOrderFromApi(resData?.order || resData?.data || resData) || apiPayload;
+
+    // Cache order locally so it instantly reflects in My Orders
+    try {
+      const existing = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
+      const updated = [createdOrder, ...existing.filter(o => o.orderNumber !== createdOrder.orderNumber)];
+      localStorage.setItem('my_recent_orders', JSON.stringify(updated));
+    } catch (e) {}
+
+    return createdOrder;
   },
 
   /** PUT (Status) — PUT /api/orders/{id}/status */
