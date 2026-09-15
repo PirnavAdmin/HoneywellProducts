@@ -3,7 +3,6 @@ import {
   User, Mail, Lock, Eye, EyeOff, ShieldCheck, Sun, 
   ArrowRight, AlertCircle, CheckCircle2, Info, X 
 } from 'lucide-react';
-import brandLogo from '../../../public/honeywell-products-logo.png';
 import { useAuth } from '../../context/AuthContext';
 import { forgotPassword as forgotPasswordApi } from '../../services/customerApi';
 
@@ -255,7 +254,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
           {/* Right Form Container */}
           <div className="auth-right-container">
             <div className="auth-brand-logo-wrap">
-              <img src={brandLogo} alt="Honeywell Logo" className="auth-brand-logo" />
+              <img src="/honeywell-products-logo.png" alt="Honeywell Logo" className="auth-brand-logo" />
             </div>
 
             <div className="auth-form-header">

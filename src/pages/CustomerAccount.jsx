@@ -6,7 +6,6 @@ import {
   MapPin, Landmark, Camera, Trash2, Building, CreditCard
 } from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
-import brandLogo from '../../public/honeywell-products-logo.png';
 import { useAuth } from '../context/AuthContext';
 import { 
   getProfile, updateProfile, 
@@ -1429,7 +1428,7 @@ export default function CustomerAccount() {
               {/* Right Form Container */}
               <div className="auth-right-container">
                 <div className="auth-brand-logo-wrap">
-                  <img src={brandLogo} alt="Honeywell Logo" className="auth-brand-logo" />
+                  <img src="/honeywell-products-logo.png" alt="Honeywell Logo" className="auth-brand-logo" />
                 </div>
 
                 <div className="auth-form-header">

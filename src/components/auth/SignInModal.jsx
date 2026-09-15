@@ -4,7 +4,6 @@ import {
   ArrowRight, AlertCircle, CheckCircle2, Info, X 
 } from 'lucide-react';
 import './SignInModal.css';
-import brandLogo from '../../../public/honeywell-products-logo.png';
 import { useAuth } from '../../context/AuthContext';
 import { forgotPassword as forgotPasswordApi } from '../../services/customerApi';
 
@@ -272,7 +271,7 @@ export default function SignInModal({ isOpen, onClose, initialMode = 'login', on
         {/* Right Side: Clean White Sign-In Panel */}
         <div className="signin-right-panel">
           <div className="signin-logo-wrap">
-            <img src={brandLogo} alt="Honeywell Logo" className="signin-logo" />
+            <img src="/honeywell-products-logo.png" alt="Honeywell Logo" className="signin-logo" />
           </div>
 
           <div className="signin-form-header">
