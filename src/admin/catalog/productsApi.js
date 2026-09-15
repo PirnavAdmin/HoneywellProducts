@@ -3,6 +3,8 @@ import { getApiDomain } from '../../utils/apiConfig';
 import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore, defaultProducts } from './catalogStore';
 import { products as demoProducts } from '../../data/products';
 import { categories as demoCategories } from '../../data/categories';
+import { apiCache } from '../../utils/apiCache';
+
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const BASE_URL = getApiDomain();
@@ -224,7 +226,7 @@ export const mapProductFromApi = (
   const numericPrice = Number(raw.sellingPrice ?? raw.price ?? raw.mrp ?? raw.MRP ?? 0);
   const numericMrp = Number(raw.mrp ?? raw.MRP ?? raw.Mrp ?? numericPrice);
   const priceLabel = `₹${numericPrice.toLocaleString('en-IN')}`;
-  const priceNote = numericMrp > numericPrice ? `MRP ₹${numericMrp.toLocaleString('en-IN')}` : 'Incl. taxes';
+  const priceNote = numericMrp > numericPrice ? `MRP ₹${numericMrp.toLocaleString('en-IN')}` : '';
 
   // ── Specifications Resolution (Array / Object / String / DTO fields) ──────
   let rawSpecs = raw.specifications ?? raw.specificationsObj ?? raw.Specifications ?? {};
@@ -401,33 +403,38 @@ export const mapProductFromApi = (
 // GET /api/Category
 
 export const fetchCategories = async () => {
-  try {
-    const response = await api.get('/api/Category');
-    const apiCategories = unwrapList(response).map(mapCategoryFromApi);
-    if (apiCategories && apiCategories.length > 0) {
-      return apiCategories;
+  return await apiCache.fetchWithCache('categories_all', async () => {
+    try {
+      const response = await api.get('/api/Category');
+      const apiCategories = unwrapList(response).map(mapCategoryFromApi);
+      if (apiCategories && apiCategories.length > 0) {
+        return apiCategories;
+      }
+    } catch (err) {
+      console.warn('Backend categories fetch failed, using fallback:', err.message);
     }
-  } catch (err) {
-    console.warn('Backend categories fetch failed, using fallback:', err.message);
-  }
 
-  const mergedMap = new Map();
-  if (Array.isArray(demoCategories)) {
-    demoCategories.forEach((c) => {
-      const key = String(c.slug || c.id || c.name);
-      mergedMap.set(key, mapCategoryFromApi(c));
-    });
-  }
-  return Array.from(mergedMap.values());
+    const mergedMap = new Map();
+    if (Array.isArray(demoCategories)) {
+      demoCategories.forEach((c) => {
+        const key = String(c.slug || c.id || c.name);
+        mergedMap.set(key, mapCategoryFromApi(c));
+      });
+    }
+    return Array.from(mergedMap.values());
+  }, 10 * 60 * 1000);
 };
 
 // ─── Subcategories ────────────────────────────────────────────────────────────
 // GET /api/Subcategory
 
 export const fetchSubcategories = async () => {
-  const response = await api.get('/api/Subcategory');
-  return unwrapList(response).map(mapSubcategoryFromApi);
+  return await apiCache.fetchWithCache('subcategories_all', async () => {
+    const response = await api.get('/api/Subcategory');
+    return unwrapList(response).map(mapSubcategoryFromApi);
+  }, 10 * 60 * 1000);
 };
+
 
 // ─── Product Features ─────────────────────────────────────────────────────────
 // POST /api/features
@@ -500,35 +507,40 @@ export const deleteProductReview = async (id) => {
 
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
-  try {
-    const response = await api.get('/api/products');
-    const apiProducts = unwrapList(response).map((p) =>
-      mapProductFromApi(p, categories, subcategories)
-    );
-    if (apiProducts && apiProducts.length > 0) {
-      saveProducts(apiProducts);
-      return apiProducts;
+  return await apiCache.fetchWithCache('products_all', async () => {
+    try {
+      const response = await api.get('/api/products');
+      const apiProducts = unwrapList(response).map((p) =>
+        mapProductFromApi(p, categories, subcategories)
+      );
+      if (apiProducts && apiProducts.length > 0) {
+        saveProducts(apiProducts);
+        return apiProducts;
+      }
+    } catch (err) {
+      console.warn('Backend products fetch failed, using local store fallback:', err.message);
     }
-  } catch (err) {
-    console.warn('Backend products fetch failed, using local store fallback:', err.message);
-  }
 
-  const localProducts = getProducts().map((p) => mapProductFromApi(p, categories, subcategories));
-  if (localProducts && localProducts.length > 0) {
-    return localProducts;
-  }
+    const localProducts = getProducts().map((p) => mapProductFromApi(p, categories, subcategories));
+    if (localProducts && localProducts.length > 0) {
+      return localProducts;
+    }
 
-  return Array.isArray(demoProducts) ? demoProducts : [];
+    return Array.isArray(demoProducts) ? demoProducts : [];
+  }, 5 * 60 * 1000);
 };
 
 /** Search products by keyword (GET /api/products/search?keyword=) */
 export const searchProducts = async (keyword, categories = [], subcategories = []) => {
-  const response = await api.get('/api/products/search', {
-    params: { keyword },
-  });
-  return unwrapList(response).map((p) =>
-    mapProductFromApi(p, categories, subcategories)
-  );
+  const cacheKey = `search_${(keyword || '').toLowerCase()}`;
+  return await apiCache.fetchWithCache(cacheKey, async () => {
+    const response = await api.get('/api/products/search', {
+      params: { keyword },
+    });
+    return unwrapList(response).map((p) =>
+      mapProductFromApi(p, categories, subcategories)
+    );
+  }, 3 * 60 * 1000);
 };
 
 /**
@@ -560,23 +572,26 @@ export const fetchProductsPaged = async (
     params = extraParams;
   }
 
-  const response = await api.get('/api/products/paged', {
-    params: { page, pageSize, ...params },
-  });
-  const raw = response?.data;
-  const items = Array.isArray(raw)
-    ? raw
-    : Array.isArray(raw?.data)
-    ? raw.data
-    : Array.isArray(raw?.items)
-    ? raw.items
-    : [];
-  return {
-    products: items.map((p) => mapProductFromApi(p, categories, subcategories)),
-    page: raw?.page ?? page,
-    pageSize: raw?.pageSize ?? pageSize,
-    total: raw?.total ?? items.length,
-  };
+  const cacheKey = `paged_${page}_${pageSize}_${params.categoryId || ''}_${params.sort || ''}_${params.keyword || ''}`;
+  return await apiCache.fetchWithCache(cacheKey, async () => {
+    const response = await api.get('/api/products/paged', {
+      params: { page, pageSize, ...params },
+    });
+    const raw = response?.data;
+    const items = Array.isArray(raw)
+      ? raw
+      : Array.isArray(raw?.data)
+      ? raw.data
+      : Array.isArray(raw?.items)
+      ? raw.items
+      : [];
+    return {
+      products: items.map((p) => mapProductFromApi(p, categories, subcategories)),
+      page: raw?.page ?? page,
+      pageSize: raw?.pageSize ?? pageSize,
+      total: raw?.total ?? items.length,
+    };
+  }, 3 * 60 * 1000);
 };
 
 /** Fetch products by category (GET /api/products/category/{categoryId}) */
@@ -585,10 +600,12 @@ export const fetchProductsByCategory = async (
   categories = [],
   subcategories = []
 ) => {
-  const response = await api.get(`/api/products/category/${categoryId}`);
-  return unwrapList(response).map((p) =>
-    mapProductFromApi(p, categories, subcategories)
-  );
+  return await apiCache.fetchWithCache(`cat_prods_${categoryId}`, async () => {
+    const response = await api.get(`/api/products/category/${categoryId}`);
+    return unwrapList(response).map((p) =>
+      mapProductFromApi(p, categories, subcategories)
+    );
+  }, 5 * 60 * 1000);
 };
 
 /** Fetch products by subcategory (GET /api/products/subcategory/{subcategoryId}) */
@@ -597,10 +614,12 @@ export const fetchProductsBySubcategory = async (
   categories = [],
   subcategories = []
 ) => {
-  const response = await api.get(`/api/products/subcategory/${subcategoryId}`);
-  return unwrapList(response).map((p) =>
-    mapProductFromApi(p, categories, subcategories)
-  );
+  return await apiCache.fetchWithCache(`subcat_prods_${subcategoryId}`, async () => {
+    const response = await api.get(`/api/products/subcategory/${subcategoryId}`);
+    return unwrapList(response).map((p) =>
+      mapProductFromApi(p, categories, subcategories)
+    );
+  }, 5 * 60 * 1000);
 };
 
 /** Fetch dashboard stats (GET /api/products/dashboard) */
@@ -615,58 +634,63 @@ export const fetchRelatedProducts = async (
   categories = [],
   subcategories = []
 ) => {
-  const response = await api.get(`/api/products/related/${productId}`);
-  return unwrapList(response).map((p) =>
-    mapProductFromApi(p, categories, subcategories)
-  );
+  return await apiCache.fetchWithCache(`related_${productId}`, async () => {
+    const response = await api.get(`/api/products/related/${productId}`);
+    return unwrapList(response).map((p) =>
+      mapProductFromApi(p, categories, subcategories)
+    );
+  }, 5 * 60 * 1000);
 };
 
 // ─── Products — Single Item ────────────────────────────────────────────────────
 // GET /api/products/{id}
 
 export const fetchProduct = async (id, categories = [], subcategories = []) => {
-  try {
-    const response = await api.get(`/api/products/${id}`);
-    const product = unwrapItem(response);
+  return await apiCache.fetchWithCache(`product_${id}`, async () => {
+    try {
+      const response = await api.get(`/api/products/${id}`);
+      const product = unwrapItem(response);
 
-    // Fetch features and reviews in parallel; never let them crash the product load
-    const [features, reviews] = await Promise.all([
-      fetchProductFeatures(id).catch((e) => {
-        console.warn('Could not load features for product', id, e?.message);
-        return [];
-      }),
-      fetchProductReviews(id).catch((e) => {
-        console.warn('Could not load reviews for product', id, e?.message);
-        return [];
-      }),
-    ]);
+      // Fetch features and reviews in parallel; never let them crash the product load
+      const [features, reviews] = await Promise.all([
+        fetchProductFeatures(id).catch((e) => {
+          console.warn('Could not load features for product', id, e?.message);
+          return [];
+        }),
+        fetchProductReviews(id).catch((e) => {
+          console.warn('Could not load reviews for product', id, e?.message);
+          return [];
+        }),
+      ]);
 
-    return mapProductFromApi(product, categories, subcategories, features, reviews);
-  } catch (err) {
-    console.warn(`GET /api/products/${id} unavailable (${err.message}), searching product list fallback.`);
-    const allProducts = await fetchProducts(categories, subcategories);
-    let found = allProducts.find(
-      (p) =>
-        String(p.id) === String(id) ||
-        String(p.slug) === String(id) ||
-        String(p.id).toLowerCase() === String(id).toLowerCase() ||
-        String(p.slug).toLowerCase() === String(id).toLowerCase()
-    );
-
-    if (!found && Array.isArray(demoProducts)) {
-      found = demoProducts.find(
+      return mapProductFromApi(product, categories, subcategories, features, reviews);
+    } catch (err) {
+      console.warn(`GET /api/products/${id} unavailable (${err.message}), searching local cache fallback.`);
+      const localProds = getProducts();
+      let found = localProds.find(
         (p) =>
           String(p.id) === String(id) ||
           String(p.slug) === String(id) ||
           String(p.id).toLowerCase() === String(id).toLowerCase() ||
           String(p.slug).toLowerCase() === String(id).toLowerCase()
       );
-    }
 
-    if (found) return mapProductFromApi(found, categories, subcategories);
-    throw err;
-  }
+      if (!found && Array.isArray(demoProducts)) {
+        found = demoProducts.find(
+          (p) =>
+            String(p.id) === String(id) ||
+            String(p.slug) === String(id) ||
+            String(p.id).toLowerCase() === String(id).toLowerCase() ||
+            String(p.slug).toLowerCase() === String(id).toLowerCase()
+        );
+      }
+
+      if (found) return mapProductFromApi(found, categories, subcategories);
+      throw err;
+    }
+  }, 5 * 60 * 1000);
 };
+
 
 // ─── Products — Create / Update ───────────────────────────────────────────────
 // POST /api/products

@@ -236,7 +236,6 @@ export default function Header() {
                 <Link to="/products?category=cctv-cameras" onClick={closeMenus}>CCTV Cameras</Link>
                 <Link to="/products?category=solar-panels" onClick={closeMenus}>Solar Panels</Link>
                 <Link to="/product-finder" onClick={closeMenus}>Product Finder</Link>
-                <Link to="/compare" onClick={closeMenus}>Compare Products</Link>
                 <Link to="/offers" onClick={closeMenus}>Offers &amp; Deals</Link>
                 <Link to="/downloads" onClick={closeMenus}>Downloads</Link>
               </div>

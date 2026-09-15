@@ -100,6 +100,10 @@ const AdminAccountSettings = lazy(() => import('./admin/screens/AdminAccountSett
 const ContactCard = lazy(() => import('./admin/screens/ContactCard'));
 const FooterConfig = lazy(() => import('./admin/screens/FooterConfig'));
 const DescriptionManager = lazy(() => import('./admin/screens/DescriptionManager'));
+const GrowthJourneyScreen = lazy(() => import('./admin/growth/GrowthJourneyScreen'));
+const PartnerApplicationsScreen = lazy(() => import('./admin/partner/PartnerApplicationsScreen'));
+
+
 
 function LoadingScreen() {
   return <div className="route-loading" role="status"><span /><p>Loading experience…</p></div>;
@@ -191,6 +195,8 @@ export default function App() {
               <Route path="categories" element={<CategoriesList />} />
               <Route path="products" element={<ProductsList />} />
               <Route path="descriptions" element={<DescriptionManager />} />
+              <Route path="growth-journey" element={<GrowthJourneyScreen />} />
+              <Route path="partner-applications" element={<PartnerApplicationsScreen />} />
               <Route path="contact-card" element={<ContactCard />} />
               <Route path="footer" element={<FooterConfig />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />

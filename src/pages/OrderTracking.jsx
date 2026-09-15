@@ -258,7 +258,7 @@ export default function OrderTracking() {
                     </div>
                     <div className="text-right">
                       <span className="tracking-product-qty block">Qty: {item.quantity || 1}</span>
-                      {Number(item.price) > 0 && <span className="text-xs text-slate-600 font-semibold">${Number(item.price).toFixed(2)}</span>}
+                      {Number(item.price) > 0 && <span className="text-xs text-slate-600 font-semibold">₹{Number(item.price).toLocaleString('en-IN')}</span>}
                     </div>
                   </div>
                 ))

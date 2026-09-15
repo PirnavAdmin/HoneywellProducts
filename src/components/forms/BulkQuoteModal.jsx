@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import Modal from '../common/Modal';
 import { useUI } from '../../context/UIContext';
 import { quoteService } from '../../services/quoteService';
+import { productService } from '../../services/productService';
 import { validateGstin } from '../../utils/gstinValidation';
 
 const emptyForm = {
@@ -19,12 +21,109 @@ const emptyForm = {
 export default function BulkQuoteModal() {
   const { quoteOpen, quoteProduct, closeQuote } = useUI();
   const [form, setForm] = useState(emptyForm);
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [errors, setErrors] = useState({});
   const [status, setStatus] = useState('idle');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchFilter, setSearchFilter] = useState('');
+  const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, maxHeight: 180 });
+
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
-    if (quoteOpen) setForm((value) => ({ ...value, product: quoteProduct?.name || 'General bulk requirement' }));
+    let isMounted = true;
+    const loadProducts = async () => {
+      setLoadingProducts(true);
+      try {
+        const data = await productService.getAll();
+        if (isMounted && Array.isArray(data)) {
+          const sorted = [...data].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+          setProducts(sorted);
+        }
+      } catch (err) {
+        console.error('Failed to load products for bulk quote modal:', err);
+      } finally {
+        if (isMounted) setLoadingProducts(false);
+      }
+    };
+
+    if (quoteOpen) {
+      loadProducts();
+    }
+  }, [quoteOpen]);
+
+  useEffect(() => {
+    if (quoteOpen) {
+      setForm((value) => ({
+        ...value,
+        product: quoteProduct?.name || ''
+      }));
+      setIsDropdownOpen(false);
+      setSearchFilter('');
+    }
   }, [quoteOpen, quoteProduct]);
+
+  const updateCoords = () => {
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom - 16;
+      const spaceAbove = rect.top - 16;
+
+      const dropdownNeededHeight = 220;
+      let openUpward = false;
+      let calcMaxHeight = dropdownNeededHeight;
+
+      if (spaceBelow < dropdownNeededHeight && spaceAbove > spaceBelow) {
+        openUpward = true;
+        calcMaxHeight = Math.min(260, spaceAbove);
+      } else {
+        calcMaxHeight = Math.min(220, Math.max(120, spaceBelow));
+      }
+
+      setCoords({
+        top: openUpward ? undefined : rect.bottom + 4,
+        bottom: openUpward ? viewportHeight - rect.top + 4 : undefined,
+        left: rect.left,
+        width: rect.width,
+        maxHeight: calcMaxHeight,
+        openUpward
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isDropdownOpen) {
+      updateCoords();
+      window.addEventListener('resize', updateCoords);
+      window.addEventListener('scroll', updateCoords, true);
+    }
+    return () => {
+      window.removeEventListener('resize', updateCoords);
+      window.removeEventListener('scroll', updateCoords, true);
+    };
+  }, [isDropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(event.target)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isDropdownOpen]);
 
   const change = ({ target }) => {
     let value = target.value;
@@ -32,6 +131,13 @@ export default function BulkQuoteModal() {
       value = value.toUpperCase();
     }
     setForm((prev) => ({ ...prev, [target.name]: value }));
+  };
+
+  const selectProductOption = (productName) => {
+    setForm((prev) => ({ ...prev, product: productName }));
+    setIsDropdownOpen(false);
+    setSearchFilter('');
+    setErrors((prev) => ({ ...prev, product: null }));
   };
 
   const validate = () => {
@@ -42,6 +148,7 @@ export default function BulkQuoteModal() {
     if (gstinErr) next.gstin = gstinErr;
     if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) next.mobile = 'Enter a valid 10-digit Indian mobile number.';
     if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Enter a valid email address.';
+    if (!form.product.trim()) next.product = 'Please select a product.';
     if (Number(form.quantity) < 1) next.quantity = 'Quantity must be at least 1.';
     if (!form.location.trim()) next.location = 'Please enter the project location.';
     if (!form.requirement.trim()) next.requirement = 'Please describe your requirement.';
@@ -54,10 +161,11 @@ export default function BulkQuoteModal() {
     if (!validate()) return;
     setStatus('loading');
     try {
+      const selectedProd = products.find((p) => p.name === form.product);
       await quoteService.submit({
         ...form,
         gstin: form.gstin ? form.gstin.trim().toUpperCase() : '',
-        productId: quoteProduct?.id || null,
+        productId: selectedProd?.id || quoteProduct?.id || null,
         quantity: Number(form.quantity)
       });
       setStatus('success');
@@ -70,8 +178,18 @@ export default function BulkQuoteModal() {
 
   const close = () => {
     closeQuote();
-    window.setTimeout(() => { setForm(emptyForm); setErrors({}); setStatus('idle'); }, 250);
+    window.setTimeout(() => {
+      setForm(emptyForm);
+      setErrors({});
+      setStatus('idle');
+      setIsDropdownOpen(false);
+      setSearchFilter('');
+    }, 250);
   };
+
+  const filteredProducts = products.filter((p) =>
+    (p.name || '').toLowerCase().includes(searchFilter.toLowerCase())
+  );
 
   return (
     <Modal
@@ -127,8 +245,82 @@ export default function BulkQuoteModal() {
             {errors.location && <small>{errors.location}</small>}
           </label>
           <label className="field">
-            <span>Product</span>
-            <input name="product" value={form.product} readOnly />
+            <span>Product *</span>
+            <div className="custom-select-wrap">
+              <button
+                ref={triggerRef}
+                type="button"
+                className={`custom-select-trigger ${errors.product ? 'invalid' : ''} ${isDropdownOpen ? 'active' : ''}`}
+                onClick={() => setIsDropdownOpen((prev) => !prev)}
+                aria-haspopup="listbox"
+                aria-expanded={isDropdownOpen}
+              >
+                <span className={form.product ? 'selected-text' : 'placeholder-text'}>
+                  {form.product || (loadingProducts ? 'Loading products...' : 'Select product')}
+                </span>
+                <svg
+                  className={`select-arrow ${isDropdownOpen ? (coords.openUpward ? '' : 'up') : (coords.openUpward ? 'up' : '')}`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+
+              {isDropdownOpen &&
+                createPortal(
+                  <div
+                    ref={dropdownRef}
+                    className="custom-select-dropdown portal-dropdown"
+                    style={{
+                      position: 'fixed',
+                      top: coords.top !== undefined ? `${coords.top}px` : 'auto',
+                      bottom: coords.bottom !== undefined ? `${coords.bottom}px` : 'auto',
+                      left: `${coords.left}px`,
+                      width: `${coords.width}px`,
+                      maxHeight: `${coords.maxHeight}px`,
+                      zIndex: 999999
+                    }}
+                  >
+                    {products.length > 5 && (
+                      <div className="custom-select-search">
+                        <input
+                          type="text"
+                          placeholder="Search products..."
+                          value={searchFilter}
+                          onChange={(e) => setSearchFilter(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          autoFocus
+                        />
+                      </div>
+                    )}
+                    <div
+                      className={`custom-select-option ${!form.product ? 'selected' : ''}`}
+                      onClick={() => selectProductOption('')}
+                    >
+                      Select product
+                    </div>
+                    {filteredProducts.map((p) => (
+                      <div
+                        key={p.id || p.sku || p.name}
+                        className={`custom-select-option ${form.product === p.name ? 'selected' : ''}`}
+                        onClick={() => selectProductOption(p.name)}
+                      >
+                        {p.name}
+                      </div>
+                    ))}
+                    {filteredProducts.length === 0 && (
+                      <div className="custom-select-option empty-msg">No products found</div>
+                    )}
+                  </div>,
+                  document.body
+                )}
+            </div>
+            {errors.product && <small>{errors.product}</small>}
           </label>
           <label className="field">
             <span>Quantity *</span>

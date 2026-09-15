@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Box, Users, ShoppingCart, Target, 
   FolderOpen, BarChart2, Settings, ChevronRight, ChevronDown, FileText, Boxes,
-  PhoneCall, FileSpreadsheet, Shield, MessageSquare, CreditCard, Ticket, Mail
+  PhoneCall, FileSpreadsheet, Shield, MessageSquare, CreditCard, Ticket, Mail, TrendingUp
 } from 'lucide-react';
 import './AdminMenuBar.css';
 
@@ -43,7 +43,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       if (perms) {
         setUserPermissions(JSON.parse(perms));
       } else {
-        setUserPermissions(["dashboard", "catalog", "customers", "purchase indent", "purchase order", "orders", "tickets", "reports", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"]);
+        setUserPermissions(["dashboard", "catalog", "customers", "purchase indent", "purchase order", "orders", "tickets", "reports", "growth journey", "partner applications", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"]);
       }
     } catch (e) {
       console.error("Error loading permissions", e);
@@ -90,7 +90,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   const hasAccess = (moduleName) => {
     if (!moduleName) return true;
     if (userRole === 'super admin' || userRole === 'superadmin' || userRole === 'admin' || userRole === 'administrator') return true;
-    if (moduleName === 'testimonials' || moduleName === 'tickets' || moduleName === 'enquiries' || moduleName === 'contact-submissions' || moduleName === 'quotes' || moduleName === 'reports') return true;
+    if (moduleName === 'testimonials' || moduleName === 'tickets' || moduleName === 'enquiries' || moduleName === 'contact-submissions' || moduleName === 'quotes' || moduleName === 'reports' || moduleName === 'growth journey' || moduleName === 'partner applications') return true;
     if (moduleName === 'staff') return true;
 
     const norm = moduleName.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
@@ -228,6 +228,23 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
               </li>
             )}
 
+            {/* Growth Journey */}
+            {hasAccess('growth journey') && (
+              <li>
+                <NavLink
+                  to="/admin/growth-journey"
+                  className={({ isActive }) => isActive ? 'stroyka-nav-link active' : 'stroyka-nav-link'}
+                  data-tooltip="Growth Journey"
+                  title={!expanded ? "Growth Journey" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><TrendingUp size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Growth Journey</span>
+                  </div>
+                </NavLink>
+              </li>
+            )}
+
             {/* Tickets */}
             {hasAccess('tickets') && (
               <li>
@@ -291,6 +308,23 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                   <div className="nav-left">
                     <div className="icon-box"><FileSpreadsheet size={18} className="nav-icon" /></div>
                     <span className="nav-label-text">Bulk Quotes</span>
+                  </div>
+                </NavLink>
+              </li>
+            )}
+
+            {/* Partner Applications */}
+            {hasAccess('partner applications') && (
+              <li>
+                <NavLink
+                  to="/admin/partner-applications"
+                  className={({ isActive }) => isActive ? 'stroyka-nav-link active' : 'stroyka-nav-link'}
+                  data-tooltip="Partner Applications"
+                  title={!expanded ? "Partner Applications" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><Shield size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Partner Applications</span>
                   </div>
                 </NavLink>
               </li>

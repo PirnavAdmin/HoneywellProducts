@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Sun, ShieldCheck, Wrench, Search, GitCompare, Tag, Download, FileText, HelpCircle, ArrowRight } from 'lucide-react';
+import { Camera, Sun, ShieldCheck, Wrench, Search, Tag, Download, FileText, HelpCircle, ArrowRight } from 'lucide-react';
 
 export default function ProductsMegaMenu({ onClose }) {
   return (
@@ -57,15 +57,6 @@ export default function ProductsMegaMenu({ onClose }) {
                 <div>
                   <span className="mega-link-title">Product Finder</span>
                   <span className="mega-link-desc">Find the right product by specs</span>
-                </div>
-              </Link>
-            </li>
-            <li>
-              <Link to="/compare" onClick={onClose}>
-                <GitCompare size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Compare Products</span>
-                  <span className="mega-link-desc">Side-by-side spec comparison</span>
                 </div>
               </Link>
             </li>

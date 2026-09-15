@@ -67,22 +67,27 @@ export const fetchAdminBanners = async () => {
   return [];
 };
 
+import { apiCache } from '../../utils/apiCache';
+
 /**
  * GET /api/Banners
  * Fetch active banners for public frontend
  */
 export const fetchActiveBanners = async (type = '') => {
-  try {
-    const response = await api.get(type ? `?type=${encodeURIComponent(type)}` : '', { headers: getHeaders() });
-    if (response.status === 200) {
-      const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
-      return list.map(mapBannerFromApi).filter(Boolean);
+  return await apiCache.fetchWithCache(`banners_active_${type}`, async () => {
+    try {
+      const response = await api.get(type ? `?type=${encodeURIComponent(type)}` : '', { headers: getHeaders() });
+      if (response.status === 200) {
+        const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
+        return list.map(mapBannerFromApi).filter(Boolean);
+      }
+    } catch (err) {
+      console.warn('Fetch Active Banners Error:', err.message);
     }
-  } catch (err) {
-    console.warn('Fetch Active Banners Error:', err.message);
-  }
-  return [];
+    return [];
+  }, 10 * 60 * 1000);
 };
+
 
 /**
  * GET /api/Banners/{id}

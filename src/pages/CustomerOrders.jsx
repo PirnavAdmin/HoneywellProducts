@@ -223,7 +223,7 @@ export default function CustomerOrders() {
                     <div className="order-card-bottom">
                       <div className="order-total-amount">
                         <span className="text-xs text-slate-500 font-medium block">Total Amount</span>
-                        <span>${Number(order.totalAmount || order.total || 0).toFixed(2)}</span>
+                        <span>₹{Number(order.totalAmount || order.total || 0).toLocaleString('en-IN')}</span>
                       </div>
 
                       <div className="order-card-actions">

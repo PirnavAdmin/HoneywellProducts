@@ -13,10 +13,14 @@ export default function Modal({ open, onClose, title, eyebrow, children, size = 
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
       <div className={`modal ${size}`} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-        <button className="modal-close" onClick={onClose} aria-label="Close dialog"><X size={21} /></button>
-        {eyebrow && <p className="eyebrow dark">{eyebrow}</p>}
-        <h2 id="modal-title">{title}</h2>
-        {children}
+        <div className="modal-header">
+          {eyebrow && <p className="eyebrow dark">{eyebrow}</p>}
+          <h2 id="modal-title">{title}</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Close dialog"><X size={21} /></button>
+        </div>
+        <div className="modal-body">
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -124,8 +124,8 @@ export default function CustomerOrderDetails() {
                         {item.sku && <div className="text-xs text-slate-500 font-mono mt-0.5">SKU: {item.sku}</div>}
                       </td>
                       <td className="font-semibold text-slate-700">{item.quantity || 1}</td>
-                      <td className="font-medium text-slate-700">${Number(item.price || item.unitPrice || 0).toFixed(2)}</td>
-                      <td className="font-bold text-slate-800">${((item.quantity || 1) * Number(item.price || item.unitPrice || 0)).toFixed(2)}</td>
+                      <td className="font-medium text-slate-700">₹{Number(item.price || item.unitPrice || 0).toLocaleString('en-IN')}</td>
+                      <td className="font-bold text-slate-800">₹{((item.quantity || 1) * Number(item.price || item.unitPrice || 0)).toLocaleString('en-IN')}</td>
                       <td>
                         <Link 
                           to={`/warranty?orderId=${order.id}&itemId=${item.id || idx}`} 
@@ -148,15 +148,15 @@ export default function CustomerOrderDetails() {
               <h3 className="text-sm font-bold text-slate-800 mb-3">Payment &amp; Totals Breakdown</h3>
               <div className="summary-line-item">
                 <span>Subtotal</span>
-                <span>${Number(order.subtotal || order.totalAmount || 0).toFixed(2)}</span>
+                <span>₹{Number(order.subtotal || order.totalAmount || 0).toLocaleString('en-IN')}</span>
               </div>
               <div className="summary-line-item">
                 <span>Estimated Shipping</span>
-                <span>${Number(order.shippingFee || 0).toFixed(2)}</span>
+                <span>₹{Number(order.shippingFee || 0).toLocaleString('en-IN')}</span>
               </div>
               <div className="summary-line-item grand-total">
                 <span>Grand Total</span>
-                <span>${Number(order.totalAmount || 0).toFixed(2)}</span>
+                <span>₹{Number(order.totalAmount || 0).toLocaleString('en-IN')}</span>
               </div>
             </div>
 

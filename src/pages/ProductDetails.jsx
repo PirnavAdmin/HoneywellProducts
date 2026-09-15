@@ -88,20 +88,28 @@ export function ProductDetailsContent() {
         setError(null);
         setImage(0);
 
-        const data = await productService.getById(id);
+        // Fetch product main data, software downloads, and related products in parallel
+        const [data, softwareData, relData] = await Promise.all([
+          productService.getById(id).catch(() => null),
+          softwareService.getByProductId(id).catch(() => []),
+          productService.getRelated(id).catch(() => []),
+        ]);
+
         if (!isMounted) return;
 
         if (data) {
           setProduct(data);
-          loadLiveReviews(id);
-          loadProductSoftware(id);
-
-          try {
-            const relData = await productService.getRelated(id);
-            if (isMounted) setRelated(Array.isArray(relData) ? relData.slice(0, 4) : []);
-          } catch {
-            if (isMounted) setRelated([]);
+          if (Array.isArray(data.reviews) && data.reviews.length > 0) {
+            setReviews(data.reviews);
+          } else {
+            loadLiveReviews(id);
           }
+
+          const activeSoftware = Array.isArray(softwareData)
+            ? softwareData.filter((s) => (s.status || 'Active').toLowerCase() === 'active')
+            : [];
+          setProductSoftware(activeSoftware);
+          setRelated(Array.isArray(relData) ? relData.slice(0, 4) : []);
         } else {
           setError('Product not found');
         }
@@ -116,6 +124,7 @@ export function ProductDetailsContent() {
     fetchDetails();
     return () => { isMounted = false; };
   }, [id]);
+
 
   if (loading) {
     return (
@@ -271,7 +280,7 @@ export function ProductDetailsContent() {
 
           <div className="detail-price">
             {product.priceLabel}
-            <span>{product.priceNote}</span>
+            {(product.priceNote && !/incl|tax/i.test(product.priceNote)) && <span>{product.priceNote}</span>}
           </div>
 
           <div className="purchase-row">

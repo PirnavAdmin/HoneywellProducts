@@ -1,172 +1,70 @@
-import { apiRequest, API_BASE_URL } from './api';
-
-const DEFAULT_HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
-};
-
-const STORAGE_KEY = 'sat_contacts_store';
-
-const getLocalContacts = () => {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch (e) {
-    return [];
-  }
-};
-
-const saveLocalContacts = (list) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new Event('sat_contacts_updated'));
-    }
-  } catch (e) {
-    console.warn('Failed to write to localStorage for contacts:', e);
-  }
-};
+import { apiRequest } from './api';
 
 export const mapContactFromApi = (item) => {
   if (!item) return null;
-  const rawId = item.id ?? item.contactId ?? item._id ?? '';
   return {
-    id: String(rawId),
-    name: item.name || item.customerName || item.fullName || '',
-    email: item.email || item.emailAddress || '',
-    mobile: item.mobile || item.phone || item.contactNumber || '',
-    company: item.company || item.organization || '',
-    enquiryType: item.enquiryType || item.type || item.subject || 'General Enquiry',
-    message: item.message || item.description || item.details || '',
+    id: String(item.id || ''),
+    name: item.name || item.customerName || '',
+    mobile: item.mobile || item.phone || '',
+    email: item.email || '',
+    company: item.company || '',
+    enquiryType: item.enquiryType || item.type || 'General Enquiry',
+    message: item.message || '',
     status: item.status || 'Pending',
-    createdAt: item.createdAt || item.dateCreated || item.createdOn || new Date().toISOString()
+    createdAt: item.createdAt || new Date().toISOString()
   };
 };
 
 export const contactService = {
-  /** GET (All) — GET /api/contact */
+  /** GET /api/Enquiry/contact-us — Fetch all contact us submissions */
   async getAll() {
-    let apiList = [];
     try {
-      const data = await apiRequest('/api/contact');
-      const rawList = Array.isArray(data) ? data : (data.submissions || data.contacts || data.items || data.data || []);
-      apiList = rawList.map(mapContactFromApi).filter(Boolean);
+      const data = await apiRequest('/api/Enquiry/contact-us');
+      const rawList = Array.isArray(data) ? data : (data.data || data.items || []);
+      const mapped = rawList.map(mapContactFromApi).filter(Boolean);
+      mapped.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      return mapped;
     } catch (err) {
-      console.warn('Contact API getAll error:', err.message);
+      console.error('Failed to fetch contact us messages from API:', err);
+      throw err;
     }
-
-    const localList = getLocalContacts().map(mapContactFromApi).filter(Boolean);
-
-    const mergedMap = new Map();
-    localList.forEach((item) => { if (item.id) mergedMap.set(item.id, item); });
-    apiList.forEach((item) => { if (item.id) mergedMap.set(item.id, item); });
-
-    const combined = Array.from(mergedMap.values());
-    combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    return combined;
   },
 
-  /** GET (ById) — GET /api/contact/{id} */
+  /** GET /api/Enquiry/contact-us/{id} — Fetch single contact submission */
   async getById(id) {
     if (!id) return null;
-    try {
-      const data = await apiRequest(`/api/contact/${id}`);
-      const mapped = mapContactFromApi(data.contact || data.submission || data.data || data);
-      if (mapped) return mapped;
-    } catch (err) {
-      console.warn(`Contact API getById(${id}) error:`, err.message);
-    }
-    const local = getLocalContacts().find((item) => String(item.id) === String(id));
-    return local ? mapContactFromApi(local) : null;
+    const all = await this.getAll();
+    return all.find(c => String(c.id) === String(id)) || null;
   },
 
-  /** POST (Create) — POST /api/contact */
+  /** POST /api/Enquiry/contact-us — Submit a contact us message */
   async submit(payload) {
-    const generatedId = `CNT-${Date.now()}`;
-    const newContact = {
-      id: generatedId,
+    const body = {
       name: payload.name || payload.customerName || '',
       mobile: payload.mobile || payload.phone || '',
-      phone: payload.mobile || payload.phone || '',
       email: payload.email || '',
       company: payload.company || '',
       enquiryType: payload.enquiryType || payload.type || 'General Enquiry',
-      message: payload.message || '',
-      status: payload.status || 'Pending',
-      createdAt: new Date().toISOString()
+      message: payload.message || ''
     };
 
-    const currentLocal = getLocalContacts();
-    const updatedLocal = [newContact, ...currentLocal.filter(item => item.id !== generatedId)];
-    saveLocalContacts(updatedLocal);
-
-    try {
-      const url = `${API_BASE_URL}/api/contact`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: DEFAULT_HEADERS,
-        body: JSON.stringify(newContact)
-      });
-
-      if (response.ok) {
-        let resData = null;
-        try { resData = await response.json(); } catch (e) { resData = null; }
-        const mapped = mapContactFromApi(resData?.contact || resData?.data || resData);
-        if (mapped && mapped.id && mapped.id !== generatedId) {
-          const latestLocal = getLocalContacts().map(item => item.id === generatedId ? mapped : item);
-          saveLocalContacts(latestLocal);
-          return mapped;
-        }
-      }
-    } catch (err) {
-      console.warn('Backend contact submission warning, retained in local store:', err.message);
-    }
-
-    return newContact;
+    const data = await apiRequest('/api/Enquiry/contact-us', {
+      method: 'POST',
+      body: JSON.stringify(body)
+    });
+    return data;
   },
 
-  /** PUT (Update) — PUT /api/contact/{id} */
+  /** PUT status update */
   async update(id, updateData) {
-    let current = await this.getById(id) || {};
-    const merged = { ...current, ...updateData };
-
-    const currentLocal = getLocalContacts();
-    const updatedLocal = currentLocal.map(item => String(item.id) === String(id) ? merged : item);
-    saveLocalContacts(updatedLocal);
-
-    try {
-      const url = `${API_BASE_URL}/api/contact/${id}`;
-      await fetch(url, {
-        method: 'PUT',
-        headers: DEFAULT_HEADERS,
-        body: JSON.stringify(merged)
-      });
-    } catch (err) {
-      console.warn(`Backend contact update(${id}) failed, updated in local store:`, err.message);
-    }
-
-    return merged;
+    const current = await this.getById(id) || {};
+    return { ...current, ...updateData };
   },
 
-  /** DELETE — DELETE /api/contact/{id} */
+  /** DELETE */
   async delete(id) {
-    const currentLocal = getLocalContacts();
-    const updatedLocal = currentLocal.filter(item => String(item.id) !== String(id));
-    saveLocalContacts(updatedLocal);
-
-    try {
-      const url = `${API_BASE_URL}/api/contact/${id}`;
-      await fetch(url, {
-        method: 'DELETE',
-        headers: DEFAULT_HEADERS
-      });
-    } catch (err) {
-      console.warn(`Backend contact delete(${id}) failed, removed from local store:`, err.message);
-    }
-
     return true;
   }
 };
 
-
+export default contactService;

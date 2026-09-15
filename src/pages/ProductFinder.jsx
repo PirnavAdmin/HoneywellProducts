@@ -68,9 +68,9 @@ export default function ProductFinder() {
     }
     if (priceRange) {
       const price = Number(item.price || item.unitPrice || 0);
-      if (priceRange === 'under-100' && price > 100) return false;
-      if (priceRange === '100-500' && (price < 100 || price > 500)) return false;
-      if (priceRange === 'above-500' && price < 500) return false;
+      if ((priceRange === 'under-100' || priceRange === 'under-10000') && price > 10000) return false;
+      if ((priceRange === '100-500' || priceRange === '10000-50000') && (price < 10000 || price > 50000)) return false;
+      if ((priceRange === 'above-500' || priceRange === 'above-50000') && price < 50000) return false;
     }
     if (selectedFeatures.length > 0) {
       const itemFeats = Array.isArray(item.features) ? item.features.join(' ').toLowerCase() : (item.features || '').toLowerCase();
@@ -169,9 +169,9 @@ export default function ProductFinder() {
                   onChange={(e) => setPriceRange(e.target.value)}
                 >
                   <option value="">All Prices</option>
-                  <option value="under-100">Under $100</option>
-                  <option value="100-500">$100 - $500</option>
-                  <option value="above-500">Above $500</option>
+                  <option value="under-10000">Under ₹10,000</option>
+                  <option value="10000-50000">₹10,000 - ₹50,000</option>
+                  <option value="above-50000">Above ₹50,000</option>
                 </select>
               </div>
 
@@ -238,8 +238,8 @@ export default function ProductFinder() {
                       highlights: Array.isArray(product.highlights)
                         ? product.highlights
                         : (Array.isArray(product.features) ? product.features : (product.features || 'Night Vision, PoE, Weatherproof IP67').split(',').map(s => s.trim())),
-                      priceLabel: product.price ? `$${Number(product.price).toFixed(2)}` : (product.priceLabel || 'Request Quote'),
-                      priceNote: product.priceNote || 'MSRP Excl. Taxes'
+                      priceLabel: product.price ? `₹${Number(product.price).toLocaleString('en-IN')}` : (product.priceLabel || 'Request Quote'),
+                      priceNote: product.priceNote || ''
                     };
 
                     return <ProductCard key={product.id} product={normalizedProduct} />;
