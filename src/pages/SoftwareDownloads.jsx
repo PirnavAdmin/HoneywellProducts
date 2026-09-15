@@ -105,14 +105,17 @@ export default function SoftwareDownloads() {
     loadCats();
   }, []);
 
-  // Fetch software items
+  // Fetch software items with server-side query params (search, platform, softwareType)
   const loadSoftware = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await softwareService.getAll({
-        status: 'Active',
-      });
+      const params = { status: 'Active' };
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
+      if (selectedPlatform) params.platform = selectedPlatform;
+      if (selectedType) params.softwareType = selectedType;
+
+      const res = await softwareService.getAll(params);
       const items = Array.isArray(res) ? res : (res?.items || []);
       setSoftwareList(items);
     } catch (err) {
@@ -121,19 +124,19 @@ export default function SoftwareDownloads() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [debouncedSearch, selectedPlatform, selectedType]);
 
   useEffect(() => {
     loadSoftware();
   }, [loadSoftware]);
 
-  // Filter software on client side
+  // Client-side filter — only category (search, type, platform are now server-side)
   const filteredSoftware = useMemo(() => {
     return softwareList.filter((item) => {
       // Must be active
       if (item.status && item.status.toLowerCase() !== 'active') return false;
 
-      // Category filter
+      // Category filter (client-side only, not an API param)
       if (selectedCategory) {
         const catName = item.category || item.categoryName || '';
         const catId = item.categoryId || '';
@@ -142,33 +145,9 @@ export default function SoftwareDownloads() {
         }
       }
 
-      // Type filter
-      if (selectedType && (item.softwareType || '').toLowerCase() !== selectedType.toLowerCase()) {
-        return false;
-      }
-
-      // Platform filter
-      if (selectedPlatform && (item.platform || '').toLowerCase() !== selectedPlatform.toLowerCase()) {
-        return false;
-      }
-
-      // Search filter
-      if (debouncedSearch.trim()) {
-        const q = debouncedSearch.trim().toLowerCase();
-        const matchesName = (item.softwareName || '').toLowerCase().includes(q);
-        const matchesProduct = (item.productName || '').toLowerCase().includes(q);
-        const matchesModel = (item.productModel || '').toLowerCase().includes(q);
-        const matchesVersion = (item.version || '').toLowerCase().includes(q);
-        const matchesType = (item.softwareType || '').toLowerCase().includes(q);
-        const matchesPlatform = (item.platform || '').toLowerCase().includes(q);
-        if (!matchesName && !matchesProduct && !matchesModel && !matchesVersion && !matchesType && !matchesPlatform) {
-          return false;
-        }
-      }
-
       return true;
     });
-  }, [softwareList, selectedCategory, selectedType, selectedPlatform, debouncedSearch]);
+  }, [softwareList, selectedCategory]);
 
   const clearFilters = () => {
     setRawSearch('');
@@ -636,6 +615,11 @@ export default function SoftwareDownloads() {
                         {item.releaseDate && (
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                             <Calendar size={14} /> Updated: <strong>{formatDate(item.releaseDate)}</strong>
+                          </span>
+                        )}
+                        {item.downloadCount > 0 && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Download size={14} style={{ color: '#1d4ed8' }} /> <strong>{item.downloadCount.toLocaleString()}</strong> downloads
                           </span>
                         )}
                       </div>

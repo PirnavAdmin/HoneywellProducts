@@ -1,11 +1,19 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Wrench, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { Wrench, CheckCircle2, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
-import { createTicket } from '../admin/api/tickets';
+import { API_BASE_URL } from '../services/api';
 import heroImage from '../assets/images/capital-park2.jpg';
 
+const HEADERS = {
+  'ngrok-skip-browser-warning': 'true',
+  Accept: 'application/json',
+  'Content-Type': 'application/json',
+};
+
 export default function ServiceRequest() {
+  const [searchParams] = useSearchParams();
+
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
@@ -18,12 +26,23 @@ export default function ServiceRequest() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState(null);
-  const [ticketId, setTicketId] = useState(null);
+  const [resultData, setResultData] = useState(null);
+
+  // Auto-fill form fields from URL search params if navigated from Warranty or Order page
+  useEffect(() => {
+    const serialParam = searchParams.get('serial') || searchParams.get('sn');
+    const orderParam = searchParams.get('order') || searchParams.get('orderId');
+    const productParam = searchParams.get('product') || searchParams.get('model');
+
+    if (serialParam) setSerialNumber(serialParam);
+    if (orderParam) setOrderNumber(orderParam);
+    if (productParam) setProductName(productParam);
+  }, [searchParams]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !mobile.trim()) {
-      setError('Please provide your name and mobile number.');
+    if (!name.trim() || !mobile.trim() || !description.trim()) {
+      setError('Please provide your name, mobile number, and problem description.');
       return;
     }
 
@@ -31,29 +50,57 @@ export default function ServiceRequest() {
     setError(null);
 
     const payload = {
-      customerName: name.trim(),
+      name: name.trim(),
+      fullName: name.trim(),
       mobile: mobile.trim(),
+      mobileNumber: mobile.trim(),
       email: email.trim(),
       productName: productName.trim() || 'Honeywell Product',
       serialNumber: serialNumber.trim(),
       orderNumber: orderNumber.trim(),
       issueType,
-      subject: `Service Request: ${productName || 'Honeywell Unit'} - ${issueType}`,
       description: description.trim(),
-      status: 'Open',
-      createdAt: new Date().toISOString()
+      problemDescription: description.trim(),
     };
 
     try {
-      const res = await createTicket(payload);
-      setTicketId(res?.id || res?.ticketId || 'SR-' + Math.floor(100000 + Math.random() * 900000));
+      const response = await fetch(`${API_BASE_URL}/api/Support/service-request`, {
+        method: 'POST',
+        headers: HEADERS,
+        body: JSON.stringify(payload),
+      });
+
+      const resData = await response.json().catch(() => null);
+
+      if (!response.ok || (resData && resData.success === false)) {
+        throw new Error(resData?.message || `Failed to submit service request (${response.status})`);
+      }
+
+      setResultData({
+        ticketId: resData?.ticketId,
+        ticketCode: resData?.ticketCode || (resData?.ticketId ? `TCK-SRV-${resData.ticketId}` : 'TCK-SRV-SUBMITTED'),
+        message: resData?.message || 'Your technical service & repair ticket has been submitted successfully.',
+      });
       setSubmitted(true);
     } catch (err) {
       console.error('Service request submission error:', err);
-      setError('Failed to submit service request to backend. Please try again.');
+      setError(err.message || 'Failed to submit service request to backend. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReset = () => {
+    setSubmitted(false);
+    setResultData(null);
+    setName('');
+    setMobile('');
+    setEmail('');
+    setProductName('');
+    setSerialNumber('');
+    setOrderNumber('');
+    setDescription('');
+    setError(null);
   };
 
   return (
@@ -68,13 +115,37 @@ export default function ServiceRequest() {
       <section className="section">
         <div className="container">
           {submitted ? (
-            <div className="empty-state">
-              <CheckCircle size={56} className="text-success" />
-              <h2>Service Request Submitted Successfully</h2>
-              <p>Your ticket reference ID is <strong>#{ticketId}</strong>.</p>
-              <p>Our technical service team will contact you at <strong>{mobile}</strong> within 24 business hours.</p>
-              <div className="btn-group justify-center mt-3">
-                <button className="button button-small" onClick={() => { setSubmitted(false); setName(''); setMobile(''); setDescription(''); }}>
+            <div className="empty-state" style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center', padding: '48px 24px', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
+              <CheckCircle2 size={64} style={{ color: '#16a34a', margin: '0 auto 16px' }} />
+              <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                Service Request Submitted
+              </h2>
+              <p style={{ color: '#475569', fontSize: '15px', marginBottom: '20px' }}>
+                {resultData?.message}
+              </p>
+
+              {(resultData?.ticketCode || resultData?.ticketId) && (
+                <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '16px', marginBottom: '24px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
+                    Reference Ticket Number
+                  </span>
+                  <span style={{ fontSize: '22px', fontWeight: 800, color: '#15803d', fontFamily: 'monospace', display: 'block' }}>
+                    {resultData.ticketCode}
+                  </span>
+                  {resultData.ticketId && (
+                    <span style={{ fontSize: '13px', color: '#166534', marginTop: '4px', display: 'block' }}>
+                      (Database ID: #{resultData.ticketId})
+                    </span>
+                  )}
+                </div>
+              )}
+
+              <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '28px' }}>
+                Our technical service team will contact you at <strong>{mobile}</strong> within 24 business hours.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                <button className="button button-small" onClick={handleReset}>
                   Submit Another Ticket
                 </button>
                 <Link to="/support" className="button button-outline button-small">
@@ -83,10 +154,10 @@ export default function ServiceRequest() {
               </div>
             </div>
           ) : (
-            <div className="form-card-container">
+            <div className="form-card-container" style={{ maxWidth: '760px', margin: '0 auto', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '32px', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
               {error && (
-                <div className="error-box mb-3">
-                  <AlertCircle size={18} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 18px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '10px', color: '#dc2626', marginBottom: '24px', fontSize: '14px', fontWeight: 600 }}>
+                  <AlertCircle size={20} style={{ flexShrink: 0 }} />
                   <span>{error}</span>
                 </div>
               )}
@@ -94,7 +165,7 @@ export default function ServiceRequest() {
               <form onSubmit={handleSubmit} className="service-request-form">
                 <div className="form-row">
                   <div className="form-group">
-                    <label htmlFor="sr-name">Full Name <span className="required">*</span></label>
+                    <label htmlFor="sr-name">Full Name <span className="required" style={{ color: '#e53935' }}>*</span></label>
                     <input
                       id="sr-name"
                       type="text"
@@ -105,12 +176,12 @@ export default function ServiceRequest() {
                     />
                   </div>
                   <div className="form-group">
-                    <label htmlFor="sr-mobile">Mobile Number <span className="required">*</span></label>
+                    <label htmlFor="sr-mobile">Mobile Number <span className="required" style={{ color: '#e53935' }}>*</span></label>
                     <input
                       id="sr-mobile"
                       type="tel"
                       required
-                      placeholder="+1 (555) 000-0000"
+                      placeholder="+91 98765 43210"
                       value={mobile}
                       onChange={(e) => setMobile(e.target.value)}
                     />
@@ -179,7 +250,7 @@ export default function ServiceRequest() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="sr-description">Problem Description <span className="required">*</span></label>
+                  <label htmlFor="sr-description">Problem Description <span className="required" style={{ color: '#e53935' }}>*</span></label>
                   <textarea
                     id="sr-description"
                     rows={4}
@@ -190,14 +261,25 @@ export default function ServiceRequest() {
                   />
                 </div>
 
-                <button type="submit" className="button button-full" disabled={loading}>
-                  {loading ? 'Submitting Request...' : 'Submit Service Ticket'}
+                <button type="submit" className="button button-full" disabled={loading} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '15px', fontWeight: 700, padding: '14px' }}>
+                  {loading ? (
+                    <><Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} /> Submitting Request...</>
+                  ) : (
+                    <><Wrench size={18} /> Submit Service Ticket</>
+                  )}
                 </button>
               </form>
             </div>
           )}
         </div>
       </section>
+
+      <style>{`
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </>
   );
 }

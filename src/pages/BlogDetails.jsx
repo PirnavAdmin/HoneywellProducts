@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, User, Tag, Share2, BookOpen, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import { getBlogById, getBlogs, resolveBlogImageUrl } from '../services/blogApi';
-import { marketTrends } from '../data/marketTrends';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function BlogDetails() {
@@ -22,9 +21,9 @@ export default function BlogDetails() {
         setLoading(true);
         setError(null);
 
-        // Load all blogs for fallback & related articles
+        // Load all blogs from API for related articles
         const list = await getBlogs().catch(() => []);
-        const validList = Array.isArray(list) && list.length > 0 ? list : marketTrends;
+        const validList = Array.isArray(list) ? list : [];
         if (isMounted) setAllBlogs(validList);
 
         if (id) {
@@ -43,14 +42,14 @@ export default function BlogDetails() {
           if (isMounted) {
             if (found) {
               setBlog(found);
-            } else if (validList.length > 0) {
-              setBlog(validList[0]);
             } else {
               setError('Article not found.');
             }
           }
         } else if (validList.length > 0) {
           setBlog(validList[0]);
+        } else {
+          if (isMounted) setError('No articles available.');
         }
       } catch (err) {
         console.error('Error loading blog article:', err);
