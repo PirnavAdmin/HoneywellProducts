@@ -69,7 +69,7 @@ export const getReturnsConfig = async () => {
   }
 };
 
-// GET /api/Returns/eligibility/order-item/{orderItemId}
+// GET /api/Returns/check-eligibility?query={query} and POST fallback
 export const checkReturnEligibility = async (orderItemId) => {
   const raw = String(orderItemId || '').trim();
   if (!raw) {
@@ -79,34 +79,55 @@ export const checkReturnEligibility = async (orderItemId) => {
     };
   }
 
-  // Normalize input: strip prefixes and any trailing punctuation like '.'
-  const clean = raw
-    .replace(/^(Order\s*#*|#)+/i, '')
-    .replace(/[.,;:\s]+$/, '')
-    .trim();
+  const mapEligibilityData = (d) => ({
+    success: d.success !== false,
+    eligible: !!(d.isEligible ?? d.eligible ?? true),
+    isEligible: !!(d.isEligible ?? d.eligible ?? true),
+    orderReference: d.orderReference || raw,
+    orderNumber: d.orderReference || raw,
+    searchQuery: d.searchQuery || raw,
+    productName: d.productName || 'Honeywell Product',
+    purchaseDate: d.purchaseDate,
+    warrantyExpiryDate: d.warrantyExpiryDate,
+    warrantyDaysTotal: d.warrantyDaysTotal || 365,
+    daysRemaining: d.daysRemaining,
+    warrantyStatus: d.warrantyStatus || 'COVERAGE DATABASE ACTIVE',
+    coverageStatusLabel: d.coverageStatusLabel || 'Active',
+    returnEligibilityStatus: d.returnEligibilityStatus || 'Eligible for Hardware Warranty Claim & Repair',
+    eligibleClaimReasons: d.eligibleClaimReasons || [],
+    warrantyTermsNotice: d.warrantyTermsNotice,
+    reason: d.returnEligibilityStatus || d.warrantyStatus || (d.isEligible ? 'Product eligible for warranty & return service.' : 'Warranty expired.'),
+  });
 
-  // 1. Direct check against ASP.NET Returns eligibility endpoint if numeric
-  if (/^\d+$/.test(clean)) {
-    try {
-      const response = await fetch(`${BASE_URL}/eligibility/order-item/${clean}`, { headers: DEFAULT_HEADERS });
-      if (response.ok) {
-        const d = await response.json();
-        return {
-          eligible: !!d.eligible,
-          canSubmit: !!d.canSubmit,
-          reason: d.message || (d.eligible ? 'Product eligible for warranty & return service.' : 'Warranty / Return window expired.'),
-          reasonCode: d.reasonCode,
-          orderItemId: clean,
-          productName: d.productName,
-          sku: d.sku
-        };
-      }
-    } catch (e) {
-      console.warn('Direct eligibility endpoint error:', e.message);
+  // 1. Try GET /api/Returns/check-eligibility?query={query}
+  try {
+    const url = `${getApiDomain()}/api/Returns/check-eligibility?query=${encodeURIComponent(raw)}`;
+    const response = await fetch(url, { headers: DEFAULT_HEADERS });
+    if (response.ok) {
+      const d = await response.json();
+      return mapEligibilityData(d);
     }
+  } catch (e) {
+    console.warn('GET check-eligibility API error, trying POST fallback:', e.message);
   }
 
-  // 2. Query live Orders in database to match by Order ID, Order Number (#ORD-211406), or Invoice
+  // 2. Try POST /api/Returns/check-eligibility fallback
+  try {
+    const url = `${getApiDomain()}/api/Returns/check-eligibility`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: DEFAULT_HEADERS,
+      body: JSON.stringify({ query: raw })
+    });
+    if (response.ok) {
+      const d = await response.json();
+      return mapEligibilityData(d);
+    }
+  } catch (e) {
+    console.warn('POST check-eligibility API fallback error:', e.message);
+  }
+
+  // 3. Fallback database lookup if needed
   try {
     const ordersRes = await fetch(`${getApiDomain()}/api/Orders`, { headers: DEFAULT_HEADERS });
     if (ordersRes.ok) {

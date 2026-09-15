@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { ShieldCheck, ShieldAlert, AlertCircle, CheckCircle2, Clock, Wrench, RotateCcw, Search, ExternalLink, Tag } from 'lucide-react';
+import {
+  ShieldCheck, ShieldAlert, AlertCircle, CheckCircle2, Clock, Wrench,
+  RotateCcw, Search, ExternalLink, Calendar, CheckSquare
+} from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
 import { checkReturnEligibility, getReturnsConfig } from '../admin/api/returns';
 
 export default function Warranty() {
   const [searchParams] = useSearchParams();
-  const initialItemId = searchParams.get('itemId') || searchParams.get('orderId') || '';
+  const initialItemId = searchParams.get('itemId') || searchParams.get('orderId') || searchParams.get('serial') || searchParams.get('query') || '';
 
   const [orderItemId, setOrderItemId] = useState(initialItemId);
   const [loading, setLoading] = useState(false);
@@ -31,7 +34,7 @@ export default function Warranty() {
     const queryId = (customId !== undefined ? customId : orderItemId).trim();
 
     if (!queryId) {
-      setError('Please enter an Order Item ID, Order Number, or Product Serial Number.');
+      setError('Please enter an Order Number (e.g. ORD-31904), Item ID, or Product Serial Number.');
       return;
     }
 
@@ -111,7 +114,7 @@ export default function Warranty() {
           </div>
 
           <p className="text-xs text-slate-600 mb-3">
-            Enter your Order Item Reference ID or Product Serial Number below to check live coverage status.
+            Enter your Order Reference Number (e.g. <strong>ORD-31904</strong>) or Product Serial Number below to check live coverage status.
           </p>
 
           <form onSubmit={handleCheckWarranty} className="warranty-search-form">
@@ -121,7 +124,7 @@ export default function Warranty() {
                 type="text"
                 className="warranty-search-input"
                 required
-                placeholder="Enter Order # (e.g. ORD-211406), Item ID, or Serial / SKU"
+                placeholder="Enter Order # (e.g. ORD-31904), Item ID, or Serial Number"
                 value={orderItemId}
                 onChange={(e) => setOrderItemId(e.target.value)}
               />
@@ -130,8 +133,6 @@ export default function Warranty() {
               {loading ? <span>Verifying...</span> : <><Search size={15} /><span>Check Eligibility</span></>}
             </button>
           </form>
-
-
 
           {/* Result States */}
           {loading ? (
@@ -145,49 +146,91 @@ export default function Warranty() {
               <span>{error}</span>
             </div>
           ) : eligibilityResult ? (
-            <div className={`portal-toast mt-3 ${eligibilityResult.eligible ? 'success' : 'error'}`}>
+            <div className={`portal-toast mt-4 ${eligibilityResult.eligible ? 'success' : 'error'}`} style={{ borderLeftWidth: '4px' }}>
               <div className="flex-1">
-                <div className="flex items-center gap-2 font-bold mb-1 text-sm">
-                  {eligibilityResult.eligible ? (
-                    <>
-                      <CheckCircle2 size={18} className="text-emerald-700" />
-                      <span>Product Eligible for Warranty & Return Service</span>
-                    </>
-                  ) : eligibilityResult.orderNumber ? (
-                    <>
-                      <AlertCircle size={18} className="text-amber-700" />
-                      <span>Order Verified — Fulfillment Pending Delivery</span>
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle size={18} className="text-red-700" />
-                      <span>Warranty Record Not Found or Inactive</span>
-                    </>
+                {/* Status Title Banner */}
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    {eligibilityResult.eligible ? (
+                      <>
+                        <CheckCircle2 size={20} className="text-emerald-700" />
+                        <span className="text-emerald-900 font-extrabold">{eligibilityResult.returnEligibilityStatus || 'Product Eligible for Warranty & Return Service'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle size={20} className="text-red-700" />
+                        <span className="text-red-900 font-extrabold">Warranty Record Not Found or Inactive</span>
+                      </>
+                    )}
+                  </div>
+                  {eligibilityResult.warrantyStatus && (
+                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full ${eligibilityResult.eligible ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}`}>
+                      {eligibilityResult.warrantyStatus}
+                    </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-700 leading-relaxed">{eligibilityResult.reason}</p>
-                
-                {eligibilityResult.productName && (
-                  <div className="mt-3 p-3 bg-white/90 border border-emerald-200 rounded-lg flex flex-wrap items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-slate-500 font-semibold">Product:</span>
-                      <span className="font-bold text-slate-900">{eligibilityResult.productName}</span>
+
+                {/* Details Grid */}
+                <div className="mt-3 p-3.5 bg-white/95 border border-emerald-200/80 rounded-lg grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-500 font-semibold block text-[11px] uppercase tracking-wider">Product Name</span>
+                    <span className="font-bold text-slate-900 text-sm">{eligibilityResult.productName}</span>
+                  </div>
+
+                  <div>
+                    <span className="text-slate-500 font-semibold block text-[11px] uppercase tracking-wider">Order Reference</span>
+                    <span className="font-mono font-bold text-emerald-800 text-sm">{eligibilityResult.orderReference || eligibilityResult.searchQuery}</span>
+                  </div>
+
+                  {eligibilityResult.purchaseDate && (
+                    <div>
+                      <span className="text-slate-500 font-semibold block text-[11px] uppercase tracking-wider">Purchase Date</span>
+                      <span className="font-semibold text-slate-800">{eligibilityResult.purchaseDate}</span>
                     </div>
-                    {eligibilityResult.sku && (
-                      <div className="flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-100">
-                        <span className="text-slate-500 font-semibold">SKU:</span>
-                        <span className="font-mono font-bold text-emerald-800">{eligibilityResult.sku}</span>
-                      </div>
-                    )}
+                  )}
+
+                  {eligibilityResult.warrantyExpiryDate && (
+                    <div>
+                      <span className="text-slate-500 font-semibold block text-[11px] uppercase tracking-wider">Warranty Expiry Date</span>
+                      <span className="font-semibold text-slate-800">{eligibilityResult.warrantyExpiryDate}</span>
+                    </div>
+                  )}
+
+                  {eligibilityResult.daysRemaining !== undefined && (
+                    <div className="md:col-span-2 bg-emerald-50/80 p-2.5 rounded border border-emerald-100 flex items-center justify-between">
+                      <span className="font-medium text-slate-700">Warranty Validity Remaining:</span>
+                      <span className="font-bold text-emerald-800">{eligibilityResult.daysRemaining} Days (out of {eligibilityResult.warrantyDaysTotal || 365} days total)</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Eligible Claim Reasons */}
+                {eligibilityResult.eligibleClaimReasons && eligibilityResult.eligibleClaimReasons.length > 0 && (
+                  <div className="mt-3 bg-slate-50/90 p-3 rounded-lg border border-slate-200/80">
+                    <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                      <CheckSquare size={13} className="text-emerald-600" />
+                      Eligible Service &amp; Claim Reasons:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {eligibilityResult.eligibleClaimReasons.map((reason, idx) => (
+                        <span key={idx} className="text-[11px] font-semibold bg-white text-slate-800 px-2.5 py-1 rounded border border-slate-200">
+                          {reason}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
 
+                {/* Action button to proceed to Service Request */}
                 {eligibilityResult.eligible && (
-                  <div className="mt-3 pt-2">
-                    <Link to={`/service-request?serial=${encodeURIComponent(orderItemId)}`} className="btn-portal-primary text-xs py-2 px-3 inline-flex items-center gap-2">
-                      <Wrench size={14} />
+                  <div className="mt-4 pt-1 flex items-center gap-3">
+                    <Link
+                      to={`/service-request?serial=${encodeURIComponent(eligibilityResult.orderReference || orderItemId)}&product=${encodeURIComponent(eligibilityResult.productName || '')}`}
+                      className="btn-portal-primary text-xs py-2.5 px-4 inline-flex items-center gap-2 font-bold"
+                    >
+                      <Wrench size={15} />
                       <span>Proceed to Service / Replacement Request</span>
-                      <ExternalLink size={12} />
+                      <ExternalLink size={13} />
                     </Link>
                   </div>
                 )}
@@ -201,7 +244,7 @@ export default function Warranty() {
           <div className="portal-card-section-header">
             <div className="portal-card-section-title">
               <Clock size={16} />
-              <span>Honeywell Standard Warranty Policy</span>
+              <span>Honeywell Standard Warranty Policy &amp; Terms</span>
             </div>
           </div>
 
@@ -212,7 +255,7 @@ export default function Warranty() {
                 <span>Coverage Duration</span>
               </div>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Standard hardware components carry <strong>{config?.returnWindowDays || 15} to 365 days</strong> of manufacturer warranty against hardware or component defects.
+                Standard hardware components carry <strong>7 to 365 days</strong> of manufacturer warranty against hardware or component defects.
               </p>
             </div>
 
@@ -222,13 +265,10 @@ export default function Warranty() {
                 <span>Eligible Claim Reasons</span>
               </div>
               <ul className="text-xs text-slate-600 space-y-1.5 list-disc list-inside">
-                {config?.reasonCodes ? config.reasonCodes.map((r) => <li key={r.code}>{r.label}</li>) : (
-                  <>
-                    <li>Hardware or Component Defect</li>
-                    <li>Power / Sensor Failure</li>
-                    <li>Shipping Damage / Defective Delivery</li>
-                  </>
-                )}
+                <li>Hardware or Component Defect</li>
+                <li>Power / Sensor / Display Fault</li>
+                <li>Product Arrived Damaged / Defective Delivery</li>
+                <li>Missing Parts or Accessories</li>
               </ul>
             </div>
           </div>
