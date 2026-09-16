@@ -16,25 +16,10 @@ const formatCategoryName = (cat) => {
   if (!cat) return '';
   const catLower = String(cat).toLowerCase();
   const map = {
-    'cctv-cameras': 'CCTV Cameras',
-    'bullet-cameras': 'Bullet Cameras',
-    'dome-cameras': 'Dome Cameras',
-    'ip-cameras': 'IP Cameras',
-    'ptz-cameras': 'PTZ Cameras',
-    'wifi-cameras': 'Wi-Fi Cameras',
-    '4g-cameras': '4G Cameras',
-    'solar-cameras': 'Solar Cameras',
-    'solar-panels': 'Solar Panels',
-    'solar-inverters': 'Solar Inverters',
-    'solar-batteries': 'Solar Batteries',
-    'solar-controllers': 'Solar Charge Controllers',
-    'nvr': 'NVR',
-    'dvr': 'DVR',
-    'surveillance-storage': 'Surveillance Storage',
-    'networking': 'Networking',
-    'cctv-accessories': 'CCTV Accessories',
-    'security-products': 'Security Products',
-    'accessories': 'Accessories',
+    'network-cameras': 'Network Cameras',
+    'solar-kit': 'Solar kit',
+    'solar-panels': 'Solar panels',
+    'turbo-hd-cameras': 'Turbo HD Cameras',
   };
   if (map[catLower]) return map[catLower];
   if (String(cat).includes('-')) {

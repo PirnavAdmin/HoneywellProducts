@@ -182,53 +182,20 @@ function AddStaff() {
               }
             });
           } else {
-            const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-            const localStaff = localAccounts.find(s => String(s.employeeId) === String(empIdVal) || String(s.email).toLowerCase() === String(target.email || target.Email).toLowerCase() || String(s.employeeId) === String(staffId) || String(s.id ?? s.Id) === String(staffId));
-            
-            if (localStaff && Array.isArray(localStaff.permissions) && localStaff.permissions.length > 0) {
-              localStaff.permissions.forEach(p => {
-                if (p in permsState) {
-                  permsState[p] = true;
-                }
-              });
-            } else {
-              const roleKey = (target.role || target.Role || "staff").toLowerCase();
-              const fallbackPerms = ROLE_DEFAULTS[roleKey] || ROLE_DEFAULTS.staff;
-              fallbackPerms.forEach(p => {
-                if (p in permsState) {
-                  permsState[p] = true;
-                }
-              });
-            }
+            const roleKey = (target.role || target.Role || "staff").toLowerCase();
+            const fallbackPerms = ROLE_DEFAULTS[roleKey] || ROLE_DEFAULTS.staff;
+            fallbackPerms.forEach(p => {
+              if (p in permsState) {
+                permsState[p] = true;
+              }
+            });
           }
           setPermissions(permsState);
 
         } catch (err) {
           console.warn("Error loading staff from API:", err);
-          const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-          const target = localAccounts.find(s => String(s.employeeId) === String(staffId) || String(s.id ?? s.Id) === String(staffId));
-          if (target) {
-            setFormData({
-              firstName: target.firstName || target.FirstName || "",
-              lastName: target.lastName || target.LastName || "",
-              email: target.email || target.Email || "",
-              mobile: target.mobile || "",
-              employeeId: target.employeeId || staffId,
-              role: target.role || "staff",
-              password: "",
-              confirmPassword: ""
-            });
-            if (Array.isArray(target.permissions)) {
-              const permsState = { ...initialPerms };
-              target.permissions.forEach(p => {
-                permsState[p] = true;
-              });
-              setPermissions(permsState);
-            }
-          } else {
-            setToastMessage('Error loading staff details.');
-            setToastType('error');
-          }
+          setToastMessage('Error loading staff details from server.');
+          setToastType('error');
         }
       }
     };
@@ -444,17 +411,6 @@ function AddStaff() {
         }).catch(pErr => console.warn('Permissions sync warning:', pErr));
       }
 
-      // Store local cache copy for instant session speed
-      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-      const index = localAccounts.findIndex(acc => acc.email.toLowerCase() === apiStaffPayload.email.toLowerCase() || acc.employeeId === apiStaffPayload.employeeId);
-      const localRecord = { ...apiStaffPayload, id: targetId || apiStaffPayload.employeeId, permissions: enabledPermissions };
-      if (index > -1) {
-        localAccounts[index] = { ...localAccounts[index], ...localRecord };
-      } else {
-        localAccounts.push(localRecord);
-      }
-      localStorage.setItem('added_staff_accounts', JSON.stringify(localAccounts));
-
       setToastMessage(`Staff member ${isEditing ? 'updated' : 'created'} successfully.`);
       setToastType('success');
       
@@ -464,22 +420,8 @@ function AddStaff() {
 
     } catch (err) {
       console.error('API Error saving staff:', err);
-      // Fallback local save if network/server is completely down
-      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-      const index = localAccounts.findIndex(acc => acc.email.toLowerCase() === apiStaffPayload.email.toLowerCase() || acc.employeeId === apiStaffPayload.employeeId);
-      const localRecord = { ...apiStaffPayload, id: apiStaffPayload.employeeId, permissions: enabledPermissions };
-      if (index > -1) {
-        localAccounts[index] = { ...localAccounts[index], ...localRecord };
-      } else {
-        localAccounts.push(localRecord);
-      }
-      localStorage.setItem('added_staff_accounts', JSON.stringify(localAccounts));
-
-      setToastMessage(`Saved staff member #${apiStaffPayload.employeeId}`);
-      setToastType('success');
-      setTimeout(() => {
-        navigate('/admin/staff/list');
-      }, 1200);
+      setToastMessage(err?.message || `Failed to ${isEditing ? 'update' : 'create'} staff member. Server or API error.`);
+      setToastType('error');
     } finally {
       setIsSaving(false);
     }

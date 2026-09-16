@@ -87,56 +87,12 @@ export const initialSoftware = [
   }
 ];
 
-const isStorageAvailable = () => typeof window !== 'undefined' && window.localStorage;
+export const getSoftwareFromStore = () => [];
 
-export const getSoftwareFromStore = () => {
-  if (!isStorageAvailable()) return initialSoftware;
-  try {
-    const stored = window.localStorage.getItem(SOFTWARE_KEY);
-    if (!stored) {
-      window.localStorage.setItem(SOFTWARE_KEY, JSON.stringify(initialSoftware));
-      return initialSoftware;
-    }
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : initialSoftware;
-  } catch (err) {
-    return initialSoftware;
-  }
-};
+export const saveSoftwareToStore = () => {};
 
-export const saveSoftwareToStore = (list) => {
-  if (!isStorageAvailable()) return;
-  window.localStorage.setItem(SOFTWARE_KEY, JSON.stringify(list));
-};
+export const getSoftwareByProductIdFromStore = () => [];
 
-export const getSoftwareByProductIdFromStore = (productId) => {
-  const all = getSoftwareFromStore();
-  return all.filter((s) => String(s.productId) === String(productId));
-};
+export const upsertSoftwareInStore = (softwareData) => softwareData;
 
-export const upsertSoftwareInStore = (softwareData) => {
-  const all = getSoftwareFromStore();
-  const idToUse = softwareData.id ? String(softwareData.id) : String(Date.now());
-  const prepared = {
-    ...softwareData,
-    id: isNaN(Number(idToUse)) ? idToUse : Number(idToUse),
-    productId: String(softwareData.productId || ''),
-    status: softwareData.status || 'Active',
-    isFeatured: Boolean(softwareData.isFeatured),
-    sortOrder: Number(softwareData.sortOrder) || 1,
-  };
-
-  const exists = all.some((item) => String(item.id) === String(prepared.id));
-  const updated = exists
-    ? all.map((item) => (String(item.id) === String(prepared.id) ? prepared : item))
-    : [prepared, ...all];
-
-  saveSoftwareToStore(updated);
-  return prepared;
-};
-
-export const deleteSoftwareFromStore = (id) => {
-  const all = getSoftwareFromStore();
-  const updated = all.filter((item) => String(item.id) !== String(id));
-  saveSoftwareToStore(updated);
-};
+export const deleteSoftwareFromStore = () => {};

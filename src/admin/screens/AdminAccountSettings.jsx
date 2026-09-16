@@ -33,15 +33,12 @@ const AdminAccountSettings = () => {
       localStorage.setItem('adminAddress', storedAddress);
     }
     
-    const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-    const matched = localAccounts.find(acc => acc.email.toLowerCase() === storedEmail.toLowerCase());
-
     setFormData(prev => ({
       ...prev,
       name: storedName,
       email: storedEmail,
-      mobile: matched?.mobile || '9912649265',
-      address: storedAddress || matched?.address || '101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana'
+      mobile: '9912649265',
+      address: storedAddress || '101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana'
     }));
   }, []);
 

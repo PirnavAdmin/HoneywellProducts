@@ -1,11 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../utils/apiConfig';
-import {
-  getSoftwareFromStore,
-  getSoftwareByProductIdFromStore,
-  upsertSoftwareInStore,
-  deleteSoftwareFromStore,
-} from '../admin/catalog/softwareStore';
+
 
 const BASE_URL = getApiDomain();
 
@@ -67,51 +62,23 @@ export const softwareService = {
       }
 
       const apiItems = unwrapList(response);
-      if (apiItems && apiItems.length >= 0) {
-        return {
-          items: apiItems,
-          totalCount: apiItems.length,
-          page: params.page || 1,
-          pageSize: params.pageSize || 50,
-          totalPages: 1,
-        };
-      }
+      return {
+        items: apiItems,
+        totalCount: apiItems.length,
+        page: params.page || 1,
+        pageSize: params.pageSize || 50,
+        totalPages: 1,
+      };
     } catch (err) {
-      console.warn('GET /api/software API call failed, using fallback store:', err.message);
+      console.warn('GET /api/software API call failed:', err.message);
+      return {
+        items: [],
+        totalCount: 0,
+        page: 1,
+        pageSize: 50,
+        totalPages: 0,
+      };
     }
-
-    // Client-side fallback store filtering
-    let items = getSoftwareFromStore();
-    if (params.status) {
-      items = items.filter((item) => (item.status || 'Active').toLowerCase() === params.status.toLowerCase());
-    }
-    if (params.softwareType) {
-      items = items.filter((item) => (item.softwareType || '').toLowerCase() === params.softwareType.toLowerCase());
-    }
-    if (params.platform) {
-      items = items.filter((item) => (item.platform || '').toLowerCase() === params.platform.toLowerCase());
-    }
-    if (params.productId) {
-      items = items.filter((item) => String(item.productId) === String(params.productId));
-    }
-    if (params.search) {
-      const q = params.search.toLowerCase();
-      items = items.filter(
-        (item) =>
-          (item.softwareName || '').toLowerCase().includes(q) ||
-          (item.productName || '').toLowerCase().includes(q) ||
-          (item.productModel || '').toLowerCase().includes(q) ||
-          (item.version || '').toLowerCase().includes(q) ||
-          (item.description || '').toLowerCase().includes(q)
-      );
-    }
-    return {
-      items,
-      totalCount: items.length,
-      page: 1,
-      pageSize: 50,
-      totalPages: 1,
-    };
   },
 
   /**
@@ -123,11 +90,9 @@ export const softwareService = {
       const item = unwrapItem(response);
       if (item && (item.id || item.softwareId)) return item;
     } catch (err) {
-      console.warn(`GET /api/software/${id} API call failed, using fallback store:`, err.message);
+      console.warn(`GET /api/software/${id} API call failed:`, err.message);
     }
-
-    const items = getSoftwareFromStore();
-    return items.find((item) => String(item.id) === String(id)) || null;
+    return null;
   },
 
   /**
@@ -137,15 +102,11 @@ export const softwareService = {
     if (!productId) return [];
     try {
       const response = await api.get(`/api/products/${productId}/software`);
-      const apiItems = unwrapList(response);
-      if (apiItems) {
-        return apiItems;
-      }
+      return unwrapList(response) || [];
     } catch (err) {
-      console.warn(`GET /api/products/${productId}/software failed, using fallback store:`, err.message);
+      console.warn(`GET /api/products/${productId}/software failed:`, err.message);
+      return [];
     }
-
-    return getSoftwareByProductIdFromStore(productId);
   },
 
   /**
@@ -242,32 +203,10 @@ export const softwareService = {
    */
   async create(softwareData, file = null) {
     const fd = this.buildFormData(softwareData, file);
-
-    try {
-      const response = await api.post('/api/software', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const saved = unwrapItem(response);
-      if (saved) upsertSoftwareInStore(saved);
-      return saved;
-    } catch (err) {
-      console.warn('POST /api/software failed, saving locally:', err.message);
-      let fileUrl = softwareData.fileUrl || '';
-      if (file) {
-        fileUrl = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = () => resolve('');
-          reader.readAsDataURL(file);
-        });
-      }
-      const payload = {
-        ...softwareData,
-        fileUrl,
-        fileSize: file ? file.size : softwareData.fileSize || 0,
-      };
-      return upsertSoftwareInStore(payload);
-    }
+    const response = await api.post('/api/software', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return unwrapItem(response);
   },
 
   /**
@@ -277,53 +216,25 @@ export const softwareService = {
     const fd = this.buildFormData(softwareData, file, keepExistingFile);
     if (id) fd.append('Id', id);
 
-    try {
-      const response = await api.put(`/api/software/${id}`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      const saved = unwrapItem(response);
-      if (saved) upsertSoftwareInStore(saved);
-      return saved;
-    } catch (err) {
-      console.warn(`PUT /api/software/${id} failed, updating locally:`, err.message);
-      const payload = {
-        ...softwareData,
-        id,
-        fileSize: file ? file.size : softwareData.fileSize || 0,
-      };
-      return upsertSoftwareInStore(payload);
-    }
+    const response = await api.put(`/api/software/${id}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return unwrapItem(response);
   },
 
   /**
    * DELETE /api/software/{id}
    */
   async delete(id) {
-    try {
-      await api.delete(`/api/software/${id}`);
-    } catch (err) {
-      console.warn(`DELETE /api/software/${id} failed, deleting locally:`, err.message);
-    }
-    deleteSoftwareFromStore(id);
+    await api.delete(`/api/software/${id}`);
+    return true;
   },
 
   /**
    * PATCH /api/software/{id}/status
    */
   async updateStatus(id, status) {
-    try {
-      const response = await api.patch(`/api/software/${id}/status`, { status });
-      const updated = unwrapItem(response);
-      if (updated) upsertSoftwareInStore(updated);
-      return updated;
-    } catch (err) {
-      console.warn(`PATCH /api/software/${id}/status failed:`, err.message);
-      const item = await this.getById(id);
-      if (item) {
-        const updated = { ...item, status };
-        upsertSoftwareInStore(updated);
-        return updated;
-      }
-    }
+    const response = await api.patch(`/api/software/${id}/status`, { status });
+    return unwrapItem(response);
   },
 };

@@ -14,6 +14,9 @@ export default function ProductCard({ product }) {
     : rawImg;
 
   const productSlug = product.slug || product.id || '';
+  const cardLink = product.customUrl || `/products/${productSlug}`;
+  const ctaLabel = product.ctaLabel || 'View';
+
   const numPrice = Number(product.price || 0);
   const numMrp = Number(product.mrp || 0);
   const discountPercent = (numMrp > numPrice && numPrice > 0)
@@ -38,7 +41,7 @@ export default function ProductCard({ product }) {
 
   return (
     <article className="product-card">
-      <Link className="product-image" to={`/products/${productSlug}`}>
+      <Link className="product-image" to={cardLink}>
         <img
           src={displayImage}
           alt={product.name}
@@ -61,7 +64,7 @@ export default function ProductCard({ product }) {
         </div>
 
         <h3 className="product-card-title">
-          <Link to={`/products/${productSlug}`} title={product.name}>{product.name}</Link>
+          <Link to={cardLink} title={product.name}>{product.name}</Link>
         </h3>
 
         <div className="product-sub-row">
@@ -93,7 +96,7 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="product-actions">
-        <Link to={`/products/${productSlug}`}>View <ArrowUpRight size={13} /></Link>
+        <Link to={cardLink}>{ctaLabel} <ArrowUpRight size={13} /></Link>
         <button onClick={() => openEnquiry(product)}>Enquire</button>
         <button className="cart-square" onClick={add} aria-label={`Add ${product.name} to cart`}><ShoppingCart size={15} /></button>
       </div>

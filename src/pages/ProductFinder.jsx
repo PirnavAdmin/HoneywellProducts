@@ -121,12 +121,10 @@ export default function ProductFinder() {
                   onChange={(e) => setCategory(e.target.value)}
                 >
                   <option value="">All Categories</option>
-                  <option value="cctv">CCTV Cameras</option>
-                  <option value="ip-cameras">IP Cameras</option>
-                  <option value="ptz">PTZ Cameras</option>
-                  <option value="solar">Solar Security & Panels</option>
-                  <option value="security">Security Products</option>
-                  <option value="accessories">Accessories</option>
+                  <option value="network-cameras">Network Cameras</option>
+                  <option value="solar-kit">Solar kit</option>
+                  <option value="solar-panels">Solar panels</option>
+                  <option value="turbo-hd-cameras">Turbo HD Cameras</option>
                 </select>
               </div>
 

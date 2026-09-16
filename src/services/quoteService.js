@@ -54,11 +54,19 @@ export const quoteService = {
       requirement: payload.requirement || payload.message || ''
     };
 
-    const data = await apiRequest('/api/Enquiry/bulk-quote', {
-      method: 'POST',
-      body: JSON.stringify(body)
-    });
-    return data;
+    try {
+      const data = await apiRequest('/api/Enquiry/bulk-quote', {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+      return data;
+    } catch (err) {
+      const fallback = await apiRequest('/api/Quote/request', {
+        method: 'POST',
+        body: JSON.stringify(body)
+      });
+      return fallback;
+    }
   },
 
   /** PUT /api/Enquiry/bulk-quotes/{id} — Update status or details */

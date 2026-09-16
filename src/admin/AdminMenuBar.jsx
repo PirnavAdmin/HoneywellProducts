@@ -445,6 +445,8 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                 </div>
                 <ul className={`stroyka-submenu ${openDropdowns.marketing && expanded ? 'show-submenu' : ''}`}>
                   <li><NavLink to="/admin/marketing/banners" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Hero & Banners</NavLink></li>
+                  <li><NavLink to="/admin/marketing/offers" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Offers &amp; Deals</NavLink></li>
+                  <li><NavLink to="/admin/marketing/offer" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Create Offer</NavLink></li>
                   <li><NavLink to="/admin/marketing/coupons" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Coupons List</NavLink></li>
                   <li><NavLink to="/admin/marketing/coupon"  className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Coupon</NavLink></li>
                 </ul>

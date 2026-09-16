@@ -67,22 +67,7 @@ const StaffList = () => {
     setLoading(true);
     try {
       const apiList = await getStaffList();
-      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-
-      // Merge API staff with locally created staff
       const combined = [...apiList];
-      localAccounts.forEach(local => {
-        const empId = String(local.employeeId || '').toLowerCase();
-        const email = String(local.email || '').toLowerCase();
-        const exists = combined.some(item => {
-          const itemEmpId = String(item.employeeId || item.EmployeeId || '').toLowerCase();
-          const itemEmail = String(item.email || item.Email || '').toLowerCase();
-          return (empId && itemEmpId === empId) || (email && itemEmail === email);
-        });
-        if (!exists) {
-          combined.push(local);
-        }
-      });
 
       const ROLE_DEFAULTS = {
         advisory: ['dashboard', 'customers', 'call history', 'reports'],
@@ -141,9 +126,8 @@ const StaffList = () => {
 
       setStaffList(mappedList);
     } catch (err) {
-      console.warn('Staff fetch error handled:', err);
-      const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-      setStaffList(localAccounts);
+      console.warn('Staff fetch error:', err);
+      setStaffList([]);
     } finally {
       setLoading(false);
     }
@@ -161,20 +145,16 @@ const StaffList = () => {
     if (!staffToDelete) return;
     const { id, name } = staffToDelete;
 
-    // Remove from localStorage
-    const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-    const filteredLocal = localAccounts.filter(acc => String(acc.id ?? acc.employeeId) !== String(id));
-    localStorage.setItem('added_staff_accounts', JSON.stringify(filteredLocal));
-
     try {
       await deleteStaff(id);
+      setStaffList(prev => prev.filter(item => String(item.id ?? item.employeeId) !== String(id)));
+      setToastMessage(`Staff "${name}" removed successfully.`);
+      setToastType('success');
     } catch (err) {
-      console.warn('API delete failed, removed locally:', err);
+      console.error('API delete failed:', err);
+      setToastMessage(`Failed to delete staff member "${name}". Server or API error.`);
+      setToastType('error');
     }
-
-    setStaffList(prev => prev.filter(item => String(item.id ?? item.employeeId) !== String(id)));
-    setToastMessage(`Staff "${name}" removed successfully.`);
-    setToastType('success');
     setStaffToDelete(null);
   };
 
@@ -195,34 +175,21 @@ const StaffList = () => {
       isActive: newIsActive
     };
 
-    // Update in localStorage
-    const localAccounts = JSON.parse(localStorage.getItem('added_staff_accounts') || '[]');
-    const updatedLocal = localAccounts.map(acc => {
-      if (String(acc.id ?? acc.employeeId) === String(id)) {
-        return { ...acc, isActive: newIsActive, status: newIsActive ? 'Active' : 'Inactive' };
-      }
-      return acc;
-    });
-    localStorage.setItem('added_staff_accounts', JSON.stringify(updatedLocal));
-
     try {
       await updateStaff(id, putPayload);
+      setStaffList(prev => prev.map(s => {
+        if (String(s.id ?? s.employeeId) === String(id)) {
+          return { ...s, isActive: newIsActive, status: newIsActive ? 'Active' : 'Inactive' };
+        }
+        return s;
+      }));
+      setToastMessage(`Staff status updated to ${newIsActive ? 'Active' : 'Inactive'}.`);
+      setToastType('success');
     } catch (err) {
-      console.warn('API status toggle failed, updated locally:', err);
+      console.error('API status toggle failed:', err);
+      setToastMessage(`Failed to update staff status. Server or API error.`);
+      setToastType('error');
     }
-
-    setStaffList(prev => prev.map(s => {
-      if (String(s.id ?? s.employeeId) === String(id)) {
-        return {
-          ...s,
-          status: newIsActive ? 'Active' : 'Inactive',
-          isActive: newIsActive
-        };
-      }
-      return s;
-    }));
-    setToastMessage(`Updated status for "${name}".`);
-    setToastType('success');
   };
 
   // Pagination calculations

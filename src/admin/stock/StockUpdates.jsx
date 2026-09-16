@@ -488,15 +488,6 @@ const AddEntryModal = ({ categories = [], onClose, onSave }) => {
   );
 };
 
-const saveLocalStock = (stock) => {
-  localStorage.setItem('honeywell_stock_ledger', JSON.stringify(stock));
-};
-
-const getLocalStock = () => {
-  const local = localStorage.getItem('honeywell_stock_ledger') || localStorage.getItem('shyam_stock_ledger');
-  return local ? JSON.parse(local) : INITIAL_STOCK;
-};
-
 /* ─── Main Screen ────────────────────────────────────── */
 const StockUpdates = () => {
   const [items, setItems] = useState([]);
@@ -525,16 +516,15 @@ const StockUpdates = () => {
     setLoading(true);
     try {
       const response = await getStockLedger({ _t: Date.now() });
-      if (response && response.items && response.items.length > 0) {
+      if (response && response.items) {
         setItems(response.items);
         setApiMetrics(response.apiMetrics);
-        saveLocalStock(response.items);
       } else {
-        setItems(getLocalStock());
+        setItems([]);
       }
     } catch (err) {
-      console.warn("Failed to fetch stock ledger from API, using localStorage:", err);
-      setItems(getLocalStock());
+      console.warn("Failed to fetch stock ledger from API:", err);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -603,26 +593,8 @@ const StockUpdates = () => {
       showNotification('Stock adjusted successfully!', 'success');
       await loadLedger();
     } catch (err) {
-      console.warn("Failed to adjust stock on API, falling back to local simulation:", err);
-      showNotification('API Offline. Stock adjusted locally.', 'error');
-      
-      const updatedQty = adjustmentData.newQty;
-      const newStatus = updatedQty === 0
-        ? 'Out of Stock'
-        : updatedQty <= item.reorderLevel
-          ? 'Low Stock'
-          : 'In Stock';
-          
-      const updatedItem = {
-        ...item,
-        currentStock: updatedQty,
-        status: newStatus,
-        lastUpdated: new Date().toISOString().slice(0, 10)
-      };
-      
-      const newItems = items.map(i => i.id === item.id ? updatedItem : i);
-      setItems(newItems);
-      saveLocalStock(newItems);
+      console.error("Failed to adjust stock on API:", err);
+      showNotification(err?.response?.data?.message || err?.message || 'Failed to adjust stock. API error.', 'error');
     } finally {
       setLoading(false);
       setAdjustingItem(null);
@@ -637,36 +609,8 @@ const StockUpdates = () => {
       await loadLedger();
       setShowAddModal(false);
     } catch (err) {
-      console.warn("Failed to add stock entry on API, falling back to local simulation:", err);
-      showNotification('API Offline. Entry added locally.', 'error');
-      
-      const simulatedItem = {
-        id: items.length ? Math.max(...items.map(i => Number(i.id) || 0)) + 1 : 1,
-        sku: newEntry.sku,
-        name: newEntry.productName,
-        category: newEntry.categoryName || 'General',
-        categoryId: newEntry.categoryId || '',
-        subcategory: newEntry.subcategoryName,
-        supplier: newEntry.supplierName,
-        currentStock: newEntry.initialStockQty,
-        reorderLevel: newEntry.reorderLevel,
-        unit: newEntry.stockUnit,
-        costPrice: newEntry.costPrice,
-        sellingPrice: newEntry.sellingPrice,
-        status: newEntry.initialStockQty === 0
-          ? 'Out of Stock'
-          : newEntry.initialStockQty <= newEntry.reorderLevel
-            ? 'Low Stock'
-            : 'In Stock',
-        lastUpdated: new Date().toISOString().slice(0, 10),
-        trend: 'stable',
-        change: 0
-      };
-      
-      const newItems = [...items, simulatedItem];
-      setItems(newItems);
-      saveLocalStock(newItems);
-      setShowAddModal(false);
+      console.error("Failed to add stock entry on API:", err);
+      showNotification(err?.response?.data?.message || err?.message || 'Failed to add stock entry. API error.', 'error');
     } finally {
       setLoading(false);
     }

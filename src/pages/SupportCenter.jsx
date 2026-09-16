@@ -28,10 +28,17 @@ async function sendBotChat(message) {
 }
 
 async function submitSupportTicket(payload) {
+  const body = {
+    name: payload.name || '',
+    email: payload.email || '',
+    phone: payload.phone || payload.mobile || '',
+    subject: payload.subject || 'Support Request',
+    message: payload.message || ''
+  };
   const res = await fetch(`${API_BASE_URL}/api/Support/ticket`, {
     method: 'POST',
     headers: SUPPORT_HEADERS,
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
   if (!res.ok) throw new Error(`Ticket submit failed (${res.status})`);
   return res.json();

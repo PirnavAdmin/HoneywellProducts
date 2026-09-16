@@ -21,39 +21,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-const STORAGE_INDENTS_KEY = 'pos_ims_purchase_indents';
-const STORAGE_POS_KEY = 'pos_ims_purchase_orders';
-
-// Helper to get local indents
-export const getLocalIndents = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_INDENTS_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch (e) {
-    return [];
-  }
-};
-
-export const saveLocalIndents = (data) => {
-  localStorage.setItem(STORAGE_INDENTS_KEY, JSON.stringify(data));
-};
-
-// Helper to get local purchase orders
-export const getLocalPurchaseOrders = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_POS_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw);
-  } catch (e) {
-    return [];
-  }
-};
-
-export const saveLocalPurchaseOrders = (data) => {
-  localStorage.setItem(STORAGE_POS_KEY, JSON.stringify(data));
-};
-
 // Helper to unwrap response list
 const unwrapList = (data) => {
   if (Array.isArray(data)) return data;
@@ -112,16 +79,10 @@ export const fetchPurchaseIndents = async () => {
   try {
     const response = await api.get('/api/PurchaseIndent');
     const rawList = unwrapList(response?.data);
-    const mapped = rawList.map(mapPurchaseIndentFromApi);
-    if (mapped.length > 0) {
-      saveLocalIndents(mapped);
-      return mapped;
-    }
-    const local = getLocalIndents().map(mapPurchaseIndentFromApi);
-    return local;
+    return rawList.map(mapPurchaseIndentFromApi);
   } catch (err) {
-    console.warn('API GET /api/PurchaseIndent warning, loading cached indents:', err.message);
-    return getLocalIndents().map(mapPurchaseIndentFromApi);
+    console.warn('API GET /api/PurchaseIndent error:', err.message);
+    return [];
   }
 };
 
@@ -132,9 +93,8 @@ export const fetchPurchaseIndentById = async (id) => {
     const data = response?.data?.data || response?.data || {};
     return mapPurchaseIndentFromApi(data);
   } catch (err) {
-    console.warn(`API GET /api/PurchaseIndent/${id} warning:`, err.message);
-    const all = await fetchPurchaseIndents();
-    return all.find(i => String(i.id) === String(id)) || null;
+    console.warn(`API GET /api/PurchaseIndent/${id} error:`, err.message);
+    return null;
   }
 };
 
@@ -154,52 +114,19 @@ export const createPurchaseIndent = async (indentData) => {
     }))
   };
 
-  try {
-    const response = await api.post('/api/PurchaseIndent', payload);
-    const createdData = response?.data?.data || response?.data;
-    if (createdData && typeof createdData === 'object') {
-      const mapped = mapPurchaseIndentFromApi(createdData);
-      const existing = getLocalIndents();
-      existing.unshift(mapped);
-      saveLocalIndents(existing);
-      return mapped;
-    }
-  } catch (err) {
-    console.warn('API POST /api/PurchaseIndent warning, saving locally:', err.message);
+  const response = await api.post('/api/PurchaseIndent', payload);
+  const createdData = response?.data?.data || response?.data;
+  if (createdData && typeof createdData === 'object') {
+    return mapPurchaseIndentFromApi(createdData);
   }
-
-  // Local persistence fallback
-  const existing = getLocalIndents();
-  const nextId = existing.length > 0 ? Math.max(...existing.map(i => Number(i.id) || 0)) + 1 : 1001;
-  const newIndent = mapPurchaseIndentFromApi({
-    id: nextId,
-    indentNumber: `IND-${nextId}`,
-    date: new Date().toISOString().slice(0, 10),
-    ...payload,
-    status: 'Pending Approval'
-  });
-
-  existing.unshift(newIndent);
-  saveLocalIndents(existing);
-  return newIndent;
+  throw new Error('Failed to create purchase indent via API');
 };
 
 // PUT /api/PurchaseIndent/{id}/status
 export const updatePurchaseIndentStatus = async (id, status) => {
-  try {
-    await api.put(`/api/PurchaseIndent/${id}/status`, { status }, {
-      params: { status }
-    });
-  } catch (err) {
-    console.warn(`API PUT /api/PurchaseIndent/${id}/status warning:`, err.message);
-  }
-
-  const existing = getLocalIndents();
-  const index = existing.findIndex(i => String(i.id) === String(id));
-  if (index !== -1) {
-    existing[index].status = status;
-    saveLocalIndents(existing);
-  }
+  await api.put(`/api/PurchaseIndent/${id}/status`, { status }, {
+    params: { status }
+  });
   return true;
 };
 
@@ -255,15 +182,10 @@ export const fetchPurchaseOrders = async () => {
   try {
     const response = await api.get('/api/PurchaseOrder');
     const rawList = unwrapList(response?.data);
-    const mapped = rawList.map(mapPurchaseOrderFromApi);
-    if (mapped.length > 0) {
-      saveLocalPurchaseOrders(mapped);
-      return mapped;
-    }
-    return getLocalPurchaseOrders().map(mapPurchaseOrderFromApi);
+    return rawList.map(mapPurchaseOrderFromApi);
   } catch (err) {
-    console.warn('API GET /api/PurchaseOrder warning, loading cached orders:', err.message);
-    return getLocalPurchaseOrders().map(mapPurchaseOrderFromApi);
+    console.warn('API GET /api/PurchaseOrder error:', err.message);
+    return [];
   }
 };
 
@@ -274,9 +196,8 @@ export const fetchPurchaseOrderById = async (id) => {
     const data = response?.data?.data || response?.data || {};
     return mapPurchaseOrderFromApi(data);
   } catch (err) {
-    console.warn(`API GET /api/PurchaseOrder/${id} warning:`, err.message);
-    const all = await fetchPurchaseOrders();
-    return all.find(p => String(p.id) === String(id)) || null;
+    console.warn(`API GET /api/PurchaseOrder/${id} error:`, err.message);
+    return null;
   }
 };
 
@@ -298,60 +219,24 @@ export const createPurchaseOrder = async (poData) => {
     }))
   };
 
-  try {
-    const response = await api.post('/api/PurchaseOrder', payload);
-    const createdData = response?.data?.data || response?.data;
-    if (createdData && typeof createdData === 'object') {
-      const mapped = mapPurchaseOrderFromApi(createdData);
-      const existing = getLocalPurchaseOrders();
-      existing.unshift(mapped);
-      saveLocalPurchaseOrders(existing);
-
-      if (poData.indentId) {
-        updatePurchaseIndentStatus(poData.indentId, 'PO Created');
-      }
-      return mapped;
+  const response = await api.post('/api/PurchaseOrder', payload);
+  const createdData = response?.data?.data || response?.data;
+  if (createdData && typeof createdData === 'object') {
+    const mapped = mapPurchaseOrderFromApi(createdData);
+    if (poData.indentId) {
+      try {
+        await updatePurchaseIndentStatus(poData.indentId, 'PO Created');
+      } catch (e) {}
     }
-  } catch (err) {
-    console.warn('API POST /api/PurchaseOrder warning, saving locally:', err.message);
+    return mapped;
   }
-
-  // Fallback local save
-  const existing = getLocalPurchaseOrders();
-  const nextId = existing.length > 0 ? Math.max(...existing.map(p => Number(p.id) || 0)) + 1 : 5001;
-  const newPO = mapPurchaseOrderFromApi({
-    id: nextId,
-    poNumber: `PO-${nextId}`,
-    date: new Date().toISOString().slice(0, 10),
-    ...payload,
-    status: 'Issued'
-  });
-
-  existing.unshift(newPO);
-  saveLocalPurchaseOrders(existing);
-
-  if (poData.indentId) {
-    updatePurchaseIndentStatus(poData.indentId, 'PO Created');
-  }
-
-  return newPO;
+  throw new Error('Failed to create purchase order via API');
 };
 
 // PUT /api/PurchaseOrder/{id}/status
 export const updatePurchaseOrderStatus = async (id, status) => {
-  try {
-    await api.put(`/api/PurchaseOrder/${id}/status`, { status }, {
-      params: { status }
-    });
-  } catch (err) {
-    console.warn(`API PUT /api/PurchaseOrder/${id}/status warning:`, err.message);
-  }
-
-  const existing = getLocalPurchaseOrders();
-  const index = existing.findIndex(p => String(p.id) === String(id));
-  if (index !== -1) {
-    existing[index].status = status;
-    saveLocalPurchaseOrders(existing);
-  }
+  await api.put(`/api/PurchaseOrder/${id}/status`, { status }, {
+    params: { status }
+  });
   return true;
 };

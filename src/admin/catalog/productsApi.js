@@ -401,26 +401,8 @@ export const mapProductFromApi = (
 // GET /api/Category
 
 export const fetchCategories = async () => {
-  return await apiCache.fetchWithCache('categories_all', async () => {
-    try {
-      const response = await api.get('/api/Category');
-      const apiCategories = unwrapList(response).map(mapCategoryFromApi);
-      if (apiCategories && apiCategories.length > 0) {
-        return apiCategories;
-      }
-    } catch (err) {
-      console.warn('Backend categories fetch failed, using fallback:', err.message);
-    }
-
-    const mergedMap = new Map();
-    if (Array.isArray(demoCategories)) {
-      demoCategories.forEach((c) => {
-        const key = String(c.slug || c.id || c.name);
-        mergedMap.set(key, mapCategoryFromApi(c));
-      });
-    }
-    return Array.from(mergedMap.values());
-  }, 10 * 60 * 1000);
+  const response = await api.get('/api/Category');
+  return unwrapList(response).map(mapCategoryFromApi);
 };
 
 // ─── Subcategories ────────────────────────────────────────────────────────────
@@ -506,25 +488,11 @@ export const deleteProductReview = async (id) => {
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
   return await apiCache.fetchWithCache('products_all', async () => {
-    try {
-      const response = await api.get('/api/products');
-      const apiProducts = unwrapList(response).map((p) =>
-        mapProductFromApi(p, categories, subcategories)
-      );
-      if (apiProducts && apiProducts.length > 0) {
-        saveProducts(apiProducts);
-        return apiProducts;
-      }
-    } catch (err) {
-      console.warn('Backend products fetch failed, using local store fallback:', err.message);
-    }
-
-    const localProducts = getProducts().map((p) => mapProductFromApi(p, categories, subcategories));
-    if (localProducts && localProducts.length > 0) {
-      return localProducts;
-    }
-
-    return Array.isArray(demoProducts) ? demoProducts : [];
+    const response = await api.get('/api/products');
+    const apiProducts = unwrapList(response).map((p) =>
+      mapProductFromApi(p, categories, subcategories)
+    );
+    return apiProducts;
   }, 5 * 60 * 1000);
 };
 
@@ -663,27 +631,7 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
 
       return mapProductFromApi(product, categories, subcategories, features, reviews);
     } catch (err) {
-      console.warn(`GET /api/products/${id} unavailable (${err.message}), searching local cache fallback.`);
-      const localProds = getProducts();
-      let found = localProds.find(
-        (p) =>
-          String(p.id) === String(id) ||
-          String(p.slug) === String(id) ||
-          String(p.id).toLowerCase() === String(id).toLowerCase() ||
-          String(p.slug).toLowerCase() === String(id).toLowerCase()
-      );
-
-      if (!found && Array.isArray(demoProducts)) {
-        found = demoProducts.find(
-          (p) =>
-            String(p.id) === String(id) ||
-            String(p.slug) === String(id) ||
-            String(p.id).toLowerCase() === String(id).toLowerCase() ||
-            String(p.slug).toLowerCase() === String(id).toLowerCase()
-        );
-      }
-
-      if (found) return mapProductFromApi(found, categories, subcategories);
+      console.error(`GET /api/products/${id} failed:`, err.message);
       throw err;
     }
   }, 5 * 60 * 1000);
@@ -845,14 +793,8 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     upsertProduct(finalProduct);
     return finalProduct;
   } catch (err) {
-    console.warn('Backend API unavailable, saving product locally:', err.message);
-    const fallbackId = String(product.id || Date.now());
-    const mapped = mapProductFromApi({ ...payload, id: fallbackId });
-    mapped.image = primaryImage;
-    mapped.images = mergedImages;
-    mapped.gallery = mergedImages;
-    upsertProduct(mapped);
-    return mapped;
+    console.error('Backend API unavailable to save product:', err.message);
+    throw new Error('Unable to save product. Backend server is unreachable.');
   }
 };
 

@@ -54,13 +54,11 @@ export const fetchSubcategories = async () => {
       if (response.ok) {
         const data = await response.json();
         const list = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        const mapped = list.map(mapSubcategory);
-        if (mapped.length > 0) saveSubcategories(mapped);
-        return mapped.length > 0 ? mapped : getSubcategories();
+        return list.map(mapSubcategory);
       }
     } catch (err) {}
   }
-  return getSubcategories();
+  return [];
 };
 
 export const fetchSubcategoryById = async (id) => {
@@ -77,10 +75,7 @@ export const fetchSubcategoryById = async (id) => {
     } catch (err) {}
   }
   
-  const list = getSubcategories();
-  const found = list.find(s => String(s.id) === String(id));
-  if (found) return found;
-  throw new Error(`Subcategory with ID ${id} not found`);
+  throw new Error(`Subcategory with ID ${id} not found on server.`);
 };
 
 export const createSubcategory = async (payload) => {
@@ -104,17 +99,15 @@ export const createSubcategory = async (payload) => {
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
         const saved = mapSubcategory(data?.data || data);
-        const result = {
+        return {
           ...saved,
           categoryId: saved.categoryId || String(payload.categoryId),
         };
-        upsertSubcategory(result);
-        return result;
       }
     } catch (err) {}
   }
 
-  return upsertSubcategory(payload);
+  throw new Error('Failed to create subcategory on server.');
 };
 
 export const updateSubcategory = async (id, payload) => {
@@ -139,7 +132,7 @@ export const updateSubcategory = async (id, payload) => {
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
         const saved = mapSubcategory(data?.data || data);
-        const result = {
+        return {
           ...saved,
           id: saved.id || String(id),
           categoryId: saved.categoryId || String(payload.categoryId),
@@ -148,13 +141,11 @@ export const updateSubcategory = async (id, payload) => {
           description: saved.description || payload.description,
           status: payload.status || 'Active'
         };
-        upsertSubcategory(result);
-        return result;
       }
     } catch (err) {}
   }
 
-  return upsertSubcategory({ ...payload, id });
+  throw new Error(`Failed to update subcategory #${id} on server.`);
 };
 
 export const deleteSubcategory = async (id) => {
@@ -165,13 +156,11 @@ export const deleteSubcategory = async (id) => {
         headers: getHeaders()
       });
       if (response.ok) {
-        break;
+        return true;
       }
     } catch (err) {}
   }
 
-  const filtered = getSubcategories().filter((s) => String(s.id) !== String(id));
-  saveSubcategories(filtered);
-  return true;
+  throw new Error(`Failed to delete subcategory #${id} on server.`);
 };
 

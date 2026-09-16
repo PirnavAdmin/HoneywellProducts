@@ -236,7 +236,20 @@ export default function Header() {
                 <Link to="/products?category=cctv-cameras" onClick={closeMenus}>CCTV Cameras</Link>
                 <Link to="/products?category=solar-panels" onClick={closeMenus}>Solar Panels</Link>
                 <Link to="/product-finder" onClick={closeMenus}>Product Finder</Link>
-                <Link to="/offers" onClick={closeMenus}>Offers &amp; Deals</Link>
+                <Link
+                  to="/offers#offers-deals"
+                  onClick={() => {
+                    closeMenus();
+                    setTimeout(() => {
+                      const el = document.getElementById('offers-deals');
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }, 50);
+                  }}
+                >
+                  Offers &amp; Deals
+                </Link>
                 <Link to="/downloads" onClick={closeMenus}>Downloads</Link>
               </div>
             )}

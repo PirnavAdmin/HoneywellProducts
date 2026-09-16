@@ -76,6 +76,8 @@ const BannersList = lazy(() => import('./admin/marketing/BannersList'));
 const BannerForm = lazy(() => import('./admin/marketing/BannerForm'));
 const CouponsList = lazy(() => import('./admin/marketing/CouponsList'));
 const Coupon = lazy(() => import('./admin/marketing/Coupon'));
+const OffersList = lazy(() => import('./admin/marketing/OffersList'));
+const OfferForm = lazy(() => import('./admin/marketing/OfferForm'));
 const BrandsList = lazy(() => import('./admin/brands/BrandsList'));
 const BrandForm = lazy(() => import('./admin/brands/BrandForm'));
 const BlogsList = lazy(() => import('./admin/blogs/BlogsList'));
@@ -165,6 +167,9 @@ export default function App() {
               <Route path="marketing" element={<Navigate to="banners" replace />} />
               <Route path="marketing/banners" element={<BannersList />} />
               <Route path="marketing/banner" element={<BannerForm />} />
+              <Route path="marketing/offers" element={<OffersList />} />
+              <Route path="marketing/offer" element={<OfferForm />} />
+              <Route path="marketing/offer/:id" element={<OfferForm />} />
               <Route path="marketing/coupons" element={<CouponsList />} />
               <Route path="marketing/coupon" element={<Coupon />} />
               <Route path="brands" element={<BrandsList />} />

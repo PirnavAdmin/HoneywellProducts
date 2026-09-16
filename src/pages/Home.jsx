@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import HeroCarousel from '../components/home/HeroCarousel';
 import SectionHeading from '../components/common/SectionHeading';
 import ProductCard from '../components/products/ProductCard';
+import OffersDeals from '../components/home/OffersDeals';
 import GrowthSection from '../components/home/GrowthSection';
 import TestimonialsSection from '../components/home/TestimonialsSection';
 import { productService } from '../services/productService';
@@ -147,6 +148,8 @@ export default function Home() {
         </div>
       </div>
     </section>
+
+    <OffersDeals />
 
     <section className="section featured-section">
       <div className="container">

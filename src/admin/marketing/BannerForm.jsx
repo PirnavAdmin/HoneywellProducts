@@ -54,8 +54,9 @@ const BannerForm = () => {
     setIsUploading(true);
     try {
       const res = await uploadBannerImage(file);
-      if (res && res.imageUrl) {
-        setFormData(prev => ({ ...prev, imageUrl: res.imageUrl }));
+      if (res) {
+        const imageUrlStr = typeof res === 'string' ? res : (res.imageUrl || res.url || res.path || '');
+        setFormData(prev => ({ ...prev, imageUrl: imageUrlStr }));
         setMsg({ text: 'Banner image uploaded successfully!', type: 'success' });
         setTimeout(() => setMsg({ text: '', type: '' }), 3000);
       }

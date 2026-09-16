@@ -28,3 +28,6 @@ export async function toggleCouponStatus(id, currentStatus) {
   const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
   return await couponService.update(id, { status: newStatus, isActive: newStatus === 'Active' });
 }
+
+export { offersService } from '../../services/offersService';
+

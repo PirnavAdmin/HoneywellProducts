@@ -241,22 +241,14 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
 // ─── Category API ─────────────────────────────────────────────────────────────
 
 export const fetchCategories = async () => {
-  let apiCategories = [];
   try {
     const response = await api.get('/api/Category');
-    apiCategories = unwrapList(response).map(mapCategoryFromApi);
+    const apiCategories = unwrapList(response).map(mapCategoryFromApi);
+    return apiCategories;
   } catch (err) {
-    console.warn('API error fetching categories, returning store list:', err.message);
+    console.error('API error fetching categories:', err.message);
+    throw new Error('Unable to connect to backend server or fetch categories.');
   }
-
-  const localCategories = getCategories().map(mapCategoryFromApi);
-  const mergedMap = new Map();
-  apiCategories.forEach((c) => { if (c.id) mergedMap.set(String(c.id), c); });
-  localCategories.forEach((c) => { if (c.id) mergedMap.set(String(c.id), c); });
-
-  const result = Array.from(mergedMap.values());
-  if (result.length > 0) saveCategories(result);
-  return result;
 };
 
 export const fetchCategory = async (id) => {
@@ -349,12 +341,8 @@ export const saveCategory = async (category) => {
     upsertCategory(mapped);
     return mapped;
   } catch (err) {
-    console.warn('Backend API unavailable, saving category locally:', err.message);
-    const mapped = mapCategoryFromApi({ ...payload, id: category.id || String(Date.now()) });
-    mapped.image = categoryImage;
-    mapped.imageUrl = categoryImage;
-    upsertCategory(mapped);
-    return mapped;
+    console.error('Backend API unavailable to save category:', err.message);
+    throw new Error('Unable to save category. Backend server is unreachable.');
   }
 };
 
@@ -401,17 +389,11 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
   try {
     const response = await api.get('/api/products');
     const list = unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
-    if (list.length > 0) saveProducts(list);
-    return list.length > 0 ? list : getProducts();
+    return list;
   } catch {
-    try {
-      const response = await api.get('/api/Products');
-      const list = unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
-      if (list.length > 0) saveProducts(list);
-      return list.length > 0 ? list : getProducts();
-    } catch {
-      return getProducts();
-    }
+    const response = await api.get('/api/Products');
+    const list = unwrapList(response).map((p) => mapProductFromApi(p, categories, subcategories));
+    return list;
   }
 };
 
@@ -420,15 +402,8 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
     const response = await api.get(`/api/products/${id}`);
     return mapProductFromApi(unwrapItem(response), categories, subcategories);
   } catch {
-    try {
-      const response = await api.get(`/api/Products/${id}`);
-      return mapProductFromApi(unwrapItem(response), categories, subcategories);
-    } catch {
-      const all = getProducts();
-      const found = all.find((p) => String(p.id) === String(id));
-      if (found) return found;
-      throw new Error('Product not found');
-    }
+    const response = await api.get(`/api/Products/${id}`);
+    return mapProductFromApi(unwrapItem(response), categories, subcategories);
   }
 };
 
@@ -493,30 +468,17 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null) =>
     fd.append('VideoFile', videoFile);
   }
 
-  try {
-    const response = await api({
-      method: isEditing ? 'PUT' : 'POST',
-      url: isEditing ? `/api/products/${product.id}` : '/api/products',
-      data: fd,
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+  const response = await api({
+    method: isEditing ? 'PUT' : 'POST',
+    url: isEditing ? `/api/products/${product.id}` : '/api/products',
+    data: fd,
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
 
-    const saved = mapProductFromApi(unwrapItem(response));
-    const result = { ...saved, id: saved.id || product.id || '' };
-    upsertProduct(result);
-    return result;
-  } catch (err) {
-    console.warn('API error saving product, persisting locally:', err.message);
-    return upsertProduct(product);
-  }
+  const saved = mapProductFromApi(unwrapItem(response));
+  return { ...saved, id: saved.id || product.id || '' };
 };
 
 export const deleteProduct = async (id) => {
-  try {
-    await api.delete(`/api/products/${id}`);
-  } catch (err) {
-    console.warn('API error deleting product, removing locally:', err.message);
-  }
-  const filtered = getProducts().filter((p) => String(p.id) !== String(id));
-  saveProducts(filtered);
+  await api.delete(`/api/products/${id}`);
 };

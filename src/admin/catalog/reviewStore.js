@@ -53,73 +53,10 @@ export const initialReviews = [
   },
 ];
 
-const isStorageAvailable = () => typeof window !== 'undefined' && window.localStorage;
+export const getReviewsFromStore = () => [];
 
-export const getReviewsFromStore = () => {
-  if (!isStorageAvailable()) return [...initialReviews];
-  try {
-    const raw = window.localStorage.getItem(REVIEWS_KEY);
-    if (!raw) {
-      window.localStorage.setItem(REVIEWS_KEY, JSON.stringify(initialReviews));
-      return [...initialReviews];
-    }
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [...initialReviews];
-  } catch (err) {
-    console.warn('Error reading reviews from localStorage:', err);
-    return [...initialReviews];
-  }
-};
+export const getReviewsByProductIdFromStore = () => [];
 
-export const getReviewsByProductIdFromStore = (productId) => {
-  if (!productId) return [];
-  const all = getReviewsFromStore();
-  const targetId = String(productId).trim().toLowerCase();
-  return all.filter((r) => String(r.productId || '').trim().toLowerCase() === targetId);
-};
+export const upsertReviewInStore = (reviewData) => reviewData;
 
-export const upsertReviewInStore = (reviewData) => {
-  const all = getReviewsFromStore();
-  const newId = reviewData.id || `rev-${Date.now()}`;
-  const existingIdx = all.findIndex((r) => String(r.id) === String(newId));
-
-  const updatedReview = {
-    id: String(newId),
-    productId: String(reviewData.productId || ''),
-    customerName: reviewData.customerName || reviewData.customer || reviewData.name || 'Anonymous',
-    rating: Number(reviewData.rating) || 5,
-    reviewDate: reviewData.reviewDate || reviewData.date || new Date().toISOString(),
-    reviewComment: reviewData.reviewComment || reviewData.comment || '',
-    verifiedPurchase: reviewData.verifiedPurchase !== undefined ? Boolean(reviewData.verifiedPurchase) : (reviewData.verified !== false),
-    status: reviewData.status || 'Approved',
-  };
-
-  if (existingIdx >= 0) {
-    all[existingIdx] = { ...all[existingIdx], ...updatedReview };
-  } else {
-    all.unshift(updatedReview);
-  }
-
-  if (isStorageAvailable()) {
-    try {
-      window.localStorage.setItem(REVIEWS_KEY, JSON.stringify(all));
-    } catch (err) {
-      console.warn('Error writing reviews to localStorage:', err);
-    }
-  }
-
-  return updatedReview;
-};
-
-export const deleteReviewFromStore = (id) => {
-  let all = getReviewsFromStore();
-  all = all.filter((r) => String(r.id) !== String(id));
-  if (isStorageAvailable()) {
-    try {
-      window.localStorage.setItem(REVIEWS_KEY, JSON.stringify(all));
-    } catch (err) {
-      console.warn('Error deleting review from localStorage:', err);
-    }
-  }
-  return true;
-};
+export const deleteReviewFromStore = () => true;

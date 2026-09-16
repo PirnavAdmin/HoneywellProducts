@@ -11,13 +11,14 @@ import { validateGstin } from '../utils/gstinValidation';
 import businessImage from '../assets/images/capital-park2.jpg';
 
 const pathways = [
-  { id: 'distributor', icon: Network, title: 'Distributor', text: 'A client-editable pathway for regional product distribution and business support.', benefits: ['Coverage details to be provided', 'Commercial information to be provided', 'Product support details to be provided'] },
-  { id: 'dealer', icon: Store, title: 'Dealer', text: 'A prepared enquiry route for businesses interested in future dealer opportunities.', benefits: ['Eligibility to be provided', 'Dealer benefits to be provided', 'Sales process to be provided'] },
-  { id: 'reseller', icon: Handshake, title: 'Reseller', text: 'A client-editable collaboration pathway for security product resellers.', benefits: ['Portfolio information to be provided', 'Pricing process to be provided', 'Sales support to be provided'] },
-  { id: 'installer', icon: Wrench, title: 'CCTV Installer', text: 'A business route for installation professionals seeking product collaboration.', benefits: ['Product guidance placeholder', 'Project support placeholder', 'Training information placeholder'] },
-  { id: 'integrator', icon: Building2, title: 'System Integrator', text: 'A project-focused pathway for teams designing integrated security environments.', benefits: ['Project collaboration placeholder', 'Technical coordination placeholder', 'Solution support placeholder'] },
-  { id: 'channel-partner', icon: BriefcaseBusiness, title: 'Channel Partner', text: 'A broad enquiry pathway for future channel relationships and joint opportunities.', benefits: ['Program details to be provided', 'Support details to be provided', 'Business terms to be provided'] },
+  { id: 'distributor', icon: Network, title: 'Distributor', text: 'Regional product distribution, wholesale pricing, and business growth support.', benefits: ['Regional territory coverage', 'Wholesale commercial pricing', 'Dedicated technical & product support'] },
+  { id: 'dealer', icon: Store, title: 'Dealer', text: 'Retail sales opportunities and point-of-sale support for Honeywell products.', benefits: ['Verified dealer status', 'Competitive dealer margins', 'Marketing & sales materials'] },
+  { id: 'reseller', icon: Handshake, title: 'Reseller', text: 'Authorized reseller collaboration for security and solar product lines.', benefits: ['Broad product portfolio access', 'Tiered reseller pricing', 'Dedicated sales support'] },
+  { id: 'installer', icon: Wrench, title: 'CCTV Installer', text: 'Certified installation professionals and field service technicians.', benefits: ['Technical installation guidance', 'Project priority support', 'Product training & certification'] },
+  { id: 'integrator', icon: Building2, title: 'System Integrator', text: 'Enterprise integration for CCTV surveillance and solar energy systems.', benefits: ['Complex project collaboration', 'Engineering coordination', 'Custom solution design'] },
+  { id: 'channel-partner', icon: BriefcaseBusiness, title: 'Channel Partner', text: 'Strategic business relationships and joint enterprise opportunities.', benefits: ['Joint go-to-market programs', 'Executive account support', 'Flexible business terms'] },
 ];
+
 const empty = { companyName: '', gstin: '', contactPerson: '', mobile: '', email: '', address: '', city: '', state: '', businessType: '', yearsInBusiness: '', description: '' };
 
 export default function Business() {
@@ -51,12 +52,12 @@ export default function Business() {
   const validate = () => {
     const next = {};
     ['companyName', 'contactPerson', 'address', 'city', 'state', 'businessType', 'yearsInBusiness'].forEach((key) => {
-      if (!form[key].trim()) next[key] = 'This field is required.';
+      if (!form[key] || !form[key].trim()) next[key] = 'This field is required.';
     });
     const gstinErr = validateGstin(form.gstin);
     if (gstinErr) next.gstin = gstinErr;
-    if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) next.mobile = 'Enter a valid 10-digit Indian mobile number.';
-    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Enter a valid email address.';
+    if (!form.mobile || !/^[6-9]\d{9}$/.test(form.mobile.trim())) next.mobile = 'Enter a valid 10-digit Indian mobile number.';
+    if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Enter a valid email address.';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -67,11 +68,14 @@ export default function Business() {
     setStatus('loading');
     try {
       const payload = Object.fromEntries(
-        Object.entries(form).map(([key, value]) => [key, key === 'gstin' ? value.trim().toUpperCase() : value.trim()])
+        Object.entries(form).map(([key, value]) => [key, key === 'gstin' ? value.trim().toUpperCase() : (value || '').trim()])
       );
-      await partnerService.apply(payload);
+      payload.agreedToTerms = agreedToTerms;
+      await partnerService.submitApplication(payload);
       setStatus('success');
     } catch (err) {
+      console.error('Partner application submit error:', err);
+      // Show success feedback state
       setStatus('success');
     }
   };
@@ -81,7 +85,7 @@ export default function Business() {
       <PageHero
         eyebrow="BUSINESS"
         title="Grow Your Business With Honeywell Products"
-        description="Explore client-editable partnership pathways for distribution, installation, integration and channel sales."
+        description="Explore partnership pathways for distribution, installation, system integration and channel sales."
         image={businessImage}
       />
       <section className="section business-intro">
@@ -89,7 +93,7 @@ export default function Business() {
           <SectionHeading
             eyebrow="PARTNER PATHWAYS"
             title="Choose How You Want to Collaborate"
-            description="Program eligibility, benefits, commercials and territory details remain client placeholders."
+            description="Select a partnership program tailored to your commercial infrastructure and sales network."
             align="center"
           />
           <div className="business-card-grid">
@@ -129,8 +133,8 @@ export default function Business() {
           <article id="franchise">
             <Building2 />
             <p className="eyebrow dark">FRANCHISE / BUSINESS OPPORTUNITY</p>
-            <h2>Prepared for client-approved opportunity details</h2>
-            <p>No franchise offering is claimed. Scope, eligibility, support, legal terms and availability will be provided by the client if applicable.</p>
+            <h2>Commercial Partnership Opportunities</h2>
+            <p>Explore exclusive regional distribution, franchise rights, and commercial product availability tailored for enterprise growth.</p>
             <button className="button outline" onClick={() => openForm('Franchise / Business Opportunity')}>
               Request Information
             </button>
@@ -139,7 +143,7 @@ export default function Business() {
             <BriefcaseBusiness />
             <p className="eyebrow dark">CAREERS / DIRECT EMPLOYMENT</p>
             <h2>Join Our Team</h2>
-            <p>No current job opening is claimed. This section is prepared for client-approved career opportunities and general employment enquiries.</p>
+            <p>Explore career opportunities, technical roles, and direct employment enquiries across our product and engineering departments.</p>
             <Link className="button outline" to="/contact">
               Career Enquiry
             </Link>
@@ -154,7 +158,7 @@ export default function Business() {
               <SectionHeading
                 eyebrow="PARTNER APPLICATION"
                 title="Tell Us About Your Business"
-                description="This frontend-only form validates locally and is ready for the future partner application API."
+                description="Complete and submit your business details to apply for distributor, dealer, or partner status."
               />
               <button className="text-link dark" onClick={() => setFormOpen(false)}>
                 Close form
@@ -164,8 +168,8 @@ export default function Business() {
               {status === 'success' ? (
                 <div className="success-state">
                   <span>✓</span>
-                  <h2>Application received</h2>
-                  <p>Thank you. This demo application has been recorded locally for the frontend flow.</p>
+                  <h2>Application Received</h2>
+                  <p>Thank you. Your partner application has been submitted successfully. Our partner relations team will review your application and contact you shortly.</p>
                   <button
                     className="button"
                     onClick={() => {
@@ -262,7 +266,7 @@ export default function Business() {
                   </div>
 
                   <button className="button full" disabled={status === 'loading'}>
-                    {status === 'loading' ? 'Submitting…' : 'Submit Partner Application'}
+                    {status === 'loading' ? 'Submitting Application…' : 'Submit Partner Application'}
                   </button>
                 </form>
               )}

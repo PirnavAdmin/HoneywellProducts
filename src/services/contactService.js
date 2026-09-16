@@ -48,7 +48,7 @@ export const contactService = {
       message: payload.message || ''
     };
 
-    const data = await apiRequest('/api/Enquiry/contact-us', {
+    const data = await apiRequest('/api/Contact', {
       method: 'POST',
       body: JSON.stringify(body)
     });

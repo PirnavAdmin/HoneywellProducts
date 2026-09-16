@@ -10,11 +10,20 @@ export default function ProductsMegaMenu({ onClose }) {
           <h4 className="mega-title">Product Categories</h4>
           <ul className="mega-list">
             <li>
-              <Link to="/products?category=cctv-cameras" onClick={onClose}>
+              <Link to="/products?category=network-cameras" onClick={onClose}>
                 <Camera size={18} className="mega-icon" />
                 <div>
-                  <span className="mega-link-title">CCTV Cameras</span>
-                  <span className="mega-link-desc">IP, PTZ, Dome &amp; Bullet Cameras</span>
+                  <span className="mega-link-title">Network Cameras</span>
+                  <span className="mega-link-desc">High-Definition IP Network Cameras</span>
+                </div>
+              </Link>
+            </li>
+            <li>
+              <Link to="/products?category=solar-kit" onClick={onClose}>
+                <Sun size={18} className="mega-icon" />
+                <div>
+                  <span className="mega-link-title">Solar kit</span>
+                  <span className="mega-link-desc">Complete Solar Power Kit Systems</span>
                 </div>
               </Link>
             </li>
@@ -22,26 +31,17 @@ export default function ProductsMegaMenu({ onClose }) {
               <Link to="/products?category=solar-panels" onClick={onClose}>
                 <Sun size={18} className="mega-icon" />
                 <div>
-                  <span className="mega-link-title">Solar Panels</span>
+                  <span className="mega-link-title">Solar panels</span>
                   <span className="mega-link-desc">High-Efficiency Solar Modules</span>
                 </div>
               </Link>
             </li>
             <li>
-              <Link to="/products?category=security-products" onClick={onClose}>
+              <Link to="/products?category=turbo-hd-cameras" onClick={onClose}>
                 <ShieldCheck size={18} className="mega-icon" />
                 <div>
-                  <span className="mega-link-title">Security Products</span>
-                  <span className="mega-link-desc">Access Control &amp; Alarm Systems</span>
-                </div>
-              </Link>
-            </li>
-            <li>
-              <Link to="/products?category=accessories" onClick={onClose}>
-                <Wrench size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Accessories</span>
-                  <span className="mega-link-desc">Cables, Power Supply &amp; Mounts</span>
+                  <span className="mega-link-title">Turbo HD Cameras</span>
+                  <span className="mega-link-desc">High-Definition Turbo HD Cameras</span>
                 </div>
               </Link>
             </li>
@@ -61,7 +61,18 @@ export default function ProductsMegaMenu({ onClose }) {
               </Link>
             </li>
             <li>
-              <Link to="/offers" onClick={onClose}>
+              <Link
+                to="/offers#offers-deals"
+                onClick={(e) => {
+                  if (onClose) onClose();
+                  setTimeout(() => {
+                    const el = document.getElementById('offers-deals');
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }, 50);
+                }}
+              >
                 <Tag size={18} className="mega-icon" />
                 <div>
                   <span className="mega-link-title">Offers &amp; Deals</span>

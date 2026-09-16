@@ -55,7 +55,7 @@ export const partnerService = {
       city: payload.city || '',
       state: payload.state || '',
       yearsInBusiness: payload.yearsInBusiness || '',
-      address: payload.address || '',
+      address: payload.address || (payload.city ? `${payload.city}, ${payload.state || ''}` : 'Main Office Address'),
       description: payload.description || payload.message || '',
       agreedToTerms: payload.agreedToTerms !== undefined ? Boolean(payload.agreedToTerms) : true
     };
@@ -65,6 +65,11 @@ export const partnerService = {
       body: JSON.stringify(body)
     });
     return data;
+  },
+
+  /** Alias for submitApplication */
+  async apply(payload) {
+    return await this.submitApplication(payload);
   },
 
   /** Partner Login & Auth */
