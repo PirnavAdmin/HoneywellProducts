@@ -18,6 +18,10 @@ const AdminLayout = () => {
 
   const [globalToast, setGlobalToast] = useState(null);
 
+  useEffect(() => {
+    document.title = 'HONEYWELL PRODUCTS | SMART TECHNOLOGY. STRONGER PROTECTION';
+  }, [location.pathname]);
+
   let userRole = (localStorage.getItem('adminRole') || 'admin').toLowerCase();
   
   // Load custom permissions from localStorage

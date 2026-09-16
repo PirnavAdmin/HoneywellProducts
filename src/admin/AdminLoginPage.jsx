@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { adminAuthApi } from './api/adminAuthApi';
 import adminPortalImage from '../assets/images/products-hero.png';
 import './AdminLoginPage.css';
@@ -20,6 +21,7 @@ const getLoginErrorMessage = (err) => {
 };
 
 const AdminLoginPage = () => {
+  useDocumentTitle('Admin Login', 'Honeywell Products Admin Portal');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
