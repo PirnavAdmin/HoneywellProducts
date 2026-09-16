@@ -631,7 +631,31 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
 
       return mapProductFromApi(product, categories, subcategories, features, reviews);
     } catch (err) {
-      console.error(`GET /api/products/${id} failed:`, err.message);
+      console.warn(`GET /api/products/${id} failed (${err.message}), attempting catalog fallback search.`);
+      try {
+        const allProds = await fetchProducts(categories, subcategories);
+        if (Array.isArray(allProds) && allProds.length > 0) {
+          const cleanId = String(id).trim().toLowerCase();
+          const found = allProds.find((p) => {
+            const pId = String(p.id || '').toLowerCase();
+            const pSlug = String(p.slug || '').toLowerCase();
+            const pName = String(p.name || p.title || '').toLowerCase();
+            const pCode = String(p.sku || p.code || '').toLowerCase();
+            return (
+              pId === cleanId ||
+              pSlug === cleanId ||
+              pCode === cleanId ||
+              pName === cleanId ||
+              pName.replace(/\s+/g, '-') === cleanId ||
+              pName.includes(cleanId) ||
+              cleanId.includes(pName)
+            );
+          });
+          if (found) return found;
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback catalog search also failed:', fallbackErr.message);
+      }
       throw err;
     }
   }, 5 * 60 * 1000);

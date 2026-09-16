@@ -17,6 +17,28 @@ export async function apiRequest(path, options = {}) {
     },
     ...options,
   });
-  if (!response.ok) throw new Error(`API request failed: ${response.status}`);
+  if (!response.ok) {
+    let errorDetail = '';
+    try {
+      const errJson = await response.json();
+      if (errJson) {
+        if (typeof errJson === 'string') errorDetail = errJson;
+        else if (errJson.title) errorDetail = errJson.title;
+        else if (errJson.message) errorDetail = errJson.message;
+        else if (errJson.detail) errorDetail = errJson.detail;
+        else if (errJson.errors && typeof errJson.errors === 'object') {
+          errorDetail = Object.entries(errJson.errors)
+            .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
+            .join(' | ');
+        }
+      }
+    } catch {
+      try {
+        errorDetail = await response.text();
+      } catch {}
+    }
+    const cleanMsg = errorDetail ? `API Error (${response.status}): ${errorDetail}` : `API request failed: ${response.status}`;
+    throw new Error(cleanMsg);
+  }
   return response.json();
 }

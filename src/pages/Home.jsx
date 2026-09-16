@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { ArrowLeft, ArrowRight, Camera, Expand, Headphones, Image, MonitorSmartphone, Network, PlugZap, ShieldCheck, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HeroCarousel from '../components/home/HeroCarousel';
@@ -97,7 +97,40 @@ export default function Home() {
     return Number(category.subcategoryCount || category.subCategoryCount || 0);
   };
 
-  const tabProducts = (productsList.length > 0 ? productsList : []).slice(0, 8);
+  // Filter & sort products depending on active tab
+  const tabProducts = useMemo(() => {
+    if (!Array.isArray(productsList) || productsList.length === 0) return [];
+    const listCopy = [...productsList];
+
+    if (productTab === 'New Products') {
+      // Sort by creation date or newest ID descending
+      return listCopy.sort((a, b) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        if (timeA !== timeB) return timeB - timeA;
+        return (Number(b.id) || 0) - (Number(a.id) || 0);
+      }).slice(0, 8);
+    }
+
+    if (productTab === 'Popular Products') {
+      // Sort by reviews count & rating descending
+      return listCopy.sort((a, b) => {
+        const revA = Number(a.reviewCount || a.totalReviews || 0);
+        const revB = Number(b.reviewCount || b.totalReviews || 0);
+        if (revA !== revB) return revB - revA;
+        const ratingA = Number(a.rating || 0);
+        const ratingB = Number(b.rating || 0);
+        return ratingB - ratingA;
+      }).slice(0, 8);
+    }
+
+    // Default: 'Featured'
+    const featuredOnly = listCopy.filter(p => p.isFeatured || p.featured || Number(p.rating || 0) >= 4.5);
+    if (featuredOnly.length >= 4) {
+      return featuredOnly.slice(0, 8);
+    }
+    return listCopy.slice(0, 8);
+  }, [productsList, productTab]);
 
   return <>
     <HeroCarousel />

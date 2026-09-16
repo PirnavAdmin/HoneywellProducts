@@ -165,14 +165,17 @@ export default function OffersDeals() {
               const origPrice = Number(offer.originalPrice || 0);
               const dealPrice = Number(offer.dealPrice || offer.price || offer.offerPrice || 0);
 
-              // Smart resolution of actual target product
-              const matchedProduct = offer.productId
-                ? allProducts.find(p => String(p.id) === String(offer.productId))
-                : allProducts.find(p => p.name && offer.title && p.name.trim().toLowerCase() === offer.title.trim().toLowerCase());
+              // Smart resolution of actual target product (by ID, exact title, or title substring)
+              const matchedProduct = (offer.productId && allProducts.find(p => String(p.id) === String(offer.productId))) ||
+                (offer.title && allProducts.find(p => (p.name || p.title) && String(p.name || p.title).trim().toLowerCase() === offer.title.trim().toLowerCase())) ||
+                (offer.title && allProducts.find(p => (p.name || p.title) && (
+                  String(p.name || p.title).toLowerCase().includes(offer.title.toLowerCase().trim()) ||
+                  offer.title.toLowerCase().includes(String(p.name || p.title).toLowerCase().trim())
+                )));
 
               const productSlug = matchedProduct
-                ? (matchedProduct.slug || matchedProduct.id)
-                : (offer.productId ? offer.productId : null);
+                ? (matchedProduct.id || matchedProduct.slug)
+                : (offer.productId ? offer.productId : offer.id || null);
 
               const targetUrl = productSlug
                 ? `/products/${productSlug}`

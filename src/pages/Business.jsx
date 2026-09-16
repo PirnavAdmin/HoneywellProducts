@@ -184,7 +184,7 @@ export default function Business() {
               ) : (
                 <form className="form-grid" onSubmit={submit} noValidate>
                   {[
-                    ['companyName', 'Company Name *'],
+                    ['companyName', 'Business Name *'],
                     ['gstin', 'GSTIN Number'],
                     ['contactPerson', 'Contact Person *'],
                     ['businessType', 'Business Type *'],
@@ -192,7 +192,7 @@ export default function Business() {
                     ['email', 'Email *'],
                     ['city', 'City *'],
                     ['state', 'State *'],
-                    ['yearsInBusiness', 'Years in Business *'],
+                    ['yearsInBusiness', 'Experience in Business *'],
                     ['address', 'Address *'],
                     ['description', 'Description']
                   ].map(([name, label]) => (

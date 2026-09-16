@@ -65,6 +65,16 @@ export const offersService = {
 
   /** POST create offer — POST /api/Offers */
   async create(payload) {
+    const rawEndDate = payload.endDate || '';
+    let formattedEndDate = new Date(Date.now() + 30 * 86400000).toISOString();
+    if (rawEndDate) {
+      if (rawEndDate.includes('T')) {
+        formattedEndDate = rawEndDate;
+      } else {
+        formattedEndDate = `${rawEndDate}T23:59:59Z`;
+      }
+    }
+
     const apiPayload = {
       title: payload.title || '',
       category: payload.category || 'General',
@@ -74,23 +84,48 @@ export const offersService = {
       discountPercentage: Number(payload.discountPercentage || 0),
       description: payload.description || '',
       imageUrl: payload.imageUrl || '',
-      endDate: payload.endDate ? `${payload.endDate}T23:59:59Z` : new Date(Date.now() + 30 * 86400000).toISOString(),
+      endDate: formattedEndDate,
       isActive: payload.isActive !== undefined ? Boolean(payload.isActive) : true,
       displayOrder: Number(payload.displayOrder || 0),
       productId: payload.productId ? Number(payload.productId) : null
     };
 
-    const data = await apiRequest('/api/Offers', {
-      method: 'POST',
-      body: JSON.stringify(apiPayload)
-    });
-
-    const createdItem = data.offer || data.data || data;
-    return mapOfferFromApi(createdItem) || apiPayload;
+    try {
+      const data = await apiRequest('/api/Offers', {
+        method: 'POST',
+        body: JSON.stringify(apiPayload)
+      });
+      const createdItem = data.offer || data.data || data;
+      return mapOfferFromApi(createdItem) || apiPayload;
+    } catch (err) {
+      // If backend returns 400 because of productId FK/null constraint, retry without productId
+      if (err.message && err.message.includes('400') && apiPayload.productId !== null) {
+        console.warn('POST /api/Offers failed with productId, retrying without productId property:', err.message);
+        const fallbackPayload = { ...apiPayload };
+        delete fallbackPayload.productId;
+        const data = await apiRequest('/api/Offers', {
+          method: 'POST',
+          body: JSON.stringify(fallbackPayload)
+        });
+        const createdItem = data.offer || data.data || data;
+        return mapOfferFromApi(createdItem) || fallbackPayload;
+      }
+      throw err;
+    }
   },
 
   /** PUT update offer — PUT /api/Offers/{id} */
   async update(id, payload) {
+    const rawEndDate = payload.endDate || '';
+    let formattedEndDate = new Date(Date.now() + 30 * 86400000).toISOString();
+    if (rawEndDate) {
+      if (rawEndDate.includes('T')) {
+        formattedEndDate = rawEndDate;
+      } else {
+        formattedEndDate = `${rawEndDate}T23:59:59Z`;
+      }
+    }
+
     const apiPayload = {
       id: Number(id),
       title: payload.title || '',
@@ -101,19 +136,33 @@ export const offersService = {
       discountPercentage: Number(payload.discountPercentage || 0),
       description: payload.description || '',
       imageUrl: payload.imageUrl || '',
-      endDate: payload.endDate ? (payload.endDate.includes('T') ? payload.endDate : `${payload.endDate}T23:59:59Z`) : new Date(Date.now() + 30 * 86400000).toISOString(),
+      endDate: formattedEndDate,
       isActive: payload.isActive !== undefined ? Boolean(payload.isActive) : true,
       displayOrder: Number(payload.displayOrder || 0),
       productId: payload.productId ? Number(payload.productId) : null
     };
 
-    const data = await apiRequest(`/api/Offers/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(apiPayload)
-    });
-
-    const updatedItem = data.offer || data.data || data;
-    return mapOfferFromApi(updatedItem) || apiPayload;
+    try {
+      const data = await apiRequest(`/api/Offers/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(apiPayload)
+      });
+      const updatedItem = data.offer || data.data || data;
+      return mapOfferFromApi(updatedItem) || apiPayload;
+    } catch (err) {
+      if (err.message && err.message.includes('400') && apiPayload.productId !== null) {
+        console.warn(`PUT /api/Offers/${id} failed with productId, retrying without productId property:`, err.message);
+        const fallbackPayload = { ...apiPayload };
+        delete fallbackPayload.productId;
+        const data = await apiRequest(`/api/Offers/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify(fallbackPayload)
+        });
+        const updatedItem = data.offer || data.data || data;
+        return mapOfferFromApi(updatedItem) || fallbackPayload;
+      }
+      throw err;
+    }
   },
 
   /** PATCH toggle active/inactive status — PATCH /api/Offers/{id}/status */

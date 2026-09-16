@@ -304,7 +304,7 @@ export default function PartnerApplicationsScreen() {
                 )}
                 {selectedApp.yearsInBusiness && (
                   <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>Years in Business</span>
+                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>Experience in Business</span>
                     <span style={{ fontSize: '14px', color: '#0f172a' }}>{selectedApp.yearsInBusiness}</span>
                   </div>
                 )}

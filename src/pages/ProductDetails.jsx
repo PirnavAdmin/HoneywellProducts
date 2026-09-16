@@ -88,11 +88,37 @@ export function ProductDetailsContent() {
         setError(null);
         setImage(0);
 
-        // Fetch product main data, software downloads, and related products in parallel
-        const [data, softwareData, relData] = await Promise.all([
-          productService.getById(id).catch(() => null),
-          softwareService.getByProductId(id).catch(() => []),
-          productService.getRelated(id).catch(() => []),
+        // 1. Primary lookup by ID
+        let data = await productService.getById(id).catch(() => null);
+
+        // 2. Fallback: If getById failed or returned null, search full product catalog by ID, slug, or title
+        if (!data) {
+          const allProds = await productService.getAll().catch(() => []);
+          if (Array.isArray(allProds) && allProds.length > 0) {
+            const cleanId = String(id).trim().toLowerCase();
+            data = allProds.find((p) => {
+              const pId = String(p.id || '').toLowerCase();
+              const pSlug = String(p.slug || '').toLowerCase();
+              const pName = String(p.name || p.title || '').toLowerCase();
+              const pCode = String(p.sku || p.code || '').toLowerCase();
+              return (
+                pId === cleanId ||
+                pSlug === cleanId ||
+                pCode === cleanId ||
+                pName === cleanId ||
+                pName.replace(/\s+/g, '-') === cleanId ||
+                pName.includes(cleanId) ||
+                cleanId.includes(pName)
+              );
+            }) || null;
+          }
+        }
+
+        // Fetch software & related products using resolved data ID if available
+        const resolvedId = data?.id || id;
+        const [softwareData, relData] = await Promise.all([
+          softwareService.getByProductId(resolvedId).catch(() => []),
+          productService.getRelated(resolvedId).catch(() => []),
         ]);
 
         if (!isMounted) return;
@@ -102,7 +128,7 @@ export function ProductDetailsContent() {
           if (Array.isArray(data.reviews) && data.reviews.length > 0) {
             setReviews(data.reviews);
           } else {
-            loadLiveReviews(id);
+            loadLiveReviews(resolvedId);
           }
 
           const activeSoftware = Array.isArray(softwareData)
