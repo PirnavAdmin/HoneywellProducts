@@ -8,6 +8,7 @@ import GrowthSection from '../components/home/GrowthSection';
 import TestimonialsSection from '../components/home/TestimonialsSection';
 import { productService } from '../services/productService';
 import { categoryService } from '../services/categoryService';
+import { fetchSubcategories } from '../admin/catalog/subcategoriesApi';
 import { solutionService } from '../services/solutionService';
 import { applications } from '../data/solutions';
 import { marketTrends } from '../data/marketTrends';
@@ -34,6 +35,7 @@ export default function Home() {
   const [productTab, setProductTab] = useState('Featured');
   const [productsList, setProductsList] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
+  const [subcategoriesList, setSubcategoriesList] = useState([]);
   const [solutionsList, setSolutionsList] = useState([]);
   const [blogsList, setBlogsList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -57,13 +59,15 @@ export default function Home() {
     Promise.all([
       productService.getAll().catch(() => []),
       categoryService.getAll().catch(() => []),
+      fetchSubcategories().catch(() => []),
       solutionService.getAll().catch(() => []),
       getBlogs().catch(() => []),
     ])
-      .then(([prods, cats, sols, blogs]) => {
+      .then(([prods, cats, subs, sols, blogs]) => {
         if (isMounted) {
           setProductsList(Array.isArray(prods) ? prods : []);
           setCategoriesList(Array.isArray(cats) ? cats : []);
+          setSubcategoriesList(Array.isArray(subs) ? subs : []);
           setSolutionsList(Array.isArray(sols) ? sols : []);
           setBlogsList(Array.isArray(blogs) && blogs.length > 0 ? blogs : marketTrends);
         }
@@ -73,6 +77,24 @@ export default function Home() {
       });
     return () => { isMounted = false; };
   }, []);
+
+  const getSubcategoryCount = (category) => {
+    if (!category) return 0;
+    const catIdStr = String(category.id ?? category.categoryId ?? '');
+    if (Array.isArray(subcategoriesList) && subcategoriesList.length > 0) {
+      const matched = subcategoriesList.filter((sub) => {
+        const subCatId = String(sub.categoryId ?? sub.category_id ?? '');
+        const isActive = sub.status !== 'Inactive' && sub.isActive !== false;
+        return subCatId === catIdStr && isActive;
+      });
+      return matched.length;
+    }
+    const embedded = category.subCategories || category.subcategories || [];
+    if (Array.isArray(embedded) && embedded.length > 0) {
+      return embedded.filter((s) => s.isActive !== false && s.status !== 'Inactive').length;
+    }
+    return Number(category.subcategoryCount || category.subCategoryCount || 0);
+  };
 
   const tabProducts = (productsList.length > 0 ? productsList : []).slice(0, 8);
 
@@ -85,25 +107,43 @@ export default function Home() {
           <Link className="arrow-link" to="/products">View all products <ArrowRight /></Link>
         </div>
         <div className="category-grid product-category-grid">
-          {categoriesList.map((category) => (
-            <Link key={category.id} to={`/products?category=${category.id}`} className="category-card">
-              <img
-                src={(!category.image && !category.imageUrl) || String(category.image || category.imageUrl).toLowerCase().includes('placeholder') ? '/honeywell-products-logo.png' : (category.image || category.imageUrl)}
-                alt={`${category.name} product category`}
-                loading="lazy"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/honeywell-products-logo.png';
-                }}
-              />
-              <div className="category-overlay" />
-              <div>
-                <h3>{category.name}</h3>
-                <p>{category.description}</p>
-                <b>Explore Products <ArrowRight size={17} /></b>
-              </div>
-            </Link>
-          ))}
+          {categoriesList.map((category) => {
+            const subCount = getSubcategoryCount(category);
+            const countLabel = subCount === 1 ? '1 Subcategory' : `${subCount} Subcategories`;
+            const imageSrc = (!category.image && !category.imageUrl) || String(category.image || category.imageUrl).toLowerCase().includes('placeholder')
+              ? '/honeywell-products-logo.png'
+              : (category.image || category.imageUrl);
+
+            return (
+              <Link key={category.id} to={`/products?category=${category.id}`} className="category-card">
+                <img
+                  src={imageSrc}
+                  alt={`${category.name} product category`}
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = '/honeywell-products-logo.png';
+                  }}
+                />
+                <div className="category-overlay" />
+                <div className="category-card-content">
+                  <div className="category-card-header">
+                    <h3>{category.name}</h3>
+                    <span className="category-subcount">{countLabel}</span>
+                  </div>
+                  <div className="category-card-expand">
+                    {category.description && category.description.trim() ? (
+                      <p className="category-desc">{category.description.trim()}</p>
+                    ) : null}
+                    <div className="category-action">
+                      <span>Explore Products</span>
+                      <ArrowRight size={16} />
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       </div>
     </section>

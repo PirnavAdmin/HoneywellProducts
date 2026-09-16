@@ -150,12 +150,11 @@ export default function TestimonialsSection() {
         }
 
         if (isMounted) {
-          const list = Array.isArray(data) && data.length > 0 ? data : defaultTestimonials;
-          setItems(list);
+          setItems(Array.isArray(data) ? data : []);
         }
       } catch (err) {
         console.error('Error fetching testimonials from API:', err);
-        if (isMounted) setItems(defaultTestimonials);
+        if (isMounted) setItems([]);
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -204,6 +203,10 @@ export default function TestimonialsSection() {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', width: '100%' }}>
               Loading testimonials from server...
+            </div>
+          ) : items.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', width: '100%' }}>
+              No testimonials available.
             </div>
           ) : (
             <div className="reviews-scroll-track" ref={scrollRef}>

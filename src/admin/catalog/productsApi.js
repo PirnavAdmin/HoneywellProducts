@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
 import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore, defaultProducts } from './catalogStore';
-import { products as demoProducts } from '../../data/products';
-import { categories as demoCategories } from '../../data/categories';
 import { apiCache } from '../../utils/apiCache';
 
 

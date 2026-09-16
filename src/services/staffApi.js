@@ -2,7 +2,7 @@ import { getApiDomain } from '../utils/apiConfig';
 
 const getBaseUrl = () => {
   const domain = getApiDomain();
-  return domain ? `${domain}/api/Staff` : 'https://wildlife-unwieldy-devotee.ngrok-free.dev/api/Staff';
+  return `${domain}/api/Staff`;
 };
 
 const getHeaders = () => {
