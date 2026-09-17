@@ -97,7 +97,7 @@ const createEmptyProduct = () => ({
     coverageUsage: '',
   },
   keyFeatures: [''],
-  rating: '4.5',
+  rating: '0',
   totalReviews: '0',
   ratingBreakdown: {
     fiveStar: '0',
@@ -117,13 +117,17 @@ const normalizeReviews = (reviews) => {
     return [];
   }
 
-  return reviews.map((review) => ({
-    customer: review.customer || review.customerName || '',
-    rating: String(review.rating || '5'),
-    comment: review.comment || review.reviewComment || '',
-    date: review.date || review.reviewDate || new Date().toISOString().split('T')[0],
-    verified: Boolean(review.verified ?? review.verifiedPurchase ?? true),
-  }));
+  return reviews.map((review) => {
+    const rawRating = Number(review.rating);
+    return {
+      id: review.id ? String(review.id) : undefined,
+      customer: review.customer || review.customerName || '',
+      rating: !isNaN(rawRating) && rawRating >= 0 ? String(rawRating) : '5',
+      comment: review.comment || review.reviewComment || '',
+      date: review.date || review.reviewDate || new Date().toISOString().split('T')[0],
+      verified: Boolean(review.verified ?? review.verifiedPurchase ?? true),
+    };
+  });
 };
 
 const normalizeProduct = (product) => {
@@ -161,8 +165,8 @@ const normalizeProduct = (product) => {
     codAvailable: product.codAvailable === 'No' || product.codAvailability === false ? 'No' : 'Yes',
     deliveryEstimate: product.deliveryEstimate || product.estimatedDelivery || '3-7 business days',
     returnPolicy: product.returnPolicy || product.deliveryReturn || 'Easy Returns',
-    rating: String(product.rating || '4.5'),
-    totalReviews: String(product.totalReviews || '0'),
+    rating: product.rating !== undefined && product.rating !== null && product.rating !== '' ? String(product.rating) : '0',
+    totalReviews: product.totalReviews !== undefined && product.totalReviews !== null && product.totalReviews !== '' ? String(product.totalReviews) : '0',
     shortDescription: product.shortDescription || product.shortDesc || product.description || '',
     productDetails: product.productDetails || product.longDesc || '',
     packageIncludes: product.packageIncludes || '',
@@ -230,6 +234,7 @@ const ProductsForm = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [showImagePreview, setShowImagePreview] = useState(false);
+  const [deletedReviewIds, setDeletedReviewIds] = useState([]);
   const isEditing = Boolean(productId);
 
   // Software & Downloads Admin State
@@ -431,6 +436,9 @@ const ProductsForm = () => {
       if (name === 'stock' || name === 'reorderLevel') {
         updated.status = computeStockStatus(updated.stock, updated.reorderLevel);
       }
+      if (name === 'rating' && Array.isArray(updated.reviews) && updated.reviews.length === 1) {
+        updated.reviews = [{ ...updated.reviews[0], rating: value }];
+      }
       return updated;
     });
   };
@@ -499,12 +507,25 @@ const ProductsForm = () => {
   };
 
   const handleReviewChange = (index, field, value) => {
-    setFormData((current) => ({
-      ...current,
-      reviews: current.reviews.map((review, reviewIndex) =>
+    setFormData((current) => {
+      const updatedReviews = current.reviews.map((review, reviewIndex) =>
         reviewIndex === index ? { ...review, [field]: value } : review
-      ),
-    }));
+      );
+      let updatedRating = current.rating;
+      if (field === 'rating') {
+        const validRatings = updatedReviews
+          .map((r) => Number(r.rating))
+          .filter((n) => !isNaN(n) && n > 0);
+        if (validRatings.length > 0) {
+          updatedRating = (validRatings.reduce((a, b) => a + b, 0) / validRatings.length).toFixed(1);
+        }
+      }
+      return {
+        ...current,
+        reviews: updatedReviews,
+        rating: updatedRating,
+      };
+    });
   };
 
   const addReview = () => {
@@ -515,6 +536,10 @@ const ProductsForm = () => {
   };
 
   const removeReview = (index) => {
+    const item = formData.reviews[index];
+    if (item?.id) {
+      setDeletedReviewIds((prev) => [...prev, item.id]);
+    }
     setFormData((current) => ({
       ...current,
       reviews: current.reviews.filter((_, reviewIndex) => reviewIndex !== index),
@@ -713,6 +738,7 @@ const ProductsForm = () => {
       weight: formData.specifications.weight,
       keyFeatures: formData.keyFeatures.filter((feature) => feature.trim()),
       reviews: formData.reviews.filter((review) => review.customer || review.comment),
+      deletedReviewIds,
       ratingBreakdown: Object.fromEntries(
         Object.entries(formData.ratingBreakdown).map(([rating, value]) => [rating, Number(value) || 0])
       ),
@@ -724,6 +750,7 @@ const ProductsForm = () => {
     try {
       const savedProduct = await saveProductApi(preparedProduct, imageFiles, videoFile, posterFile);
 
+      setDeletedReviewIds([]);
       setFormData(normalizeProduct(savedProduct));
       setImageFiles([]);
       setVideoFile(null);

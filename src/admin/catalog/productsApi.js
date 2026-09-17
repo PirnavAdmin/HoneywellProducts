@@ -189,7 +189,8 @@ export const mapProductFromApi = (
     const custName = r.customerName || r.customer || r.name || r.author || 'Anonymous';
     const revComment = r.reviewComment || r.comment || r.message || r.text || '';
     const revDate = r.reviewDate || r.date || r.dateCreated || r.createdAt || new Date().toISOString();
-    const numRating = Number(r.rating) || 5;
+    const parsedRating = Number(r.rating);
+    const numRating = !isNaN(parsedRating) && parsedRating >= 0 ? parsedRating : 0;
     const isVerified = (r.verifiedPurchase ?? r.verified) !== false;
     return {
       id: String(r.id ?? ''),
@@ -395,9 +396,14 @@ export const mapProductFromApi = (
     ],
 
     // Features & Reviews
-    rating: mappedReviews.length > 0
-      ? (mappedReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / mappedReviews.length).toFixed(1)
-      : (Number(raw.averageRating ?? raw.rating) > 0 ? Number(raw.averageRating ?? raw.rating).toFixed(1) : '0'),
+    rating: (() => {
+      if (mappedReviews.length > 0) {
+        const sum = mappedReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0);
+        return (sum / mappedReviews.length).toFixed(1);
+      }
+      const rawNum = Number(raw.averageRating ?? raw.rating);
+      return !isNaN(rawNum) && rawNum > 0 ? rawNum.toFixed(1) : '0';
+    })(),
     reviewCount: mappedReviews.length > 0
       ? mappedReviews.length
       : (Number(raw.totalReviews) > 0 ? Number(raw.totalReviews) : 0),
@@ -481,45 +487,43 @@ export const fetchProductReviewById = async (id) => {
   return await reviewService.getById(id);
 };
 
+const formatReviewDate = (d) => {
+  if (!d) return new Date().toISOString();
+  if (typeof d === 'string') {
+    if (d.includes('T')) return d;
+    if (d.length === 7) return `${d}-01T00:00:00Z`;
+    if (d.length === 10) return `${d}T00:00:00Z`;
+  }
+  return new Date(d).toISOString();
+};
+
 export const createProductReview = async (productId, review) => {
   const result = await reviewService.submit({
-    productId: Number(productId),
+    productId: String(productId || '').trim(),
     customerName: review.customer || review.customerName || 'Anonymous',
     rating: Number(review.rating) || 5,
-    reviewDate: review.date ? `${review.date}-01T00:00:00Z` : new Date().toISOString(),
+    reviewDate: formatReviewDate(review.date || review.reviewDate),
     reviewComment: review.comment || review.reviewComment || '',
     verifiedPurchase: review.verified !== false,
   });
   apiCache.invalidate('product');
-  apiCache.invalidate('catalog_reviews');
+  apiCache.invalidate('products_all');
+  apiCache.invalidate(`prod_${productId}`);
   return result;
 };
 
 export const updateProductReview = async (id, reviewData) => {
   const result = await reviewService.update(id, reviewData);
   apiCache.invalidate('product');
-  apiCache.invalidate('catalog_reviews');
+  apiCache.invalidate('products_all');
   return result;
 };
 
 export const deleteProductReview = async (id) => {
   const result = await reviewService.delete(id);
   apiCache.invalidate('product');
-  apiCache.invalidate('catalog_reviews');
+  apiCache.invalidate('products_all');
   return result;
-};
-
-/** Helper to fetch global catalog reviews with caching */
-export const fetchCatalogReviews = async () => {
-  return await apiCache.fetchWithCache('catalog_reviews_global', async () => {
-    try {
-      const res = await fetchProductReviews('all');
-      if (Array.isArray(res) && res.length > 0) return res;
-    } catch (e) {
-      console.warn('Could not load global catalog reviews:', e?.message);
-    }
-    return [];
-  }, 5 * 60 * 1000);
 };
 
 // ─── Products — List & Search ─────────────────────────────────────────────────
@@ -534,15 +538,10 @@ export const fetchCatalogReviews = async () => {
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
   return await apiCache.fetchWithCache('products_all', async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get('/api/products'),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get('/api/products');
     const rawList = unwrapList(response);
     const apiProducts = rawList.map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
     return apiProducts;
@@ -553,14 +552,9 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
 export const searchProducts = async (keyword, categories = [], subcategories = []) => {
   const cacheKey = `search_${(keyword || '').toLowerCase()}`;
   return await apiCache.fetchWithCache(cacheKey, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get('/api/products/search', { params: { keyword } }),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get('/api/products/search', { params: { keyword } });
     return unwrapList(response).map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
   }, 3 * 60 * 1000);
@@ -597,10 +591,7 @@ export const fetchProductsPaged = async (
 
   const cacheKey = `paged_${page}_${pageSize}_${params.categoryId || ''}_${params.sort || ''}_${params.keyword || ''}`;
   return await apiCache.fetchWithCache(cacheKey, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get('/api/products/paged', { params: { page, pageSize, ...params } }),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get('/api/products/paged', { params: { page, pageSize, ...params } });
     const raw = response?.data;
     const items = Array.isArray(raw)
       ? raw
@@ -611,9 +602,7 @@ export const fetchProductsPaged = async (
       : [];
     return {
       products: items.map((p) => {
-        const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-          ? p.reviews
-          : catalogReviews;
+        const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
         return mapProductFromApi(p, categories, subcategories, [], prodReviews);
       }),
       page: raw?.page ?? page,
@@ -630,14 +619,9 @@ export const fetchProductsByCategory = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`cat_prods_${categoryId}`, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get(`/api/products/category/${categoryId}`),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get(`/api/products/category/${categoryId}`);
     return unwrapList(response).map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
   }, 5 * 60 * 1000);
@@ -650,14 +634,9 @@ export const fetchProductsBySubcategory = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`subcat_prods_${subcategoryId}`, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get(`/api/products/subcategory/${subcategoryId}`),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get(`/api/products/subcategory/${subcategoryId}`);
     return unwrapList(response).map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
   }, 5 * 60 * 1000);
@@ -676,14 +655,9 @@ export const fetchRelatedProducts = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`related_${productId}`, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get(`/api/products/related/${productId}`),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get(`/api/products/related/${productId}`);
     return unwrapList(response).map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
   }, 5 * 60 * 1000);
@@ -697,20 +671,25 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
     try {
       const response = await api.get(`/api/products/${id}`);
       const product = unwrapItem(response);
+      const prodId = product.id || id;
 
-      // Fetch features and reviews in parallel; never let them crash the product load
+      // Fetch features and strictly product-specific reviews in parallel
       const [features, reviews] = await Promise.all([
-        fetchProductFeatures(id).catch((e) => {
-          console.warn('Could not load features for product', id, e?.message);
+        fetchProductFeatures(prodId).catch((e) => {
+          console.warn('Could not load features for product', prodId, e?.message);
           return [];
         }),
-        fetchProductReviews(id).catch((e) => {
-          console.warn('Could not load reviews for product', id, e?.message);
+        fetchProductReviews(prodId).catch((e) => {
+          console.warn('Could not load reviews for product', prodId, e?.message);
           return [];
         }),
       ]);
 
-      return mapProductFromApi(product, categories, subcategories, features, reviews);
+      const strictReviews = (Array.isArray(reviews) ? reviews : []).filter(
+        (r) => !r.productId || String(r.productId) === String(prodId)
+      );
+
+      return mapProductFromApi(product, categories, subcategories, features, strictReviews);
     } catch (err) {
       console.warn(`GET /api/products/${id} failed (${err.message}), attempting catalog fallback search.`);
       try {
@@ -820,12 +799,33 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   fd.append('Price', String(Number(product.price) || 0));
   fd.append('Stock', String(Number(product.stock) || 0));
 
+  // Ratings & Reviews
+  let calculatedRating = Number(product.rating) || 0;
+  if (Array.isArray(product.reviews) && product.reviews.length > 0) {
+    const validRatings = product.reviews
+      .map((r) => Number(r.rating))
+      .filter((n) => !isNaN(n) && n > 0);
+    if (validRatings.length > 0) {
+      calculatedRating = Number((validRatings.reduce((a, b) => a + b, 0) / validRatings.length).toFixed(2));
+    }
+  }
+  const calculatedTotalReviews = Array.isArray(product.reviews) && product.reviews.length > 0
+    ? product.reviews.length
+    : (Number(product.totalReviews) || 0);
+
+  fd.append('Rating', String(calculatedRating));
+  fd.append('AverageRating', String(calculatedRating));
+  fd.append('TotalReviews', String(calculatedTotalReviews));
+
   // Images & Media
   if (Array.isArray(imageFiles)) {
     imageFiles.forEach((file) => fd.append('Images', file));
   }
   if (videoFile) fd.append('Video', videoFile);
   if (posterFile) fd.append('Poster', posterFile);
+
+  let mapped = null;
+  let savedId = String(product.id || '');
 
   try {
     const response = await api({
@@ -835,72 +835,135 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     const saved = unwrapItem(response);
-    const mapped = mapProductFromApi(saved);
-    if (!mapped.image && primaryImage) mapped.image = primaryImage;
-    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
-      mapped.images = mergedImages;
-      mapped.gallery = mergedImages;
-    }
-    upsertProduct(mapped);
-    return mapped;
+    savedId = String(saved?.productId || saved?.id || product.id || '');
+    mapped = mapProductFromApi(saved);
   } catch (err) {
     console.warn('FormData product upload failed, attempting JSON fallback:', err.message);
-  }
 
-  // Standard JSON payload fallback
-  const payload = {
-    id: isEditing ? Number(product.id) : undefined,
-    productName: product.name || '',
-    name: product.name || '',
-    sku: product.sku || '',
-    brand: product.brand || 'Honeywell',
-    manufacturer: product.supplier || product.manufacturer || '',
-    subcategoryId: Number(product.subcategoryId) || 0,
-    categoryId: Number(product.categoryId) || 0,
-    mrp: Number(product.mrp) || 0,
-    price: Number(product.price) || 0,
-    sellingPrice: Number(product.price) || 0,
-    stock: Number(product.stock) || 0,
-    stockQuantity: Number(product.stock) || 0,
-    shortDescription: product.shortDescription || product.description || '',
-    productDetails: product.productDetails || '',
-    packageIncludes: product.packageIncludes || '',
-    weight: specWeight,
-    dimensions: specDimensions,
-    powerSource: specPower,
-    material: specMaterial,
-    coverageUsage: specCoverage,
-    specifications: product.specifications || {},
-    discountType: product.discountType || 'none',
-    discountAmount: Number(product.discountValue) || 0,
-    isActive: product.status !== 'Inactive' && product.isActive !== false,
-    imageUrl: primaryImage,
-    image: primaryImage,
-    images: mergedImages,
-  };
+    // Standard JSON payload fallback
+    const payload = {
+      id: isEditing ? Number(product.id) : undefined,
+      productName: product.name || '',
+      name: product.name || '',
+      sku: product.sku || '',
+      brand: product.brand || 'Honeywell',
+      manufacturer: product.supplier || product.manufacturer || '',
+      subcategoryId: Number(product.subcategoryId) || 0,
+      categoryId: Number(product.categoryId) || 0,
+      mrp: Number(product.mrp) || 0,
+      price: Number(product.price) || 0,
+      sellingPrice: Number(product.price) || 0,
+      stock: Number(product.stock) || 0,
+      stockQuantity: Number(product.stock) || 0,
+      shortDescription: product.shortDescription || product.description || '',
+      productDetails: product.productDetails || '',
+      packageIncludes: product.packageIncludes || '',
+      weight: specWeight,
+      dimensions: specDimensions,
+      powerSource: specPower,
+      material: specMaterial,
+      coverageUsage: specCoverage,
+      specifications: product.specifications || {},
+      discountType: product.discountType || 'none',
+      discountAmount: Number(product.discountValue) || 0,
+      rating: calculatedRating,
+      averageRating: calculatedRating,
+      totalReviews: calculatedTotalReviews,
+      isActive: product.status !== 'Inactive' && product.isActive !== false,
+      imageUrl: primaryImage,
+      image: primaryImage,
+      images: mergedImages,
+    };
 
-  try {
-    const response = await api({
-      method: isEditing ? 'PUT' : 'POST',
-      url: isEditing ? `/api/products/${product.id}` : '/api/products',
-      data: payload,
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const saved = unwrapItem(response);
-    const savedId = String(saved.productId || saved.id || product.id || '');
-    const mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
-    if (!mapped.image && primaryImage) mapped.image = primaryImage;
-    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
-      mapped.images = mergedImages;
-      mapped.gallery = mergedImages;
+    try {
+      const response = await api({
+        method: isEditing ? 'PUT' : 'POST',
+        url: isEditing ? `/api/products/${product.id}` : '/api/products',
+        data: payload,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const saved = unwrapItem(response);
+      savedId = String(saved?.productId || saved?.id || product.id || '');
+      mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
+    } catch (err2) {
+      console.error('Backend API unavailable to save product:', err2.message);
+      throw new Error('Unable to save product. Backend server is unreachable.');
     }
-    const finalProduct = { ...mapped, id: savedId || mapped.id };
-    upsertProduct(finalProduct);
-    return finalProduct;
-  } catch (err) {
-    console.error('Backend API unavailable to save product:', err.message);
-    throw new Error('Unable to save product. Backend server is unreachable.');
   }
+
+  if (!mapped.image && primaryImage) mapped.image = primaryImage;
+  if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
+    mapped.images = mergedImages;
+    mapped.gallery = mergedImages;
+  }
+
+  const targetId = String(savedId || mapped?.id || product.id || '').trim();
+
+  // If deletedReviewIds provided, delete them
+  if (Array.isArray(product.deletedReviewIds) && product.deletedReviewIds.length > 0) {
+    for (const dId of product.deletedReviewIds) {
+      if (dId) {
+        await deleteProductReview(dId).catch((e) => console.warn('Could not delete review:', dId, e?.message));
+      }
+    }
+  }
+
+  // If reviews provided in product, persist them
+  const savedReviews = [];
+  if (targetId && Array.isArray(product.reviews) && product.reviews.length > 0) {
+    for (const r of product.reviews) {
+      if (r && (r.customer || r.customerName || r.comment || r.reviewComment)) {
+        try {
+          let savedRev = null;
+          if (r.id) {
+            savedRev = await updateProductReview(r.id, { ...r, productId: targetId });
+          } else {
+            savedRev = await createProductReview(targetId, r);
+          }
+          if (savedRev) savedReviews.push(savedRev);
+        } catch (revErr) {
+          console.warn('Could not persist product review:', revErr?.message);
+        }
+      }
+    }
+  }
+
+  const finalProduct = {
+    ...mapped,
+    id: targetId || mapped.id,
+    rating: String(calculatedRating > 0 ? calculatedRating.toFixed(1) : '0'),
+    averageRating: calculatedRating,
+    totalReviews: String(calculatedTotalReviews),
+    reviewCount: calculatedTotalReviews,
+    reviews: (savedReviews.length > 0 ? savedReviews : (product.reviews || [])).map((r) => {
+      const rRating = Number(r.rating) || calculatedRating;
+      const rDate = r.reviewDate || r.date || new Date().toISOString();
+      const rName = r.customerName || r.customer || 'Anonymous';
+      const rComment = r.reviewComment || r.comment || '';
+      return {
+        id: String(r.id || ''),
+        productId: targetId,
+        customer: rName,
+        customerName: rName,
+        rating: rRating,
+        ratingStr: String(rRating),
+        comment: rComment,
+        reviewComment: rComment,
+        date: rDate,
+        reviewDate: rDate,
+        verified: r.verified !== false,
+        verifiedPurchase: r.verified !== false,
+      };
+    }),
+  };
+  upsertProduct(finalProduct);
+
+  apiCache.invalidate('products_all');
+  apiCache.invalidate(`prod_${targetId}`);
+  apiCache.invalidate('product');
+  reviewService.clearCache();
+
+  return finalProduct;
 };
 
 // ─── Products — Delete ────────────────────────────────────────────────────────

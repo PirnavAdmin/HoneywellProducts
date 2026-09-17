@@ -58,7 +58,10 @@ export function ProductDetailsContent() {
   const loadLiveReviews = async (prodId) => {
     try {
       const data = await reviewService.getByProduct(prodId);
-      setReviews(Array.isArray(data) ? data : []);
+      const filtered = Array.isArray(data)
+        ? data.filter((r) => !prodId || String(r.productId) === String(prodId))
+        : [];
+      setReviews(filtered);
     } catch (e) {
       console.warn('Error loading product reviews:', e);
     }
@@ -125,11 +128,10 @@ export function ProductDetailsContent() {
 
         if (data) {
           setProduct(data);
-          if (Array.isArray(data.reviews) && data.reviews.length > 0) {
-            setReviews(data.reviews);
-          } else {
-            loadLiveReviews(resolvedId);
-          }
+          const strictReviews = (Array.isArray(data.reviews) ? data.reviews : []).filter(
+            (r) => !data.id || String(r.productId) === String(data.id)
+          );
+          setReviews(strictReviews);
 
           const activeSoftware = Array.isArray(softwareData)
             ? softwareData.filter((s) => (s.status || 'Active').toLowerCase() === 'active')
@@ -229,8 +231,9 @@ export function ProductDetailsContent() {
     setReviewSubmitting(true);
     setReviewMsg('');
     try {
+      const targetProdId = String(product?.id || id);
       await reviewService.submit({
-        productId: id,
+        productId: targetProdId,
         customerName: newReview.name.trim(),
         rating: Number(newReview.rating),
         reviewComment: newReview.comment.trim(),
@@ -238,7 +241,7 @@ export function ProductDetailsContent() {
       });
       setNewReview({ name: '', rating: 5, comment: '' });
       setReviewMsg('Thank you! Your review has been submitted.');
-      loadLiveReviews(id);
+      await loadLiveReviews(targetProdId);
     } catch (err) {
       console.error('Review submit error:', err);
       setReviewMsg('Thank you! Your review has been recorded.');

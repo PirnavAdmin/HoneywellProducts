@@ -13,7 +13,8 @@ export const mapReviewFromApi = (item) => {
   const customerName = item.customerName || item.customer || item.name || item.author || 'Anonymous';
   const reviewComment = item.reviewComment || item.comment || item.message || item.text || '';
   const reviewDate = item.reviewDate || item.date || item.createdAt || new Date().toISOString();
-  const rating = Number(item.rating) || 5;
+  const rawRating = Number(item.rating);
+  const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
   const verifiedPurchase = item.verifiedPurchase !== undefined ? Boolean(item.verifiedPurchase) : (item.verified !== undefined ? Boolean(item.verified) : true);
   return {
     id: String(rawId),
@@ -35,82 +36,54 @@ const reviewsCache = new Map();
 
 export const reviewService = {
   /** Synchronously get reviews from memory cache or localStore if available */
-  getCached(productId, fallbackId = null) {
-    if (productId && reviewsCache.has(String(productId).trim())) {
-      return reviewsCache.get(String(productId).trim());
+  getCached(productId) {
+    if (!productId) return null;
+    const key = String(productId).trim();
+    if (reviewsCache.has(key)) {
+      return reviewsCache.get(key);
     }
-    if (fallbackId && reviewsCache.has(String(fallbackId).trim())) {
-      return reviewsCache.get(String(fallbackId).trim());
-    }
-    if (reviewsCache.has('all')) {
-      return reviewsCache.get('all');
-    }
-    const local = getReviewsByProductIdFromStore(productId) || (fallbackId ? getReviewsByProductIdFromStore(fallbackId) : []);
-    return local && local.length > 0 ? local : null;
+    const local = getReviewsByProductIdFromStore(key);
+    const filtered = (local || []).filter((r) => !r.productId || String(r.productId) === key);
+    return filtered.length > 0 ? filtered : null;
   },
 
-  /** GET (ByProduct) — GET /api/reviews/{productId} with fallbackId (e.g. slug) support */
-  async getByProduct(productId, fallbackId = null) {
-    if (!productId && !fallbackId) {
-      if (reviewsCache.has('all')) return reviewsCache.get('all');
+  clearCache(productId = null) {
+    if (productId) {
+      reviewsCache.delete(String(productId).trim());
+    } else {
+      reviewsCache.clear();
+    }
+  },
+
+  /** GET (ByProduct) — GET /api/reviews/{productId} strictly for this product */
+  async getByProduct(productId) {
+    if (!productId) return [];
+    const key = String(productId).trim();
+    if (!key || isNaN(Number(key))) {
       return [];
     }
-    const primaryKey = String(productId || fallbackId).trim();
-    if (reviewsCache.has(primaryKey)) {
-      return reviewsCache.get(primaryKey);
-    }
-    if (fallbackId && reviewsCache.has(String(fallbackId).trim())) {
-      return reviewsCache.get(String(fallbackId).trim());
+    if (reviewsCache.has(key)) {
+      return reviewsCache.get(key);
     }
 
     try {
-      let data = await apiRequest(`/api/reviews/${primaryKey}`);
-      let list = Array.isArray(data) ? data : (data.reviews || data.items || data.data || []);
-      let mapped = list.map(mapReviewFromApi).filter(Boolean);
+      const data = await apiRequest(`/api/reviews/${key}`);
+      const list = Array.isArray(data) ? data : (data.reviews || data.items || data.data || []);
+      const mapped = list
+        .map(mapReviewFromApi)
+        .filter(Boolean)
+        .filter((r) => !r.productId || String(r.productId) === key);
 
-      // If primary ID returned empty and fallbackId (e.g. slug) is provided, query with fallbackId
-      if (mapped.length === 0 && fallbackId && String(fallbackId).trim() !== primaryKey) {
-        const fallbackKey = String(fallbackId).trim();
-        const fallbackData = await apiRequest(`/api/reviews/${fallbackKey}`);
-        const fallbackList = Array.isArray(fallbackData) ? fallbackData : (fallbackData.reviews || fallbackData.items || fallbackData.data || []);
-        mapped = fallbackList.map(mapReviewFromApi).filter(Boolean);
-      }
-
-      // If still empty, query global catalogue reviews /api/reviews/all
-      if (mapped.length === 0) {
-        if (reviewsCache.has('all')) {
-          mapped = reviewsCache.get('all');
-        } else {
-          const allData = await apiRequest('/api/reviews/all').catch(() => []);
-          const allList = Array.isArray(allData) ? allData : (allData.reviews || allData.items || allData.data || []);
-          mapped = allList.map(mapReviewFromApi).filter(Boolean);
-          if (mapped.length > 0) {
-            reviewsCache.set('all', mapped);
-          }
-        }
-      }
-
-      if (mapped.length > 0) {
-        reviewsCache.set(primaryKey, mapped);
-        if (fallbackId) reviewsCache.set(String(fallbackId).trim(), mapped);
-        return mapped;
-      }
+      reviewsCache.set(key, mapped);
+      return mapped;
     } catch (err) {
-      console.warn(`Reviews API getByProduct(${primaryKey}) error:`, err.message);
+      console.warn(`Reviews API getByProduct(${key}) error:`, err.message);
     }
 
-    // Fallback to local store or global cached reviews
-    let local = getReviewsByProductIdFromStore(productId);
-    if ((!local || local.length === 0) && fallbackId) {
-      local = getReviewsByProductIdFromStore(fallbackId);
-    }
-    if ((!local || local.length === 0) && reviewsCache.has('all')) {
-      local = reviewsCache.get('all');
-    }
-    const result = local || [];
-    reviewsCache.set(primaryKey, result);
-    if (fallbackId) reviewsCache.set(String(fallbackId).trim(), result);
-    return result;
+    const local = getReviewsByProductIdFromStore(key) || [];
+    const filteredLocal = local.filter((r) => !r.productId || String(r.productId) === key);
+    reviewsCache.set(key, filteredLocal);
+    return filteredLocal;
   },
 
   /** GET (ById) — GET /api/reviews/item/{id} */
@@ -127,13 +100,15 @@ export const reviewService = {
 
   /** POST (Create) — POST /api/reviews */
   async submit(payload) {
+    const rawRating = Number(payload.rating);
+    const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
     const apiPayload = {
-      productId: isNaN(Number(payload.productId)) ? payload.productId : Number(payload.productId),
+      productId: String(payload.productId || '').trim(),
       customerName: payload.customerName || payload.customer || payload.name || 'Anonymous',
-      rating: Number(payload.rating) || 5,
+      rating,
       reviewDate: payload.reviewDate || payload.date || new Date().toISOString(),
       reviewComment: payload.reviewComment || payload.comment || '',
-      verifiedPurchase: payload.verifiedPurchase !== undefined ? payload.verifiedPurchase : true,
+      verifiedPurchase: payload.verifiedPurchase !== undefined ? Boolean(payload.verifiedPurchase) : true,
       status: payload.status || 'Approved'
     };
 
@@ -173,14 +148,16 @@ export const reviewService = {
     }
 
     const merged = { ...current, ...updateData };
+    const rawRating = Number(merged.rating);
+    const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
     const apiPayload = {
       id: isNaN(Number(id)) ? id : Number(id),
-      productId: isNaN(Number(merged.productId)) ? merged.productId : Number(merged.productId),
+      productId: String(merged.productId || '').trim(),
       customerName: merged.customerName || merged.customer || 'Anonymous',
-      rating: Number(merged.rating) || 5,
+      rating,
       reviewDate: merged.reviewDate || merged.date || new Date().toISOString(),
       reviewComment: merged.reviewComment || merged.comment || '',
-      verifiedPurchase: merged.verifiedPurchase !== undefined ? merged.verifiedPurchase : true,
+      verifiedPurchase: merged.verifiedPurchase !== undefined ? Boolean(merged.verifiedPurchase) : true,
       status: merged.status || 'Approved'
     };
 
@@ -195,6 +172,7 @@ export const reviewService = {
       throw new Error(`Failed to update review ${id} (${response.status})`);
     }
 
+    reviewsCache.clear();
     return apiPayload;
   },
 
@@ -210,6 +188,7 @@ export const reviewService = {
       throw new Error(`Failed to delete review ${id} (${response.status})`);
     }
 
+    reviewsCache.clear();
     return true;
   }
 };
