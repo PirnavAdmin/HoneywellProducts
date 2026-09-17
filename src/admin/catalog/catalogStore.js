@@ -15,9 +15,57 @@ const MOCK_IDS = new Set([
   '1', '2', '3', '5', '6', '7'
 ]);
 
-const readList = (key, fallback) => fallback;
+const readList = (key, fallback) => {
+  if (!isStorageAvailable()) return fallback;
 
-const writeList = () => {};
+  try {
+    const stored = window.localStorage.getItem(key);
+    if (!stored) return fallback;
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch (error) {
+    return fallback;
+  }
+};
+
+/**
+ * Strip large base64-encoded image strings from a product before persisting
+ * so we don't blow the ~5 MB localStorage quota.
+ */
+const stripHeavyFields = (product) => {
+  const stripped = { ...product };
+  // Remove base64 image data (data:image/... strings) — they are re-fetched from API
+  if (typeof stripped.image === 'string' && stripped.image.startsWith('data:')) {
+    stripped.image = '';
+  }
+  if (Array.isArray(stripped.images)) {
+    stripped.images = stripped.images.map((img) =>
+      typeof img === 'string' && img.startsWith('data:') ? '' : img
+    );
+  }
+  return stripped;
+};
+
+const writeList = (key, list) => {
+  if (!isStorageAvailable()) return;
+  try {
+    // For the products key, strip heavy fields first to avoid quota errors
+    const toStore =
+      key === CATALOG_KEYS.products
+        ? list.map(stripHeavyFields)
+        : list;
+    window.localStorage.setItem(key, JSON.stringify(toStore));
+  } catch (err) {
+    if (err && err.name === 'QuotaExceededError') {
+      console.warn(
+        `[catalogStore] localStorage quota exceeded for key "${key}". ` +
+        'Some product data may not be persisted locally — it will still be saved via the API.'
+      );
+    } else {
+      console.error(`[catalogStore] Failed to write "${key}" to localStorage:`, err);
+    }
+  }
+};
 
 const nextId = (prefix, items) => {
   const nextNumber =

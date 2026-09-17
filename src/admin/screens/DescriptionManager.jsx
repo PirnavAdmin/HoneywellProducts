@@ -1,10 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Save, RefreshCw, CheckCircle, AlertCircle, FileText, Code } from 'lucide-react';
+import {
+  Save, RefreshCw, CheckCircle, AlertCircle,
+  FileText, Code2, ShieldCheck, TriangleAlert, Info
+} from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
-import '../catalog/adminModule.css';
+import './DescriptionManager.css';
 
 const API_URL = `${getApiDomain()}/api/Settings/description-manager`;
+
+/* ── Character counter helper ── */
+const CharCount = ({ value, max }) => {
+  const len = (value || '').length;
+  const cls = len > max ? 'over' : len > max * 0.85 ? 'warn' : '';
+  return (
+    <span className={`dm-char-count ${cls}`}>
+      {len} / {max} chars
+    </span>
+  );
+};
+
+/* ── Single template card ── */
+const TemplateCard = ({ icon, iconVariant, title, desc, badge, badgeVariant, mono, rows, maxLen, required, value, onChange, placeholder }) => (
+  <div className="dm-card">
+    <div className="dm-card-head">
+      <div className="dm-card-head-left">
+        <div className={`dm-card-icon ${iconVariant}`}>{icon}</div>
+        <div>
+          <div className="dm-card-title">{title}</div>
+          <div className="dm-card-desc">{desc}</div>
+        </div>
+      </div>
+      <span className={`dm-badge ${badgeVariant}`}>{badge}</span>
+    </div>
+
+    <div className="dm-textarea-wrap">
+      <textarea
+        className={`dm-textarea${mono ? ' mono-font' : ''}`}
+        rows={rows}
+        required={required}
+        placeholder={placeholder}
+        value={value}
+        onChange={onChange}
+      />
+    </div>
+
+    <div className="dm-card-foot">
+      <CharCount value={value} max={maxLen} />
+    </div>
+  </div>
+);
 
 const DescriptionManager = () => {
   const [descData, setDescData] = useState({
@@ -17,9 +62,7 @@ const DescriptionManager = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  useEffect(() => {
-    fetchDescriptionSettings();
-  }, []);
+  useEffect(() => { fetchDescriptionSettings(); }, []);
 
   const fetchDescriptionSettings = async () => {
     setLoading(true);
@@ -28,9 +71,7 @@ const DescriptionManager = () => {
       const res = await axios.get(API_URL, {
         headers: { 'ngrok-skip-browser-warning': 'true' }
       });
-      if (res.data) {
-        setDescData(prev => ({ ...prev, ...res.data }));
-      }
+      if (res.data) setDescData(prev => ({ ...prev, ...res.data }));
     } catch (err) {
       console.warn('Failed to load Description Manager from API:', err.message);
     } finally {
@@ -55,87 +96,118 @@ const DescriptionManager = () => {
     }
   };
 
+  const set = (field) => (e) =>
+    setDescData(prev => ({ ...prev, [field]: e.target.value }));
+
   return (
-    <div className="admin-screen p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Description Manager</h1>
-          <p className="text-sm text-slate-500">Configure global product description templates, technical specs formats, and warranty disclaimers.</p>
+    <div className="dm-page">
+
+      {/* ── Header ── */}
+      <div className="dm-header">
+        <div className="dm-header-text">
+          <span className="dm-kicker">Settings · Content</span>
+          <h1>Description Manager</h1>
+          <p>Configure global product description templates, technical specs formats, and warranty disclaimers.</p>
         </div>
         <button
+          type="button"
           onClick={fetchDescriptionSettings}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium text-xs"
+          className="dm-reload-btn"
         >
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Reload Templates
+          <RefreshCw size={15} className={loading ? 'spinning' : ''} />
+          Reload Templates
         </button>
       </div>
 
+      {/* ── Loading bar ── */}
+      {loading && <div className="dm-loading-bar" />}
+
+      {/* ── Alert ── */}
       {message.text && (
-        <div className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${
-          message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+        <div className={`dm-alert ${message.type}`}>
+          {message.type === 'success' ? <CheckCircle size={17} /> : <AlertCircle size={17} />}
           <span>{message.text}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Default Product Overview Template</label>
-          <textarea
-            rows="3"
-            required
-            className="w-full border border-slate-300 rounded-xl p-3 text-sm outline-none focus:border-blue-600"
-            value={descData.defaultProductOverview}
-            onChange={e => setDescData({ ...descData, defaultProductOverview: e.target.value })}
-          />
-        </div>
+      {/* ── Form ── */}
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Technical Specs Template</label>
-          <textarea
-            rows="4"
-            required
-            className="w-full border border-slate-300 rounded-xl p-3 text-sm font-mono outline-none focus:border-blue-600"
-            value={descData.technicalSpecsTemplate}
-            onChange={e => setDescData({ ...descData, technicalSpecsTemplate: e.target.value })}
-          />
-        </div>
+        <TemplateCard
+          icon={<FileText size={17} />}
+          iconVariant="blue"
+          title="Default Product Overview Template"
+          desc="Used as the default description when a product has no custom overview."
+          badge="Required"
+          badgeVariant="required"
+          rows={4}
+          maxLen={500}
+          required
+          placeholder="High-performance scanning engine designed for..."
+          value={descData.defaultProductOverview}
+          onChange={set('defaultProductOverview')}
+        />
 
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Standard Warranty Terms Statement</label>
-          <textarea
-            rows="2"
-            className="w-full border border-slate-300 rounded-xl p-3 text-sm outline-none focus:border-blue-600"
-            value={descData.warrantyTerms}
-            onChange={e => setDescData({ ...descData, warrantyTerms: e.target.value })}
-          />
-        </div>
+        <TemplateCard
+          icon={<Code2 size={17} />}
+          iconVariant="violet"
+          title="Technical Specs Template"
+          desc="Structured key-value format for product specification tables. One spec per line."
+          badge="Monospace · Required"
+          badgeVariant="mono"
+          mono
+          rows={5}
+          maxLen={800}
+          required
+          placeholder={"Scanning Technology: 2D Imager\nInterface: USB / Bluetooth 5.0\nOperating Temp: -10°C to 50°C"}
+          value={descData.technicalSpecsTemplate}
+          onChange={set('technicalSpecsTemplate')}
+        />
 
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Technical Specifications Disclaimer</label>
-          <textarea
-            rows="2"
-            className="w-full border border-slate-300 rounded-xl p-3 text-sm outline-none focus:border-blue-600"
-            value={descData.disclaimerText}
-            onChange={e => setDescData({ ...descData, disclaimerText: e.target.value })}
-          />
-        </div>
+        <TemplateCard
+          icon={<ShieldCheck size={17} />}
+          iconVariant="amber"
+          title="Standard Warranty Terms Statement"
+          desc="Displayed on product pages and in order confirmation emails."
+          badge="Optional"
+          badgeVariant="optional"
+          rows={3}
+          maxLen={400}
+          placeholder="Includes 3-Year Factory Warranty with optional coverage..."
+          value={descData.warrantyTerms}
+          onChange={set('warrantyTerms')}
+        />
 
-        <div className="flex justify-end pt-4 border-t border-slate-100">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition-colors shadow-md"
-          >
-            <Save size={16} /> {saving ? 'Saving...' : 'Save Description Templates'}
+        <TemplateCard
+          icon={<TriangleAlert size={17} />}
+          iconVariant="rose"
+          title="Technical Specifications Disclaimer"
+          desc="Legal disclaimer shown beneath spec tables on the storefront."
+          badge="Optional"
+          badgeVariant="optional"
+          rows={3}
+          maxLen={400}
+          placeholder="Specifications are subject to change without prior notice..."
+          value={descData.disclaimerText}
+          onChange={set('disclaimerText')}
+        />
+
+        {/* ── Footer ── */}
+        <div className="dm-form-footer">
+          <span className="dm-form-hint">
+            <Info size={13} />
+            Templates apply globally to all products unless overridden per-product.
+          </span>
+          <button type="submit" disabled={saving} className="dm-save-btn">
+            <Save size={15} className={saving ? 'saving-spin' : ''} />
+            {saving ? 'Saving…' : 'Save Description Templates'}
           </button>
         </div>
+
       </form>
     </div>
   );
 };
 
 export default DescriptionManager;
-

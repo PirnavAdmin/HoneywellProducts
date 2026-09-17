@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Save, RefreshCw, CheckCircle, AlertCircle, FileText, Globe, Shield } from 'lucide-react';
+import {
+  Save, RefreshCw, CheckCircle, AlertCircle,
+  FileText, Globe, Shield, Link2, Copyright,
+  AlignLeft, Linkedin, Twitter, Facebook
+} from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
-import '../catalog/adminModule.css';
+import './FooterConfig.css';
 
 const API_URL = `${getApiDomain()}/api/Settings/footer`;
 
@@ -22,9 +26,7 @@ const FooterConfig = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  useEffect(() => {
-    fetchFooterConfig();
-  }, []);
+  useEffect(() => { fetchFooterConfig(); }, []);
 
   const fetchFooterConfig = async () => {
     setLoading(true);
@@ -33,9 +35,7 @@ const FooterConfig = () => {
       const res = await axios.get(API_URL, {
         headers: { 'ngrok-skip-browser-warning': 'true' }
       });
-      if (res.data) {
-        setFooterData(prev => ({ ...prev, ...res.data }));
-      }
+      if (res.data) setFooterData(prev => ({ ...prev, ...res.data }));
     } catch (err) {
       console.warn('Failed to load Footer Config from API:', err.message);
     } finally {
@@ -60,140 +60,225 @@ const FooterConfig = () => {
     }
   };
 
+  const set = (field) => (e) =>
+    setFooterData(prev => ({ ...prev, [field]: e.target.value }));
+
   return (
-    <div className="admin-screen p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Footer Configuration</h1>
-          <p className="text-sm text-slate-500">Configure website footer links, copyright statements, and social media handles.</p>
+    <div className="fc-page">
+
+      {/* ── Header ── */}
+      <div className="fc-header">
+        <div className="fc-header-text">
+          <span className="fc-kicker">Settings · Footer</span>
+          <h1>Footer Configuration</h1>
+          <p>Configure website footer links, copyright statements, and social media handles.</p>
         </div>
         <button
+          type="button"
           onClick={fetchFooterConfig}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium text-xs"
+          className="fc-reload-btn"
         >
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Reload Data
+          <RefreshCw size={15} className={loading ? 'spinning' : ''} />
+          Reload Data
         </button>
       </div>
 
+      {/* ── Loading bar ── */}
+      {loading && <div className="fc-loading-bar" />}
+
+      {/* ── Alert ── */}
       {message.text && (
-        <div className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${
-          message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+        <div className={`fc-alert ${message.type}`}>
+          {message.type === 'success' ? <CheckCircle size={17} /> : <AlertCircle size={17} />}
           <span>{message.text}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Copyright Statement</label>
-          <input
-            type="text"
-            required
-            className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-600"
-            value={footerData.copyrightText}
-            onChange={e => setFooterData({ ...footerData, copyrightText: e.target.value })}
-          />
-        </div>
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Footer About Summary</label>
-          <textarea
-            rows="3"
-            className="w-full border border-slate-300 rounded-xl p-3 text-sm outline-none focus:border-blue-600"
-            value={footerData.aboutSummary}
-            onChange={e => setFooterData({ ...footerData, aboutSummary: e.target.value })}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Privacy Policy Page URL</label>
-            <input
-              type="text"
-              className="w-full border border-slate-300 rounded-xl px-4 py-2 text-sm outline-none focus:border-blue-600"
-              value={footerData.privacyPolicyUrl}
-              onChange={e => setFooterData({ ...footerData, privacyPolicyUrl: e.target.value })}
-            />
+        {/* ── Section 1 — Brand Content ── */}
+        <div className="fc-card">
+          <div className="fc-section-head">
+            <div className="fc-section-icon"><AlignLeft size={17} /></div>
+            <span className="fc-section-label">Brand Content</span>
+            <span className="fc-section-sub">Shown in the website footer</span>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Terms & Conditions URL</label>
-            <input
-              type="text"
-              className="w-full border border-slate-300 rounded-xl px-4 py-2 text-sm outline-none focus:border-blue-600"
-              value={footerData.termsUrl}
-              onChange={e => setFooterData({ ...footerData, termsUrl: e.target.value })}
-            />
-          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* Copyright */}
+            <div className="fc-field">
+              <label className="fc-label">
+                <Copyright size={13} />
+                Copyright Statement
+              </label>
+              <div className="fc-input-wrap">
+                <Copyright size={16} />
+                <input
+                  type="text"
+                  required
+                  placeholder="© 2026 Company Name. All rights reserved."
+                  value={footerData.copyrightText}
+                  onChange={set('copyrightText')}
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Cookie Policy URL</label>
-            <input
-              type="text"
-              className="w-full border border-slate-300 rounded-xl px-4 py-2 text-sm outline-none focus:border-blue-600"
-              value={footerData.cookiePolicyUrl}
-              onChange={e => setFooterData({ ...footerData, cookiePolicyUrl: e.target.value })}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Warranty Policy URL</label>
-            <input
-              type="text"
-              className="w-full border border-slate-300 rounded-xl px-4 py-2 text-sm outline-none focus:border-blue-600"
-              value={footerData.warrantyPolicyUrl}
-              onChange={e => setFooterData({ ...footerData, warrantyPolicyUrl: e.target.value })}
-            />
+            {/* About Summary */}
+            <div className="fc-field">
+              <label className="fc-label">
+                <FileText size={13} />
+                Footer About Summary
+              </label>
+              <div className="fc-input-wrap textarea-wrap">
+                <FileText size={16} />
+                <textarea
+                  rows={3}
+                  placeholder="Brief company description shown in the footer..."
+                  value={footerData.aboutSummary}
+                  onChange={set('aboutSummary')}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">LinkedIn URL</label>
-            <input
-              type="url"
-              className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-600"
-              value={footerData.linkedinUrl}
-              onChange={e => setFooterData({ ...footerData, linkedinUrl: e.target.value })}
-            />
+        {/* ── Section 2 — Legal Links ── */}
+        <div className="fc-card">
+          <div className="fc-section-head">
+            <div className="fc-section-icon"><Shield size={17} /></div>
+            <span className="fc-section-label">Legal & Policy Links</span>
+            <span className="fc-section-sub">URLs for policy pages</span>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Twitter URL</label>
-            <input
-              type="url"
-              className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-600"
-              value={footerData.twitterUrl}
-              onChange={e => setFooterData({ ...footerData, twitterUrl: e.target.value })}
-            />
-          </div>
+          <div className="fc-grid-2">
+            <div className="fc-field">
+              <label className="fc-label"><Link2 size={13} /> Privacy Policy URL</label>
+              <div className="fc-input-wrap">
+                <Link2 size={16} />
+                <input
+                  type="text"
+                  placeholder="/privacy-policy"
+                  value={footerData.privacyPolicyUrl}
+                  onChange={set('privacyPolicyUrl')}
+                />
+              </div>
+            </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Facebook URL</label>
-            <input
-              type="url"
-              className="w-full border border-slate-300 rounded-xl px-3 py-2 text-xs outline-none focus:border-blue-600"
-              value={footerData.facebookUrl}
-              onChange={e => setFooterData({ ...footerData, facebookUrl: e.target.value })}
-            />
+            <div className="fc-field">
+              <label className="fc-label"><Link2 size={13} /> Terms &amp; Conditions URL</label>
+              <div className="fc-input-wrap">
+                <Link2 size={16} />
+                <input
+                  type="text"
+                  placeholder="/terms-and-conditions"
+                  value={footerData.termsUrl}
+                  onChange={set('termsUrl')}
+                />
+              </div>
+            </div>
+
+            <div className="fc-field">
+              <label className="fc-label"><Link2 size={13} /> Cookie Policy URL</label>
+              <div className="fc-input-wrap">
+                <Link2 size={16} />
+                <input
+                  type="text"
+                  placeholder="/cookie-policy"
+                  value={footerData.cookiePolicyUrl}
+                  onChange={set('cookiePolicyUrl')}
+                />
+              </div>
+            </div>
+
+            <div className="fc-field">
+              <label className="fc-label"><Link2 size={13} /> Warranty Policy URL</label>
+              <div className="fc-input-wrap">
+                <Link2 size={16} />
+                <input
+                  type="text"
+                  placeholder="/warranty-policy"
+                  value={footerData.warrantyPolicyUrl}
+                  onChange={set('warrantyPolicyUrl')}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex justify-end pt-4 border-t border-slate-100">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition-colors shadow-md"
-          >
-            <Save size={16} /> {saving ? 'Saving...' : 'Save Footer Config'}
+        {/* ── Section 3 — Social Media ── */}
+        <div className="fc-card">
+          <div className="fc-section-head">
+            <div className="fc-section-icon"><Globe size={17} /></div>
+            <span className="fc-section-label">Social Media Handles</span>
+            <span className="fc-section-sub">Full profile URLs</span>
+          </div>
+
+          <div className="fc-grid-3">
+            <div className="fc-field">
+              <label className="fc-label">
+                <Linkedin size={13} />
+                LinkedIn
+                <span className="fc-social-badge linkedin">in</span>
+              </label>
+              <div className="fc-input-wrap">
+                <Linkedin size={16} />
+                <input
+                  type="url"
+                  placeholder="https://linkedin.com/company/..."
+                  value={footerData.linkedinUrl}
+                  onChange={set('linkedinUrl')}
+                />
+              </div>
+            </div>
+
+            <div className="fc-field">
+              <label className="fc-label">
+                <Twitter size={13} />
+                Twitter / X
+                <span className="fc-social-badge twitter">𝕏</span>
+              </label>
+              <div className="fc-input-wrap">
+                <Twitter size={16} />
+                <input
+                  type="url"
+                  placeholder="https://twitter.com/..."
+                  value={footerData.twitterUrl}
+                  onChange={set('twitterUrl')}
+                />
+              </div>
+            </div>
+
+            <div className="fc-field">
+              <label className="fc-label">
+                <Facebook size={13} />
+                Facebook
+                <span className="fc-social-badge facebook">f</span>
+              </label>
+              <div className="fc-input-wrap">
+                <Facebook size={16} />
+                <input
+                  type="url"
+                  placeholder="https://facebook.com/..."
+                  value={footerData.facebookUrl}
+                  onChange={set('facebookUrl')}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Save ── */}
+        <div className="fc-form-footer">
+          <button type="submit" disabled={saving} className="fc-save-btn">
+            <Save size={15} className={saving ? 'saving-spin' : ''} />
+            {saving ? 'Saving…' : 'Save Footer Config'}
           </button>
         </div>
+
       </form>
     </div>
   );
 };
 
 export default FooterConfig;
-

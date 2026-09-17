@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Phone, Mail, MapPin, Clock, Save, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
+import {
+  Phone, Mail, MapPin, Clock, Save, RefreshCw,
+  CheckCircle, AlertCircle, Building2
+} from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
-import '../catalog/adminModule.css';
+import './ContactCard.css';
 
 const API_URL = `${getApiDomain()}/api/Settings/contact-card`;
 
@@ -57,119 +60,167 @@ const ContactCard = () => {
     }
   };
 
+  const set = (field) => (e) => setFormData(prev => ({ ...prev, [field]: e.target.value }));
+
   return (
-    <div className="admin-screen p-6 max-w-4xl mx-auto space-y-6">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-800">Contact Card Configuration</h1>
-          <p className="text-sm text-slate-500">Manage business contact information, helpline numbers, and campus address.</p>
+    <div className="cc-page">
+
+      {/* ── Header ── */}
+      <div className="cc-header">
+        <div className="cc-header-text">
+          <span className="cc-kicker">Settings · Contact</span>
+          <h1>Contact Card Configuration</h1>
+          <p>Manage business contact information, helpline numbers, and campus address.</p>
         </div>
         <button
+          type="button"
           onClick={fetchContactCard}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition-colors font-medium text-xs"
+          className="cc-reload-btn"
         >
-          <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Reload Data
+          <RefreshCw size={15} className={loading ? 'spinning' : ''} />
+          Reload Data
         </button>
       </div>
 
+      {/* ── Loading bar ── */}
+      {loading && <div className="cc-loading-bar" />}
+
+      {/* ── Alert ── */}
       {message.text && (
-        <div className={`p-4 rounded-xl flex items-center gap-3 text-sm font-medium ${
-          message.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
-        }`}>
-          {message.type === 'success' ? <CheckCircle size={18} /> : <AlertCircle size={18} />}
+        <div className={`cc-alert ${message.type}`}>
+          {message.type === 'success'
+            ? <CheckCircle size={17} />
+            : <AlertCircle size={17} />}
           <span>{message.text}</span>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Company Name</label>
-            <input
-              type="text"
-              required
-              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-blue-600"
-              value={formData.companyName}
-              onChange={e => setFormData({ ...formData, companyName: e.target.value })}
-            />
+      {/* ── Form ── */}
+      <form onSubmit={handleSubmit} className="cc-form-card">
+
+        <p className="cc-section-title">Basic Information</p>
+
+        <div className="cc-grid">
+          {/* Company Name */}
+          <div className="cc-field">
+            <label className="cc-label">
+              <Building2 size={13} />
+              Company Name
+            </label>
+            <div className="cc-input-wrap">
+              <input
+                type="text"
+                required
+                placeholder="e.g. Honeywell POS-IMS Division"
+                value={formData.companyName}
+                onChange={set('companyName')}
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Official Email Address</label>
-            <div className="flex items-center gap-2 border border-slate-300 rounded-xl px-3 py-2 text-sm focus-within:border-blue-600">
-              <Mail size={18} className="text-slate-400" />
+          {/* Official Email */}
+          <div className="cc-field">
+            <label className="cc-label">
+              <Mail size={13} />
+              Official Email Address
+            </label>
+            <div className="cc-input-wrap">
+              <Mail size={16} />
               <input
                 type="email"
                 required
-                className="w-full outline-none text-sm"
+                placeholder="support@company.com"
                 value={formData.email}
-                onChange={e => setFormData({ ...formData, email: e.target.value })}
+                onChange={set('email')}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Primary Helpline Phone</label>
-            <div className="flex items-center gap-2 border border-slate-300 rounded-xl px-3 py-2 text-sm focus-within:border-blue-600">
-              <Phone size={18} className="text-slate-400" />
+          {/* Primary Phone */}
+          <div className="cc-field">
+            <label className="cc-label">
+              <Phone size={13} />
+              Primary Helpline Phone
+            </label>
+            <div className="cc-input-wrap">
+              <Phone size={16} />
               <input
                 type="text"
                 required
-                className="w-full outline-none text-sm"
+                placeholder="+91 1800-000-0000"
                 value={formData.phone}
-                onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                onChange={set('phone')}
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Secondary Support Hotline</label>
-            <div className="flex items-center gap-2 border border-slate-300 rounded-xl px-3 py-2 text-sm focus-within:border-blue-600">
-              <Phone size={18} className="text-slate-400" />
+          {/* Secondary Hotline */}
+          <div className="cc-field">
+            <label className="cc-label">
+              <Phone size={13} />
+              Secondary Support Hotline
+            </label>
+            <div className="cc-input-wrap">
+              <Phone size={16} />
               <input
                 type="text"
-                className="w-full outline-none text-sm"
+                placeholder="+91 98765 43210"
                 value={formData.supportHotline}
-                onChange={e => setFormData({ ...formData, supportHotline: e.target.value })}
+                onChange={set('supportHotline')}
               />
             </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Office Address</label>
-          <div className="flex items-start gap-2 border border-slate-300 rounded-xl px-3 py-2 text-sm focus-within:border-blue-600">
-            <MapPin size={18} className="text-slate-400 mt-1" />
-            <textarea
-              rows="3"
-              className="w-full outline-none text-sm"
-              value={formData.address}
-              onChange={e => setFormData({ ...formData, address: e.target.value })}
-            />
+        <hr className="cc-divider" />
+        <p className="cc-section-title">Location &amp; Hours</p>
+
+        <div className="cc-grid">
+          {/* Office Address */}
+          <div className="cc-field full-width">
+            <label className="cc-label">
+              <MapPin size={13} />
+              Office Address
+            </label>
+            <div className="cc-input-wrap textarea-wrap">
+              <MapPin size={16} />
+              <textarea
+                rows={3}
+                placeholder="Full office address..."
+                value={formData.address}
+                onChange={set('address')}
+              />
+            </div>
+          </div>
+
+          {/* Business Hours */}
+          <div className="cc-field full-width">
+            <label className="cc-label">
+              <Clock size={13} />
+              Business Operating Hours
+            </label>
+            <div className="cc-input-wrap">
+              <Clock size={16} />
+              <input
+                type="text"
+                placeholder="Monday - Saturday: 9:00 AM - 6:00 PM IST"
+                value={formData.businessHours}
+                onChange={set('businessHours')}
+              />
+            </div>
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Business Operating Hours</label>
-          <div className="flex items-center gap-2 border border-slate-300 rounded-xl px-3 py-2 text-sm focus-within:border-blue-600">
-            <Clock size={18} className="text-slate-400" />
-            <input
-              type="text"
-              className="w-full outline-none text-sm"
-              value={formData.businessHours}
-              onChange={e => setFormData({ ...formData, businessHours: e.target.value })}
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end pt-4 border-t border-slate-100">
+        {/* ── Footer ── */}
+        <div className="cc-form-footer">
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-xl font-bold text-xs hover:bg-blue-700 transition-colors shadow-md"
+            className="cc-save-btn"
           >
-            <Save size={16} /> {saving ? 'Saving...' : 'Save Contact Card'}
+            <Save size={15} className={saving ? 'saving-spin' : ''} />
+            {saving ? 'Saving…' : 'Save Contact Card'}
           </button>
         </div>
       </form>
@@ -178,4 +229,3 @@ const ContactCard = () => {
 };
 
 export default ContactCard;
-
