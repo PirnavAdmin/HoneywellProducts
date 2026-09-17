@@ -357,7 +357,7 @@ const FormSettings = () => {
                 </h3>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
                     Support Phone Number
@@ -374,6 +374,24 @@ const FormSettings = () => {
                   />
                 </div>
 
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
+                    Support Email
+                  </label>
+                  <input
+                    type="email"
+                    name="supportEmail"
+                    value={supportData.supportEmail}
+                    onChange={handleSupportChange}
+                    placeholder="e.g. support@yourcompany.com"
+                    style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '13px', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#ffffff' }}
+                    onFocus={(e) => { e.target.style.borderColor = '#1268a5'; e.target.style.boxShadow = '0 0 0 3px rgba(18, 104, 165, 0.15)'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '6px' }}>
                     Work Timings
