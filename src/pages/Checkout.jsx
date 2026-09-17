@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, LockKeyhole, CreditCard, QrCode, ShieldCheck, Check, AlertCircle, Upload, Info } from 'lucide-react';
+import { ArrowLeft, ArrowRight, LockKeyhole, CreditCard, QrCode, ShieldCheck, Check, AlertCircle, Upload, Info, Tag, X } from 'lucide-react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -131,6 +131,13 @@ export default function Checkout() {
     } finally {
       setCouponApplying(false);
     }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setDiscountAmount(0);
+    setCouponCodeInput('');
+    setCouponMsg({ type: 'info', text: 'Coupon removed.' });
   };
 
   if (!items.length) return <Navigate to="/cart" replace />;
@@ -762,31 +769,78 @@ export default function Checkout() {
                   </div>
 
                   {/* Coupon Code Section */}
-                  <div style={{ marginTop: '12px', marginBottom: '12px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Promo / Coupon Code</label>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <input
-                        type="text"
-                        placeholder="Enter code (e.g. WELCOME10)"
-                        value={couponCodeInput}
-                        onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
-                        style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', textTransform: 'uppercase' }}
-                      />
+                  {appliedCoupon ? (
+                    <div style={{
+                      background: '#f0fdf4',
+                      border: '1px solid #bbf7d0',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '8px',
+                      marginTop: '12px',
+                      marginBottom: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Tag size={16} color="#16a34a" />
+                        <div>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                            {appliedCoupon.code} APPLIED
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#15803d' }}>
+                            Saved {formatPrice(discountAmount)} on this order
+                          </div>
+                        </div>
+                      </div>
                       <button
                         type="button"
-                        onClick={handleApplyCoupon}
-                        disabled={couponApplying || !couponCodeInput.trim()}
-                        style={{ padding: '6px 12px', fontSize: '12px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                        onClick={handleRemoveCoupon}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #fca5a5',
+                          color: '#dc2626',
+                          borderRadius: '6px',
+                          padding: '4px 8px',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="Remove Coupon"
                       >
-                        {couponApplying ? 'Applying...' : 'Apply'}
+                        <X size={12} /> Remove
                       </button>
                     </div>
-                    {couponMsg.text && (
-                      <div style={{ fontSize: '11px', marginTop: '4px', color: couponMsg.type === 'error' ? '#ef4444' : '#16a34a', fontWeight: 500 }}>
-                        {couponMsg.text}
+                  ) : (
+                    <div style={{ marginTop: '12px', marginBottom: '12px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Promo / Coupon Code</label>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <input
+                          type="text"
+                          placeholder="Enter code (e.g. WELCOME10)"
+                          value={couponCodeInput}
+                          onChange={(e) => setCouponCodeInput(e.target.value.toUpperCase())}
+                          style={{ flex: 1, padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', textTransform: 'uppercase' }}
+                        />
+                        <button
+                          type="button"
+                          onClick={handleApplyCoupon}
+                          disabled={couponApplying || !couponCodeInput.trim()}
+                          style={{ padding: '6px 12px', fontSize: '12px', background: '#0284c7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          {couponApplying ? 'Applying...' : 'Apply'}
+                        </button>
                       </div>
-                    )}
-                  </div>
+                      {couponMsg.text && (
+                        <div style={{ fontSize: '11px', marginTop: '4px', color: couponMsg.type === 'error' ? '#ef4444' : (couponMsg.type === 'info' ? '#64748b' : '#16a34a'), fontWeight: 500 }}>
+                          {couponMsg.text}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {discountAmount > 0 && (
                     <div className="summary-row" style={{ color: '#16a34a' }}>

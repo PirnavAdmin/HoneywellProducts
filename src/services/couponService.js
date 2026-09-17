@@ -52,12 +52,13 @@ export const couponService = {
     }
   },
 
-  /** POST (Apply) — POST /api/coupons/apply */
+  /** POST (Apply) — POST /api/coupons/apply with client-side fallback */
   async applyCoupon(code, cartTotal = 0) {
+    const searchCode = code.trim().toUpperCase();
     const url = `${API_BASE_URL}/api/coupons/apply`;
     const payload = {
-      code: code.trim().toUpperCase(),
-      couponCode: code.trim().toUpperCase(),
+      code: searchCode,
+      couponCode: searchCode,
       cartTotal: Number(cartTotal) || 0,
       totalAmount: Number(cartTotal) || 0
     };
@@ -69,31 +70,78 @@ export const couponService = {
         body: JSON.stringify(payload)
       });
 
-      if (!response.ok) {
-        let errMessage = `Coupon "${code}" is invalid or expired.`;
-        try {
-          const errData = await response.json();
-          if (errData.message) errMessage = errData.message;
-        } catch (e) {
-          // fallback
-        }
-        throw new Error(errMessage);
+      if (response.ok) {
+        const resData = await response.json();
+        const couponObj = mapCouponFromApi(resData.coupon || resData.data || resData) || {};
+        const discountAmount = Number(resData.discountAmount || resData.discount || couponObj.discount || 0);
+
+        return {
+          valid: true,
+          code: searchCode,
+          discountAmount,
+          coupon: couponObj,
+          message: resData.message || `Coupon "${searchCode}" applied successfully!`
+        };
+      }
+    } catch (err) {
+      console.warn(`Coupons API applyCoupon(${searchCode}) backend request failed:`, err.message);
+    }
+
+    // ── FALLBACK CLIENT-SIDE COUPON VALIDATION ──
+    try {
+      const allCoupons = await this.getAll();
+      const matched = allCoupons.find(
+        (c) => c.code && c.code.trim().toUpperCase() === searchCode
+      );
+
+      if (!matched) {
+        throw new Error(`Coupon "${searchCode}" is invalid or expired.`);
       }
 
-      const resData = await response.json();
-      const couponObj = mapCouponFromApi(resData.coupon || resData.data || resData) || {};
-      const discountAmount = Number(resData.discountAmount || resData.discount || couponObj.discount || 0);
+      if (matched.isActive === false || matched.status === 'Inactive') {
+        throw new Error(`Coupon "${searchCode}" is currently inactive.`);
+      }
+
+      const now = new Date();
+      if (matched.endDate) {
+        const end = new Date(matched.endDate);
+        if (end < now) {
+          throw new Error(`Coupon "${searchCode}" has expired.`);
+        }
+      }
+
+      if (matched.startDate) {
+        const start = new Date(matched.startDate);
+        if (start > now) {
+          throw new Error(`Coupon "${searchCode}" is not active yet.`);
+        }
+      }
+
+      if (matched.minSpend > 0 && Number(cartTotal) < matched.minSpend) {
+        throw new Error(`Minimum order value of ₹${matched.minSpend.toLocaleString('en-IN')} required for coupon "${searchCode}".`);
+      }
+
+      let computedDiscount = 0;
+      if (matched.type === 'Percentage') {
+        computedDiscount = (Number(cartTotal) * Number(matched.discount)) / 100;
+        if (matched.maxDiscount && matched.maxDiscount > 0) {
+          computedDiscount = Math.min(computedDiscount, Number(matched.maxDiscount));
+        }
+      } else {
+        computedDiscount = Number(matched.discount || 0);
+      }
+
+      computedDiscount = Math.min(computedDiscount, Number(cartTotal));
 
       return {
         valid: true,
-        code: code.trim().toUpperCase(),
-        discountAmount,
-        coupon: couponObj,
-        message: resData.message || `Coupon "${code.toUpperCase()}" applied successfully!`
+        code: searchCode,
+        discountAmount: Math.round(computedDiscount),
+        coupon: matched,
+        message: `Coupon "${searchCode}" applied successfully!`
       };
-    } catch (err) {
-      console.warn(`Coupons API applyCoupon(${code}) error:`, err.message);
-      throw err;
+    } catch (fallbackErr) {
+      throw fallbackErr;
     }
   },
 
