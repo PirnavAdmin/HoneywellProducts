@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowUpRight, ShoppingCart, Star } from 'lucide-react';
+import { ArrowUpRight, ShoppingCart, Star, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useUI } from '../../context/UIContext';
@@ -149,9 +149,13 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="product-actions">
-        <Link to={cardLink}>{ctaLabel} <ArrowUpRight size={13} /></Link>
-        <button onClick={() => openEnquiry(product)}>Enquire</button>
-        <button className="cart-square" onClick={add} aria-label={`Add ${product.name} to cart`}><ShoppingCart size={15} /></button>
+        <Link to={cardLink} className="product-action-btn view-btn">{ctaLabel} <ArrowUpRight size={13} /></Link>
+        <button type="button" className="product-action-btn enquire-btn" onClick={() => openEnquiry(product)}>
+          <MessageSquare size={13} /> Enquire
+        </button>
+        <button type="button" className="cart-square" onClick={add} aria-label={`Add ${product.name} to cart`}>
+          <ShoppingCart size={15} />
+        </button>
       </div>
     </article>
   );
