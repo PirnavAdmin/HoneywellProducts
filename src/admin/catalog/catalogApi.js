@@ -47,24 +47,32 @@ const resolveImageUrl = (url) => {
   if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
     return trimmed;
   }
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.includes('/uploads/')) {
+
+  let result = '';
+  if (/^https?:\/\//i.test(trimmed)) {
+    result = trimmed;
+  } else if (trimmed.includes('/uploads/')) {
     const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
     const cleanBase = (BASE_URL || '').replace(/\/$/, '');
-    return `${cleanBase}${uploadPath}`;
-  }
-  if (
+    result = `${cleanBase}${uploadPath}`;
+  } else if (
     trimmed.startsWith('/assets/') ||
     trimmed.startsWith('assets/') ||
     trimmed.startsWith('/images/') ||
     trimmed.startsWith('images/') ||
     trimmed.startsWith('/honeywell-products-logo')
   ) {
-    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+    result = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  } else {
+    const cleanBase = (BASE_URL || '').replace(/\/$/, '');
+    result = !cleanBase ? (trimmed.startsWith('/') ? trimmed : `/${trimmed}`) : `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
   }
-  const cleanBase = (BASE_URL || '').replace(/\/$/, '');
-  if (!cleanBase) return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+
+  if (result.includes('/uploads/') || result.includes('ngrok-free.dev')) {
+    const separator = result.includes('?') ? '&' : '?';
+    return `${result}${separator}v=${Date.now()}`;
+  }
+  return result;
 };
 
 /** Extract an array from various API response shapes */

@@ -60,60 +60,93 @@ export default function Offers() {
       {/* Offers & Deals Section */}
       <OffersDeals />
 
-      {/* Promo Coupons Grid Section */}
-      <section className="section" style={{ paddingTop: '20px' }}>
+      {/* Active Coupon Codes Section */}
+      <section className="section" style={{ paddingTop: '40px', paddingBottom: '60px', backgroundColor: '#f8fafc' }}>
         <div className="container">
-          <div style={{ marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '22px', fontWeight: '800', color: '#0f172a', margin: 0 }}>Active Coupon Codes</h3>
-            <p style={{ fontSize: '14px', color: '#64748b', marginTop: '4px' }}>Apply these promotional codes at checkout for instant savings.</p>
+          <div className="section-heading" style={{ marginBottom: '32px' }}>
+            <p className="eyebrow dark">PROMOTIONAL COUPONS</p>
+            <h2>Active Coupon Codes</h2>
+            <p>Apply these promotional codes at checkout for instant savings on Honeywell products.</p>
           </div>
 
           {loading ? (
-            <div className="route-loading" style={{ minHeight: '180px' }}>
-              <p>Loading promotional coupon codes...</p>
+            <div className="route-loading" style={{ minHeight: '180px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+              <p style={{ fontSize: '14px', color: '#64748b' }}>Loading promotional coupon codes...</p>
             </div>
           ) : coupons.length === 0 ? (
-            <div className="empty-state">
-              <Tag size={48} className="empty-icon" />
-              <h3>No active promotional codes currently listed</h3>
-              <p>Contact our sales team directly for bulk order pricing and custom quotes.</p>
-              <button className="button button-small" onClick={openQuote} style={{ marginTop: '12px' }}>
+            <div className="coupon-empty-card" style={{
+              padding: '48px 24px',
+              textAlign: 'center',
+              backgroundColor: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+              maxWidth: '560px',
+              margin: '0 auto',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <div style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                backgroundColor: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '16px',
+                color: '#1268a5'
+              }}>
+                <Tag size={28} />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>
+                No Active Promotional Codes
+              </h3>
+              <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 20px 0', maxWidth: '420px', lineHeight: '1.5' }}>
+                Contact our sales team directly for bulk order pricing, dealer discounts, and custom quotes.
+              </p>
+              <button className="button button-primary button-small" onClick={openQuote} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                 Get a Custom Bulk Quote
               </button>
             </div>
           ) : (
-            <div className="offers-grid">
+            <div className="coupon-promo-grid">
               {coupons.map((coupon) => (
-                <div key={coupon.id || coupon.code} className="offer-card">
-                  <div className="offer-card-badge">
-                    <Percent size={16} /> Discount Offer
+                <div key={coupon.id || coupon.code} className="coupon-promo-card">
+                  <div>
+                    <div className="coupon-promo-badge">
+                      <Percent size={14} /> Discount Offer
+                    </div>
+                    <div className="coupon-promo-body">
+                      <h3>{coupon.title || coupon.name || `Promo ${coupon.code}`}</h3>
+                      <p>{coupon.description || `Apply discount code ${coupon.code} at checkout.`}</p>
+                      {coupon.discountAmount && (
+                        <div className="coupon-promo-discount">
+                          {coupon.discountType === 'Percentage' ? `${coupon.discountAmount}% OFF` : `₹${coupon.discountAmount} OFF`}
+                        </div>
+                      )}
+                      {coupon.expiryDate && (
+                        <div className="coupon-promo-expiry">
+                          <Calendar size={13} /> Expires: {new Date(coupon.expiryDate).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <div className="offer-card-body">
-                    <h3>{coupon.title || coupon.name || `Promo ${coupon.code}`}</h3>
-                    <p>{coupon.description || `Apply discount code ${coupon.code} at checkout.`}</p>
-                    {coupon.discountAmount && (
-                      <div className="offer-discount-value">
-                        {coupon.discountType === 'Percentage' ? `${coupon.discountAmount}% OFF` : `$${coupon.discountAmount} OFF`}
-                      </div>
-                    )}
-                    {coupon.expiryDate && (
-                      <div className="offer-expiry">
-                        <Calendar size={13} /> Expires: {new Date(coupon.expiryDate).toLocaleDateString()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="offer-card-footer">
+                  <div className="coupon-promo-footer">
                     <div className="coupon-code-box">
                       <code>{coupon.code}</code>
                       <button
                         className="button-icon-only"
                         onClick={() => copyCode(coupon.code)}
                         title="Copy Code"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
                       >
-                        {copiedCode === coupon.code ? <Check size={16} color="green" /> : <Copy size={16} />}
+                        {copiedCode === coupon.code ? <Check size={16} color="#16a34a" /> : <Copy size={16} color="#64748b" />}
                       </button>
                     </div>
-                    <Link to="/products" className="button button-small">
+                    <Link to="/products" className="button button-small" style={{ textDecoration: 'none' }}>
                       Shop Products <ArrowRight size={14} />
                     </Link>
                   </div>
