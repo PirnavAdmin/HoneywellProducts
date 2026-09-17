@@ -13,7 +13,8 @@ export const mapReviewFromApi = (item) => {
   const customerName = item.customerName || item.customer || item.name || item.author || 'Anonymous';
   const reviewComment = item.reviewComment || item.comment || item.message || item.text || '';
   const reviewDate = item.reviewDate || item.date || item.createdAt || new Date().toISOString();
-  const rating = Number(item.rating) || 5;
+  const rawRating = Number(item.rating);
+  const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
   const verifiedPurchase = item.verifiedPurchase !== undefined ? Boolean(item.verifiedPurchase) : (item.verified !== undefined ? Boolean(item.verified) : true);
   return {
     id: String(rawId),
@@ -99,10 +100,12 @@ export const reviewService = {
 
   /** POST (Create) — POST /api/reviews */
   async submit(payload) {
+    const rawRating = Number(payload.rating);
+    const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
     const apiPayload = {
       productId: String(payload.productId || '').trim(),
       customerName: payload.customerName || payload.customer || payload.name || 'Anonymous',
-      rating: Number(payload.rating) || 5,
+      rating,
       reviewDate: payload.reviewDate || payload.date || new Date().toISOString(),
       reviewComment: payload.reviewComment || payload.comment || '',
       verifiedPurchase: payload.verifiedPurchase !== undefined ? Boolean(payload.verifiedPurchase) : true,
@@ -145,11 +148,13 @@ export const reviewService = {
     }
 
     const merged = { ...current, ...updateData };
+    const rawRating = Number(merged.rating);
+    const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
     const apiPayload = {
       id: isNaN(Number(id)) ? id : Number(id),
       productId: String(merged.productId || '').trim(),
       customerName: merged.customerName || merged.customer || 'Anonymous',
-      rating: Number(merged.rating) || 5,
+      rating,
       reviewDate: merged.reviewDate || merged.date || new Date().toISOString(),
       reviewComment: merged.reviewComment || merged.comment || '',
       verifiedPurchase: merged.verifiedPurchase !== undefined ? Boolean(merged.verifiedPurchase) : true,

@@ -189,7 +189,8 @@ export const mapProductFromApi = (
     const custName = r.customerName || r.customer || r.name || r.author || 'Anonymous';
     const revComment = r.reviewComment || r.comment || r.message || r.text || '';
     const revDate = r.reviewDate || r.date || r.dateCreated || r.createdAt || new Date().toISOString();
-    const numRating = Number(r.rating) || 5;
+    const parsedRating = Number(r.rating);
+    const numRating = !isNaN(parsedRating) && parsedRating >= 0 ? parsedRating : 0;
     const isVerified = (r.verifiedPurchase ?? r.verified) !== false;
     return {
       id: String(r.id ?? ''),
@@ -395,9 +396,14 @@ export const mapProductFromApi = (
     ],
 
     // Features & Reviews
-    rating: mappedReviews.length > 0
-      ? (mappedReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / mappedReviews.length).toFixed(1)
-      : (Number(raw.averageRating ?? raw.rating) > 0 ? Number(raw.averageRating ?? raw.rating).toFixed(1) : '0'),
+    rating: (() => {
+      if (mappedReviews.length > 0) {
+        const sum = mappedReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0);
+        return (sum / mappedReviews.length).toFixed(1);
+      }
+      const rawNum = Number(raw.averageRating ?? raw.rating);
+      return !isNaN(rawNum) && rawNum > 0 ? rawNum.toFixed(1) : '0';
+    })(),
     reviewCount: mappedReviews.length > 0
       ? mappedReviews.length
       : (Number(raw.totalReviews) > 0 ? Number(raw.totalReviews) : 0),
@@ -794,11 +800,22 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   fd.append('Stock', String(Number(product.stock) || 0));
 
   // Ratings & Reviews
-  const numRating = Number(product.rating) || 0;
-  const numReviews = Number(product.totalReviews) || (Array.isArray(product.reviews) ? product.reviews.length : 0);
-  fd.append('Rating', String(numRating));
-  fd.append('AverageRating', String(numRating));
-  fd.append('TotalReviews', String(numReviews));
+  let calculatedRating = Number(product.rating) || 0;
+  if (Array.isArray(product.reviews) && product.reviews.length > 0) {
+    const validRatings = product.reviews
+      .map((r) => Number(r.rating))
+      .filter((n) => !isNaN(n) && n > 0);
+    if (validRatings.length > 0) {
+      calculatedRating = Number((validRatings.reduce((a, b) => a + b, 0) / validRatings.length).toFixed(2));
+    }
+  }
+  const calculatedTotalReviews = Array.isArray(product.reviews) && product.reviews.length > 0
+    ? product.reviews.length
+    : (Number(product.totalReviews) || 0);
+
+  fd.append('Rating', String(calculatedRating));
+  fd.append('AverageRating', String(calculatedRating));
+  fd.append('TotalReviews', String(calculatedTotalReviews));
 
   // Images & Media
   if (Array.isArray(imageFiles)) {
@@ -849,9 +866,9 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       specifications: product.specifications || {},
       discountType: product.discountType || 'none',
       discountAmount: Number(product.discountValue) || 0,
-      rating: numRating,
-      averageRating: numRating,
-      totalReviews: numReviews,
+      rating: calculatedRating,
+      averageRating: calculatedRating,
+      totalReviews: calculatedTotalReviews,
       isActive: product.status !== 'Inactive' && product.isActive !== false,
       imageUrl: primaryImage,
       image: primaryImage,
@@ -879,10 +896,8 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     mapped.images = mergedImages;
     mapped.gallery = mergedImages;
   }
-  const finalProduct = { ...mapped, id: savedId || mapped.id };
-  upsertProduct(finalProduct);
 
-  const targetId = String(savedId || finalProduct?.id || product.id || '').trim();
+  const targetId = String(savedId || mapped?.id || product.id || '').trim();
 
   // If deletedReviewIds provided, delete them
   if (Array.isArray(product.deletedReviewIds) && product.deletedReviewIds.length > 0) {
@@ -894,21 +909,54 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   }
 
   // If reviews provided in product, persist them
+  const savedReviews = [];
   if (targetId && Array.isArray(product.reviews) && product.reviews.length > 0) {
     for (const r of product.reviews) {
       if (r && (r.customer || r.customerName || r.comment || r.reviewComment)) {
         try {
+          let savedRev = null;
           if (r.id) {
-            await updateProductReview(r.id, { ...r, productId: targetId });
+            savedRev = await updateProductReview(r.id, { ...r, productId: targetId });
           } else {
-            await createProductReview(targetId, r);
+            savedRev = await createProductReview(targetId, r);
           }
+          if (savedRev) savedReviews.push(savedRev);
         } catch (revErr) {
           console.warn('Could not persist product review:', revErr?.message);
         }
       }
     }
   }
+
+  const finalProduct = {
+    ...mapped,
+    id: targetId || mapped.id,
+    rating: String(calculatedRating > 0 ? calculatedRating.toFixed(1) : '0'),
+    averageRating: calculatedRating,
+    totalReviews: String(calculatedTotalReviews),
+    reviewCount: calculatedTotalReviews,
+    reviews: (savedReviews.length > 0 ? savedReviews : (product.reviews || [])).map((r) => {
+      const rRating = Number(r.rating) || calculatedRating;
+      const rDate = r.reviewDate || r.date || new Date().toISOString();
+      const rName = r.customerName || r.customer || 'Anonymous';
+      const rComment = r.reviewComment || r.comment || '';
+      return {
+        id: String(r.id || ''),
+        productId: targetId,
+        customer: rName,
+        customerName: rName,
+        rating: rRating,
+        ratingStr: String(rRating),
+        comment: rComment,
+        reviewComment: rComment,
+        date: rDate,
+        reviewDate: rDate,
+        verified: r.verified !== false,
+        verifiedPurchase: r.verified !== false,
+      };
+    }),
+  };
+  upsertProduct(finalProduct);
 
   apiCache.invalidate('products_all');
   apiCache.invalidate(`prod_${targetId}`);

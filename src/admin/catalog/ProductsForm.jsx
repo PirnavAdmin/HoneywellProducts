@@ -117,14 +117,17 @@ const normalizeReviews = (reviews) => {
     return [];
   }
 
-  return reviews.map((review) => ({
-    id: review.id ? String(review.id) : undefined,
-    customer: review.customer || review.customerName || '',
-    rating: String(review.rating || '5'),
-    comment: review.comment || review.reviewComment || '',
-    date: review.date || review.reviewDate || new Date().toISOString().split('T')[0],
-    verified: Boolean(review.verified ?? review.verifiedPurchase ?? true),
-  }));
+  return reviews.map((review) => {
+    const rawRating = Number(review.rating);
+    return {
+      id: review.id ? String(review.id) : undefined,
+      customer: review.customer || review.customerName || '',
+      rating: !isNaN(rawRating) && rawRating >= 0 ? String(rawRating) : '5',
+      comment: review.comment || review.reviewComment || '',
+      date: review.date || review.reviewDate || new Date().toISOString().split('T')[0],
+      verified: Boolean(review.verified ?? review.verifiedPurchase ?? true),
+    };
+  });
 };
 
 const normalizeProduct = (product) => {
@@ -433,6 +436,9 @@ const ProductsForm = () => {
       if (name === 'stock' || name === 'reorderLevel') {
         updated.status = computeStockStatus(updated.stock, updated.reorderLevel);
       }
+      if (name === 'rating' && Array.isArray(updated.reviews) && updated.reviews.length === 1) {
+        updated.reviews = [{ ...updated.reviews[0], rating: value }];
+      }
       return updated;
     });
   };
@@ -501,12 +507,25 @@ const ProductsForm = () => {
   };
 
   const handleReviewChange = (index, field, value) => {
-    setFormData((current) => ({
-      ...current,
-      reviews: current.reviews.map((review, reviewIndex) =>
+    setFormData((current) => {
+      const updatedReviews = current.reviews.map((review, reviewIndex) =>
         reviewIndex === index ? { ...review, [field]: value } : review
-      ),
-    }));
+      );
+      let updatedRating = current.rating;
+      if (field === 'rating') {
+        const validRatings = updatedReviews
+          .map((r) => Number(r.rating))
+          .filter((n) => !isNaN(n) && n > 0);
+        if (validRatings.length > 0) {
+          updatedRating = (validRatings.reduce((a, b) => a + b, 0) / validRatings.length).toFixed(1);
+        }
+      }
+      return {
+        ...current,
+        reviews: updatedReviews,
+        rating: updatedRating,
+      };
+    });
   };
 
   const addReview = () => {
