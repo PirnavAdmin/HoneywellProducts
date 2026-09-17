@@ -302,7 +302,7 @@ const ProductsList = () => {
                       {Number(product.rating || 0).toFixed(1)}
                     </span>
                     <div className="catalog-table__muted" style={{ fontSize: '10px' }}>
-                      {Number(product.totalReviews || 0)} reviews
+                      {Number(product.totalReviews || 0)} {Number(product.totalReviews || 0) === 1 ? 'review' : 'reviews'}
                     </div>
                   </td>
                   <td className="catalog-center-cell" style={{ padding: '5px 8px', fontSize: '11px' }}>{product.stock}</td>

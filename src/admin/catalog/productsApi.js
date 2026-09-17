@@ -481,28 +481,42 @@ export const fetchProductReviewById = async (id) => {
   return await reviewService.getById(id);
 };
 
+const formatReviewDate = (d) => {
+  if (!d) return new Date().toISOString();
+  if (typeof d === 'string') {
+    if (d.includes('T')) return d;
+    if (d.length === 7) return `${d}-01T00:00:00Z`;
+    if (d.length === 10) return `${d}T00:00:00Z`;
+  }
+  return new Date(d).toISOString();
+};
+
 export const createProductReview = async (productId, review) => {
   const result = await reviewService.submit({
     productId: String(productId || '').trim(),
     customerName: review.customer || review.customerName || 'Anonymous',
     rating: Number(review.rating) || 5,
-    reviewDate: review.date ? `${review.date}-01T00:00:00Z` : new Date().toISOString(),
+    reviewDate: formatReviewDate(review.date || review.reviewDate),
     reviewComment: review.comment || review.reviewComment || '',
     verifiedPurchase: review.verified !== false,
   });
   apiCache.invalidate('product');
+  apiCache.invalidate('products_all');
+  apiCache.invalidate(`prod_${productId}`);
   return result;
 };
 
 export const updateProductReview = async (id, reviewData) => {
   const result = await reviewService.update(id, reviewData);
   apiCache.invalidate('product');
+  apiCache.invalidate('products_all');
   return result;
 };
 
 export const deleteProductReview = async (id) => {
   const result = await reviewService.delete(id);
   apiCache.invalidate('product');
+  apiCache.invalidate('products_all');
   return result;
 };
 
@@ -779,12 +793,22 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   fd.append('Price', String(Number(product.price) || 0));
   fd.append('Stock', String(Number(product.stock) || 0));
 
+  // Ratings & Reviews
+  const numRating = Number(product.rating) || 0;
+  const numReviews = Number(product.totalReviews) || (Array.isArray(product.reviews) ? product.reviews.length : 0);
+  fd.append('Rating', String(numRating));
+  fd.append('AverageRating', String(numRating));
+  fd.append('TotalReviews', String(numReviews));
+
   // Images & Media
   if (Array.isArray(imageFiles)) {
     imageFiles.forEach((file) => fd.append('Images', file));
   }
   if (videoFile) fd.append('Video', videoFile);
   if (posterFile) fd.append('Poster', posterFile);
+
+  let mapped = null;
+  let savedId = String(product.id || '');
 
   try {
     const response = await api({
@@ -794,72 +818,104 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     const saved = unwrapItem(response);
-    const mapped = mapProductFromApi(saved);
-    if (!mapped.image && primaryImage) mapped.image = primaryImage;
-    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
-      mapped.images = mergedImages;
-      mapped.gallery = mergedImages;
-    }
-    upsertProduct(mapped);
-    return mapped;
+    savedId = String(saved?.productId || saved?.id || product.id || '');
+    mapped = mapProductFromApi(saved);
   } catch (err) {
     console.warn('FormData product upload failed, attempting JSON fallback:', err.message);
-  }
 
-  // Standard JSON payload fallback
-  const payload = {
-    id: isEditing ? Number(product.id) : undefined,
-    productName: product.name || '',
-    name: product.name || '',
-    sku: product.sku || '',
-    brand: product.brand || 'Honeywell',
-    manufacturer: product.supplier || product.manufacturer || '',
-    subcategoryId: Number(product.subcategoryId) || 0,
-    categoryId: Number(product.categoryId) || 0,
-    mrp: Number(product.mrp) || 0,
-    price: Number(product.price) || 0,
-    sellingPrice: Number(product.price) || 0,
-    stock: Number(product.stock) || 0,
-    stockQuantity: Number(product.stock) || 0,
-    shortDescription: product.shortDescription || product.description || '',
-    productDetails: product.productDetails || '',
-    packageIncludes: product.packageIncludes || '',
-    weight: specWeight,
-    dimensions: specDimensions,
-    powerSource: specPower,
-    material: specMaterial,
-    coverageUsage: specCoverage,
-    specifications: product.specifications || {},
-    discountType: product.discountType || 'none',
-    discountAmount: Number(product.discountValue) || 0,
-    isActive: product.status !== 'Inactive' && product.isActive !== false,
-    imageUrl: primaryImage,
-    image: primaryImage,
-    images: mergedImages,
-  };
+    // Standard JSON payload fallback
+    const payload = {
+      id: isEditing ? Number(product.id) : undefined,
+      productName: product.name || '',
+      name: product.name || '',
+      sku: product.sku || '',
+      brand: product.brand || 'Honeywell',
+      manufacturer: product.supplier || product.manufacturer || '',
+      subcategoryId: Number(product.subcategoryId) || 0,
+      categoryId: Number(product.categoryId) || 0,
+      mrp: Number(product.mrp) || 0,
+      price: Number(product.price) || 0,
+      sellingPrice: Number(product.price) || 0,
+      stock: Number(product.stock) || 0,
+      stockQuantity: Number(product.stock) || 0,
+      shortDescription: product.shortDescription || product.description || '',
+      productDetails: product.productDetails || '',
+      packageIncludes: product.packageIncludes || '',
+      weight: specWeight,
+      dimensions: specDimensions,
+      powerSource: specPower,
+      material: specMaterial,
+      coverageUsage: specCoverage,
+      specifications: product.specifications || {},
+      discountType: product.discountType || 'none',
+      discountAmount: Number(product.discountValue) || 0,
+      rating: numRating,
+      averageRating: numRating,
+      totalReviews: numReviews,
+      isActive: product.status !== 'Inactive' && product.isActive !== false,
+      imageUrl: primaryImage,
+      image: primaryImage,
+      images: mergedImages,
+    };
 
-  try {
-    const response = await api({
-      method: isEditing ? 'PUT' : 'POST',
-      url: isEditing ? `/api/products/${product.id}` : '/api/products',
-      data: payload,
-      headers: { 'Content-Type': 'application/json' },
-    });
-    const saved = unwrapItem(response);
-    const savedId = String(saved.productId || saved.id || product.id || '');
-    const mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
-    if (!mapped.image && primaryImage) mapped.image = primaryImage;
-    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
-      mapped.images = mergedImages;
-      mapped.gallery = mergedImages;
+    try {
+      const response = await api({
+        method: isEditing ? 'PUT' : 'POST',
+        url: isEditing ? `/api/products/${product.id}` : '/api/products',
+        data: payload,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const saved = unwrapItem(response);
+      savedId = String(saved?.productId || saved?.id || product.id || '');
+      mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
+    } catch (err2) {
+      console.error('Backend API unavailable to save product:', err2.message);
+      throw new Error('Unable to save product. Backend server is unreachable.');
     }
-    const finalProduct = { ...mapped, id: savedId || mapped.id };
-    upsertProduct(finalProduct);
-    return finalProduct;
-  } catch (err) {
-    console.error('Backend API unavailable to save product:', err.message);
-    throw new Error('Unable to save product. Backend server is unreachable.');
   }
+
+  if (!mapped.image && primaryImage) mapped.image = primaryImage;
+  if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
+    mapped.images = mergedImages;
+    mapped.gallery = mergedImages;
+  }
+  const finalProduct = { ...mapped, id: savedId || mapped.id };
+  upsertProduct(finalProduct);
+
+  const targetId = String(savedId || finalProduct?.id || product.id || '').trim();
+
+  // If deletedReviewIds provided, delete them
+  if (Array.isArray(product.deletedReviewIds) && product.deletedReviewIds.length > 0) {
+    for (const dId of product.deletedReviewIds) {
+      if (dId) {
+        await deleteProductReview(dId).catch((e) => console.warn('Could not delete review:', dId, e?.message));
+      }
+    }
+  }
+
+  // If reviews provided in product, persist them
+  if (targetId && Array.isArray(product.reviews) && product.reviews.length > 0) {
+    for (const r of product.reviews) {
+      if (r && (r.customer || r.customerName || r.comment || r.reviewComment)) {
+        try {
+          if (r.id) {
+            await updateProductReview(r.id, { ...r, productId: targetId });
+          } else {
+            await createProductReview(targetId, r);
+          }
+        } catch (revErr) {
+          console.warn('Could not persist product review:', revErr?.message);
+        }
+      }
+    }
+  }
+
+  apiCache.invalidate('products_all');
+  apiCache.invalidate(`prod_${targetId}`);
+  apiCache.invalidate('product');
+  reviewService.clearCache();
+
+  return finalProduct;
 };
 
 // ─── Products — Delete ────────────────────────────────────────────────────────

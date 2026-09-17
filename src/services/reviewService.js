@@ -46,10 +46,21 @@ export const reviewService = {
     return filtered.length > 0 ? filtered : null;
   },
 
+  clearCache(productId = null) {
+    if (productId) {
+      reviewsCache.delete(String(productId).trim());
+    } else {
+      reviewsCache.clear();
+    }
+  },
+
   /** GET (ByProduct) — GET /api/reviews/{productId} strictly for this product */
   async getByProduct(productId) {
     if (!productId) return [];
     const key = String(productId).trim();
+    if (!key || isNaN(Number(key))) {
+      return [];
+    }
     if (reviewsCache.has(key)) {
       return reviewsCache.get(key);
     }
@@ -136,12 +147,12 @@ export const reviewService = {
     const merged = { ...current, ...updateData };
     const apiPayload = {
       id: isNaN(Number(id)) ? id : Number(id),
-      productId: isNaN(Number(merged.productId)) ? merged.productId : Number(merged.productId),
+      productId: String(merged.productId || '').trim(),
       customerName: merged.customerName || merged.customer || 'Anonymous',
       rating: Number(merged.rating) || 5,
       reviewDate: merged.reviewDate || merged.date || new Date().toISOString(),
       reviewComment: merged.reviewComment || merged.comment || '',
-      verifiedPurchase: merged.verifiedPurchase !== undefined ? merged.verifiedPurchase : true,
+      verifiedPurchase: merged.verifiedPurchase !== undefined ? Boolean(merged.verifiedPurchase) : true,
       status: merged.status || 'Approved'
     };
 
@@ -156,6 +167,7 @@ export const reviewService = {
       throw new Error(`Failed to update review ${id} (${response.status})`);
     }
 
+    reviewsCache.clear();
     return apiPayload;
   },
 
@@ -171,6 +183,7 @@ export const reviewService = {
       throw new Error(`Failed to delete review ${id} (${response.status})`);
     }
 
+    reviewsCache.clear();
     return true;
   }
 };
