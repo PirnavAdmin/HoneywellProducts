@@ -12,6 +12,8 @@ import { categoryService } from '../services/categoryService';
 import { fetchSubcategories } from '../admin/catalog/subcategoriesApi';
 import { solutionService } from '../services/solutionService';
 import { applications } from '../data/solutions';
+import { INDUSTRY_VERTICALS } from '../data/industryData';
+import { SOLUTION_PILLARS } from '../data/solutionsData';
 import { marketTrends } from '../data/marketTrends';
 import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -207,45 +209,136 @@ export default function Home() {
       </div>
     </section>
 
-    <section className="section applications-section">
-      <div className="container">
-        <SectionHeading eyebrow="SHOP BY APPLICATION" title="What Are You Protecting?" description="Start with the environment and continue to a suggested product category." />
-        <div className="application-grid">
-          {applications.map((application) => (
-            <Link key={application.id} to={`/solutions?application=${application.id}`} className="application-card">
-              <img src={application.image} alt={`${application.name} security application`} loading="lazy" />
-              <div>
-                <span>{application.name}</span>
-                <p>{application.description}</p>
-                <b>Find a solution <ArrowRight size={16} /></b>
-              </div>
-            </Link>
-          ))}
+      {/* Section 1: SHOP BY APPLICATION */}
+      <section className="section applications-section">
+        <div className="container">
+          <SectionHeading eyebrow="SHOP BY APPLICATION" title="What Are You Protecting?" description="Start with the environment and continue to a suggested product category." />
+          <div className="application-grid">
+            {applications.map((application) => (
+              <Link key={application.id} to={`/solutions?application=${application.id}`} className="application-card">
+                <img src={application.image} alt={`${application.name} security application`} loading="lazy" />
+                <div>
+                  <span>{application.name}</span>
+                  <p>{application.description}</p>
+                  <b>Find a solution <ArrowRight size={16} /></b>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section className="section solutions-preview">
-      <div className="container">
-        <div className="split-heading">
-          <SectionHeading eyebrow="END-TO-END PLANNING" title="Complete Security Solutions" description="Explore practical solution starting points for common residential, commercial and industrial settings." />
-          <Link className="arrow-link" to="/solutions">View all solutions <ArrowRight /></Link>
+      {/* Section 2: INDUSTRY VERTICALS */}
+      <section className="section industries-section" style={{ background: '#f8fafc', padding: '60px 0' }}>
+        <div className="container">
+          <div className="split-heading">
+            <SectionHeading eyebrow="INDUSTRY VERTICALS" title="Tailored Industry Solutions" description="Discover specialized technology architectures engineered for specific operational environments." />
+            <Link className="arrow-link" to="/industries">Explore all industries <ArrowRight /></Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', marginTop: '24px' }}>
+            {Object.values(INDUSTRY_VERTICALS).map((ind) => {
+              const Icon = ind.icon;
+              return (
+                <Link
+                  key={ind.id}
+                  to={`/industries?type=${ind.id}`}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    padding: '24px',
+                    textDecoration: 'none',
+                    color: 'inherit',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-3px)';
+                    e.currentTarget.style.borderColor = '#1268a5';
+                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(15, 23, 42, 0.08)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(15, 23, 42, 0.03)';
+                  }}
+                >
+                  <div style={{ display: 'flex', items: 'center', gap: '12px' }}>
+                    <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#eff6ff', color: '#1268a5', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                      <Icon size={22} />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#e53935', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{ind.eyebrow}</span>
+                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{ind.name}</h3>
+                    </div>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>{ind.subtitle}</p>
+                  <div style={{ fontSize: '12px', color: '#1268a5', fontWeight: 700, marginTop: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    Explore Vertical Solutions <ArrowRight size={14} />
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
         </div>
-        <div className="solution-grid">
-          {solutionsList.map((solution) => (
-            <article key={solution.id} className="solution-card">
-              <img src={solution.image || '/honeywell-products-logo.png'} alt={`${solution.title} environment`} loading="lazy" />
-              <div>
-                <small>{solution.application}</small>
-                <h3>{solution.title}</h3>
-                <p>{solution.description}</p>
-                <Link to={`/solutions?solution=${solution.id}`}>View Solution <ArrowRight size={16} /></Link>
-              </div>
-            </article>
-          ))}
+      </section>
+
+      {/* Section 3: COMPLETE SECURITY SOLUTIONS (PILLARS) */}
+      <section className="section solutions-preview">
+        <div className="container">
+          <div className="split-heading">
+            <SectionHeading eyebrow="ARCHITECTURE PILLARS" title="Complete Security Solutions" description="Explore enterprise security architecture packages engineered for scalable monitoring and control." />
+            <Link className="arrow-link" to="/solutions">View all solutions <ArrowRight /></Link>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(270px, 1fr))', gap: '20px', marginTop: '24px' }}>
+            {Object.values(SOLUTION_PILLARS).map((pillar) => (
+              <Link
+                key={pillar.id}
+                to={`/solutions?solution=${pillar.id}`}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '24px',
+                  textDecoration: 'none',
+                  color: 'inherit',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-3px)';
+                  e.currentTarget.style.borderColor = '#e53935';
+                  e.currentTarget.style.boxShadow = '0 8px 24px rgba(15, 23, 42, 0.08)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(15, 23, 42, 0.03)';
+                }}
+              >
+                <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#e53935', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{pillar.eyebrow}</span>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>{pillar.title}</h3>
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>{pillar.subtitle}</p>
+                
+                <div style={{ marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: '#1268a5', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    Explore Architecture <ArrowRight size={14} />
+                  </span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '3px 8px', borderRadius: '4px' }}>
+                    {pillar.architecture?.length || 4} Steps
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
     <section className="section why-section">
       <div className="container">
         <SectionHeading eyebrow="WHY CHOOSE US" title="Technology Designed Around Your Security" description="A practical, conservative framework for product discovery, project planning and support." inverse />
