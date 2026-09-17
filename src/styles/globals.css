@@ -618,12 +618,13 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .mrp-strike { font-size: 10px; color: #94a3b8; text-decoration: line-through; }
 .price-note { padding: 1px 4px; border-radius: 3px; background: #f1f5f9; color: #475569; font-size: 8px; font-weight: 700; text-transform: uppercase; white-space: nowrap; }
 
-.product-actions { min-height: 34px; border-top: 1px solid #e2e8f0; display: grid; grid-template-columns: 1fr 1fr 42px; }
-.product-actions a, .product-actions button { min-width: 0; padding: 0 4px; border: 0; border-right: 1px solid #e2e8f0; background: transparent; display: flex; align-items: center; justify-content: center; gap: 3px; color: #0f172a; font-size: 10px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: background .15s ease, color .15s ease; }
-.product-actions a:hover, .product-actions button:hover { background: #0f172a; color: #ffffff; }
-.product-actions a:focus-visible, .product-actions button:focus-visible { position: relative; z-index: 1; outline: 3px solid rgba(13, 109, 164, .28); outline-offset: -3px; }
-.product-actions .cart-square { background: var(--red); color: #ffffff; border-right: 0; }
-.product-actions .cart-square:hover { background: #950f15; }
+.product-actions { padding: 8px 10px; border-top: 1px solid #f1f5f9; display: flex; align-items: center; gap: 6px; margin-top: auto; }
+.product-actions a { flex: 1; height: 32px; padding: 0 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #ffffff; color: #0f172a; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px; text-decoration: none; transition: all .15s ease; white-space: nowrap; }
+.product-actions a:hover { background: #f8fafc; border-color: #94a3b8; color: #0f172a; }
+.product-actions button:not(.cart-square) { flex: 1; height: 32px; padding: 0 8px; border: 1px solid var(--primary); border-radius: 6px; background: var(--primary); color: #ffffff; font-size: 10.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: all .15s ease; white-space: nowrap; }
+.product-actions button:not(.cart-square):hover { background: #0d5485; border-color: #0d5485; }
+.product-actions .cart-square { width: 32px; height: 32px; flex: 0 0 32px; border: 1px solid var(--red); border-radius: 6px; background: var(--red); color: #ffffff; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .15s ease; }
+.product-actions .cart-square:hover { background: #950f15; border-color: #950f15; }
 .why-section { background: var(--ink); overflow: hidden; }
 .about-reasons { overflow: hidden; }
 
@@ -2832,9 +2833,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 /* INDUSTRIES PAGE */
 .industry-selector-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 14px;
-  margin: 28px 0;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin: 24px 0;
+}
+
+@media (max-width: 900px) {
+  .industry-selector-grid {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    margin: 18px 0;
+  }
+  .industry-select-card {
+    flex: 0 0 140px;
+    text-align: center;
+  }
 }
 
 .industry-select-card {
@@ -2842,19 +2856,21 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 16px;
+  padding: 14px 10px;
   background: var(--white);
   border: 1px solid var(--grey-200);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-weight: 700;
+  font-size: 13px;
 }
 
 .industry-select-card:hover,
 .industry-select-card.active {
-  border-color: var(--red);
-  background: var(--red-soft);
-  color: var(--red-dark);
+  border-color: var(--primary);
+  background: #f0f7ff;
+  color: var(--primary);
 }
 
 .ind-card-icon {
