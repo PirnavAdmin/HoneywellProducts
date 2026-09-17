@@ -1,4 +1,5 @@
 import { apiRequest, API_BASE_URL } from './api';
+import { getReviewsByProductIdFromStore, upsertReviewInStore } from '../admin/catalog/reviewStore';
 
 const DEFAULT_HEADERS = {
   'ngrok-skip-browser-warning': 'true',
@@ -21,18 +22,86 @@ export const mapReviewFromApi = (item) => {
   };
 };
 
+const reviewsCache = new Map();
+
 export const reviewService = {
-  /** GET (ByProduct) — GET /api/reviews/{productId} */
-  async getByProduct(productId) {
-    if (!productId) return [];
-    try {
-      const data = await apiRequest(`/api/reviews/${productId}`);
-      const list = Array.isArray(data) ? data : (data.reviews || data.items || data.data || []);
-      return list.map(mapReviewFromApi).filter(Boolean);
-    } catch (err) {
-      console.warn(`Reviews API getByProduct(${productId}) error:`, err.message);
+  /** Synchronously get reviews from memory cache or localStore if available */
+  getCached(productId, fallbackId = null) {
+    if (productId && reviewsCache.has(String(productId).trim())) {
+      return reviewsCache.get(String(productId).trim());
+    }
+    if (fallbackId && reviewsCache.has(String(fallbackId).trim())) {
+      return reviewsCache.get(String(fallbackId).trim());
+    }
+    if (reviewsCache.has('all')) {
+      return reviewsCache.get('all');
+    }
+    const local = getReviewsByProductIdFromStore(productId) || (fallbackId ? getReviewsByProductIdFromStore(fallbackId) : []);
+    return local && local.length > 0 ? local : null;
+  },
+
+  /** GET (ByProduct) — GET /api/reviews/{productId} with fallbackId (e.g. slug) support */
+  async getByProduct(productId, fallbackId = null) {
+    if (!productId && !fallbackId) {
+      if (reviewsCache.has('all')) return reviewsCache.get('all');
       return [];
     }
+    const primaryKey = String(productId || fallbackId).trim();
+    if (reviewsCache.has(primaryKey)) {
+      return reviewsCache.get(primaryKey);
+    }
+    if (fallbackId && reviewsCache.has(String(fallbackId).trim())) {
+      return reviewsCache.get(String(fallbackId).trim());
+    }
+
+    try {
+      let data = await apiRequest(`/api/reviews/${primaryKey}`);
+      let list = Array.isArray(data) ? data : (data.reviews || data.items || data.data || []);
+      let mapped = list.map(mapReviewFromApi).filter(Boolean);
+
+      // If primary ID returned empty and fallbackId (e.g. slug) is provided, query with fallbackId
+      if (mapped.length === 0 && fallbackId && String(fallbackId).trim() !== primaryKey) {
+        const fallbackKey = String(fallbackId).trim();
+        const fallbackData = await apiRequest(`/api/reviews/${fallbackKey}`);
+        const fallbackList = Array.isArray(fallbackData) ? fallbackData : (fallbackData.reviews || fallbackData.items || fallbackData.data || []);
+        mapped = fallbackList.map(mapReviewFromApi).filter(Boolean);
+      }
+
+      // If still empty, query global catalogue reviews /api/reviews/all
+      if (mapped.length === 0) {
+        if (reviewsCache.has('all')) {
+          mapped = reviewsCache.get('all');
+        } else {
+          const allData = await apiRequest('/api/reviews/all').catch(() => []);
+          const allList = Array.isArray(allData) ? allData : (allData.reviews || allData.items || allData.data || []);
+          mapped = allList.map(mapReviewFromApi).filter(Boolean);
+          if (mapped.length > 0) {
+            reviewsCache.set('all', mapped);
+          }
+        }
+      }
+
+      if (mapped.length > 0) {
+        reviewsCache.set(primaryKey, mapped);
+        if (fallbackId) reviewsCache.set(String(fallbackId).trim(), mapped);
+        return mapped;
+      }
+    } catch (err) {
+      console.warn(`Reviews API getByProduct(${primaryKey}) error:`, err.message);
+    }
+
+    // Fallback to local store or global cached reviews
+    let local = getReviewsByProductIdFromStore(productId);
+    if ((!local || local.length === 0) && fallbackId) {
+      local = getReviewsByProductIdFromStore(fallbackId);
+    }
+    if ((!local || local.length === 0) && reviewsCache.has('all')) {
+      local = reviewsCache.get('all');
+    }
+    const result = local || [];
+    reviewsCache.set(primaryKey, result);
+    if (fallbackId) reviewsCache.set(String(fallbackId).trim(), result);
+    return result;
   },
 
   /** GET (ById) — GET /api/reviews/item/{id} */
@@ -77,7 +146,12 @@ export const reviewService = {
       resData = null;
     }
 
-    return mapReviewFromApi(resData?.review || resData?.data || resData) || { ok: true, payload: apiPayload };
+    reviewsCache.clear();
+    const finalReview = mapReviewFromApi(resData?.review || resData?.data || resData) || { ok: true, payload: apiPayload };
+    if (finalReview && finalReview.productId) {
+      upsertReviewInStore(finalReview);
+    }
+    return finalReview;
   },
 
   /** PUT (Update) — PUT /api/reviews/{id} */

@@ -1,12 +1,44 @@
+import React, { useState, useEffect } from 'react';
 import { ArrowUpRight, ShoppingCart, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useUI } from '../../context/UIContext';
+import { reviewService } from '../../services/reviewService';
+import { getReviewsByProductIdFromStore } from '../../admin/catalog/reviewStore';
 
 export default function ProductCard({ product }) {
   const { addItem } = useCart();
   const { openEnquiry, notify } = useUI();
   const add = () => { addItem(product); notify(`${product.name} added to cart.`); };
+
+  const [liveReviews, setLiveReviews] = useState(() => {
+    if (Array.isArray(product.reviews) && product.reviews.length > 0) {
+      return product.reviews;
+    }
+    const cached = reviewService.getCached?.(product.id, product.slug);
+    if (Array.isArray(cached) && cached.length > 0) return cached;
+    return (product.id ? getReviewsByProductIdFromStore(product.id) : []) || [];
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    if (Array.isArray(product.reviews) && product.reviews.length > 0) {
+      setLiveReviews(product.reviews);
+      return;
+    }
+    const pid = product.id || product.slug;
+    const fallback = product.slug || product.sku || product.model;
+    if (pid || fallback) {
+      reviewService.getByProduct(pid, fallback)
+        .then((revs) => {
+          if (isMounted && Array.isArray(revs) && revs.length > 0) {
+            setLiveReviews(revs);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => { isMounted = false; };
+  }, [product.id, product.slug, product.sku, product.model, product.reviews]);
 
   const rawImg = product.image || product.imageUrl || (Array.isArray(product.images) && product.images[0]);
   const displayImage = (!rawImg || String(rawImg).toLowerCase().includes('placeholder'))
@@ -39,6 +71,27 @@ export default function ProductCard({ product }) {
 
   const isOutOfStock = product.availability === 'Out of Stock' || product.stock === 0;
 
+  // Resolve effective reviews: embedded product.reviews, live fetched reviews, or local store reviews
+  const effectiveReviews = (Array.isArray(liveReviews) && liveReviews.length > 0)
+    ? liveReviews
+    : (Array.isArray(product.reviews) && product.reviews.length > 0 ? product.reviews : []);
+
+  const hasReviews = effectiveReviews.length > 0;
+  const numRating = Number(product.rating ?? product.averageRating);
+
+  // Exact matching calculation with ProductDetails (View) page
+  const displayRating = hasReviews
+    ? (effectiveReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / effectiveReviews.length).toFixed(1)
+    : (numRating > 0 ? numRating.toFixed(1) : '0');
+
+  const displayReviewCount = hasReviews
+    ? effectiveReviews.length
+    : (Number(product.reviewCount) > 0
+        ? Number(product.reviewCount)
+        : (Number(product.totalReviews) > 0
+            ? Number(product.totalReviews)
+            : 0));
+
   return (
     <article className="product-card">
       <Link className="product-image" to={cardLink}>
@@ -68,10 +121,10 @@ export default function ProductCard({ product }) {
         </h3>
 
         <div className="product-sub-row">
-          <div className="product-rating" aria-label={`${product.rating || '4.8'} out of 5 from ${product.reviewCount || 8} reviews`}>
+          <div className="product-rating" aria-label={`${displayRating} out of 5 from ${displayReviewCount} reviews`}>
             <span className="product-stars"><Star size={11} fill="currentColor" /></span>
-            <strong>{product.rating || '4.8'}</strong>
-            <span>({product.reviewCount || 8})</span>
+            <strong>{displayRating}</strong>
+            <span>({displayReviewCount})</span>
           </div>
           {(product.model || product.sku) && (
             <span className="product-card-model" title={product.model || product.sku}>
