@@ -387,9 +387,17 @@ export const mapProductFromApi = (
     ],
 
     // Features & Reviews
-    rating: String(raw.averageRating ?? raw.rating ?? '4.8'),
-    reviewCount: Number(raw.totalReviews ?? mappedReviews.length ?? 8),
-    totalReviews: String(raw.totalReviews ?? mappedReviews.length ?? 8),
+    rating: mappedReviews.length > 0
+      ? (mappedReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / mappedReviews.length).toFixed(1)
+      : (Number(raw.averageRating ?? raw.rating) > 0 ? Number(raw.averageRating ?? raw.rating).toFixed(1) : '0'),
+    reviewCount: mappedReviews.length > 0
+      ? mappedReviews.length
+      : (Number(raw.totalReviews) > 0 ? Number(raw.totalReviews) : 0),
+    totalReviews: String(
+      mappedReviews.length > 0
+        ? mappedReviews.length
+        : (Number(raw.totalReviews) > 0 ? Number(raw.totalReviews) : 0)
+    ),
     ratingBreakdown: raw.ratingBreakdown ?? { 5: '80%', 4: '15%', 3: '5%', 2: '0%', 1: '0%' },
     reviews: mappedReviews,
 
@@ -466,7 +474,7 @@ export const fetchProductReviewById = async (id) => {
 };
 
 export const createProductReview = async (productId, review) => {
-  return await reviewService.submit({
+  const result = await reviewService.submit({
     productId: Number(productId),
     customerName: review.customer || review.customerName || 'Anonymous',
     rating: Number(review.rating) || 5,
@@ -474,14 +482,36 @@ export const createProductReview = async (productId, review) => {
     reviewComment: review.comment || review.reviewComment || '',
     verifiedPurchase: review.verified !== false,
   });
+  apiCache.invalidate('product');
+  apiCache.invalidate('catalog_reviews');
+  return result;
 };
 
 export const updateProductReview = async (id, reviewData) => {
-  return await reviewService.update(id, reviewData);
+  const result = await reviewService.update(id, reviewData);
+  apiCache.invalidate('product');
+  apiCache.invalidate('catalog_reviews');
+  return result;
 };
 
 export const deleteProductReview = async (id) => {
-  return await reviewService.delete(id);
+  const result = await reviewService.delete(id);
+  apiCache.invalidate('product');
+  apiCache.invalidate('catalog_reviews');
+  return result;
+};
+
+/** Helper to fetch global catalog reviews with caching */
+export const fetchCatalogReviews = async () => {
+  return await apiCache.fetchWithCache('catalog_reviews_global', async () => {
+    try {
+      const res = await fetchProductReviews('all');
+      if (Array.isArray(res) && res.length > 0) return res;
+    } catch (e) {
+      console.warn('Could not load global catalog reviews:', e?.message);
+    }
+    return [];
+  }, 5 * 60 * 1000);
 };
 
 // ─── Products — List & Search ─────────────────────────────────────────────────
@@ -496,10 +526,17 @@ export const deleteProductReview = async (id) => {
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
   return await apiCache.fetchWithCache('products_all', async () => {
-    const response = await api.get('/api/products');
-    const apiProducts = unwrapList(response).map((p) =>
-      mapProductFromApi(p, categories, subcategories)
-    );
+    const [response, catalogReviews] = await Promise.all([
+      api.get('/api/products'),
+      fetchCatalogReviews().catch(() => []),
+    ]);
+    const rawList = unwrapList(response);
+    const apiProducts = rawList.map((p) => {
+      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
+        ? p.reviews
+        : catalogReviews;
+      return mapProductFromApi(p, categories, subcategories, [], prodReviews);
+    });
     return apiProducts;
   }, 5 * 60 * 1000);
 };
@@ -508,12 +545,16 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
 export const searchProducts = async (keyword, categories = [], subcategories = []) => {
   const cacheKey = `search_${(keyword || '').toLowerCase()}`;
   return await apiCache.fetchWithCache(cacheKey, async () => {
-    const response = await api.get('/api/products/search', {
-      params: { keyword },
+    const [response, catalogReviews] = await Promise.all([
+      api.get('/api/products/search', { params: { keyword } }),
+      fetchCatalogReviews().catch(() => []),
+    ]);
+    return unwrapList(response).map((p) => {
+      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
+        ? p.reviews
+        : catalogReviews;
+      return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
-    return unwrapList(response).map((p) =>
-      mapProductFromApi(p, categories, subcategories)
-    );
   }, 3 * 60 * 1000);
 };
 
@@ -548,9 +589,10 @@ export const fetchProductsPaged = async (
 
   const cacheKey = `paged_${page}_${pageSize}_${params.categoryId || ''}_${params.sort || ''}_${params.keyword || ''}`;
   return await apiCache.fetchWithCache(cacheKey, async () => {
-    const response = await api.get('/api/products/paged', {
-      params: { page, pageSize, ...params },
-    });
+    const [response, catalogReviews] = await Promise.all([
+      api.get('/api/products/paged', { params: { page, pageSize, ...params } }),
+      fetchCatalogReviews().catch(() => []),
+    ]);
     const raw = response?.data;
     const items = Array.isArray(raw)
       ? raw
@@ -560,7 +602,12 @@ export const fetchProductsPaged = async (
       ? raw.items
       : [];
     return {
-      products: items.map((p) => mapProductFromApi(p, categories, subcategories)),
+      products: items.map((p) => {
+        const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
+          ? p.reviews
+          : catalogReviews;
+        return mapProductFromApi(p, categories, subcategories, [], prodReviews);
+      }),
       page: raw?.page ?? page,
       pageSize: raw?.pageSize ?? pageSize,
       total: raw?.total ?? items.length,
@@ -575,10 +622,16 @@ export const fetchProductsByCategory = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`cat_prods_${categoryId}`, async () => {
-    const response = await api.get(`/api/products/category/${categoryId}`);
-    return unwrapList(response).map((p) =>
-      mapProductFromApi(p, categories, subcategories)
-    );
+    const [response, catalogReviews] = await Promise.all([
+      api.get(`/api/products/category/${categoryId}`),
+      fetchCatalogReviews().catch(() => []),
+    ]);
+    return unwrapList(response).map((p) => {
+      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
+        ? p.reviews
+        : catalogReviews;
+      return mapProductFromApi(p, categories, subcategories, [], prodReviews);
+    });
   }, 5 * 60 * 1000);
 };
 
@@ -589,10 +642,16 @@ export const fetchProductsBySubcategory = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`subcat_prods_${subcategoryId}`, async () => {
-    const response = await api.get(`/api/products/subcategory/${subcategoryId}`);
-    return unwrapList(response).map((p) =>
-      mapProductFromApi(p, categories, subcategories)
-    );
+    const [response, catalogReviews] = await Promise.all([
+      api.get(`/api/products/subcategory/${subcategoryId}`),
+      fetchCatalogReviews().catch(() => []),
+    ]);
+    return unwrapList(response).map((p) => {
+      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
+        ? p.reviews
+        : catalogReviews;
+      return mapProductFromApi(p, categories, subcategories, [], prodReviews);
+    });
   }, 5 * 60 * 1000);
 };
 
@@ -609,10 +668,16 @@ export const fetchRelatedProducts = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`related_${productId}`, async () => {
-    const response = await api.get(`/api/products/related/${productId}`);
-    return unwrapList(response).map((p) =>
-      mapProductFromApi(p, categories, subcategories)
-    );
+    const [response, catalogReviews] = await Promise.all([
+      api.get(`/api/products/related/${productId}`),
+      fetchCatalogReviews().catch(() => []),
+    ]);
+    return unwrapList(response).map((p) => {
+      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
+        ? p.reviews
+        : catalogReviews;
+      return mapProductFromApi(p, categories, subcategories, [], prodReviews);
+    });
   }, 5 * 60 * 1000);
 };
 

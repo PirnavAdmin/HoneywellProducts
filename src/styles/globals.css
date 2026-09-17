@@ -227,6 +227,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   margin: 0 0 12px;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -436,6 +437,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   text-decoration: none;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   transition: color 150ms ease;
@@ -452,6 +454,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -595,12 +598,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .stock-badge.out-of-stock { background: #fef2f2; color: #dc2626; }
 
 .product-card-title { min-height: 32px; margin: 3px 0; }
-.product-card-title a { font: 600 13px/1.3 'Manrope', sans-serif; color: #0f172a; text-decoration: none; display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; height: 34px; transition: color .15s ease; }
+.product-card-title a { font: 600 13px/1.3 'Manrope', sans-serif; color: #0f172a; text-decoration: none; display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; height: 34px; transition: color .15s ease; }
 .product-card-title a:hover { color: var(--red); }
 
 .product-sub-row { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 10px; min-height: 14px; margin-bottom: 4px; }
-.product-rating { display: flex; align-items: center; gap: 3px; color: #64748b; }
-.product-stars { display: inline-flex; gap: 1px; color: #f59e0b; }
+.product-rating { display: flex; align-items: center; gap: 3px; color: #64748b; flex-shrink: 0; white-space: nowrap; }
+.product-stars { display: inline-flex; gap: 1px; color: #f59e0b; flex-shrink: 0; }
 .product-stars svg { display: block; }
 .product-rating strong { color: #0f172a; font-weight: 700; }
 .product-card-model { color: #64748b; font-size: 10px; font-weight: 500; max-width: 95px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -3763,6 +3766,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   line-height: 1.35;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

@@ -287,11 +287,28 @@ export function ProductDetailsContent() {
           <p className="eyebrow dark">{categoryText}</p>
           <h1>{productNameText}</h1>
           <p className="product-model"><strong>{productModelText}</strong></p>
-          <div className="product-rating" aria-label={`${reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / reviews.length).toFixed(1) : (product.rating || '4.8')} out of 5 from ${reviews.length > 0 ? reviews.length : (product.reviewCount || 0)} reviews`}>
-            <span className="product-stars"><Star size={15} fill="currentColor" /></span>
-            <strong>{reviews.length > 0 ? (reviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / reviews.length).toFixed(1) : (product.rating || '4.8')}</strong>
-            <span>({reviews.length > 0 ? reviews.length : (product.reviewCount || 0)} reviews)</span>
-          </div>
+          {(() => {
+            const hasReviews = reviews.length > 0;
+            const numProdRating = Number(product?.rating ?? product?.averageRating);
+            const detailRating = hasReviews
+              ? (reviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / reviews.length).toFixed(1)
+              : (numProdRating > 0 ? numProdRating.toFixed(1) : '0');
+            const detailReviewCount = hasReviews
+              ? reviews.length
+              : (Number(product?.reviewCount) > 0
+                  ? Number(product.reviewCount)
+                  : (Number(product?.totalReviews) > 0
+                      ? Number(product.totalReviews)
+                      : 0));
+
+            return (
+              <div className="product-rating" aria-label={`${detailRating} out of 5 from ${detailReviewCount} reviews`}>
+                <span className="product-stars"><Star size={15} fill="currentColor" /></span>
+                <strong>{detailRating}</strong>
+                <span>({detailReviewCount} reviews)</span>
+              </div>
+            );
+          })()}
           <span className="availability"><i /> {safeString(product.availability, 'In Stock')}</span>
           <p className="product-description">{productDescriptionText}</p>
 
