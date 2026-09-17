@@ -483,7 +483,7 @@ export const fetchProductReviewById = async (id) => {
 
 export const createProductReview = async (productId, review) => {
   const result = await reviewService.submit({
-    productId: Number(productId),
+    productId: String(productId || '').trim(),
     customerName: review.customer || review.customerName || 'Anonymous',
     rating: Number(review.rating) || 5,
     reviewDate: review.date ? `${review.date}-01T00:00:00Z` : new Date().toISOString(),
@@ -491,35 +491,19 @@ export const createProductReview = async (productId, review) => {
     verifiedPurchase: review.verified !== false,
   });
   apiCache.invalidate('product');
-  apiCache.invalidate('catalog_reviews');
   return result;
 };
 
 export const updateProductReview = async (id, reviewData) => {
   const result = await reviewService.update(id, reviewData);
   apiCache.invalidate('product');
-  apiCache.invalidate('catalog_reviews');
   return result;
 };
 
 export const deleteProductReview = async (id) => {
   const result = await reviewService.delete(id);
   apiCache.invalidate('product');
-  apiCache.invalidate('catalog_reviews');
   return result;
-};
-
-/** Helper to fetch global catalog reviews with caching */
-export const fetchCatalogReviews = async () => {
-  return await apiCache.fetchWithCache('catalog_reviews_global', async () => {
-    try {
-      const res = await fetchProductReviews('all');
-      if (Array.isArray(res) && res.length > 0) return res;
-    } catch (e) {
-      console.warn('Could not load global catalog reviews:', e?.message);
-    }
-    return [];
-  }, 5 * 60 * 1000);
 };
 
 // ─── Products — List & Search ─────────────────────────────────────────────────
@@ -534,15 +518,10 @@ export const fetchCatalogReviews = async () => {
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
   return await apiCache.fetchWithCache('products_all', async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get('/api/products'),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get('/api/products');
     const rawList = unwrapList(response);
     const apiProducts = rawList.map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
     return apiProducts;
@@ -553,14 +532,9 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
 export const searchProducts = async (keyword, categories = [], subcategories = []) => {
   const cacheKey = `search_${(keyword || '').toLowerCase()}`;
   return await apiCache.fetchWithCache(cacheKey, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get('/api/products/search', { params: { keyword } }),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get('/api/products/search', { params: { keyword } });
     return unwrapList(response).map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
   }, 3 * 60 * 1000);
@@ -597,10 +571,7 @@ export const fetchProductsPaged = async (
 
   const cacheKey = `paged_${page}_${pageSize}_${params.categoryId || ''}_${params.sort || ''}_${params.keyword || ''}`;
   return await apiCache.fetchWithCache(cacheKey, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get('/api/products/paged', { params: { page, pageSize, ...params } }),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get('/api/products/paged', { params: { page, pageSize, ...params } });
     const raw = response?.data;
     const items = Array.isArray(raw)
       ? raw
@@ -611,9 +582,7 @@ export const fetchProductsPaged = async (
       : [];
     return {
       products: items.map((p) => {
-        const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-          ? p.reviews
-          : catalogReviews;
+        const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
         return mapProductFromApi(p, categories, subcategories, [], prodReviews);
       }),
       page: raw?.page ?? page,
@@ -630,14 +599,9 @@ export const fetchProductsByCategory = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`cat_prods_${categoryId}`, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get(`/api/products/category/${categoryId}`),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get(`/api/products/category/${categoryId}`);
     return unwrapList(response).map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
   }, 5 * 60 * 1000);
@@ -650,14 +614,9 @@ export const fetchProductsBySubcategory = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`subcat_prods_${subcategoryId}`, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get(`/api/products/subcategory/${subcategoryId}`),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get(`/api/products/subcategory/${subcategoryId}`);
     return unwrapList(response).map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
   }, 5 * 60 * 1000);
@@ -676,14 +635,9 @@ export const fetchRelatedProducts = async (
   subcategories = []
 ) => {
   return await apiCache.fetchWithCache(`related_${productId}`, async () => {
-    const [response, catalogReviews] = await Promise.all([
-      api.get(`/api/products/related/${productId}`),
-      fetchCatalogReviews().catch(() => []),
-    ]);
+    const response = await api.get(`/api/products/related/${productId}`);
     return unwrapList(response).map((p) => {
-      const prodReviews = (Array.isArray(p.reviews) && p.reviews.length > 0)
-        ? p.reviews
-        : catalogReviews;
+      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
       return mapProductFromApi(p, categories, subcategories, [], prodReviews);
     });
   }, 5 * 60 * 1000);
@@ -697,20 +651,25 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
     try {
       const response = await api.get(`/api/products/${id}`);
       const product = unwrapItem(response);
+      const prodId = product.id || id;
 
-      // Fetch features and reviews in parallel; never let them crash the product load
+      // Fetch features and strictly product-specific reviews in parallel
       const [features, reviews] = await Promise.all([
-        fetchProductFeatures(id).catch((e) => {
-          console.warn('Could not load features for product', id, e?.message);
+        fetchProductFeatures(prodId).catch((e) => {
+          console.warn('Could not load features for product', prodId, e?.message);
           return [];
         }),
-        fetchProductReviews(id).catch((e) => {
-          console.warn('Could not load reviews for product', id, e?.message);
+        fetchProductReviews(prodId).catch((e) => {
+          console.warn('Could not load reviews for product', prodId, e?.message);
           return [];
         }),
       ]);
 
-      return mapProductFromApi(product, categories, subcategories, features, reviews);
+      const strictReviews = (Array.isArray(reviews) ? reviews : []).filter(
+        (r) => !r.productId || String(r.productId) === String(prodId)
+      );
+
+      return mapProductFromApi(product, categories, subcategories, features, strictReviews);
     } catch (err) {
       console.warn(`GET /api/products/${id} failed (${err.message}), attempting catalog fallback search.`);
       try {
