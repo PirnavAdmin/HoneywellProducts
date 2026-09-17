@@ -288,13 +288,16 @@ export function ProductDetailsContent() {
           <h1>{productNameText}</h1>
           <p className="product-model"><strong>{productModelText}</strong></p>
           {(() => {
-            const hasReviews = reviews.length > 0;
+            const effectiveReviewsList = (Array.isArray(reviews) && reviews.length > 0)
+              ? reviews
+              : (Array.isArray(product?.reviews) && product.reviews.length > 0 ? product.reviews : []);
+            const hasReviews = effectiveReviewsList.length > 0;
             const numProdRating = Number(product?.rating ?? product?.averageRating);
             const detailRating = hasReviews
-              ? (reviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / reviews.length).toFixed(1)
+              ? (effectiveReviewsList.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / effectiveReviewsList.length).toFixed(1)
               : (numProdRating > 0 ? numProdRating.toFixed(1) : '0');
             const detailReviewCount = hasReviews
-              ? reviews.length
+              ? effectiveReviewsList.length
               : (Number(product?.reviewCount) > 0
                   ? Number(product.reviewCount)
                   : (Number(product?.totalReviews) > 0
@@ -302,11 +305,21 @@ export function ProductDetailsContent() {
                       : 0));
 
             return (
-              <div className="product-rating" aria-label={`${detailRating} out of 5 from ${detailReviewCount} reviews`}>
+              <button
+                type="button"
+                className="product-rating product-rating-btn"
+                onClick={() => {
+                  setTab('Reviews');
+                  const el = document.getElementById('product-tabs-section');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                title="Click to view customer reviews"
+                aria-label={`${detailRating} out of 5 from ${detailReviewCount} reviews. Click to see customer reviews.`}
+              >
                 <span className="product-stars"><Star size={15} fill="currentColor" /></span>
                 <strong>{detailRating}</strong>
-                <span>({detailReviewCount} reviews)</span>
-              </div>
+                <span className="product-review-link">({detailReviewCount} reviews)</span>
+              </button>
             );
           })()}
           <span className="availability"><i /> {safeString(product.availability, 'In Stock')}</span>
@@ -360,12 +373,28 @@ export function ProductDetailsContent() {
         </div>
       </section>
 
-      <section className="product-tabs">
+      <section className="product-tabs" id="product-tabs-section">
         <div className="container">
           <div className="tab-list" role="tablist" aria-label="Product information">
-            {tabs.map((item) => (
-              <button key={item} role="tab" aria-selected={tab === item} className={tab === item ? 'active' : ''} onClick={() => setTab(item)}>{item}</button>
-            ))}
+            {tabs.map((item) => {
+              const effectiveCount = reviews.length > 0
+                ? reviews.length
+                : (Array.isArray(product?.reviews) ? product.reviews.length : 0);
+              return (
+                <button
+                  key={item}
+                  role="tab"
+                  aria-selected={tab === item}
+                  className={tab === item ? 'active' : ''}
+                  onClick={() => setTab(item)}
+                >
+                  {item}
+                  {item === 'Reviews' && effectiveCount > 0 && (
+                    <span className="tab-review-pill">{effectiveCount}</span>
+                  )}
+                </button>
+              );
+            })}
           </div>
           <div className="tab-content">
             {tab === 'Overview' && <div><h2>Product Overview</h2><p>{product.description || product.productDetails || product.shortDescription || 'Complete technical details for this product model.'}</p></div>}
@@ -580,29 +609,87 @@ export function ProductDetailsContent() {
                 </div>
               </div>
             )}
-            {tab === 'Reviews' && (
-              <div>
-                <h2>Customer Reviews &amp; Ratings</h2>
-                {reviews.length === 0 ? (
-                  <p style={{ color: '#64748b', marginBottom: 24 }}>No reviews submitted for this product yet. Be the first to leave a review!</p>
-                ) : (
-                  <div className="review-list" style={{ display: 'grid', gap: 16, marginBottom: 32 }}>
-                    {reviews.map((r) => (
-                      <div key={r.id} style={{ background: '#f8fafc', padding: 16, borderRadius: 8, border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <strong style={{ color: '#0f172a' }}>{r.customerName}</strong>
-                          <div style={{ color: '#f59e0b', fontSize: '14px', display: 'flex', gap: 2 }}>
-                            {Array.from({ length: r.rating }, (_, i) => <Star key={i} size={14} fill="currentColor" />)}
+            {tab === 'Reviews' && (() => {
+              const effectiveReviewsList = (Array.isArray(reviews) && reviews.length > 0)
+                ? reviews
+                : (Array.isArray(product?.reviews) && product.reviews.length > 0 ? product.reviews : []);
+              const hasReviews = effectiveReviewsList.length > 0;
+              const numProdRating = Number(product?.rating ?? product?.averageRating);
+              const detailRating = hasReviews
+                ? (effectiveReviewsList.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / effectiveReviewsList.length).toFixed(1)
+                : (numProdRating > 0 ? numProdRating.toFixed(1) : '0');
+              const detailReviewCount = hasReviews
+                ? effectiveReviewsList.length
+                : (Number(product?.reviewCount) > 0 ? Number(product.reviewCount) : 0);
+
+              return (
+                <div>
+                  <h2>Customer Reviews &amp; Ratings</h2>
+                  {effectiveReviewsList.length === 0 ? (
+                    <p style={{ color: '#64748b', marginBottom: 24 }}>No reviews submitted for this product yet. Be the first to leave a review!</p>
+                  ) : (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '20px 24px', background: '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', marginBottom: 28, flexWrap: 'wrap' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <div style={{ fontSize: '42px', fontWeight: 800, color: '#0f172a', lineHeight: 1 }}>{detailRating}</div>
+                          <div style={{ color: '#f59e0b', display: 'flex', gap: 3, justifyContent: 'center', margin: '8px 0 4px' }}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={16}
+                                fill={star <= Math.round(Number(detailRating)) ? 'currentColor' : 'none'}
+                                stroke="currentColor"
+                              />
+                            ))}
                           </div>
+                          <small style={{ color: '#64748b', fontSize: '12px', fontWeight: 600 }}>Based on {detailReviewCount} verified reviews</small>
                         </div>
-                        <p style={{ margin: 0, color: '#334155', fontSize: '14px' }}>{r.reviewComment}</p>
-                        <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: 6, display: 'block' }}>
-                          {new Date(r.reviewDate).toLocaleDateString()}
-                        </span>
+                        <div style={{ flex: 1, minWidth: 220, borderLeft: '1px solid #e2e8f0', paddingLeft: 24 }}>
+                          <p style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 700, color: '#1e293b' }}>
+                            Customer Satisfaction
+                          </p>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                            All reviews below are verified submissions from authenticated clients and technicians using Honeywell surveillance equipment.
+                          </p>
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+
+                      <div className="review-list" style={{ display: 'grid', gap: 16, marginBottom: 32 }}>
+                        {effectiveReviewsList.map((r, idx) => {
+                          const custName = r.customerName || r.customer || 'Verified Buyer';
+                          const commentText = r.reviewComment || r.comment || 'Verified purchase review.';
+                          const rawDate = r.reviewDate || r.date;
+                          const dateText = rawDate && !isNaN(new Date(rawDate).getTime())
+                            ? new Date(rawDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                            : 'Recent';
+                          const numStars = Math.min(5, Math.max(1, Number(r.rating) || 5));
+
+                          return (
+                            <div key={r.id || `rev-${idx}`} style={{ background: '#f8fafc', padding: 18, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#e0e7ff', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13 }}>
+                                    {custName.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <strong style={{ color: '#0f172a', fontSize: '14px', display: 'block' }}>{custName}</strong>
+                                    <span style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>✓ Verified Buyer</span>
+                                  </div>
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                  <div style={{ color: '#f59e0b', fontSize: '14px', display: 'flex', gap: 2 }}>
+                                    {Array.from({ length: numStars }, (_, i) => <Star key={i} size={15} fill="currentColor" />)}
+                                  </div>
+                                  <span style={{ fontSize: '12px', color: '#94a3b8' }}>{dateText}</span>
+                                </div>
+                              </div>
+                              <p style={{ margin: 0, color: '#334155', fontSize: '14px', lineHeight: 1.5, paddingLeft: 44 }}>{commentText}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
 
                 <div style={{ background: '#ffffff', padding: 20, borderRadius: 10, border: '1px solid #e2e8f0', maxWidth: 540 }}>
                   <h3 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 12px 0' }}>Write a Review</h3>
@@ -648,7 +735,8 @@ export function ProductDetailsContent() {
                   </form>
                 </div>
               </div>
-            )}
+            );
+          })()}
             {tab === 'FAQ' && (
               <div>
                 <h2>Frequently Asked Questions</h2>

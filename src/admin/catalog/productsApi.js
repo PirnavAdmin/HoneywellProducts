@@ -185,18 +185,26 @@ export const mapProductFromApi = (
       ? raw.reviews
       : [];
 
-  const mappedReviews = rawReviews.map((r) => ({
-    id: String(r.id ?? ''),
-    customer: r.customerName || r.customer || 'Anonymous',
-    rating: String(Number(r.rating) || 5),
-    date: r.reviewDate
-      ? r.reviewDate.slice(0, 7)
-      : r.dateCreated
-      ? r.dateCreated.slice(0, 7)
-      : new Date().toISOString().slice(0, 7),
-    comment: r.reviewComment || r.comment || '',
-    verified: (r.verifiedPurchase ?? r.verified) !== false,
-  }));
+  const mappedReviews = rawReviews.map((r) => {
+    const custName = r.customerName || r.customer || r.name || r.author || 'Anonymous';
+    const revComment = r.reviewComment || r.comment || r.message || r.text || '';
+    const revDate = r.reviewDate || r.date || r.dateCreated || r.createdAt || new Date().toISOString();
+    const numRating = Number(r.rating) || 5;
+    const isVerified = (r.verifiedPurchase ?? r.verified) !== false;
+    return {
+      id: String(r.id ?? ''),
+      customer: custName,
+      customerName: custName,
+      rating: numRating,
+      ratingStr: String(numRating),
+      date: revDate,
+      reviewDate: revDate,
+      comment: revComment,
+      reviewComment: revComment,
+      verified: isVerified,
+      verifiedPurchase: isVerified,
+    };
+  });
 
   // ── Images ────────────────────────────────────────────────────────────────
   const rawImages = raw.images || raw.media || [];

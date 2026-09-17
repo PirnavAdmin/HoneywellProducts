@@ -10,14 +10,23 @@ const DEFAULT_HEADERS = {
 export const mapReviewFromApi = (item) => {
   if (!item) return null;
   const rawId = item.id ?? item.reviewId ?? item._id ?? '';
+  const customerName = item.customerName || item.customer || item.name || item.author || 'Anonymous';
+  const reviewComment = item.reviewComment || item.comment || item.message || item.text || '';
+  const reviewDate = item.reviewDate || item.date || item.createdAt || new Date().toISOString();
+  const rating = Number(item.rating) || 5;
+  const verifiedPurchase = item.verifiedPurchase !== undefined ? Boolean(item.verifiedPurchase) : (item.verified !== undefined ? Boolean(item.verified) : true);
   return {
     id: String(rawId),
     productId: item.productId ? String(item.productId) : null,
-    customerName: item.customerName || item.customer || item.name || item.author || 'Anonymous',
-    rating: Number(item.rating) || 5,
-    reviewDate: item.reviewDate || item.date || item.createdAt || new Date().toISOString(),
-    reviewComment: item.reviewComment || item.comment || item.message || item.text || '',
-    verifiedPurchase: item.verifiedPurchase !== undefined ? Boolean(item.verifiedPurchase) : (item.verified !== undefined ? Boolean(item.verified) : true),
+    customerName,
+    customer: customerName,
+    rating,
+    reviewDate,
+    date: reviewDate,
+    reviewComment,
+    comment: reviewComment,
+    verifiedPurchase,
+    verified: verifiedPurchase,
     status: item.status || 'Approved'
   };
 };
