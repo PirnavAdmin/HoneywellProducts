@@ -1,5 +1,6 @@
 # dependencies
 /node_modules
+**/node_modules/
 /.pnp
 .pnp.*
 .yarn/*
@@ -11,13 +12,21 @@
 # testing
 /coverage
 
-# next.js
+# next.js & vite & build outputs
 /.next/
 /.vinext/
 /out/
+/dist/
+**/dist/
+/.wrangler/
+/outputs/
+/work/
 
-# misc
+# misc & OS
 .DS_Store
+Thumbs.db
+*.tmp
+*.log
 *.pem
 
 # debug
@@ -28,12 +37,24 @@ yarn-error.log*
 
 # local environment
 .env*
+**/.env
+**/.env.local
+**/.env.development.local
+**/.env.production.local
 !.env.example
+!**/.env.example
 
 # deployment and generated files
 .vercel
 next-env.d.ts
-/dist/
-/.wrangler/
-/outputs/
-/work/
+
+# BACKEND - .NET
+**/bin/
+**/obj/
+
+# Visual Studio & VS Code
+.vs/
+**/.vs/
+*.user
+*.suo
+.vscode/
