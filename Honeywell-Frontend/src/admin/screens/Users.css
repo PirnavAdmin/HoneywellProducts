@@ -362,13 +362,14 @@
 .users-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(6px);
-  z-index: 999;
+  z-index: 999999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 24px;
+  box-sizing: border-box;
   animation: modalOverlayFade 0.2s ease-out;
 }
 
@@ -382,10 +383,27 @@
   border-radius: 20px;
   max-width: 680px;
   width: 100%;
-  padding: 28px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.3);
   border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  padding: 24px 28px;
+  box-sizing: border-box;
   animation: modalScaleUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.add-user-modal-card {
+  max-width: 480px;
+  width: 100%;
+  padding: 24px 28px;
+  overflow: visible;
+}
+
+.add-user-form {
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes modalScaleUp {
@@ -398,8 +416,8 @@
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 18px;
-  margin-bottom: 20px;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .users-modal-header-info {
@@ -545,12 +563,13 @@
   justify-content: flex-end;
   gap: 12px;
   border-top: 1px solid #f1f5f9;
-  padding-top: 20px;
+  padding-top: 16px;
+  margin-top: 4px;
 }
 
 /* Form Controls in Modal */
 .form-group-users {
-  margin-bottom: 16px;
+  margin-bottom: 13px;
 }
 
 .form-group-users label {
@@ -558,21 +577,33 @@
   font-size: 13px;
   font-weight: 700;
   color: #334155;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .form-input-users {
   width: 100%;
-  padding: 10px 14px;
+  padding: 9px 13px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 13.5px;
   outline: none;
   background: #ffffff;
+  box-sizing: border-box;
   transition: all 0.2s ease;
 }
 
 .form-input-users:focus {
   border-color: #1268a5;
   box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.12);
+}
+
+.users-modal-card::-webkit-scrollbar,
+.add-user-form::-webkit-scrollbar {
+  display: none;
+}
+
+.users-modal-card,
+.add-user-form {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

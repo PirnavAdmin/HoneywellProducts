@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { 
   User, 
@@ -392,9 +393,9 @@ const Users = () => {
       </div>
 
       {/* Add User Modal */}
-      {showAddUserModal && (
+      {showAddUserModal && createPortal(
         <div className="users-modal-overlay">
-          <div className="users-modal-card" style={{ maxWidth: 480 }}>
+          <div className="users-modal-card add-user-modal-card">
             <div className="users-modal-header">
               <div className="users-modal-header-info">
                 <div className="users-modal-header-icon">
@@ -405,14 +406,18 @@ const Users = () => {
                   <p>Create a user account with default system privileges</p>
                 </div>
               </div>
-              <button onClick={() => setShowAddUserModal(false)} className="users-modal-close">
+              <button 
+                type="button"
+                onClick={() => setShowAddUserModal(false)} 
+                className="users-modal-close"
+              >
                 <X size={20} />
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser}>
+            <form onSubmit={handleCreateUser} className="add-user-form">
               <div className="form-group-users">
-                <label>Full Name *</label>
+                <label>Full Name <span style={{ color: '#ef4444' }}>*</span></label>
                 <input 
                   type="text"
                   required
@@ -424,7 +429,7 @@ const Users = () => {
               </div>
 
               <div className="form-group-users">
-                <label>Email Address *</label>
+                <label>Email Address <span style={{ color: '#ef4444' }}>*</span></label>
                 <input 
                   type="email"
                   required
@@ -460,7 +465,7 @@ const Users = () => {
               <div className="users-modal-footer">
                 <button 
                   type="button"
-                  onClick={() => setShowAddUserModal(false)}
+                  onClick={() => setShowAddUserModal(false)} 
                   className="btn-users-secondary"
                 >
                   Cancel
@@ -475,13 +480,14 @@ const Users = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Manage Permissions Modal */}
-      {selectedUser && (
+      {selectedUser && createPortal(
         <div className="users-modal-overlay">
-          <div className="users-modal-card">
+          <div className="users-modal-card" style={{ maxWidth: 720 }}>
             <div className="users-modal-header">
               <div className="users-modal-header-info">
                 <div className="users-modal-header-icon">
@@ -493,6 +499,7 @@ const Users = () => {
                 </div>
               </div>
               <button 
+                type="button"
                 onClick={() => setSelectedUser(null)}
                 className="users-modal-close"
               >
@@ -534,12 +541,14 @@ const Users = () => {
             {/* Modal Actions */}
             <div className="users-modal-footer">
               <button 
+                type="button"
                 onClick={() => setSelectedUser(null)}
                 className="btn-users-secondary"
               >
                 Cancel
               </button>
               <button 
+                type="button"
                 onClick={savePermissions}
                 className="btn-users-primary"
               >
@@ -547,7 +556,8 @@ const Users = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

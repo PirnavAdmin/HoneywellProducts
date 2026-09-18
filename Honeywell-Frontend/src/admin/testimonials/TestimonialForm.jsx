@@ -249,7 +249,7 @@ const TestimonialForm = () => {
                   name="role"
                   value={formData.role}
                   onChange={handleChange}
-                  placeholder="e.g., Professional Farmer"
+                  placeholder="e.g., Security System Integrator, Facility Manager"
                   style={{
                     padding: '10px 14px',
                     borderRadius: '6px',

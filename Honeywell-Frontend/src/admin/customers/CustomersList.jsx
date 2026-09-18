@@ -27,11 +27,11 @@ const CustomersList = () => {
     address: '',
     district: '',
     state: '',
-    type: 'Farmer', // Default client/farmer type
-    soilType: 'Red Sandy',
-    cropType: 'Cotton',
-    farmSizeAcres: '5',
-    irrigationSource: 'Borewell'
+    type: '',
+    companyOrganization: '',
+    sector: 'Security & CCTV Surveillance',
+    projectScale: 'Commercial & Industrial',
+    gstin: ''
   });
 
   useEffect(() => {
@@ -86,22 +86,26 @@ const CustomersList = () => {
       return;
     }
 
+    if (!newCustomer.type) {
+      alert('Please select a Customer Type.');
+      return;
+    }
+
     const payload = {
       name: newCustomer.name,
       phone: newCustomer.phone,
       email: (newCustomer.email || '').trim().toLowerCase(),
       status: newCustomer.status || 'Active',
-      type: newCustomer.type || 'Farmer',
+      role: newCustomer.type || 'System Integrator',
+      companyOrganization: newCustomer.companyOrganization || 'Enterprise Partner',
       address: newCustomer.address || '',
       district: newCustomer.district || '',
       state: newCustomer.state || '',
-      profilePicture: `https://ui-avatars.com/api/?name=${encodeURIComponent(newCustomer.name)}&background=2e7d32&color=fff`,
-      agrarianProfile: {
-        soilType: newCustomer.soilType || 'Red Sandy',
-        cropType: newCustomer.cropType || 'Cotton',
-        farmSizeAcres: parseFloat(newCustomer.farmSizeAcres) || 0,
-        irrigationSource: newCustomer.irrigationSource || 'Borewell'
-      }
+      profilePicture: `https://ui-avatars.com/api/?name=${encodeURIComponent(newCustomer.name)}&background=1268a5&color=fff`,
+      type: newCustomer.type || 'System Integrator',
+      sector: newCustomer.sector || 'Security & CCTV Surveillance',
+      projectScale: newCustomer.projectScale || 'Commercial & Industrial',
+      gstin: newCustomer.gstin || ''
     };
 
     try {
@@ -116,7 +120,7 @@ const CustomersList = () => {
 
       if (!res.ok) throw new Error('Failed to create customer');
       const data = await res.json();
-      setCustomers(prev => [data, ...prev]);
+      setCustomers(prev => [{ ...data, type: newCustomer.type }, ...prev]);
       setShowAddModal(false);
       
       setNewCustomer({
@@ -127,11 +131,11 @@ const CustomersList = () => {
         address: '',
         district: '',
         state: '',
-        type: 'Farmer',
-        soilType: 'Red Sandy',
-        cropType: 'Cotton',
-        farmSizeAcres: '5',
-        irrigationSource: 'Borewell'
+        type: '',
+        companyOrganization: '',
+        sector: 'Security & CCTV Surveillance',
+        projectScale: 'Commercial & Industrial',
+        gstin: ''
       });
     } catch (err) {
       console.error('Error creating customer:', err);
@@ -154,8 +158,8 @@ const CustomersList = () => {
         idVal.includes(searchTerm.toLowerCase()) ||
         phoneVal.includes(searchTerm.toLowerCase());
       
-      const customerType = c.type || 'Farmer';
-      const matchesType = typeFilter === 'All' || customerType === typeFilter;
+      const customerType = c.type || c.role || 'System Integrator';
+      const matchesType = typeFilter === 'All' || customerType.toLowerCase() === typeFilter.toLowerCase();
       
       return matchesSearch && matchesType;
     });
@@ -166,14 +170,27 @@ const CustomersList = () => {
     setCurrentPage(1);
   }, [searchTerm, typeFilter]);
 
-  const getTagColor = (type) => {
-    switch (type || 'Farmer') {
-      case 'Farmer':
-        return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-      case 'Retailer':
-        return 'bg-blue-50 text-blue-700 border border-blue-200';
+  const getTagBadgeStyle = (type) => {
+    const t = type || 'System Integrator';
+    switch (t) {
+      case 'System Integrator':
+        return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' };
+      case 'CCTV Installer':
+        return { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' };
+      case 'Commercial & Enterprise':
+        return { bg: '#f1f5f9', color: '#0f172a', border: '#cbd5e1' };
+      case 'Distributor':
+        return { bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
+      case 'Dealer / Reseller':
+      case 'Dealer':
+      case 'Reseller':
+        return { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' };
+      case 'Residential & Facility Owner':
+        return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+      case 'Channel Partner':
+        return { bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4' };
       default:
-        return 'bg-purple-50 text-purple-700 border border-purple-200';
+        return { bg: '#eff6ff', color: '#1268a5', border: '#bfdbfe' };
     }
   };
 
@@ -204,13 +221,13 @@ const CustomersList = () => {
             Customers Directory
           </h1>
           <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-            Manage registered growers, retailers, and agricultural bulk buyers.
+            Manage registered system integrators, installers, dealers, and enterprise clients.
           </p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
           style={{
-            backgroundColor: '#059669',
+            backgroundColor: '#1268a5',
             color: '#ffffff',
             fontSize: '13px',
             fontWeight: 700,
@@ -221,9 +238,12 @@ const CustomersList = () => {
             display: 'inline-flex',
             alignItems: 'center',
             gap: '6px',
-            boxShadow: '0 1px 3px rgba(5, 150, 105, 0.25)',
-            whiteSpace: 'nowrap'
+            boxShadow: '0 1px 3px rgba(18, 104, 165, 0.25)',
+            whiteSpace: 'nowrap',
+            transition: 'background-color 0.15s ease'
           }}
+          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0e5586')}
+          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1268a5')}
         >
           <Plus size={16} /> Add Customer
         </button>
@@ -245,7 +265,7 @@ const CustomersList = () => {
           <Search size={16} style={{ position: 'absolute', left: '14px', color: '#94a3b8' }} />
           <input
             type="text"
-            placeholder="Search by customer name, id..."
+            placeholder="Search by customer name, phone, id..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -276,9 +296,13 @@ const CustomersList = () => {
           }}
         >
           <option value="All">All Customer Types</option>
-          <option value="Farmer">Farmers</option>
-          <option value="Retailer">Retailers</option>
-          <option value="Wholesaler">Wholesalers</option>
+          <option value="System Integrator">System Integrators</option>
+          <option value="CCTV Installer">CCTV Installers</option>
+          <option value="Commercial & Enterprise">Commercial & Enterprise</option>
+          <option value="Distributor">Distributors</option>
+          <option value="Dealer / Reseller">Dealers / Resellers</option>
+          <option value="Residential & Facility Owner">Residential & Facility Owners</option>
+          <option value="Channel Partner">Channel Partners</option>
         </select>
       </section>
 
@@ -313,7 +337,8 @@ const CustomersList = () => {
                 const displayAddress = formatAddr();
                 const orderCount = cust.orders?.length || 0;
                 const totalSpent = cust.orders?.reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0) || 0;
-                const customerType = cust.type || 'Farmer';
+                const customerType = cust.type || cust.role || 'System Integrator';
+                const badgeStyle = getTagBadgeStyle(customerType);
 
                 return (
                   <tr 
@@ -329,14 +354,13 @@ const CustomersList = () => {
                     <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0f172a', fontSize: '13px', whiteSpace: 'nowrap' }}>
                       <span>{cust.name}</span>
                       <span style={{
-                        backgroundColor: customerType === 'Farmer' ? '#dcfce7' : (customerType === 'Retailer' ? '#dbeafe' : '#f3e8ff'),
-                        color: customerType === 'Farmer' ? '#15803d' : (customerType === 'Retailer' ? '#1e40af' : '#6b21a8'),
-                        border: `1px solid ${customerType === 'Farmer' ? '#bbf7d0' : (customerType === 'Retailer' ? '#bfdbfe' : '#e9d5ff')}`,
-                        fontSize: '10px',
-                        fontWeight: 800,
+                        backgroundColor: badgeStyle.bg,
+                        color: badgeStyle.color,
+                        border: `1px solid ${badgeStyle.border}`,
+                        fontSize: '10.5px',
+                        fontWeight: 700,
                         padding: '2px 8px',
                         borderRadius: '999px',
-                        textTransform: 'uppercase',
                         marginLeft: '8px',
                         display: 'inline-block'
                       }}>
@@ -397,7 +421,7 @@ const CustomersList = () => {
             
             {/* MODAL HEADER */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '22px 28px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
-              <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#064e3b', margin: 0, letterSpacing: '-0.01em' }}>Add New Customer</h3>
+              <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>Add New Customer</h3>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
@@ -413,7 +437,7 @@ const CustomersList = () => {
             <form onSubmit={handleAddSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', padding: '28px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* BASIC INFORMATION */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BASIC INFORMATION</h4>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BASIC INFORMATION</h4>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
@@ -424,7 +448,7 @@ const CustomersList = () => {
                       type="text"
                       required
                       value={newCustomer.name}
-                      placeholder="e.g. Rajinder Singh"
+                      placeholder="e.g. Ramesh Kumar"
                       onChange={e => setNewCustomer({ ...newCustomer, name: e.target.value })}
                       style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
@@ -438,7 +462,7 @@ const CustomersList = () => {
                       type="text"
                       required
                       value={newCustomer.phone}
-                      placeholder="e.g. +919876543201"
+                      placeholder="e.g. +919876543210"
                       onChange={e => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                       style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
@@ -451,7 +475,7 @@ const CustomersList = () => {
                     <input
                       type="email"
                       value={newCustomer.email}
-                      placeholder="e.g. email@domain.com"
+                      placeholder="e.g. client@company.com"
                       onChange={e => setNewCustomer({ ...newCustomer, email: e.target.value })}
                       style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
@@ -459,32 +483,48 @@ const CustomersList = () => {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Customer Type
+                      Customer Type <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <select
+                      required
                       value={newCustomer.type}
                       onChange={e => setNewCustomer({ ...newCustomer, type: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      style={{
+                        width: '100%',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '10px',
+                        padding: '10px 14px',
+                        fontSize: '13.5px',
+                        color: newCustomer.type ? '#0f172a' : '#64748b',
+                        outline: 'none',
+                        backgroundColor: '#ffffff',
+                        cursor: 'pointer'
+                      }}
                     >
-                      <option value="Farmer">Farmer</option>
-                      <option value="Retailer">Retailer</option>
-                      <option value="Wholesaler">Wholesaler</option>
+                      <option value="" disabled style={{ color: '#94a3b8' }}>Select Customer Type</option>
+                      <option value="System Integrator" style={{ color: '#0f172a' }}>System Integrator</option>
+                      <option value="CCTV Installer" style={{ color: '#0f172a' }}>CCTV Installer</option>
+                      <option value="Commercial & Enterprise" style={{ color: '#0f172a' }}>Commercial & Enterprise</option>
+                      <option value="Distributor" style={{ color: '#0f172a' }}>Distributor</option>
+                      <option value="Dealer / Reseller" style={{ color: '#0f172a' }}>Dealer / Reseller</option>
+                      <option value="Residential & Facility Owner" style={{ color: '#0f172a' }}>Residential & Facility Owner</option>
+                      <option value="Channel Partner" style={{ color: '#0f172a' }}>Channel Partner</option>
                     </select>
                   </div>
                 </div>
 
-                {/* ADDRESS DETAILS */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>ADDRESS DETAILS</h4>
+                {/* ADDRESS & LOCATION */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>ADDRESS & LOCATION</h4>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Street Address <span style={{ color: '#ef4444' }}>*</span>
+                      Street Address
                     </label>
                     <input
                       type="text"
                       value={newCustomer.address}
-                      placeholder="House/Plot/Village details (e.g. 12 Main St, Pune, Maharashtra)"
+                      placeholder="e.g. 42 Industrial Area Phase II, Electronic City, Bengaluru, Karnataka"
                       onChange={e => {
                         const addr = e.target.value;
                         setNewCustomer(prev => {
@@ -522,31 +562,31 @@ const CustomersList = () => {
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                        District <span style={{ color: '#ef4444' }}>*</span>
+                        City / District
                       </label>
                       <input
                         type="text"
                         value={newCustomer.district}
-                        placeholder="e.g. Ludhiana"
+                        placeholder="e.g. Bengaluru"
                         onChange={e => setNewCustomer({ ...newCustomer, district: e.target.value })}
                         style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                       />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                        State <span style={{ color: '#ef4444' }}>*</span>
+                        State
                       </label>
                       <input
                         type="text"
                         value={newCustomer.state}
-                        placeholder="e.g. Punjab"
+                        placeholder="e.g. Karnataka"
                         onChange={e => setNewCustomer({ ...newCustomer, state: e.target.value })}
                         style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                       />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                        Status
+                        Account Status
                       </label>
                       <select
                         value={newCustomer.status}
@@ -560,55 +600,51 @@ const CustomersList = () => {
                   </div>
                 </div>
 
-                {/* AGRARIAN PROFILE (FOR FARMERS) */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>AGRARIAN PROFILE (FOR FARMERS)</h4>
+                {/* BUSINESS & PROJECT PROFILE */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BUSINESS &amp; PROJECT PROFILE</h4>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div>
+                  <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Soil Type
-                    </label>
-                    <select
-                      value={newCustomer.soilType}
-                      onChange={e => setNewCustomer({ ...newCustomer, soilType: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                    >
-                      <option value="Red Sandy">Red Sandy</option>
-                      <option value="Black Clayey">Black Clayey</option>
-                      <option value="Alluvial">Alluvial</option>
-                      <option value="Loamy">Loamy</option>
-                      <option value="Laterite">Laterite</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Farm Size (Acres)
+                      Company / Organization Name
                     </label>
                     <input
-                      type="number"
-                      step="0.1"
-                      value={newCustomer.farmSizeAcres}
-                      onChange={e => setNewCustomer({ ...newCustomer, farmSizeAcres: e.target.value })}
+                      type="text"
+                      value={newCustomer.companyOrganization}
+                      placeholder="e.g. Apex Security Solutions Ltd"
+                      onChange={e => setNewCustomer({ ...newCustomer, companyOrganization: e.target.value })}
                       style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
                   </div>
 
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Irrigation Source
+                      Project / Operation Scale
                     </label>
                     <select
-                      value={newCustomer.irrigationSource}
-                      onChange={e => setNewCustomer({ ...newCustomer, irrigationSource: e.target.value })}
+                      value={newCustomer.projectScale}
+                      onChange={e => setNewCustomer({ ...newCustomer, projectScale: e.target.value })}
                       style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     >
-                      <option value="Borewell">Borewell</option>
-                      <option value="Drip">Drip Irrigation</option>
-                      <option value="Canal">Canal Water</option>
-                      <option value="Rainfed">Rainfed</option>
-                      <option value="Sprinkler">Sprinklers</option>
+                      <option value="Commercial & Industrial">Commercial &amp; Industrial</option>
+                      <option value="Enterprise / Multi-Site">Enterprise / Multi-Site</option>
+                      <option value="Government & Public Sector">Government &amp; Public Sector</option>
+                      <option value="Small / Mid-size Business (SMB)">Small / Mid-size Business (SMB)</option>
+                      <option value="Residential / Facility">Residential / Facility</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      GSTIN / Tax ID (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustomer.gstin}
+                      placeholder="e.g. 29ABCDE1234F1Z5"
+                      onChange={e => setNewCustomer({ ...newCustomer, gstin: e.target.value.toUpperCase() })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -624,7 +660,20 @@ const CustomersList = () => {
                 </button>
                 <button
                   type="submit"
-                  style={{ backgroundColor: '#059669', color: '#ffffff', borderRadius: '10px', padding: '10px 26px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5,150,105,0.25)' }}
+                  style={{
+                    backgroundColor: '#1268a5',
+                    color: '#ffffff',
+                    borderRadius: '10px',
+                    padding: '10px 26px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(18,104,165,0.25)',
+                    transition: 'background-color 0.15s ease'
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0e5586')}
+                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1268a5')}
                 >
                   Save Customer
                 </button>

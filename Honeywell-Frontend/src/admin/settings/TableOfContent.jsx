@@ -58,7 +58,7 @@ const TableOfContent = () => {
       links: [
         { name: 'Vouchers List', path: '/admin/marketing/coupons', icon: <Target size={15} style={{ color: '#10b981' }} /> },
         { name: 'Voucher Builder', path: '/admin/marketing/coupon', icon: <Target size={15} style={{ color: '#10b981' }} /> },
-        { name: 'Farmers Advisory Inbox', path: '/admin/tickets', icon: <Mail size={15} style={{ color: '#10b981' }} /> },
+        { name: 'Client Inquiries & Support Inbox', path: '/admin/tickets', icon: <Mail size={15} style={{ color: '#10b981' }} /> },
         { name: 'Chat Diagnostics Layout', path: '/admin/call-history', icon: <MessageSquare size={15} style={{ color: '#10b981' }} /> }
       ]
     }

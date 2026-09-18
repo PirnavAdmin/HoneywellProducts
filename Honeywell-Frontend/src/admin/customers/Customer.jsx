@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getApiDomain } from '../../utils/apiConfig';
-import { ArrowLeft, User, Phone, Mail, MapPin, Tractor, CreditCard, Activity, Edit, Plus, X, Search, ChevronDown } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, MapPin, Building2, CreditCard, Activity, Edit, Plus, X, Search, ChevronDown, ShieldCheck, Briefcase } from 'lucide-react';
 
 const Customer = () => {
   const navigate = useNavigate();
@@ -24,14 +24,15 @@ const Customer = () => {
     name: '',
     phone: '',
     email: '',
-    status: '',
+    status: 'Active',
+    type: 'System Integrator',
+    companyOrganization: '',
+    sector: 'Security & CCTV Surveillance',
+    projectScale: 'Commercial & Industrial',
+    gstin: '',
     address: '',
     district: '',
-    state: '',
-    soilType: '',
-    cropType: '',
-    farmSizeAcres: '',
-    irrigationSource: ''
+    state: ''
   });
 
   // Advisory Form State
@@ -79,13 +80,14 @@ const Customer = () => {
           phone: data.phone || '',
           email: (data.email || '').toLowerCase(),
           status: data.status || 'Active',
+          type: data.type || data.role || 'System Integrator',
+          companyOrganization: data.companyOrganization || '',
+          sector: data.sector || 'Security & CCTV Surveillance',
+          projectScale: data.projectScale || 'Commercial & Industrial',
+          gstin: data.gstin || '',
           address: data.address || '',
           district: data.district || '',
-          state: data.state || '',
-          soilType: data.agrarianProfile?.soilType || 'Red Sandy',
-          cropType: data.agrarianProfile?.cropType || '',
-          farmSizeAcres: data.agrarianProfile?.farmSizeAcres || '',
-          irrigationSource: data.agrarianProfile?.irrigationSource || 'Borewell'
+          state: data.state || ''
         });
         setLoading(false);
       })
@@ -116,16 +118,15 @@ const Customer = () => {
       phone: editForm.phone,
       email: (editForm.email || '').trim().toLowerCase(),
       status: editForm.status || 'Active',
+      role: editForm.type || 'System Integrator',
+      type: editForm.type || 'System Integrator',
+      companyOrganization: editForm.companyOrganization || '',
+      sector: editForm.sector || 'Security & CCTV Surveillance',
+      projectScale: editForm.projectScale || 'Commercial & Industrial',
+      gstin: editForm.gstin || '',
       address: editForm.address || '',
       district: editForm.district || '',
-      state: editForm.state || '',
-      agrarianProfile: {
-        ...(profile?.agrarianProfile || {}),
-        soilType: editForm.soilType || 'Red Sandy',
-        cropType: editForm.cropType || '',
-        farmSizeAcres: parseFloat(editForm.farmSizeAcres) || 0,
-        irrigationSource: editForm.irrigationSource || 'Borewell'
-      }
+      state: editForm.state || ''
     };
 
     try {
@@ -161,33 +162,42 @@ const Customer = () => {
   const postAdvisory = async (e) => {
     e.preventDefault();
     if (!advisoryText.trim() || !recommendation.trim()) {
-      alert('Please fill out both advisory notes and recommendation.');
+      alert('Please fill both observation and recommendation fields.');
       return;
     }
+
+    const payload = {
+      customerId: parseInt(id),
+      advisoryText,
+      recommendation,
+      staffId: 1
+    };
+
     try {
-      const res = await fetch(`${getApiDomain()}/api/Customers/${id}/advisory`, {
+      const res = await fetch(`${getApiDomain()}/api/Customers/${id}/advisories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'true'
         },
-        body: JSON.stringify({
-          advisoryText,
-          recommendation,
-          staffId: 1
-        }),
+        body: JSON.stringify(payload)
       });
-      if (!res.ok) throw new Error('Advisory post failed');
-      const data = await res.json();
-      
-      // Update local profile state
+
+      const newLog = {
+        id: Date.now(),
+        dateCreated: new Date().toISOString(),
+        advisoryText,
+        recommendation
+      };
+
       setProfile(prev => ({
         ...prev,
-        advisories: [data, ...(prev.advisories || [])]
+        advisories: [newLog, ...(prev?.advisories || [])]
       }));
+
       setAdvisoryText('');
       setRecommendation('');
-      alert('Advisory posted successfully');
+      alert('Technical consultation note logged successfully');
     } catch (err) {
       alert(err.message);
     }
@@ -210,14 +220,27 @@ const Customer = () => {
     setSearchQuery('');
   };
 
-  const getTagColor = (type) => {
-    switch (type || 'Farmer') {
-      case 'Farmer':
-        return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
-      case 'Retailer':
-        return 'bg-blue-50 text-blue-700 border border-blue-200';
+  const getTagBadgeStyle = (type) => {
+    const t = type || 'System Integrator';
+    switch (t) {
+      case 'System Integrator':
+        return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' };
+      case 'CCTV Installer':
+        return { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' };
+      case 'Commercial & Enterprise':
+        return { bg: '#f1f5f9', color: '#0f172a', border: '#cbd5e1' };
+      case 'Distributor':
+        return { bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
+      case 'Dealer / Reseller':
+      case 'Dealer':
+      case 'Reseller':
+        return { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' };
+      case 'Residential & Facility Owner':
+        return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+      case 'Channel Partner':
+        return { bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4' };
       default:
-        return 'bg-purple-50 text-purple-700 border border-purple-200';
+        return { bg: '#eff6ff', color: '#1268a5', border: '#bfdbfe' };
     }
   };
 
@@ -240,7 +263,7 @@ const Customer = () => {
             <div style={{
               width: '64px',
               height: '64px',
-              backgroundColor: '#e6f4ea',
+              backgroundColor: '#eff6ff',
               borderRadius: '999px',
               display: 'flex',
               alignItems: 'center',
@@ -253,7 +276,7 @@ const Customer = () => {
               Select Customer Profile
             </h1>
             <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
-              Search by customer name, phone number, or ID to view their farm record.
+              Search by customer name, phone number, or ID to view their customer records.
             </p>
           </div>
 
@@ -262,7 +285,7 @@ const Customer = () => {
             <Search size={18} style={{ position: 'absolute', left: '16px', top: '14px', color: '#94a3b8' }} />
             <input
               type="text"
-              placeholder="Search customer name or phone..."
+              placeholder="Search customer name, phone, or company..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -281,53 +304,56 @@ const Customer = () => {
 
           {/* Scrollable Customer Items List */}
           <div style={{ maxHeight: '380px', overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
-            {filteredSearchList.map(c => (
-              <div
-                key={c.id}
-                onClick={() => selectCustomer(c.id)}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '16px 20px',
-                  borderRadius: '16px',
-                  border: '1px solid #e2e8f0',
-                  backgroundColor: '#ffffff',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = '#10b981';
-                  e.currentTarget.style.backgroundColor = '#f8fafc';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.backgroundColor = '#ffffff';
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>{c.name}</div>
-                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>#{c.id}</span>
-                    <span>•</span>
-                    <span>{c.phone}</span>
+            {filteredSearchList.map(c => {
+              const cType = c.type || c.role || 'System Integrator';
+              const bStyle = getTagBadgeStyle(cType);
+              return (
+                <div
+                  key={c.id}
+                  onClick={() => selectCustomer(c.id)}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '16px 20px',
+                    borderRadius: '16px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.borderColor = '#1268a5';
+                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.backgroundColor = '#ffffff';
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: '15px', fontWeight: 700, color: '#0f172a' }}>{c.name}</div>
+                    <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>#{c.id}</span>
+                      <span>•</span>
+                      <span>{c.phone}</span>
+                    </div>
                   </div>
+                  <span style={{
+                    backgroundColor: bStyle.bg,
+                    color: bStyle.color,
+                    border: `1px solid ${bStyle.border}`,
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    padding: '4px 14px',
+                    borderRadius: '999px',
+                    letterSpacing: '0.02em'
+                  }}>
+                    {cType}
+                  </span>
                 </div>
-                <span style={{
-                  backgroundColor: (c.type || 'Farmer') === 'Farmer' ? '#e6f4ea' : ((c.type || 'Farmer') === 'Retailer' ? '#dbeafe' : '#f3e8ff'),
-                  color: (c.type || 'Farmer') === 'Farmer' ? '#15803d' : ((c.type || 'Farmer') === 'Retailer' ? '#1e40af' : '#6b21a8'),
-                  border: `1px solid ${(c.type || 'Farmer') === 'Farmer' ? '#bbf7d0' : ((c.type || 'Farmer') === 'Retailer' ? '#bfdbfe' : '#e9d5ff')}`,
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  padding: '4px 14px',
-                  borderRadius: '999px',
-                  letterSpacing: '0.04em',
-                  textTransform: 'uppercase'
-                }}>
-                  {c.type || 'Farmer'}
-                </span>
-              </div>
-            ))}
+              );
+            })}
             {filteredSearchList.length === 0 && (
               <div style={{ textAlign: 'center', padding: '36px 0', color: '#94a3b8', fontSize: '14px' }}>
                 No customers match your search query.
@@ -368,7 +394,7 @@ const Customer = () => {
       <div className="flex gap-2 justify-center">
         <button 
           onClick={() => { setError(null); setLoading(true); setSearchParams({ id }); }}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold transition-colors"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold transition-colors"
         >
           Retry
         </button>
@@ -385,7 +411,8 @@ const Customer = () => {
 
   // Derivations
   const totalSpent = profile.orders?.reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0) || 0;
-  const customerType = profile.type || 'Farmer';
+  const customerType = profile.type || profile.role || 'System Integrator';
+  const badgeStyle = getTagBadgeStyle(customerType);
 
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -401,8 +428,8 @@ const Customer = () => {
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Customer Profile &amp; Farm Records</h2>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '3px 0 0 0' }}>Overview of grower records, field details, crop advisory, and order transactions.</p>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Customer Profile &amp; Account Details</h2>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '3px 0 0 0' }}>Overview of client records, company profile, technical consultation, and transaction history.</p>
           </div>
         </div>
 
@@ -431,7 +458,7 @@ const Customer = () => {
                     <div
                       key={c.id}
                       onClick={() => selectCustomer(c.id)}
-                      style={{ padding: '8px 12px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', backgroundColor: c.id === profile.id ? '#e6f4ea' : 'transparent', color: c.id === profile.id ? '#15803d' : '#334155', fontWeight: c.id === profile.id ? 700 : 500 }}
+                      style={{ padding: '8px 12px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer', backgroundColor: c.id === profile.id ? '#eff6ff' : 'transparent', color: c.id === profile.id ? '#1268a5' : '#334155', fontWeight: c.id === profile.id ? 700 : 500 }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>{c.name}</span>
@@ -458,12 +485,12 @@ const Customer = () => {
         {/* Left column – summary */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '28px 24px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-            <div style={{ width: '80px', height: '80px', borderRadius: '999px', backgroundColor: '#1e7e34', color: '#ffffff', fontSize: '28px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px auto', textTransform: 'uppercase' }}>
+            <div style={{ width: '80px', height: '80px', borderRadius: '999px', backgroundColor: '#1268a5', color: '#ffffff', fontSize: '28px', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px auto', textTransform: 'uppercase' }}>
               {profile.name ? profile.name.slice(0, 2) : 'CU'}
             </div>
             <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{profile.name}</h3>
             <div style={{ marginTop: '8px', marginBottom: '20px' }}>
-              <span style={{ backgroundColor: '#e6f4ea', color: '#15803d', border: '1px solid #bbf7d0', fontSize: '11px', fontWeight: 800, padding: '4px 14px', borderRadius: '999px', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'inline-block' }}>
+              <span style={{ backgroundColor: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}`, fontSize: '11px', fontWeight: 800, padding: '4px 14px', borderRadius: '999px', letterSpacing: '0.02em', display: 'inline-block' }}>
                 {customerType}
               </span>
             </div>
@@ -489,30 +516,30 @@ const Customer = () => {
             </div>
           </div>
 
-          {/* Farm details */}
+          {/* Business & Project Profile Details Card */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-              <Tractor size={18} style={{ color: '#059669' }} />
-              <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#064e3b', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>Agrarian Details</h4>
+              <Building2 size={18} style={{ color: '#1268a5' }} />
+              <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>Business &amp; Project Profile</h4>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '13px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8' }}>Total Land Area:</span>
-                <span style={{ fontWeight: 700, color: '#0f172a' }}>
-                  {profile.agrarianProfile?.farmSizeAcres ? `${profile.agrarianProfile.farmSizeAcres} Acres` : '—'}
+                <span style={{ color: '#94a3b8' }}>Company / Org:</span>
+                <span style={{ fontWeight: 700, color: '#0f172a', textAlign: 'right', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {profile.companyOrganization || 'Enterprise Client'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8' }}>Soil Condition:</span>
-                <span style={{ fontWeight: 700, color: '#0f172a' }}>
-                  {profile.agrarianProfile?.soilType && profile.agrarianProfile.soilType !== 'N/A' ? profile.agrarianProfile.soilType : '—'}
+                <span style={{ color: '#94a3b8' }}>Project Scale:</span>
+                <span style={{ fontWeight: 700, color: '#0f172a', textAlign: 'right' }}>
+                  {profile.projectScale || 'Commercial & Industrial'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#94a3b8' }}>Irrigation Source:</span>
-                <span style={{ fontWeight: 700, color: '#0f172a' }}>
-                  {profile.agrarianProfile?.irrigationSource && profile.agrarianProfile.irrigationSource !== 'N/A' ? profile.agrarianProfile.irrigationSource : '—'}
+                <span style={{ color: '#94a3b8' }}>GSTIN / Tax ID:</span>
+                <span style={{ fontWeight: 700, color: '#0f172a', textAlign: 'right' }}>
+                  {profile.gstin || '—'}
                 </span>
               </div>
             </div>
@@ -524,7 +551,7 @@ const Customer = () => {
           {/* Finance Snapshot */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
             <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px 24px', display: 'flex', alignItems: 'center', gap: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#e6f4ea', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', backgroundColor: '#eff6ff', color: '#1268a5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <CreditCard size={20} />
               </div>
               <div>
@@ -538,8 +565,8 @@ const Customer = () => {
                 <CreditCard size={20} />
               </div>
               <div>
-                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Agro Coins Balance</span>
-                <h4 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{profile.coinsBalance || 0} Coins</h4>
+                <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: 600, display: 'block', marginBottom: '2px' }}>Loyalty / Reward Points</span>
+                <h4 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>{profile.coinsBalance || 0} Pts</h4>
               </div>
             </div>
           </div>
@@ -553,7 +580,7 @@ const Customer = () => {
                 {profile.orders.map((ord) => {
                   const orderItemsText = Array.isArray(ord.items) && ord.items.length > 0 
                     ? ord.items.map(item => item.productName || item.name).join(', ')
-                    : 'Agricultural Equipment / Supplies';
+                    : 'Honeywell Security & Solar Equipment';
                   return (
                     <div key={ord.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderRadius: '12px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
                       <div>
@@ -580,26 +607,26 @@ const Customer = () => {
             )}
           </div>
 
-          {/* Crop Advisory Logs & Notes */}
+          {/* Project Consultation & Technical Notes */}
           <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #f1f5f9', paddingBottom: '14px', marginBottom: '20px' }}>
-              <Activity size={18} style={{ color: '#059669' }} />
-              <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#064e3b', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>CROP ADVISORY LOGS &amp; NOTES</h4>
+              <Activity size={18} style={{ color: '#1268a5' }} />
+              <h4 style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>PROJECT CONSULTATION &amp; TECHNICAL NOTES</h4>
             </div>
 
-            {/* Post New Advisory Box */}
+            {/* Post New Note Box */}
             <form onSubmit={postAdvisory} style={{ backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '20px', marginBottom: '24px' }}>
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '14px' }}>POST NEW EXPERT ADVISORY</span>
+              <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '14px' }}>POST NEW TECHNICAL / PROJECT NOTE</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <input
                   type="text"
-                  placeholder="Observation / Issue Description (e.g. Yellowing leaves)"
+                  placeholder="Project Requirement / Observation (e.g. 32-Channel NVR System Configuration for Warehouse)"
                   value={advisoryText}
                   onChange={e => setAdvisoryText(e.target.value)}
                   style={{ width: '100%', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 14px', fontSize: '13px', backgroundColor: '#ffffff', outline: 'none' }}
                 />
                 <textarea
-                  placeholder="Expert Recommendation / Solution"
+                  placeholder="Technical Recommendation / Solution (e.g. Recommended Honeywell 4K Bullet Cameras with 10kW On-Grid Solar Array)"
                   value={recommendation}
                   onChange={e => setRecommendation(e.target.value)}
                   rows="3"
@@ -609,9 +636,9 @@ const Customer = () => {
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
                 <button
                   type="submit"
-                  style={{ backgroundColor: '#059669', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '9px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 1px 2px rgba(5,150,105,0.2)' }}
+                  style={{ backgroundColor: '#1268a5', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '9px 20px', borderRadius: '8px', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 1px 2px rgba(18,104,165,0.2)' }}
                 >
-                  <Plus size={16} /> Submit Advisory
+                  <Plus size={16} /> Submit Note
                 </button>
               </div>
             </form>
@@ -621,20 +648,20 @@ const Customer = () => {
               <div style={{ position: 'relative', paddingLeft: '24px', borderLeft: '2px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {profile.advisories.map((log) => (
                   <div key={log.id} style={{ position: 'relative' }}>
-                    <div style={{ position: 'absolute', left: '-31px', top: '4px', width: '12px', height: '12px', backgroundColor: '#059669', borderRadius: '999px', border: '3px solid #ffffff' }} />
+                    <div style={{ position: 'absolute', left: '-31px', top: '4px', width: '12px', height: '12px', backgroundColor: '#1268a5', borderRadius: '999px', border: '3px solid #ffffff' }} />
                     <span style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: '4px' }}>
                       {log.dateCreated ? log.dateCreated.slice(0, 16).replace('T', ' ') : 'Recent'}
                     </span>
                     <div style={{ backgroundColor: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '14px', fontSize: '13px' }}>
-                      <span style={{ fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Observation: <span style={{ fontWeight: 500, color: '#475569' }}>{log.advisoryText}</span></span>
-                      <span style={{ fontWeight: 800, color: '#065f46', display: 'block' }}>Solution: <span style={{ fontWeight: 500, color: '#047857' }}>{log.recommendation}</span></span>
+                      <span style={{ fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Requirement / Observation: <span style={{ fontWeight: 500, color: '#475569' }}>{log.advisoryText}</span></span>
+                      <span style={{ fontWeight: 800, color: '#1268a5', display: 'block' }}>Recommendation / Solution: <span style={{ fontWeight: 500, color: '#334155' }}>{log.recommendation}</span></span>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
               <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: '13px', padding: '36px 0' }}>
-                No advisory logs recorded yet.
+                No technical consultation notes recorded yet.
               </div>
             )}
           </div>
@@ -648,7 +675,7 @@ const Customer = () => {
             
             {/* MODAL HEADER */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '22px 28px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
-              <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#064e3b', margin: 0, letterSpacing: '-0.01em' }}>Edit Customer Profile</h3>
+              <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>Edit Customer Profile</h3>
               <button
                 type="button"
                 onClick={() => setShowEditModal(false)}
@@ -664,7 +691,7 @@ const Customer = () => {
             <form onSubmit={handleUpdateSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', padding: '28px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 {/* BASIC INFORMATION */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BASIC INFORMATION</h4>
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BASIC INFORMATION</h4>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   <div>
@@ -707,26 +734,43 @@ const Customer = () => {
 
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Status
+                      Customer Type <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <select
-                      value={editForm.status}
-                      onChange={e => setEditForm({ ...editForm, status: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      required
+                      value={editForm.type}
+                      onChange={e => setEditForm({ ...editForm, type: e.target.value })}
+                      style={{
+                        width: '100%',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '10px',
+                        padding: '10px 14px',
+                        fontSize: '13.5px',
+                        color: editForm.type ? '#0f172a' : '#64748b',
+                        outline: 'none',
+                        backgroundColor: '#ffffff',
+                        cursor: 'pointer'
+                      }}
                     >
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
+                      <option value="" disabled style={{ color: '#94a3b8' }}>Select Customer Type</option>
+                      <option value="System Integrator" style={{ color: '#0f172a' }}>System Integrator</option>
+                      <option value="CCTV Installer" style={{ color: '#0f172a' }}>CCTV Installer</option>
+                      <option value="Commercial & Enterprise" style={{ color: '#0f172a' }}>Commercial & Enterprise</option>
+                      <option value="Distributor" style={{ color: '#0f172a' }}>Distributor</option>
+                      <option value="Dealer / Reseller" style={{ color: '#0f172a' }}>Dealer / Reseller</option>
+                      <option value="Residential & Facility Owner" style={{ color: '#0f172a' }}>Residential & Facility Owner</option>
+                      <option value="Channel Partner" style={{ color: '#0f172a' }}>Channel Partner</option>
                     </select>
                   </div>
                 </div>
 
-                {/* ADDRESS DETAILS */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>ADDRESS DETAILS</h4>
+                {/* ADDRESS & LOCATION */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>ADDRESS & LOCATION</h4>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Street Address <span style={{ color: '#ef4444' }}>*</span>
+                      Street Address
                     </label>
                     <input
                       type="text"
@@ -766,10 +810,10 @@ const Customer = () => {
                     />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                        District <span style={{ color: '#ef4444' }}>*</span>
+                        City / District
                       </label>
                       <input
                         type="text"
@@ -780,7 +824,7 @@ const Customer = () => {
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                        State <span style={{ color: '#ef4444' }}>*</span>
+                        State
                       </label>
                       <input
                         type="text"
@@ -789,58 +833,67 @@ const Customer = () => {
                         style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                       />
                     </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Account Status
+                      </label>
+                      <select
+                        value={editForm.status}
+                        onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                        style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
 
-                {/* AGRARIAN DETAILS */}
-                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>AGRARIAN DETAILS</h4>
+                {/* BUSINESS & PROJECT PROFILE */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BUSINESS &amp; PROJECT PROFILE</h4>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                  <div>
+                  <div style={{ gridColumn: 'span 2' }}>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Soil Type
-                    </label>
-                    <select
-                      value={editForm.soilType}
-                      onChange={e => setEditForm({ ...editForm, soilType: e.target.value })}
-                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
-                    >
-                      <option value="Red Sandy">Red Sandy</option>
-                      <option value="Black Clayey">Black Clayey</option>
-                      <option value="Alluvial">Alluvial</option>
-                      <option value="Loamy">Loamy</option>
-                      <option value="Laterite">Laterite</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Farm Size (Acres)
+                      Company / Organization Name
                     </label>
                     <input
-                      type="number"
-                      step="0.1"
-                      value={editForm.farmSizeAcres}
-                      onChange={e => setEditForm({ ...editForm, farmSizeAcres: e.target.value })}
+                      type="text"
+                      value={editForm.companyOrganization}
+                      placeholder="e.g. Apex Security Solutions Ltd"
+                      onChange={e => setEditForm({ ...editForm, companyOrganization: e.target.value })}
                       style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     />
                   </div>
 
                   <div>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Irrigation Source
+                      Project / Operation Scale
                     </label>
                     <select
-                      value={editForm.irrigationSource}
-                      onChange={e => setEditForm({ ...editForm, irrigationSource: e.target.value })}
+                      value={editForm.projectScale}
+                      onChange={e => setEditForm({ ...editForm, projectScale: e.target.value })}
                       style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
                     >
-                      <option value="Borewell">Borewell</option>
-                      <option value="Drip">Drip Irrigation</option>
-                      <option value="Canal">Canal Water</option>
-                      <option value="Rainfed">Rainfed</option>
-                      <option value="Sprinkler">Sprinklers</option>
+                      <option value="Commercial & Industrial">Commercial &amp; Industrial</option>
+                      <option value="Enterprise / Multi-Site">Enterprise / Multi-Site</option>
+                      <option value="Government & Public Sector">Government &amp; Public Sector</option>
+                      <option value="Small / Mid-size Business (SMB)">Small / Mid-size Business (SMB)</option>
+                      <option value="Residential / Facility">Residential / Facility</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      GSTIN / Tax ID (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={editForm.gstin}
+                      placeholder="e.g. 29ABCDE1234F1Z5"
+                      onChange={e => setEditForm({ ...editForm, gstin: e.target.value.toUpperCase() })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -856,7 +909,20 @@ const Customer = () => {
                 </button>
                 <button
                   type="submit"
-                  style={{ backgroundColor: '#059669', color: '#ffffff', borderRadius: '10px', padding: '10px 26px', fontSize: '13px', fontWeight: 700, border: 'none', cursor: 'pointer', boxShadow: '0 2px 4px rgba(5,150,105,0.25)' }}
+                  style={{
+                    backgroundColor: '#1268a5',
+                    color: '#ffffff',
+                    borderRadius: '10px',
+                    padding: '10px 26px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 4px rgba(18,104,165,0.25)',
+                    transition: 'background-color 0.15s ease'
+                  }}
+                  onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0e5586')}
+                  onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1268a5')}
                 >
                   Update Changes
                 </button>
