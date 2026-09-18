@@ -214,7 +214,7 @@ export default function OffersDeals() {
               };
 
               return (
-                <div key={`${offer.id}-${idx}`} style={{ width: '275px', minWidth: '275px', flex: '0 0 275px', boxSizing: 'border-box' }}>
+                <div key={`${offer.id}-${idx}`} className="offers-product-item">
                   <ProductCard product={mappedProduct} />
                 </div>
               );

@@ -10,6 +10,8 @@ import { useCart } from '../context/CartContext';
 import { useUI } from '../context/UIContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
+import OptimizedImage from '../components/common/OptimizedImage';
+
 const tabs = ['Overview', 'Features', 'Specifications', 'Software & Downloads', 'Documents', 'Reviews', 'FAQ'];
 
 const formatFileSize = (bytes) => {
@@ -28,6 +30,37 @@ const safeString = (val, fallback = '') => {
   }
   return fallback;
 };
+
+function ProductDetailsSkeleton() {
+  return (
+    <div className="product-details-skeleton">
+      <div className="product-breadcrumbs container" style={{ padding: '12px 1rem' }}>
+        <div className="skeleton-line" style={{ width: '220px', height: '14px', borderRadius: '4px' }} />
+      </div>
+      <section className="product-detail container" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 420px) minmax(0, 1fr)', gap: '36px', paddingBlock: '16px 40px' }}>
+        <div className="product-gallery">
+          <div className="skeleton-pulse" style={{ height: '320px', borderRadius: '14px', background: '#f1f5f9' }} />
+          <div className="gallery-thumbs" style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
+            <div className="skeleton-pulse" style={{ width: '64px', height: '56px', borderRadius: '8px', background: '#f1f5f9' }} />
+            <div className="skeleton-pulse" style={{ width: '64px', height: '56px', borderRadius: '8px', background: '#f1f5f9' }} />
+            <div className="skeleton-pulse" style={{ width: '64px', height: '56px', borderRadius: '8px', background: '#f1f5f9' }} />
+          </div>
+        </div>
+        <div className="product-info" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="skeleton-line" style={{ width: '120px', height: '14px' }} />
+          <div className="skeleton-line" style={{ width: '80%', height: '28px' }} />
+          <div className="skeleton-line" style={{ width: '140px', height: '16px' }} />
+          <div className="skeleton-line" style={{ width: '100%', height: '50px' }} />
+          <div className="skeleton-line" style={{ width: '180px', height: '40px', borderRadius: '10px' }} />
+          <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+            <div className="skeleton-pulse" style={{ width: '110px', height: '42px', borderRadius: '8px' }} />
+            <div className="skeleton-pulse" style={{ width: '160px', height: '42px', borderRadius: '8px' }} />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
 
 export function ProductDetailsContent() {
   const { id } = useParams();
@@ -91,10 +124,10 @@ export function ProductDetailsContent() {
         setError(null);
         setImage(0);
 
-        // 1. Primary lookup by ID
+        // 1. Primary lookup by ID directly
         let data = await productService.getById(id).catch(() => null);
 
-        // 2. Fallback: If getById failed or returned null, search full product catalog by ID, slug, or title
+        // 2. Fallback: If getById failed or returned null, search catalog by ID, slug, or title
         if (!data) {
           const allProds = await productService.getAll().catch(() => []);
           if (Array.isArray(allProds) && allProds.length > 0) {
@@ -117,13 +150,6 @@ export function ProductDetailsContent() {
           }
         }
 
-        // Fetch software & related products using resolved data ID if available
-        const resolvedId = data?.id || id;
-        const [softwareData, relData] = await Promise.all([
-          softwareService.getByProductId(resolvedId).catch(() => []),
-          productService.getRelated(resolvedId).catch(() => []),
-        ]);
-
         if (!isMounted) return;
 
         if (data) {
@@ -132,20 +158,31 @@ export function ProductDetailsContent() {
             (r) => !data.id || String(r.productId) === String(data.id)
           );
           setReviews(strictReviews);
+          setLoading(false);
 
-          const activeSoftware = Array.isArray(softwareData)
-            ? softwareData.filter((s) => (s.status || 'Active').toLowerCase() === 'active')
-            : [];
-          setProductSoftware(activeSoftware);
-          setRelated(Array.isArray(relData) ? relData.slice(0, 4) : []);
+          // Fetch secondary independent resources (software & related products) in parallel
+          const resolvedId = data?.id || id;
+          Promise.all([
+            softwareService.getByProductId(resolvedId).catch(() => []),
+            productService.getRelated(resolvedId).catch(() => []),
+          ]).then(([softwareData, relData]) => {
+            if (!isMounted) return;
+            const activeSoftware = Array.isArray(softwareData)
+              ? softwareData.filter((s) => (s.status || 'Active').toLowerCase() === 'active')
+              : [];
+            setProductSoftware(activeSoftware);
+            setRelated(Array.isArray(relData) ? relData.slice(0, 4) : []);
+          });
         } else {
           setError('Product not found');
+          setLoading(false);
         }
       } catch (err) {
         console.error('Failed to load product details:', err);
-        if (isMounted) setError(err.message || 'Unable to load product details from server.');
-      } finally {
-        if (isMounted) setLoading(false);
+        if (isMounted) {
+          setError(err.message || 'Unable to load product details from server.');
+          setLoading(false);
+        }
       }
     };
 
@@ -155,15 +192,7 @@ export function ProductDetailsContent() {
 
 
   if (loading) {
-    return (
-      <div className="container" style={{ padding: '6rem 1rem', textAlign: 'center' }}>
-        <div className="empty-state large">
-          <Loader2 size={40} className="animate-spin text-amber-500" style={{ animation: 'spin 1s linear infinite' }} />
-          <h2>Loading Product Details...</h2>
-          <p>Fetching product information from endpoint</p>
-        </div>
-      </div>
-    );
+    return <ProductDetailsSkeleton />;
   }
 
   if (error || !product) {
@@ -199,6 +228,7 @@ export function ProductDetailsContent() {
   const productNameText = safeString(product.name, 'Product Details');
   const productModelText = safeString(product.model || product.sku, 'GEN-PRO');
   const productDescriptionText = safeString(product.description || product.productDetails || product.shortDescription, 'No description available.');
+  const numProdRating = Number(product.rating || product.averageRating || product.ratings || 0);
 
   const add = () => {
     addItem(product, quantity);
@@ -259,26 +289,23 @@ export function ProductDetailsContent() {
       <section className="product-detail container">
         <div className="product-gallery">
           <div className="gallery-main">
-            <img
+            <OptimizedImage
               src={(!gallery[image] && !product.image) || String(gallery[image] || product.image).toLowerCase().includes('placeholder') ? '/honeywell-products-logo.png' : (gallery[image] || product.image)}
               alt={productNameText}
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = '/honeywell-products-logo.png';
-              }}
+              loading="eager"
+              fetchPriority="high"
+              decoding="async"
             />
           </div>
           {gallery.length > 1 && (
             <div className="gallery-thumbs">
               {gallery.map((src, index) => (
                 <button key={`${src}-${index}`} className={index === image ? 'active' : ''} onClick={() => setImage(index)} aria-label={`View image ${index + 1}`}>
-                  <img
+                  <OptimizedImage
                     src={(!src || String(src).toLowerCase().includes('placeholder')) ? '/honeywell-products-logo.png' : src}
                     alt=""
-                    onError={(e) => {
-                      e.target.onerror = null;
-                      e.target.src = '/honeywell-products-logo.png';
-                    }}
+                    loading="lazy"
+                    decoding="async"
                   />
                 </button>
               ))}
@@ -289,65 +316,62 @@ export function ProductDetailsContent() {
         <div className="product-info">
           <p className="eyebrow dark">{categoryText}</p>
           <h1>{productNameText}</h1>
-          <p className="product-model"><strong>{productModelText}</strong></p>
-          {(() => {
-            const effectiveReviewsList = (Array.isArray(reviews) && reviews.length > 0)
-              ? reviews
-              : (Array.isArray(product?.reviews) && product.reviews.length > 0 ? product.reviews : []);
-            const hasReviews = effectiveReviewsList.length > 0;
-            const detailReviewCount = hasReviews
-              ? effectiveReviewsList.length
-              : (Number(product?.reviewCount) > 0
-                  ? Number(product.reviewCount)
-                  : (Number(product?.totalReviews) > 0
-                      ? Number(product.totalReviews)
-                      : 0));
-            const detailRating = hasReviews
-              ? (effectiveReviewsList.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0) / effectiveReviewsList.length).toFixed(1)
-              : (detailReviewCount > 0 && !isNaN(numProdRating) && numProdRating > 0 ? numProdRating.toFixed(1) : '0');
 
-            return (
-              <button
-                type="button"
-                className="product-rating product-rating-btn"
-                onClick={() => {
-                  setTab('Reviews');
-                  const el = document.getElementById('product-tabs-section');
-                  if (el) el.scrollIntoView({ behavior: 'smooth' });
-                }}
-                title="Click to view customer reviews"
-                aria-label={`${detailRating} out of 5 from ${detailReviewCount} reviews. Click to see customer reviews.`}
-              >
-                <span className="product-stars"><Star size={15} fill="currentColor" /></span>
-                <strong>{detailRating}</strong>
-                <span className="product-review-link">({detailReviewCount} reviews)</span>
-              </button>
-            );
-          })()}
-          <span className="availability"><i /> {safeString(product.availability, 'In Stock')}</span>
-          <p className="product-description">{productDescriptionText}</p>
+          <div className="product-detail-meta-row">
+            <span className="product-model-tag"><small>SKU:</small> {productModelText}</span>
+            {(() => {
+              const effectiveReviewsList = (Array.isArray(reviews) && reviews.length > 0)
+                ? reviews
+                : (Array.isArray(product?.reviews) && product.reviews.length > 0 ? product.reviews : []);
+              const hasReviews = effectiveReviewsList.length > 0;
+              const detailReviewCount = hasReviews
+                ? effectiveReviewsList.length
+                : (Number(product?.reviewCount) > 0
+                    ? Number(product.reviewCount)
+                    : (Number(product?.totalReviews) > 0
+                        ? Number(product.totalReviews)
+                        : 0));
+              const detailRating = hasReviews
+                ? (effectiveReviewsList.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0) / effectiveReviewsList.length).toFixed(1)
+                : (detailReviewCount > 0 && !isNaN(numProdRating) && numProdRating > 0 ? numProdRating.toFixed(1) : '0');
 
-          {highlights.length > 0 && (
-            <>
-              <h2 className="detail-subtitle">Highlights</h2>
-              <ul className="feature-list">
-                {highlights.map((item, idx) => <li key={`${item}-${idx}`}><Check size={17} />{item}</li>)}
-              </ul>
-            </>
-          )}
-
-          <div className="detail-price">
-            {product.priceLabel}
-            {(product.priceNote && !/incl|tax/i.test(product.priceNote)) && <span>{product.priceNote}</span>}
+              return (
+                <button
+                  type="button"
+                  className="product-rating product-rating-btn"
+                  onClick={() => {
+                    setTab('Reviews');
+                    const el = document.getElementById('product-tabs-section');
+                    if (el) el.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  title="Click to view customer reviews"
+                  aria-label={`${detailRating} out of 5 from ${detailReviewCount} reviews. Click to see customer reviews.`}
+                >
+                  <span className="product-stars"><Star size={14} fill="currentColor" /></span>
+                  <strong>{detailRating}</strong>
+                  <span className="product-review-link">({detailReviewCount})</span>
+                </button>
+              );
+            })()}
+            <span className="availability"><i /> {safeString(product.availability, 'In Stock')}</span>
           </div>
 
-          <div className="purchase-row">
-            <div className="quantity">
-              <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Minus /></button>
-              <span>{quantity}</span>
-              <button onClick={() => setQuantity(quantity + 1)} aria-label="Increase quantity"><Plus /></button>
+          <p className="product-description">{productDescriptionText}</p>
+
+          <div className="detail-price-box">
+            <div className="detail-price">
+              {product.priceLabel}
+              {(product.priceNote && !/incl|tax/i.test(product.priceNote)) && <span>{product.priceNote}</span>}
             </div>
-            <button className="button" onClick={add}><ShoppingCart size={18} /> Add to cart</button>
+
+            <div className="purchase-row">
+              <div className="quantity">
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Minus size={15} /></button>
+                <span>{quantity}</span>
+                <button onClick={() => setQuantity(quantity + 1)} aria-label="Increase quantity"><Plus size={15} /></button>
+              </div>
+              <button className="button" onClick={add}><ShoppingCart size={17} /> Add to cart</button>
+            </div>
           </div>
 
           <div className="detail-enquiry-actions">
@@ -355,21 +379,21 @@ export function ProductDetailsContent() {
             <button className="button secondary" onClick={() => openQuote(product)}>Request Bulk Quote</button>
           </div>
 
-          <div className="product-trust-badges" style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', textAlign: 'center' }}>
-            <div style={{ background: '#f8fafc', padding: '12px 8px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-              <ShieldCheck size={20} style={{ color: '#0284c7', margin: '0 auto 6px' }} />
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e293b', display: 'block' }}>100% Genuine</span>
-              <small style={{ fontSize: '10px', color: '#64748b' }}>Brand Warranty</small>
+          <div className="product-trust-badges">
+            <div className="trust-badge-card">
+              <ShieldCheck size={18} className="badge-icon-blue" />
+              <span>100% Genuine</span>
+              <small>Brand Warranty</small>
             </div>
-            <div style={{ background: '#f8fafc', padding: '12px 8px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-              <Truck size={20} style={{ color: '#16a34a', margin: '0 auto 6px' }} />
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e293b', display: 'block' }}>Express Shipping</span>
-              <small style={{ fontSize: '10px', color: '#64748b' }}>3-7 Business Days</small>
+            <div className="trust-badge-card">
+              <Truck size={18} className="badge-icon-green" />
+              <span>Express Shipping</span>
+              <small>3-7 Business Days</small>
             </div>
-            <div style={{ background: '#f8fafc', padding: '12px 8px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
-              <RotateCcw size={20} style={{ color: '#e30613', margin: '0 auto 6px' }} />
-              <span style={{ fontSize: '11px', fontWeight: 700, color: '#1e293b', display: 'block' }}>Easy Returns</span>
-              <small style={{ fontSize: '10px', color: '#64748b' }}>Hassle-Free Policy</small>
+            <div className="trust-badge-card">
+              <RotateCcw size={18} className="badge-icon-red" />
+              <span>Easy Returns</span>
+              <small>Hassle-Free Policy</small>
             </div>
           </div>
         </div>

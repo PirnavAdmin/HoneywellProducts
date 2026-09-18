@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
-import { ArrowLeft, ArrowRight, Camera, Expand, Headphones, Image, MonitorSmartphone, Network, PlugZap, ShieldCheck, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Camera, Expand, Headphones, Image, MonitorSmartphone, Network, PlugZap, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import HeroCarousel from '../components/home/HeroCarousel';
 import SectionHeading from '../components/common/SectionHeading';
@@ -20,6 +20,7 @@ import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useUI } from '../context/UIContext';
 import { socialLinks } from '../config/socialLinks';
+import OptimizedImage from '../components/common/OptimizedImage';
 import businessImage from '../assets/images/capital-park2.jpg';
 import industryResidentialImage from '../assets/images/catalog/industry-residential.png';
 import industryCommercialImage from '../assets/images/catalog/industry-commercial.png';
@@ -124,6 +125,7 @@ export default function Home() {
       // Sort by creation date or newest ID descending
       return listCopy.sort((a, b) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
         if (timeA !== timeB) return timeB - timeA;
         return (Number(b.id) || 0) - (Number(a.id) || 0);
@@ -159,7 +161,7 @@ export default function Home() {
           <Link className="arrow-link" to="/products">View all products <ArrowRight /></Link>
         </div>
         <div className="category-grid product-category-grid">
-          {categoriesList.map((category) => {
+          {categoriesList.map((category, idx) => {
             const subCount = getSubcategoryCount(category);
             const countLabel = subCount === 1 ? '1 Subcategory' : `${subCount} Subcategories`;
             const imageSrc = (!category.image && !category.imageUrl) || String(category.image || category.imageUrl).toLowerCase().includes('placeholder')
@@ -168,14 +170,12 @@ export default function Home() {
 
             return (
               <Link key={category.id} to={`/products?category=${category.id}`} className="category-card">
-                <img
+                <OptimizedImage
                   src={imageSrc}
                   alt={`${category.name} product category`}
-                  loading="lazy"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/honeywell-products-logo.png';
-                  }}
+                  loading={idx < 4 ? 'eager' : 'lazy'}
+                  fetchPriority={idx < 2 ? 'high' : undefined}
+                  decoding="async"
                 />
                 <div className="category-overlay" />
                 <div className="category-card-content">
@@ -214,43 +214,56 @@ export default function Home() {
           ))}
         </div>
         {loading ? (
-          <div style={{ padding: '3rem', textAlign: 'center' }}>
-            <Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} />
+          <div className="product-grid home-products">
+            {Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="product-card-skeleton">
+                <div className="skeleton-img-box skeleton-pulse" />
+                <div style={{ padding: '10px 10px 8px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                  <div className="skeleton-line" style={{ width: '50%', height: '10px' }} />
+                  <div className="skeleton-line" style={{ width: '90%', height: '26px' }} />
+                  <div className="skeleton-line" style={{ width: '40%', height: '10px' }} />
+                  <div className="skeleton-line" style={{ width: '70%', height: '16px', marginTop: 'auto' }} />
+                  <div className="skeleton-line" style={{ width: '100%', height: '28px', marginTop: '4px' }} />
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div className="product-grid home-products">
-            {tabProducts.map((product) => <ProductCard key={product.id} product={product} />)}
+            {tabProducts.map((product, idx) => (
+              <ProductCard key={product.id} product={product} priority={idx < 4} />
+            ))}
           </div>
         )}
       </div>
     </section>
 
-      {/* Section 1: SHOP BY APPLICATION */}
-      <section className="section applications-section">
-        <div className="container">
-          <SectionHeading eyebrow="SHOP BY APPLICATION" title="What Are You Protecting?" description="Start with the environment and continue to a suggested product category." />
-          <div className="application-grid">
-            {applications.map((application) => (
-              <Link key={application.id} to={`/solutions?application=${application.id}`} className="application-card">
-                <img src={application.image} alt={`${application.name} security application`} loading="lazy" />
-                <div>
-                  <span>{application.name}</span>
-                  <p>{application.description}</p>
-                  <b>Find a solution <ArrowRight size={16} /></b>
-                </div>
-              </Link>
-            ))}
-          </div>
+    {/* Section 1: SHOP BY APPLICATION */}
+    <section className="section applications-section">
+      <div className="container">
+        <SectionHeading eyebrow="SHOP BY APPLICATION" title="What Are You Protecting?" description="Start with the environment and continue to a suggested product category." />
+        <div className="application-grid">
+          {applications.map((application) => (
+            <Link key={application.id} to={`/solutions?application=${application.id}`} className="application-card">
+              <OptimizedImage src={application.image} alt={`${application.name} security application`} loading="lazy" decoding="async" />
+              <div>
+                <span>{application.name}</span>
+                <p>{application.description}</p>
+                <b>Find a solution <ArrowRight size={16} /></b>
+              </div>
+            </Link>
+          ))}
         </div>
-      </section>
+      </div>
+    </section>
 
-      {/* Section 2: INDUSTRY VERTICALS */}
-      <section className="section industries-section" style={{ background: '#f8fafc', padding: '60px 0' }}>
-        <div className="container">
-          <div className="split-heading">
-            <SectionHeading eyebrow="INDUSTRY VERTICALS" title="Tailored Industry Solutions" description="Discover specialized technology architectures engineered for specific operational environments." />
-            <Link className="arrow-link" to="/industries">Explore all industries <ArrowRight /></Link>
-          </div>
+    {/* Section 2: INDUSTRY VERTICALS */}
+    <section className="section industry-verticals-section">
+      <div className="container">
+        <div className="split-heading">
+          <SectionHeading eyebrow="INDUSTRY VERTICALS" title="Tailored Industry Solutions" description="Discover specialized technology architectures engineered for specific operational environments." />
+          <Link className="arrow-link" to="/industries">Explore all industries <ArrowRight /></Link>
+        </div>
           <div className="industry-verticals-grid">
             {Object.values(INDUSTRY_VERTICALS).map((ind) => {
               const Icon = ind.icon;
@@ -361,7 +374,7 @@ export default function Home() {
         </div>
       </div>
     </section>
-    <section className="section business-banner"><div className="container business-banner-grid"><div><SectionHeading eyebrow="BUSINESS PARTNERSHIPS" title="Grow Your Business With Honeywell Products" description="Explore client-editable partnership pathways for channel and project professionals." /><div className="partner-chip-list">{partnerTypes.map((type) => <span key={type}>{type}</span>)}</div><div className="button-row"><Link className="button" to="/business#partner-form">Become a Partner</Link><Link className="button outline" to="/business">Request Business Details</Link></div></div><img src={businessImage} alt="Modern commercial buildings" loading="lazy" /></div></section>
+    <section className="section business-banner"><div className="container business-banner-grid"><div><SectionHeading eyebrow="BUSINESS PARTNERSHIPS" title="Grow Your Business With Honeywell Products" /><div className="partner-chip-list">{partnerTypes.map((type) => <span key={type}>{type}</span>)}</div><div className="button-row"><Link className="button" to="/business#partner-form">Become a Partner</Link><Link className="button outline" to="/business">Request Business Details</Link></div></div><img src={businessImage} alt="Modern commercial buildings" loading="lazy" /></div></section>
     <TestimonialsSection />
     <GrowthSection />
     <section className="section insights-section">

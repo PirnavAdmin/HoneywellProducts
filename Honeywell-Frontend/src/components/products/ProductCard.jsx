@@ -1,44 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { ArrowUpRight, ShoppingCart, Star, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useUI } from '../../context/UIContext';
-import { reviewService } from '../../services/reviewService';
-import { getReviewsByProductIdFromStore } from '../../admin/catalog/reviewStore';
+import OptimizedImage from '../common/OptimizedImage';
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, priority = false }) {
   const { addItem } = useCart();
   const { openEnquiry, notify } = useUI();
   const add = () => { addItem(product); notify(`${product.name} added to cart.`); };
-
-  const [liveReviews, setLiveReviews] = useState(() => {
-    if (Array.isArray(product.reviews) && product.reviews.length > 0) {
-      return product.reviews;
-    }
-    const cached = reviewService.getCached?.(product.id, product.slug);
-    if (Array.isArray(cached) && cached.length > 0) return cached;
-    return (product.id ? getReviewsByProductIdFromStore(product.id) : []) || [];
-  });
-
-  useEffect(() => {
-    let isMounted = true;
-    if (Array.isArray(product.reviews) && product.reviews.length > 0) {
-      setLiveReviews(product.reviews);
-      return;
-    }
-    const pid = product.id || product.slug;
-    const fallback = product.slug || product.sku || product.model;
-    if (pid || fallback) {
-      reviewService.getByProduct(pid, fallback)
-        .then((revs) => {
-          if (isMounted && Array.isArray(revs) && revs.length > 0) {
-            setLiveReviews(revs);
-          }
-        })
-        .catch(() => {});
-    }
-    return () => { isMounted = false; };
-  }, [product.id, product.slug, product.sku, product.model, product.reviews]);
 
   const rawImg = product.image || product.imageUrl || (Array.isArray(product.images) && product.images[0]);
   const displayImage = (!rawImg || String(rawImg).toLowerCase().includes('placeholder'))
@@ -71,11 +41,8 @@ export default function ProductCard({ product }) {
 
   const isOutOfStock = product.availability === 'Out of Stock' || product.stock === 0;
 
-  // Resolve effective reviews: embedded product.reviews, live fetched reviews, or local store reviews
-  const effectiveReviews = (Array.isArray(liveReviews) && liveReviews.length > 0)
-    ? liveReviews
-    : (Array.isArray(product.reviews) && product.reviews.length > 0 ? product.reviews : []);
-
+  // Resolve effective reviews from already-fetched product information (no separate per-card API calls)
+  const effectiveReviews = Array.isArray(product.reviews) ? product.reviews : [];
   const hasReviews = effectiveReviews.length > 0;
   const numRating = Number(product.rating ?? product.averageRating);
 
@@ -87,7 +54,6 @@ export default function ProductCard({ product }) {
             ? Number(product.totalReviews)
             : 0));
 
-  // Exact matching calculation with ProductDetails (View) page
   const displayRating = hasReviews
     ? (effectiveReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0) / effectiveReviews.length).toFixed(1)
     : (displayReviewCount > 0 && !isNaN(numRating) && numRating > 0 ? numRating.toFixed(1) : '0');
@@ -95,14 +61,12 @@ export default function ProductCard({ product }) {
   return (
     <article className="product-card">
       <Link className="product-image" to={cardLink}>
-        <img
+        <OptimizedImage
           src={displayImage}
           alt={product.name}
-          loading="lazy"
-          onError={(e) => {
-            e.target.onerror = null;
-            e.target.src = '/honeywell-products-logo.png';
-          }}
+          loading={priority ? 'eager' : 'lazy'}
+          fetchPriority={priority ? 'high' : undefined}
+          decoding="async"
         />
         <span className="product-cat-tag">{product.category || 'General'}</span>
         {discountPercent > 0 && <span className="product-discount-tag">{discountPercent}% OFF</span>}

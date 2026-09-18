@@ -927,11 +927,9 @@ app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>
     {
-        if (ctx.Context.Request.Path.StartsWithSegments("/uploads"))
+        if (ctx.Context.Request.Path.StartsWithSegments("/uploads") || ctx.Context.Request.Path.StartsWithSegments("/images"))
         {
-            ctx.Context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
-            ctx.Context.Response.Headers["Pragma"] = "no-cache";
-            ctx.Context.Response.Headers["Expires"] = "0";
+            ctx.Context.Response.Headers["Cache-Control"] = "public, max-age=604800, stale-while-revalidate=86400";
         }
     }
 });

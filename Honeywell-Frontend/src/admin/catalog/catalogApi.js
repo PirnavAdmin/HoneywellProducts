@@ -68,9 +68,8 @@ const resolveImageUrl = (url) => {
     result = !cleanBase ? (trimmed.startsWith('/') ? trimmed : `/${trimmed}`) : `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
   }
 
-  if (result.includes('/uploads/') || result.includes('ngrok-free.dev')) {
-    const separator = result.includes('?') ? '&' : '?';
-    return `${result}${separator}v=${Date.now()}`;
+  if (result.includes('/uploads/')) {
+    return result;
   }
   return result;
 };

@@ -390,10 +390,19 @@ export default function Products() {
             </div>
 
             {loading ? (
-              <div className="empty-state large" style={{ padding: '4rem 1rem' }}>
-                <Loader2 size={36} className="animate-spin text-amber-500" style={{ animation: 'spin 1s linear infinite' }} />
-                <h2>Loading live products...</h2>
-                <p>Fetching products from API endpoint</p>
+              <div className="product-grid">
+                {Array.from({ length: 8 }).map((_, idx) => (
+                  <div key={idx} className="product-card-skeleton">
+                    <div className="skeleton-img-box skeleton-pulse" />
+                    <div style={{ padding: '10px 10px 8px', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+                      <div className="skeleton-line" style={{ width: '50%', height: '10px' }} />
+                      <div className="skeleton-line" style={{ width: '90%', height: '26px' }} />
+                      <div className="skeleton-line" style={{ width: '40%', height: '10px' }} />
+                      <div className="skeleton-line" style={{ width: '70%', height: '16px', marginTop: 'auto' }} />
+                      <div className="skeleton-line" style={{ width: '100%', height: '28px', marginTop: '4px' }} />
+                    </div>
+                  </div>
+                ))}
               </div>
             ) : error ? (
               <div className="empty-state large" style={{ padding: '4rem 1rem' }}>
@@ -405,8 +414,8 @@ export default function Products() {
             ) : filtered.length ? (
               <>
                 <div className="product-grid">
-                  {filtered.slice(0, visible).map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                  {filtered.slice(0, visible).map((product, idx) => (
+                    <ProductCard key={product.id} product={product} priority={idx < 4} />
                   ))}
                 </div>
                 {visible < filtered.length && (

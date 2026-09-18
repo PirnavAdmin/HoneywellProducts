@@ -60,9 +60,8 @@ export const resolveImageUrl = (url) => {
     result = !cleanBase ? (trimmed.startsWith('/') ? trimmed : `/${trimmed}`) : `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
   }
 
-  if (result.includes('/uploads/') || result.includes('ngrok-free.dev')) {
-    const separator = result.includes('?') ? '&' : '?';
-    return `${result}${separator}v=${Date.now()}`;
+  if (result.includes('/uploads/')) {
+    return result;
   }
   return result;
 };
@@ -678,17 +677,17 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
       const product = unwrapItem(response);
       const prodId = product.id || id;
 
-      // Fetch features and strictly product-specific reviews in parallel
-      const [features, reviews] = await Promise.all([
-        fetchProductFeatures(prodId).catch((e) => {
-          console.warn('Could not load features for product', prodId, e?.message);
-          return [];
-        }),
-        fetchProductReviews(prodId).catch((e) => {
-          console.warn('Could not load reviews for product', prodId, e?.message);
-          return [];
-        }),
-      ]);
+      // The backend /api/products/{id} already includes Features and Reviews via EF navigation properties.
+      // Only fetch separately if not present in the payload.
+      let features = Array.isArray(product.features) ? product.features : [];
+      let reviews = Array.isArray(product.reviews) ? product.reviews : [];
+
+      if (features.length === 0 && (!product.keyFeatures || product.keyFeatures.length === 0)) {
+        features = await fetchProductFeatures(prodId).catch(() => []);
+      }
+      if (reviews.length === 0 && !product.totalReviews) {
+        reviews = await fetchProductReviews(prodId).catch(() => []);
+      }
 
       const strictReviews = (Array.isArray(reviews) ? reviews : []).filter(
         (r) => !r.productId || String(r.productId) === String(prodId)
