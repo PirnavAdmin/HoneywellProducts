@@ -295,10 +295,6 @@ export function ProductDetailsContent() {
               ? reviews
               : (Array.isArray(product?.reviews) && product.reviews.length > 0 ? product.reviews : []);
             const hasReviews = effectiveReviewsList.length > 0;
-            const numProdRating = Number(product?.rating ?? product?.averageRating);
-            const detailRating = hasReviews
-              ? (effectiveReviewsList.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / effectiveReviewsList.length).toFixed(1)
-              : (numProdRating > 0 ? numProdRating.toFixed(1) : '0');
             const detailReviewCount = hasReviews
               ? effectiveReviewsList.length
               : (Number(product?.reviewCount) > 0
@@ -306,6 +302,9 @@ export function ProductDetailsContent() {
                   : (Number(product?.totalReviews) > 0
                       ? Number(product.totalReviews)
                       : 0));
+            const detailRating = hasReviews
+              ? (effectiveReviewsList.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0) / effectiveReviewsList.length).toFixed(1)
+              : (detailReviewCount > 0 && !isNaN(numProdRating) && numProdRating > 0 ? numProdRating.toFixed(1) : '0');
 
             return (
               <button

@@ -401,8 +401,12 @@ export const mapProductFromApi = (
         const sum = mappedReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0);
         return (sum / mappedReviews.length).toFixed(1);
       }
-      const rawNum = Number(raw.averageRating ?? raw.rating);
-      return !isNaN(rawNum) && rawNum > 0 ? rawNum.toFixed(1) : '0';
+      const revCount = Number(raw.totalReviews ?? raw.reviewCount ?? 0);
+      if (revCount > 0) {
+        const rawNum = Number(raw.averageRating ?? raw.rating);
+        return !isNaN(rawNum) && rawNum > 0 ? rawNum.toFixed(1) : '0';
+      }
+      return '0';
     })(),
     reviewCount: mappedReviews.length > 0
       ? mappedReviews.length
@@ -498,10 +502,11 @@ const formatReviewDate = (d) => {
 };
 
 export const createProductReview = async (productId, review) => {
+  const rNum = Number(review.rating);
   const result = await reviewService.submit({
     productId: String(productId || '').trim(),
     customerName: review.customer || review.customerName || 'Anonymous',
-    rating: Number(review.rating) || 5,
+    rating: !isNaN(rNum) && rNum >= 0 ? rNum : 0,
     reviewDate: formatReviewDate(review.date || review.reviewDate),
     reviewComment: review.comment || review.reviewComment || '',
     verifiedPurchase: review.verified !== false,
@@ -925,6 +930,31 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
           console.warn('Could not persist product review:', revErr?.message);
         }
       }
+    }
+  } else if (targetId && calculatedRating > 0) {
+    // User set Average Rating in the product form without adding a Featured Review
+    // We must persist a rating record in the backend Reviews table so the backend retains this rating!
+    try {
+      const existing = await reviewService.getByProduct(targetId);
+      if (Array.isArray(existing) && existing.length > 0) {
+        const first = existing[0];
+        const updated = await updateProductReview(first.id, {
+          ...first,
+          rating: calculatedRating,
+          productId: targetId,
+        });
+        if (updated) savedReviews.push(updated);
+      } else {
+        const created = await createProductReview(targetId, {
+          customer: 'Customer Rating',
+          rating: calculatedRating,
+          comment: 'Verified Customer Rating',
+          verified: true,
+        });
+        if (created) savedReviews.push(created);
+      }
+    } catch (e) {
+      console.warn('Could not auto-seed review for product rating:', e?.message);
     }
   }
 

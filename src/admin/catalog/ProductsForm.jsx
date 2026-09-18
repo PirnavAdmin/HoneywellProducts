@@ -122,7 +122,7 @@ const normalizeReviews = (reviews) => {
     return {
       id: review.id ? String(review.id) : undefined,
       customer: review.customer || review.customerName || '',
-      rating: !isNaN(rawRating) && rawRating >= 0 ? String(rawRating) : '5',
+      rating: !isNaN(rawRating) && rawRating >= 0 ? String(rawRating) : '0',
       comment: review.comment || review.reviewComment || '',
       date: review.date || review.reviewDate || new Date().toISOString().split('T')[0],
       verified: Boolean(review.verified ?? review.verifiedPurchase ?? true),

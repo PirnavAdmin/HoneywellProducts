@@ -14,7 +14,7 @@ export const mapReviewFromApi = (item) => {
   const reviewComment = item.reviewComment || item.comment || item.message || item.text || '';
   const reviewDate = item.reviewDate || item.date || item.createdAt || new Date().toISOString();
   const rawRating = Number(item.rating);
-  const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
+  const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 0;
   const verifiedPurchase = item.verifiedPurchase !== undefined ? Boolean(item.verifiedPurchase) : (item.verified !== undefined ? Boolean(item.verified) : true);
   return {
     id: String(rawId),
@@ -101,7 +101,7 @@ export const reviewService = {
   /** POST (Create) — POST /api/reviews */
   async submit(payload) {
     const rawRating = Number(payload.rating);
-    const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
+    const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 0;
     const apiPayload = {
       productId: String(payload.productId || '').trim(),
       customerName: payload.customerName || payload.customer || payload.name || 'Anonymous',
@@ -149,7 +149,7 @@ export const reviewService = {
 
     const merged = { ...current, ...updateData };
     const rawRating = Number(merged.rating);
-    const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 5;
+    const rating = !isNaN(rawRating) && rawRating >= 0 ? rawRating : 0;
     const apiPayload = {
       id: isNaN(Number(id)) ? id : Number(id),
       productId: String(merged.productId || '').trim(),

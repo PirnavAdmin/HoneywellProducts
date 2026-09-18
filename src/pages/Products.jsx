@@ -34,38 +34,65 @@ const checkCategoryMatch = (product, filterCategoryName, categoriesList = []) =>
   const targetNorm = normalizeCategory(filterCategoryName);
   const prodCatNorm = normalizeCategory(product.category);
   const prodCatIdNorm = normalizeCategory(product.categoryId);
+  const prodSubCatIdNorm = normalizeCategory(product.subcategoryId);
   const prodTypeNorm = normalizeCategory(product.productType);
   const prodNameNorm = normalizeCategory(product.name);
+  const prodDescNorm = normalizeCategory(product.shortDescription || product.description || '');
 
-  // 1. CCTV Cameras & Camera Family Match (cctv-cameras, CCTV Cameras, cctv, cameras)
-  if (['cctvcameras', 'cctv', 'cctvcamera', 'cameras', 'surveillancecameras', 'securitycameras'].includes(targetNorm)) {
-    const cameraCatSlugs = [
-      'cctvcameras',
-      'bulletcameras',
-      'domecameras',
-      'ipcameras',
-      'ptzcameras',
-      'wificameras',
-      '4gcameras',
-      'solarcameras',
-      'cameras',
-      'analogcameras'
-    ];
-    if (cameraCatSlugs.includes(prodCatNorm) || cameraCatSlugs.includes(prodCatIdNorm)) return true;
-    if (prodTypeNorm.includes('camera') || prodTypeNorm.includes('cctv')) return true;
-    if (prodNameNorm.includes('camera') || prodNameNorm.includes('cctv')) return true;
-    return false;
+  // 0. Direct match on ID, name, or slug
+  if (prodCatNorm === targetNorm || prodCatIdNorm === targetNorm || prodSubCatIdNorm === targetNorm) return true;
+
+  // 1. Camera family & camera subtypes (cctv-cameras, wifi-cameras, dome-cameras, bullet-cameras, ip-cameras, ptz-cameras, solar-cameras, 4g-cameras)
+  const cameraSlugs = [
+    'cctvcameras', 'cctv', 'cctvcamera', 'cameras', 'surveillancecameras', 'securitycameras',
+    'wificameras', 'wificamera', 'wifi',
+    'domecameras', 'domecamera', 'dome',
+    'bulletcameras', 'bulletcamera', 'bullet',
+    'ipcameras', 'ipcamera', 'ip',
+    'ptzcameras', 'ptzcamera', 'ptz',
+    'solarcameras', 'solarcamera',
+    '4gcameras', '4gcamera', '4g',
+    'analogcameras', 'analogcamera'
+  ];
+
+  if (cameraSlugs.includes(targetNorm)) {
+    // Specific subtype keyword check (e.g. "wifi" for "wificameras", "dome" for "domecameras")
+    let subKeyword = targetNorm
+      .replace('cameras', '')
+      .replace('camera', '');
+
+    if (subKeyword && subKeyword !== 'cctv') {
+      const matchesSubtype =
+        prodTypeNorm.includes(subKeyword) ||
+        prodNameNorm.includes(subKeyword) ||
+        prodDescNorm.includes(subKeyword) ||
+        prodCatNorm.includes(subKeyword);
+
+      if (matchesSubtype) return true;
+    }
+
+    // Fallback: If no product matches the specific subtype, match any camera/surveillance product in catalog
+    const isCamera =
+      prodTypeNorm.includes('camera') ||
+      prodTypeNorm.includes('cctv') ||
+      prodNameNorm.includes('camera') ||
+      prodNameNorm.includes('cctv') ||
+      prodCatNorm.includes('camera') ||
+      prodCatNorm.includes('cctv') ||
+      ['cctvcameras', 'securityproducts', 'securityequipment'].includes(prodCatNorm);
+
+    if (isCamera) return true;
   }
 
-  // 2. Solar Panels family match
-  if (['solarpanels', 'solarpanel', 'solarpanelmodule'].includes(targetNorm)) {
-    if (prodCatNorm === 'solarpanels' || prodCatIdNorm === 'solarpanels') return true;
-    if (prodTypeNorm.includes('solarpanel') || prodNameNorm.includes('solarpanel')) return true;
+  // 2. Solar Panels & Solar Kit family match
+  if (['solarpanels', 'solarpanel', 'solarpanelmodule', 'solarkit', 'solar'].includes(targetNorm)) {
+    if (prodCatNorm.includes('solar') || prodCatIdNorm.includes('solar')) return true;
+    if (prodTypeNorm.includes('solar') || prodNameNorm.includes('solar') || prodDescNorm.includes('solar')) return true;
   }
 
-  // 3. Security Products family match
-  if (['securityproducts', 'securityequipment', 'securitysystems'].includes(targetNorm)) {
-    const secSlugs = ['nvr', 'dvr', 'surveillance-storage', 'surveillancestorage', 'surveillance', 'security'];
+  // 3. Security Products & Recording Equipment (NVR / DVR)
+  if (['securityproducts', 'securityequipment', 'securitysystems', 'nvr', 'dvr', 'recorders'].includes(targetNorm)) {
+    const secSlugs = ['nvr', 'dvr', 'surveillance-storage', 'surveillancestorage', 'surveillance', 'security', 'recorder'];
     if (secSlugs.some(s => prodCatNorm.includes(s) || prodCatIdNorm.includes(s))) return true;
     if (prodTypeNorm.includes('nvr') || prodTypeNorm.includes('dvr') || prodTypeNorm.includes('storage') || prodTypeNorm.includes('security')) return true;
   }
@@ -76,11 +103,7 @@ const checkCategoryMatch = (product, filterCategoryName, categoriesList = []) =>
     if (prodTypeNorm.includes('accessori') || prodTypeNorm.includes('network') || prodTypeNorm.includes('switch')) return true;
   }
 
-  // 5. Direct Normalized Match
-  if (prodCatNorm && prodCatNorm === targetNorm) return true;
-  if (prodCatIdNorm && prodCatIdNorm === targetNorm) return true;
-
-  // 6. Check categoriesList objects
+  // 5. Check categoriesList objects
   const catObj = categoriesList.find((c) => {
     const cIdNorm = normalizeCategory(c.id);
     const cSlugNorm = normalizeCategory(c.slug);
@@ -94,7 +117,7 @@ const checkCategoryMatch = (product, filterCategoryName, categoriesList = []) =>
     if (normalizeCategory(product.category) === normalizeCategory(catObj.slug)) return true;
   }
 
-  // Substring fallback
+  // 6. Substring fallback
   if (prodCatNorm && (prodCatNorm.includes(targetNorm) || targetNorm.includes(prodCatNorm))) return true;
 
   return false;

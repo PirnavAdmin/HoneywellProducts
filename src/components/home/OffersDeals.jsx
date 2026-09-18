@@ -208,8 +208,8 @@ export default function OffersDeals() {
                   offer.endDate ? `Ends: ${offer.endDate}` : 'Limited time offer'
                 ],
                 availability: 'In Stock',
-                rating: matchedProduct?.rating || '4.9',
-                reviewCount: matchedProduct?.reviewCount || 16,
+                rating: matchedProduct?.rating || '0',
+                reviewCount: matchedProduct?.reviewCount || matchedProduct?.totalReviews || 0,
                 model: offer.badgeTag || matchedProduct?.model || 'SPECIAL DEAL'
               };
 

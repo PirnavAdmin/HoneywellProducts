@@ -126,7 +126,7 @@ const ProductReviews = () => {
   const mapRawReview = (r) => ({
     id: String(r.id ?? ''),
     customer: r.customerName || r.customer || 'Anonymous',
-    rating: String(Number(r.rating) || 5),
+    rating: String(!isNaN(Number(r.rating)) && Number(r.rating) >= 0 ? Number(r.rating) : 0),
     date: r.reviewDate
       ? r.reviewDate.slice(0, 7)
       : r.dateCreated

@@ -1,12 +1,12 @@
 import { API_BASE_URL } from './api';
 import { applications } from '../data/solutions';
-import { applicationImages } from '../data/imageLibrary';
+import { applicationImages, solutionPortfolioImages } from '../data/imageLibrary';
 
 export const mapSolutionFromApi = (raw = {}) => {
   const rawImage = raw.imageUrl || raw.image || raw.mediaUrl || '';
   const isInvalidImage = !rawImage || rawImage.includes('placeholder.png') || rawImage.includes('placeholder');
   const appId = String(raw.id || raw.solutionId || 'home').toLowerCase();
-  const fallbackImage = applicationImages[appId] || applicationImages['home'] || '/honeywell-products-logo.png';
+  const fallbackImage = solutionPortfolioImages[appId] || applicationImages[appId] || applicationImages['home'] || '/honeywell-products-logo.png';
 
   return {
     id: String(raw.id ?? raw.solutionId ?? ''),
@@ -22,8 +22,58 @@ export const mapSolutionFromApi = (raw = {}) => {
   };
 };
 
+function getLocalFallbackSolutions() {
+  const customSolutions = [
+    {
+      id: 'home',
+      title: 'Residential & Smart Home Security',
+      description: 'Complete home surveillance and access control for modern residences.',
+      application: 'Residential Security',
+      categoryId: 'cctv-cameras',
+      image: solutionPortfolioImages['home'] || '/assets/images/catalog/solution-residential.jpg',
+      imageUrl: solutionPortfolioImages['home'] || '/assets/images/catalog/solution-residential.jpg',
+      features: ['Smart Wi-Fi Cameras', 'Doorbell Integration', 'Mobile Motion Alerts']
+    },
+    {
+      id: 'office',
+      title: 'Corporate Office & Facility Protection',
+      description: 'Access control, time attendance, and IP video surveillance for modern workplaces.',
+      application: 'Office Security',
+      categoryId: 'networking',
+      image: solutionPortfolioImages['office'] || '/assets/images/catalog/solution-office.jpg',
+      imageUrl: solutionPortfolioImages['office'] || '/assets/images/catalog/solution-office.jpg',
+      features: ['Biometric Entry Control', 'Centralized NVR Recording', 'Visitor Management']
+    },
+    {
+      id: 'retail',
+      title: 'Retail Store & Loss Prevention',
+      description: 'High-definition video monitoring to prevent shoplifting and audit cashier points.',
+      application: 'Retail & POS Security',
+      categoryId: 'dome-camera',
+      image: solutionPortfolioImages['retail'] || '/assets/images/catalog/solution-retail.jpg',
+      imageUrl: solutionPortfolioImages['retail'] || '/assets/images/catalog/solution-retail.jpg',
+      features: ['POS Cashier Overlay', 'Foot-Traffic Analytics', '360° Dome Coverage']
+    },
+    {
+      id: 'factory',
+      title: 'Industrial & Manufacturing Safety',
+      description: 'Heavy-duty explosion-proof cameras and perimeter intrusion monitoring.',
+      application: 'Industrial Security',
+      categoryId: 'ip-camera',
+      image: solutionPortfolioImages['factory'] || '/assets/images/catalog/solution-industrial.jpg',
+      imageUrl: solutionPortfolioImages['factory'] || '/assets/images/catalog/solution-industrial.jpg',
+      features: ['Thermal Perimeter Monitoring', 'Heavy Duty Enclosures', 'Automated AI Alerts']
+    }
+  ];
+
+  return customSolutions;
+}
+
 export const solutionService = {
   async getAll() {
+    if (import.meta.env.VITE_ADMIN_DATA_MODE === 'mock') {
+      return getLocalFallbackSolutions();
+    }
     try {
       const response = await fetch(`${API_BASE_URL}/api/solutions`, {
         headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
@@ -37,16 +87,7 @@ export const solutionService = {
       // Fallthrough to local applications data
     }
 
-    return applications.map(a => ({
-      id: a.id,
-      title: a.name,
-      description: a.description,
-      application: a.name,
-      categoryId: a.categoryId,
-      image: a.image || applicationImages[a.id] || '/honeywell-products-logo.png',
-      imageUrl: a.image || applicationImages[a.id] || '/honeywell-products-logo.png',
-      features: ['Application-led planning', 'Scalable product selection', 'Sales-assisted recommendation']
-    }));
+    return getLocalFallbackSolutions();
   },
 
   // 2. GET (ById)

@@ -164,13 +164,16 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
 
   const stock = Number(raw.stockQuantity ?? raw.stock ?? 0);
 
-  const reviews = (Array.isArray(raw.reviews) ? raw.reviews : []).map((r) => ({
-    customer: r.customerName || r.customer || 'Anonymous',
-    rating: String(Number(r.rating) || 5),
-    date: r.dateCreated ? r.dateCreated.slice(0, 7) : new Date().toISOString().slice(0, 7),
-    comment: r.comment || '',
-    verified: r.verified !== false,
-  }));
+  const reviews = (Array.isArray(raw.reviews) ? raw.reviews : []).map((r) => {
+    const rNum = Number(r.rating);
+    return {
+      customer: r.customerName || r.customer || 'Anonymous',
+      rating: String(!isNaN(rNum) && rNum >= 0 ? rNum : 0),
+      date: r.dateCreated ? r.dateCreated.slice(0, 7) : new Date().toISOString().slice(0, 7),
+      comment: r.comment || '',
+      verified: r.verified !== false,
+    };
+  });
 
   const keyFeatures = Array.isArray(raw.features)
     ? raw.features.map((f) =>
@@ -237,8 +240,12 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
       coverage: raw.coverageUsage || raw.specifications?.coverage || '',
     },
     keyFeatures,
-    rating: String(raw.rating ?? ''),
-    totalReviews: String(raw.totalReviews ?? reviews.length ?? ''),
+    rating: reviews.length > 0
+      ? (reviews.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0) / reviews.length).toFixed(1)
+      : (Number(raw.totalReviews ?? raw.reviewCount ?? 0) > 0 && Number(raw.rating ?? raw.averageRating ?? 0) > 0
+          ? Number(raw.rating ?? raw.averageRating).toFixed(1)
+          : '0'),
+    totalReviews: String(reviews.length > 0 ? reviews.length : (Number(raw.totalReviews) > 0 ? Number(raw.totalReviews) : 0)),
     ratingBreakdown: raw.ratingBreakdown ?? { 5: '', 4: '', 3: '', 2: '', 1: '' },
     reviews,
     image: resolveImageUrl(raw.imageUrl || media[0]?.mediaUrl || ''),

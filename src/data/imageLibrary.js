@@ -35,6 +35,25 @@ export const applicationImages = {
   'construction-site': asset('application-construction.jpg'),
 };
 
+export const solutionPortfolioImages = {
+  home: asset('solution-residential.jpg'),
+  residential: asset('solution-residential.jpg'),
+  office: asset('solution-office.jpg'),
+  retail: asset('solution-retail.jpg'),
+  'retail-store': asset('solution-retail.jpg'),
+  factory: asset('solution-industrial.jpg'),
+  industrial: asset('solution-industrial.jpg'),
+};
+
+export const industryImages = {
+  residential: asset('solution-residential.jpg'),
+  commercial: asset('solution-office.jpg'),
+  industrial: asset('solution-industrial.jpg'),
+  retail: asset('solution-retail.jpg'),
+  education: asset('application-school.jpg'),
+  healthcare: asset('application-hospital.jpg'),
+};
+
 // Every catalogue record gets its own thumbnail. These stay centralized so an
 // API or the admin media library can replace them without touching components.
 export const productImages = {

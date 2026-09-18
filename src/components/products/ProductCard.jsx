@@ -79,11 +79,6 @@ export default function ProductCard({ product }) {
   const hasReviews = effectiveReviews.length > 0;
   const numRating = Number(product.rating ?? product.averageRating);
 
-  // Exact matching calculation with ProductDetails (View) page
-  const displayRating = hasReviews
-    ? (effectiveReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 5), 0) / effectiveReviews.length).toFixed(1)
-    : (numRating > 0 ? numRating.toFixed(1) : '0');
-
   const displayReviewCount = hasReviews
     ? effectiveReviews.length
     : (Number(product.reviewCount) > 0
@@ -91,6 +86,11 @@ export default function ProductCard({ product }) {
         : (Number(product.totalReviews) > 0
             ? Number(product.totalReviews)
             : 0));
+
+  // Exact matching calculation with ProductDetails (View) page
+  const displayRating = hasReviews
+    ? (effectiveReviews.reduce((acc, curr) => acc + (Number(curr.rating) || 0), 0) / effectiveReviews.length).toFixed(1)
+    : (displayReviewCount > 0 && !isNaN(numRating) && numRating > 0 ? numRating.toFixed(1) : '0');
 
   return (
     <article className="product-card">
@@ -149,12 +149,12 @@ export default function ProductCard({ product }) {
       </div>
 
       <div className="product-actions">
-        <Link to={cardLink} className="product-action-btn view-btn">{ctaLabel} <ArrowUpRight size={13} /></Link>
+        <Link to={cardLink} className="product-action-btn view-btn">{ctaLabel} <ArrowUpRight size={12} /></Link>
         <button type="button" className="product-action-btn enquire-btn" onClick={() => openEnquiry(product)}>
-          <MessageSquare size={13} /> Enquire
+          <MessageSquare size={12} /> Enquire
         </button>
         <button type="button" className="cart-square" onClick={add} aria-label={`Add ${product.name} to cart`}>
-          <ShoppingCart size={15} />
+          <ShoppingCart size={14} />
         </button>
       </div>
     </article>

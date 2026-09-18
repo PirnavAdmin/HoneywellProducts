@@ -230,8 +230,8 @@ export default function ProductFinder() {
                       category: product.categoryName || product.category || 'Surveillance',
                       productType: product.productType || product.type || 'Security Hardware',
                       image: (!product.image || String(product.image).toLowerCase().includes('placeholder')) ? '/honeywell-products-logo.png' : (product.imageUrl || product.image),
-                      rating: product.rating || 4.8,
-                      reviewCount: product.reviewCount || 16,
+                      rating: product.rating || 0,
+                      reviewCount: product.reviewCount || product.totalReviews || 0,
                       model: product.model || product.code || 'HW-SEC-2026',
                       highlights: Array.isArray(product.highlights)
                         ? product.highlights

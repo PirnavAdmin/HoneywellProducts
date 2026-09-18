@@ -14,12 +14,28 @@ import { solutionService } from '../services/solutionService';
 import { applications } from '../data/solutions';
 import { INDUSTRY_VERTICALS } from '../data/industryData';
 import { SOLUTION_PILLARS } from '../data/solutionsData';
+import { industryImages, applicationImages } from '../data/imageLibrary';
 import { marketTrends } from '../data/marketTrends';
 import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useUI } from '../context/UIContext';
 import { socialLinks } from '../config/socialLinks';
 import businessImage from '../assets/images/capital-park2.jpg';
+import industryResidentialImage from '../assets/images/catalog/industry-residential.png';
+import industryCommercialImage from '../assets/images/catalog/industry-commercial.png';
+import industryIndustrialImage from '../assets/images/catalog/industry-industrial.png';
+import industryRetailImage from '../assets/images/catalog/industry-retail.png';
+import industryEducationImage from '../assets/images/catalog/industry-education.png';
+import industryHealthcareImage from '../assets/images/catalog/industry-healthcare.png';
+
+const homeIndustryImages = {
+  residential: industryResidentialImage,
+  commercial: industryCommercialImage,
+  industrial: industryIndustrialImage,
+  retail: industryRetailImage,
+  education: industryEducationImage,
+  healthcare: industryHealthcareImage,
+};
 
 const reasons = [
   { icon: ShieldCheck, title: 'Advanced Security Technology', text: 'A structured portfolio prepared for modern surveillance requirements.' },
@@ -235,49 +251,37 @@ export default function Home() {
             <SectionHeading eyebrow="INDUSTRY VERTICALS" title="Tailored Industry Solutions" description="Discover specialized technology architectures engineered for specific operational environments." />
             <Link className="arrow-link" to="/industries">Explore all industries <ArrowRight /></Link>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px', marginTop: '24px' }}>
+          <div className="industry-verticals-grid">
             {Object.values(INDUSTRY_VERTICALS).map((ind) => {
               const Icon = ind.icon;
+              const cardImage = homeIndustryImages[ind.id] || ind.image || industryImages[ind.id] || applicationImages[ind.id] || '/honeywell-products-logo.png';
               return (
                 <Link
                   key={ind.id}
                   to={`/industries?type=${ind.id}`}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '12px',
-                    padding: '24px',
-                    textDecoration: 'none',
-                    color: 'inherit',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
-                    transition: 'transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-3px)';
-                    e.currentTarget.style.borderColor = '#1268a5';
-                    e.currentTarget.style.boxShadow = '0 8px 24px rgba(15, 23, 42, 0.08)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(15, 23, 42, 0.03)';
-                  }}
+                  className="industry-overlay-card"
                 >
-                  <div style={{ display: 'flex', items: 'center', gap: '12px' }}>
-                    <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#eff6ff', color: '#1268a5', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                      <Icon size={22} />
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#e53935', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{ind.eyebrow}</span>
-                      <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>{ind.name}</h3>
-                    </div>
+                  <img
+                    src={cardImage}
+                    alt={ind.name}
+                    className="industry-card-bg"
+                    loading="lazy"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/honeywell-products-logo.png';
+                    }}
+                  />
+                  <div className="industry-card-gradient-overlay" />
+                  <div className="industry-card-icon-badge">
+                    <Icon size={22} />
                   </div>
-                  <p style={{ margin: 0, fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>{ind.subtitle}</p>
-                  <div style={{ fontSize: '12px', color: '#1268a5', fontWeight: 700, marginTop: 'auto', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                    Explore Vertical Solutions <ArrowRight size={14} />
+                  <div className="industry-card-body">
+                    <span className="industry-card-category">{ind.eyebrow}</span>
+                    <h3 className="industry-card-title">{ind.name}</h3>
+                    <p className="industry-card-description">{ind.subtitle}</p>
+                  </div>
+                  <div className="industry-card-arrow-btn">
+                    <ArrowRight size={18} />
                   </div>
                 </Link>
               );
