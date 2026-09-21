@@ -1,0 +1,1 @@
+import{r as e}from"./rolldown-runtime-hePW80VL.js";import{n as t}from"./jsx-runtime-DE3RlOCf.js";var n=e(t(),1);function r(e,t){(0,n.useEffect)(()=>{document.title=`HONEYWELL PRODUCTS | SMART TECHNOLOGY. STRONGER PROTECTION`,t&&document.querySelector(`meta[name="description"]`)?.setAttribute(`content`,t)},[e,t])}export{r as t};

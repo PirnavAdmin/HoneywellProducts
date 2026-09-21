@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-DE3RlOCf.js";var t=e();function n({eyebrow:e,title:n,description:r,align:i=`left`,inverse:a=!1}){return(0,t.jsxs)(`div`,{className:`section-heading ${i} ${a?`inverse`:``}`,children:[(0,t.jsx)(`p`,{className:`eyebrow dark`,children:e}),(0,t.jsx)(`h2`,{children:n}),r&&(0,t.jsx)(`p`,{children:r})]})}export{n as t};

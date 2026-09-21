@@ -1,0 +1,1 @@
+var e=`/assets/smart-technology-trends-DdeJTWNY.png`;export{e as t};

@@ -1,0 +1,1 @@
+var e=`/assets/capital-park2-BJqJqKgt.jpg`;export{e as t};
