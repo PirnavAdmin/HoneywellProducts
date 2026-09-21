@@ -41,33 +41,54 @@ const FormSettings = () => {
   // Returns Policy Window
   const [returnsWindow, setReturnsWindow] = useState(7);
 
+  const isLegacyOrAgro = (str) => {
+    if (!str || typeof str !== 'string') return false;
+    const lower = str.toLowerCase();
+    return lower.includes('agro') || lower.includes('shyam') || lower.includes('9398649798') || lower.includes('123456789012');
+  };
+
   const sanitizeBankDetails = (data) => {
     if (!data) return {};
+    const rawHolder = data.accountHolderName ?? data.AccountHolderName ?? '';
+    const rawBank = data.bankName ?? data.BankName ?? '';
+    const rawAcc = data.accountNumber ?? data.AccountNumber ?? '';
+    const rawIfsc = data.ifscCode ?? data.IfscCode ?? '';
+    const rawBranch = data.branch ?? data.Branch ?? '';
+
     return {
-      accountHolderName: data.accountHolderName ?? data.AccountHolderName ?? 'Honeywell Products & Solutions Pvt Ltd',
-      bankName: data.bankName ?? data.BankName ?? 'HDFC Bank',
-      accountNumber: data.accountNumber ?? data.AccountNumber ?? '50200088991122',
-      ifscCode: data.ifscCode ?? data.IfscCode ?? 'HDFC0000123',
-      branch: data.branch ?? data.Branch ?? 'Cyber City Branch'
+      accountHolderName: isLegacyOrAgro(rawHolder) || !rawHolder ? 'Honeywell Products & Solutions Pvt Ltd' : rawHolder,
+      bankName: isLegacyOrAgro(rawBank) || !rawBank ? 'HDFC Bank' : rawBank,
+      accountNumber: isLegacyOrAgro(rawAcc) || rawAcc === '123456789012' || !rawAcc ? '50200088991122' : rawAcc,
+      ifscCode: isLegacyOrAgro(rawIfsc) || rawIfsc === 'HDFC0001234' || !rawIfsc ? 'HDFC0000123' : rawIfsc,
+      branch: isLegacyOrAgro(rawBranch) || !rawBranch ? 'Cyber City Branch' : rawBranch
     };
   };
 
   const sanitizeUpiDetails = (data) => {
     if (!data) return {};
+    const rawMerchant = data.merchantName ?? data.MerchantName ?? '';
+    const rawUpi = data.merchantUpiId ?? data.MerchantUpiId ?? '';
+    const rawBankDisplay = data.bankDisplayName ?? data.BankDisplayName ?? '';
+    const rawCurrency = data.currency ?? data.Currency ?? 'INR';
+
     return {
-      merchantName: data.merchantName ?? data.MerchantName ?? 'Honeywell Products India',
-      merchantUpiId: data.merchantUpiId ?? data.MerchantUpiId ?? 'honeywell@hdfcbank',
-      bankDisplayName: data.bankDisplayName ?? data.BankDisplayName ?? 'HDFC Bank - Corporate',
-      currency: data.currency ?? data.Currency ?? 'INR'
+      merchantName: isLegacyOrAgro(rawMerchant) || !rawMerchant ? 'Honeywell Products India' : rawMerchant,
+      merchantUpiId: isLegacyOrAgro(rawUpi) || !rawUpi ? 'honeywell@hdfcbank' : rawUpi,
+      bankDisplayName: isLegacyOrAgro(rawBankDisplay) || !rawBankDisplay ? 'HDFC Bank - Corporate' : rawBankDisplay,
+      currency: rawCurrency || 'INR'
     };
   };
 
   const sanitizeSupportDetails = (data) => {
     if (!data) return {};
+    const rawPhone = data.supportPhoneNumber ?? data.SupportPhoneNumber ?? data.phone ?? data.Phone ?? '';
+    const rawEmail = data.supportEmail ?? data.SupportEmail ?? data.email ?? data.Email ?? '';
+    const rawTimings = data.workTimings ?? data.WorkTimings ?? data.timings ?? data.Timings ?? '';
+
     return {
-      supportPhoneNumber: data.supportPhoneNumber ?? data.SupportPhoneNumber ?? data.phone ?? '+1 (800) 323-0194',
-      supportEmail: data.supportEmail ?? data.SupportEmail ?? data.email ?? 'support@honeywell.com',
-      workTimings: data.workTimings ?? data.WorkTimings ?? data.timings ?? 'Mon-Sat: 9:00 AM - 6:00 PM'
+      supportPhoneNumber: isLegacyOrAgro(rawPhone) || !rawPhone ? '+1 (800) 323-0194' : rawPhone,
+      supportEmail: isLegacyOrAgro(rawEmail) || !rawEmail ? 'support@honeywell.com' : rawEmail,
+      workTimings: isLegacyOrAgro(rawTimings) || !rawTimings ? 'Mon-Sat: 9:00 AM - 6:00 PM' : rawTimings
     };
   };
 
@@ -128,7 +149,6 @@ const FormSettings = () => {
 
     try {
       const bankPayload = {
-        ...bankData,
         AccountHolderName: bankData.accountHolderName,
         BankName: bankData.bankName,
         AccountNumber: bankData.accountNumber,
@@ -137,7 +157,6 @@ const FormSettings = () => {
       };
 
       const upiPayload = {
-        ...upiData,
         MerchantName: upiData.merchantName,
         MerchantUpiId: upiData.merchantUpiId,
         BankDisplayName: upiData.bankDisplayName,
@@ -145,7 +164,6 @@ const FormSettings = () => {
       };
 
       const supportPayload = {
-        ...supportData,
         SupportPhoneNumber: supportData.supportPhoneNumber,
         Phone: supportData.supportPhoneNumber,
         SupportPhone: supportData.supportPhoneNumber,
@@ -155,11 +173,21 @@ const FormSettings = () => {
         Timings: supportData.workTimings
       };
 
-      await Promise.all([
+      const [bankRes, upiRes, supportRes] = await Promise.all([
         updateBankDetails(bankPayload),
         updateUpiDetails(upiPayload),
         updateSupportConfig(supportPayload)
       ]);
+
+      if (bankRes?.data || bankRes?.Data) {
+        setBankData(prev => ({ ...prev, ...(bankRes.data || bankRes.Data) }));
+      }
+      if (upiRes?.data || upiRes?.Data) {
+        setUpiData(prev => ({ ...prev, ...(upiRes.data || upiRes.Data) }));
+      }
+      if (supportRes?.data || supportRes?.Data) {
+        setSupportData(prev => ({ ...prev, ...(supportRes.data || supportRes.Data) }));
+      }
 
       setIsSaved(true);
       setTimeout(() => setIsSaved(false), 3000);

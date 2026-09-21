@@ -573,7 +573,6 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                   <li><NavLink to="/admin/settings/form" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Settings</NavLink></li>
                   <li><NavLink to="/admin/contact-card" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Contact Card</NavLink></li>
                   <li><NavLink to="/admin/footer"       className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Footer Config</NavLink></li>
-                  <li><NavLink to="/admin/descriptions" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Description Manager</NavLink></li>
                 </ul>
               </li>
             )}

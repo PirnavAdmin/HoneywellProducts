@@ -262,8 +262,8 @@ namespace Honeywell.Controllers
                 Trend30Day = "+0%",
                 LastUpdated = DateTime.UtcNow,
                 IsActive = true,
-                Brand = request.SupplierName ?? "Shyam Agro",
-                Manufacturer = request.SupplierName ?? "Shyam Agro",
+                Brand = request.SupplierName ?? "Honeywell",
+                Manufacturer = request.SupplierName ?? "Honeywell",
                 StockStatus = request.InitialStockQty > 0 ? "InStock" : "OutOfStock",
                 AverageRating = 0,
                 TotalReviews = 0

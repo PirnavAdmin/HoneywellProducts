@@ -590,7 +590,7 @@ using (var scope = app.Services.CreateScope())
                         `SupportPhoneNumber` = '+1 (800) 323-0194',
                         `WorkTimings` = 'Mon-Sat: 9:00 AM - 6:00 PM',
                         `UpdatedAt` = NOW()
-                    WHERE LOWER(`SupportEmail`) LIKE '%shyamagro%' OR `SupportEmail` = '' OR `SupportPhoneNumber` LIKE '%4855%' OR `SupportPhoneNumber` = '';";
+                    WHERE LOWER(`SupportEmail`) LIKE '%shyamagro%' OR `SupportEmail` = '';";
                 cmd.ExecuteNonQuery();
             }
 

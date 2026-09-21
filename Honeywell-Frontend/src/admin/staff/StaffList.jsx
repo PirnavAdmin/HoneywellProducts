@@ -1,11 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
-import { Users, Plus, Mail, Phone, AlertTriangle, Trash2, X } from 'lucide-react';
+import { 
+  Users, Plus, Mail, Phone, AlertTriangle, Trash2, Edit2, X, 
+  Search, RefreshCw, UserCheck, UserX, Shield, Briefcase, Filter
+} from 'lucide-react';
 import { getStaffList, updateStaff, deleteStaff } from '../../services/staffApi';
 import { getApiDomain } from '../../utils/apiConfig';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
 import { Toast } from '../components/Toast';
-import '../catalog/adminModule.css';
+import './StaffList.css';
 
 const BASE_URL = `${getApiDomain()}/api`;
 
@@ -52,12 +56,26 @@ const formatPhoneNumber = (phone) => {
   return `+91 ${digits}`;
 };
 
+const getInitials = (name) => {
+  if (!name || name === 'N/A') return 'ST';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+};
+
 const StaffList = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const [staffToDelete, setStaffToDelete] = useState(null);
+
+  // Search & Filter State
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedRole, setSelectedRole] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
@@ -192,48 +210,57 @@ const StaffList = () => {
     }
   };
 
+  // KPI Calculations
+  const totalStaffCount = staffList.length;
+  const activeStaffCount = staffList.filter(s => s.isActive).length;
+  const inactiveStaffCount = staffList.filter(s => !s.isActive).length;
+  const adminRoleCount = staffList.filter(s => (s.role || '').toLowerCase() === 'admin').length;
+
+  // Filtered staff list
+  const filteredStaff = useMemo(() => {
+    return staffList.filter((s) => {
+      const q = searchTerm.toLowerCase().trim();
+      const matchSearch = !q || (
+        (s.name && s.name.toLowerCase().includes(q)) ||
+        (s.employeeId && s.employeeId.toLowerCase().includes(q)) ||
+        (s.email && s.email.toLowerCase().includes(q)) ||
+        (s.mobile && s.mobile.includes(q))
+      );
+
+      const matchRole = selectedRole === 'all' || (s.role || '').toLowerCase() === selectedRole.toLowerCase();
+      const matchStatus = selectedStatus === 'all' || (
+        selectedStatus === 'active' ? s.isActive : !s.isActive
+      );
+
+      return matchSearch && matchRole && matchStatus;
+    });
+  }, [staffList, searchTerm, selectedRole, selectedStatus]);
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedRole, selectedStatus]);
+
   // Pagination calculations
-  const totalPages = Math.ceil(staffList.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredStaff.length / itemsPerPage));
   const pagedStaff = useMemo(() => {
-    return staffList.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-  }, [staffList, currentPage]);
+    return filteredStaff.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredStaff, currentPage]);
 
   return (
-    <div className="admin-screen" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
+    <div className="staff-list-screen">
       {toastMessage && (
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
-      {/* Custom Delete Confirmation Modal */}
-      {staffToDelete && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(15, 23, 42, 0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div style={{
-            backgroundColor: '#ffffff',
-            borderRadius: '16px',
-            maxWidth: '440px',
-            width: '100%',
-            padding: '24px',
-            boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
-            border: '1px solid #e2e8f0',
-            position: 'relative'
-          }}>
+      {/* ── Custom Delete Confirmation Modal ── */}
+      {staffToDelete && createPortal(
+        <div className="staff-modal-backdrop">
+          <div className="staff-modal-card">
             <button
+              className="staff-modal-close"
               onClick={() => setStaffToDelete(null)}
-              style={{
-                position: 'absolute', top: '16px', right: '16px',
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: '#64748b', padding: '4px', borderRadius: '6px'
-              }}
+              aria-label="Close modal"
             >
               <X size={18} />
             </button>
@@ -257,15 +284,15 @@ const StaffList = () => {
               </div>
             </div>
 
-            <p style={{ fontSize: '14px', color: '#475569', margin: '0 0 24px 0', lineHeight: 1.6 }}>
-              Are you sure you want to delete staff member <strong>"{staffToDelete.name}"</strong> (#{staffToDelete.employeeId})? This action will remove their access credentials and system permissions.
+            <p style={{ fontSize: '13.5px', color: '#475569', margin: '0 0 22px 0', lineHeight: 1.6 }}>
+              Are you sure you want to delete staff member <strong>"{staffToDelete.name}"</strong> (#{staffToDelete.employeeId})? This will permanently revoke their access credentials and permissions.
             </p>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
                 onClick={() => setStaffToDelete(null)}
                 style={{
-                  padding: '10px 18px', borderRadius: '10px',
+                  padding: '9px 18px', borderRadius: '8px',
                   border: '1px solid #cbd5e1', backgroundColor: '#ffffff',
                   color: '#475569', fontSize: '13px', fontWeight: 700,
                   cursor: 'pointer', transition: 'all 0.15s ease'
@@ -276,7 +303,7 @@ const StaffList = () => {
               <button
                 onClick={confirmDeleteStaff}
                 style={{
-                  padding: '10px 20px', borderRadius: '10px',
+                  padding: '9px 20px', borderRadius: '8px',
                   border: 'none', backgroundColor: '#dc2626',
                   color: '#ffffff', fontSize: '13px', fontWeight: 700,
                   cursor: 'pointer', display: 'inline-flex', alignItems: 'center',
@@ -288,202 +315,274 @@ const StaffList = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* Header Row Card */}
-      <section style={{
-        backgroundColor: '#ffffff',
-        padding: '20px 24px',
-        borderRadius: '16px',
-        border: '1px solid #f1f5f9',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
-            backgroundColor: 'rgba(16, 185, 129, 0.1)'
-          }}>
-            <Users style={{ color: '#10b981' }} size={22} />
+      {/* ── Header Row Card ── */}
+      <section className="staff-header-card">
+        <div className="staff-header-left">
+          <div className="staff-header-icon-wrap">
+            <Users size={22} />
           </div>
           <div>
-            <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-              Staff Management
-            </h1>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}>
-              View, edit, and manage system roles and application permissions.
+            <h1 className="staff-header-title">Staff Management Directory</h1>
+            <p className="staff-header-desc">
+              Manage enterprise roles, application permissions, and staff accounts.
             </p>
           </div>
         </div>
 
-        <Link 
-          to="/admin/staff/add" 
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            backgroundColor: '#2563eb',
-            color: '#ffffff',
-            fontSize: '13px',
-            fontWeight: 600,
-            padding: '10px 20px',
-            borderRadius: '10px',
-            textDecoration: 'none',
-            boxShadow: '0 2px 6px rgba(37, 99, 235, 0.25)',
-            transition: 'all 0.15s ease'
-          }}
-        >
+        <Link to="/admin/staff/add" className="staff-add-btn">
           <Plus size={16} />
-          Add Staff
+          Add Staff Member
         </Link>
       </section>
 
-      {/* Staff Ledger Card */}
-      <section style={{
-        backgroundColor: '#ffffff',
-        padding: '20px',
-        borderRadius: '16px',
-        border: '1px solid #f1f5f9',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-        margin: 0
-      }}>
-        <div className="catalog-table-wrap" style={{ overflowX: 'auto' }}>
-          <table className="catalog-table" style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
+      {/* ── KPI Stat Cards ── */}
+      <div className="staff-kpi-grid">
+        <div className="staff-kpi-card">
+          <div className="staff-kpi-icon blue">
+            <Users size={20} />
+          </div>
+          <div>
+            <div className="staff-kpi-label">Total Staff</div>
+            <div className="staff-kpi-value">{totalStaffCount}</div>
+          </div>
+        </div>
+
+        <div className="staff-kpi-card">
+          <div className="staff-kpi-icon green">
+            <UserCheck size={20} />
+          </div>
+          <div>
+            <div className="staff-kpi-label">Active Members</div>
+            <div className="staff-kpi-value">{activeStaffCount}</div>
+          </div>
+        </div>
+
+        <div className="staff-kpi-card">
+          <div className="staff-kpi-icon amber">
+            <UserX size={20} />
+          </div>
+          <div>
+            <div className="staff-kpi-label">Inactive / On Leave</div>
+            <div className="staff-kpi-value">{inactiveStaffCount}</div>
+          </div>
+        </div>
+
+        <div className="staff-kpi-card">
+          <div className="staff-kpi-icon purple">
+            <Shield size={20} />
+          </div>
+          <div>
+            <div className="staff-kpi-label">Admin Accounts</div>
+            <div className="staff-kpi-value">{adminRoleCount}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Filter / Search Bar ── */}
+      <div className="staff-filter-card">
+        <div className="staff-search-wrap">
+          <Search size={16} className="staff-search-icon" />
+          <input
+            type="text"
+            className="staff-search-input"
+            placeholder="Search by name, employee ID, email, or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <div className="staff-filter-controls">
+          <select
+            className="staff-select-filter"
+            value={selectedRole}
+            onChange={(e) => setSelectedRole(e.target.value)}
+          >
+            <option value="all">All Roles</option>
+            <option value="admin">Admin</option>
+            <option value="sales">Sales</option>
+            <option value="inventory">Inventory</option>
+            <option value="advisory">Advisory</option>
+            <option value="staff">General Staff</option>
+          </select>
+
+          <select
+            className="staff-select-filter"
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+          >
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+
+          <button
+            type="button"
+            className="staff-refresh-btn"
+            onClick={fetchStaffData}
+            disabled={loading}
+            title="Refresh staff directory"
+          >
+            <RefreshCw size={15} className={loading ? 'spin' : ''} />
+            <span>Refresh</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Staff Ledger Table Card ── */}
+      <section className="staff-table-card">
+        <div className="staff-table-wrap">
+          <table className="staff-table">
             <thead>
-              <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Staff ID</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Full Name</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Contact Details</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Assigned Role</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Application Access</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Status</th>
-                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Actions</th>
+              <tr>
+                <th style={{ width: '130px' }}>Staff ID</th>
+                <th>Staff Member</th>
+                <th>Contact Details</th>
+                <th>Assigned Role</th>
+                <th>Application Access</th>
+                <th style={{ width: '110px' }}>Status</th>
+                <th style={{ width: '120px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '14px', fontWeight: 500 }}>
+                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                    <RefreshCw size={20} className="spin" style={{ display: 'block', margin: '0 auto 8px', color: '#1268a5' }} />
                     Loading staff directory...
                   </td>
                 </tr>
               ) : pagedStaff.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '14px', fontWeight: 500 }}>
-                    No staff members found.
+                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b' }}>
+                    <Users size={32} style={{ margin: '0 auto 8px', color: '#94a3b8', display: 'block' }} />
+                    <strong style={{ display: 'block', color: '#334155', fontSize: '15px', marginBottom: '4px' }}>
+                      No staff members found
+                    </strong>
+                    <span style={{ fontSize: '13px' }}>
+                      {searchTerm || selectedRole !== 'all' || selectedStatus !== 'all'
+                        ? 'Try adjusting your search or filters.'
+                        : 'Click "Add Staff Member" above to create your first staff account.'}
+                    </span>
                   </td>
                 </tr>
-              ) : pagedStaff.map((staff) => {
-                const name = staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A';
-                const staffId = staff.id ?? staff.Id ?? staff.employeeId ?? 'N/A';
-                const employeeCode = staff.employeeId || (staffId !== 'N/A' ? `EMP-${String(staffId).padStart(4, '0')}` : 'N/A');
-                const roleName = staff.role || staff.Role ? String(staff.role || staff.Role).toUpperCase() : 'STAFF';
-                const statusStr = staff.status || (staff.isActive ? 'Active' : 'Inactive');
-                const perms = Array.isArray(staff.permissions) ? staff.permissions : [];
+              ) : (
+                pagedStaff.map((staff) => {
+                  const name = staff.name || `${staff.firstName || ''} ${staff.lastName || ''}`.trim() || 'N/A';
+                  const staffId = staff.id ?? staff.Id ?? staff.employeeId ?? 'N/A';
+                  const employeeCode = staff.employeeId || (staffId !== 'N/A' ? `EMP-${String(staffId).padStart(4, '0')}` : 'N/A');
+                  const roleLower = (staff.role || staff.Role || 'staff').toLowerCase();
+                  const roleName = String(staff.role || staff.Role || 'STAFF').toUpperCase();
+                  const statusStr = staff.status || (staff.isActive ? 'Active' : 'Inactive');
+                  const perms = Array.isArray(staff.permissions) ? staff.permissions : [];
 
-                return (
-                  <tr key={staffId} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background-color 0.15s ease' }}>
-                    <td style={{ padding: '14px 16px', fontWeight: 600, color: '#64748b', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                      #{employeeCode}
-                    </td>
-                    <td style={{ padding: '14px 16px', fontWeight: 700, color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap' }}>
-                      {name}
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '12px' }}>
-                          <Mail size={13} style={{ color: '#94a3b8' }} /> {staff.email || '—'}
+                  return (
+                    <tr key={staffId}>
+                      <td>
+                        <span className="staff-id-badge">
+                          #{employeeCode}
                         </span>
-                        {staff.mobile && (
-                          <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#475569', fontSize: '12px' }}>
-                            <Phone size={13} style={{ color: '#94a3b8' }} /> {formatPhoneNumber(staff.mobile)}
+                      </td>
+
+                      <td>
+                        <div className="staff-user-cell">
+                          <div className="staff-avatar-bubble">
+                            {getInitials(name)}
+                          </div>
+                          <div>
+                            <div className="staff-user-name">{name}</div>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>
+                        <div className="staff-contact-stack">
+                          <span className="staff-contact-line">
+                            <Mail size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                            <span>{staff.email || '—'}</span>
                           </span>
-                        )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
-                      <span style={{
-                        display: 'inline-block',
-                        backgroundColor: '#f1f5f9',
-                        color: '#334155',
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        padding: '4px 12px',
-                        borderRadius: '9999px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.03em'
-                      }}>
-                        {roleName}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px' }}>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '280px' }}>
-                        {perms.map(p => (
-                          <span 
-                            key={p} 
-                            style={{ 
-                              fontSize: '11px', 
-                              backgroundColor: '#f3e8ff', 
-                              color: '#7e22ce', 
-                              padding: '2px 8px', 
-                              borderRadius: '6px', 
-                              fontWeight: 600, 
-                              textTransform: 'capitalize',
-                              lineHeight: '1.4'
-                            }}
+                          {staff.mobile && (
+                            <span className="staff-contact-line">
+                              <Phone size={13} style={{ color: '#94a3b8', flexShrink: 0 }} />
+                              <span>{formatPhoneNumber(staff.mobile)}</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td>
+                        <span className={`staff-role-pill ${roleLower}`}>
+                          {roleName}
+                        </span>
+                      </td>
+
+                      <td>
+                        <div className="staff-perms-cluster">
+                          {perms.slice(0, 4).map(p => (
+                            <span key={p} className="staff-perm-pill">
+                              {p}
+                            </span>
+                          ))}
+                          {perms.length > 4 && (
+                            <span className="staff-perm-pill" style={{ backgroundColor: '#e2e8f0', color: '#475569' }}>
+                              +{perms.length - 4} more
+                            </span>
+                          )}
+                          {perms.length === 0 && (
+                            <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                              Basic Access
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      <td>
+                        <span
+                          className={`staff-status-toggle ${staff.isActive ? 'active' : 'inactive'}`}
+                          onClick={() => handleToggleStatus(staffId, name)}
+                          title="Click to toggle active/inactive status"
+                        >
+                          <span className="staff-status-dot" />
+                          {statusStr}
+                        </span>
+                      </td>
+
+                      <td style={{ textAlign: 'center', width: '90px', minWidth: '90px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                          <Link
+                            to={`/admin/staff/add?id=${staffId}`}
+                            title="Edit Staff Member"
+                            className="staff-action-btn edit"
                           >
-                            {p}
-                          </span>
-                        ))}
-                        {perms.length === 0 && <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>No permissions</span>}
-                      </div>
-                    </td>
-                    <td style={{ padding: '14px 16px', whiteSpace: 'nowrap' }}>
-                      <span 
-                        onClick={() => handleToggleStatus(staffId, name)}
-                        style={{
-                          display: 'inline-block',
-                          fontSize: '11px',
-                          padding: '3px 12px',
-                          borderRadius: '9999px',
-                          fontWeight: 700,
-                          backgroundColor: statusStr === 'Active' ? '#dcfce7' : '#fee2e2',
-                          color: statusStr === 'Active' ? '#16a34a' : '#dc2626',
-                          cursor: 'pointer',
-                          transition: 'opacity 0.15s ease'
-                        }}
-                        title="Click to toggle status"
-                      >
-                        {statusStr}
-                      </span>
-                    </td>
-                    <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', alignItems: 'center' }}>
-                        <AnimatedEditButton to={`/admin/staff/add?id=${staffId}`} title="Edit Staff" />
-                        <OutlookDeleteButton onClick={() => handleOpenDeleteModal(staff)} title="Delete Staff" />
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                            <Edit2 size={15} />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDeleteModal(staff)}
+                            title="Delete Staff Member"
+                            className="staff-action-btn delete"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
 
-        <div style={{ marginTop: '16px' }}>
+        <div className="staff-pagination-wrap">
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
-            totalItems={staffList.length}
+            totalItems={filteredStaff.length}
             itemsPerPage={itemsPerPage}
           />
         </div>

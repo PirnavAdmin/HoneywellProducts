@@ -513,6 +513,17 @@ namespace Honeywell.Controllers
             var config = await _context.BankDetailsConfigs.FirstOrDefaultAsync();
             if (config != null)
             {
+                if (config.AccountHolderName.ToLower().Contains("agro") || config.AccountHolderName.ToLower().Contains("shyam") || config.AccountNumber == "123456789012")
+                {
+                    config.AccountHolderName = "Honeywell Products & Solutions Pvt Ltd";
+                    config.BankName = "HDFC Bank";
+                    config.AccountNumber = "50200088991122";
+                    config.IfscCode = "HDFC0000123";
+                    config.Branch = "Cyber City Branch";
+                    config.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
                 return Ok(new
                 {
                     accountHolderName = config.AccountHolderName,
@@ -561,11 +572,11 @@ namespace Honeywell.Controllers
                 _context.BankDetailsConfigs.Add(config);
             }
 
-            if (!string.IsNullOrWhiteSpace(request.IfscCode)) config.IfscCode = request.IfscCode.Trim();
-            if (!string.IsNullOrWhiteSpace(request.BankName)) config.BankName = request.BankName.Trim();
-            if (!string.IsNullOrWhiteSpace(request.Branch)) config.Branch = request.Branch.Trim();
-            if (!string.IsNullOrWhiteSpace(request.AccountNumber)) config.AccountNumber = request.AccountNumber.Trim();
-            if (!string.IsNullOrWhiteSpace(request.AccountHolderName)) config.AccountHolderName = request.AccountHolderName.Trim();
+            if (request.IfscCode != null) config.IfscCode = request.IfscCode.Trim();
+            if (request.BankName != null) config.BankName = request.BankName.Trim();
+            if (request.Branch != null) config.Branch = request.Branch.Trim();
+            if (request.AccountNumber != null) config.AccountNumber = request.AccountNumber.Trim();
+            if (request.AccountHolderName != null) config.AccountHolderName = request.AccountHolderName.Trim();
             config.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -604,6 +615,16 @@ namespace Honeywell.Controllers
             var config = await _context.UpiDetailsConfigs.FirstOrDefaultAsync();
             if (config != null)
             {
+                if (config.MerchantName.ToLower().Contains("agro") || config.MerchantName.ToLower().Contains("shyam") || config.MerchantUpiId.Contains("9398649798"))
+                {
+                    config.MerchantName = "Honeywell Products India";
+                    config.MerchantUpiId = "honeywell@hdfcbank";
+                    config.BankDisplayName = "HDFC Bank - Corporate";
+                    config.Currency = "INR";
+                    config.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
                 return Ok(new
                 {
                     merchantName = config.MerchantName,
@@ -648,10 +669,10 @@ namespace Honeywell.Controllers
                 _context.UpiDetailsConfigs.Add(config);
             }
 
-            if (!string.IsNullOrWhiteSpace(request.MerchantUpiId)) config.MerchantUpiId = request.MerchantUpiId.Trim();
-            if (!string.IsNullOrWhiteSpace(request.MerchantName)) config.MerchantName = request.MerchantName.Trim();
-            if (!string.IsNullOrWhiteSpace(request.BankDisplayName)) config.BankDisplayName = request.BankDisplayName.Trim();
-            if (!string.IsNullOrWhiteSpace(request.Currency)) config.Currency = request.Currency.Trim();
+            if (request.MerchantUpiId != null) config.MerchantUpiId = request.MerchantUpiId.Trim();
+            if (request.MerchantName != null) config.MerchantName = request.MerchantName.Trim();
+            if (request.BankDisplayName != null) config.BankDisplayName = request.BankDisplayName.Trim();
+            if (request.Currency != null) config.Currency = request.Currency.Trim();
             config.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();

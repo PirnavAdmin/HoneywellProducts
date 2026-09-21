@@ -10,7 +10,6 @@ const AdminSubNav = () => {
     { name: 'Payment History', path: '/admin/payments', icon: 'fas fa-history' },
     { name: 'Categories', path: '/admin/categories', icon: 'fas fa-list' },
     { name: 'Product Lists', path: '/admin/products', icon: 'fas fa-box-open' },
-    { name: 'Descriptions', path: '/admin/descriptions', icon: 'fas fa-file-alt' },
     { name: 'Contact Card', path: '/admin/contact-card', icon: 'fas fa-address-card' },
     { name: 'Footer Config', path: '/admin/footer', icon: 'fas fa-shoe-prints' },
   ];

@@ -102,7 +102,7 @@ const BlogsList = () => {
       <section className="catalog-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '24px 28px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #1d4ed8', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', marginBottom: '20px' }}>
         <div className="catalog-title-wrap">
           <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Blog Articles</h1>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Create and manage educational articles, crop tips, and agro news displayed to users.</p>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Create and manage technical articles, surveillance guides, and product news displayed to users.</p>
         </div>
 
         <div className="catalog-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto', flexWrap: 'nowrap' }}>

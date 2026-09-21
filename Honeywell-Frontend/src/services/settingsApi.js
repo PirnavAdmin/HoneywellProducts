@@ -100,13 +100,23 @@ export async function getReturnsConfig() {
   return res.json();
 }
 
-// ── Reports Settings API ──
-export async function updateReportsSettings(data) {
-  const res = await fetch(`${getApiDomain()}/api/Reports/settings`, {
+// ── Description Manager API ──
+export async function getDescriptionManager() {
+  const res = await fetch(`${getApiDomain()}/api/Settings/description-manager`, { headers: getHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch description manager: ${res.status}`);
+  return res.json();
+}
+
+export async function updateDescriptionManager(data) {
+  const res = await fetch(`${getApiDomain()}/api/Settings/description-manager`, {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Failed to update reports settings: ${res.status}`);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.message || errorBody.Message || `Failed to update description templates: ${res.status}`);
+  }
   return res.json().catch(() => ({ success: true }));
 }
+

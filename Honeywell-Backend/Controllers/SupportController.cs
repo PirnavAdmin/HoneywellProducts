@@ -42,16 +42,25 @@ namespace Honeywell.Controllers
             var config = await _context.SupportConfigs.FirstOrDefaultAsync();
             if (config != null)
             {
+                if (config.SupportEmail.ToLower().Contains("shyam") || config.SupportEmail.ToLower().Contains("agro"))
+                {
+                    config.SupportEmail = "support@honeywell.com";
+                    config.UpdatedAt = DateTime.UtcNow;
+                    await _context.SaveChangesAsync();
+                }
+
                 return Ok(new
                 {
                     supportPhoneNumber = config.SupportPhoneNumber,
                     SupportPhoneNumber = config.SupportPhoneNumber,
                     phone = config.SupportPhoneNumber,
+                    Phone = config.SupportPhoneNumber,
                     workTimings = config.WorkTimings,
                     WorkTimings = config.WorkTimings,
                     supportEmail = config.SupportEmail,
                     SupportEmail = config.SupportEmail,
-                    email = config.SupportEmail
+                    email = config.SupportEmail,
+                    Email = config.SupportEmail
                 });
             }
 
@@ -60,11 +69,13 @@ namespace Honeywell.Controllers
                 supportPhoneNumber = "+1 (800) 323-0194",
                 SupportPhoneNumber = "+1 (800) 323-0194",
                 phone = "+1 (800) 323-0194",
+                Phone = "+1 (800) 323-0194",
                 workTimings = "Mon-Sat: 9:00 AM - 6:00 PM",
                 WorkTimings = "Mon-Sat: 9:00 AM - 6:00 PM",
                 supportEmail = "support@honeywell.com",
                 SupportEmail = "support@honeywell.com",
-                email = "support@honeywell.com"
+                email = "support@honeywell.com",
+                Email = "support@honeywell.com"
             });
         }
 
@@ -79,15 +90,9 @@ namespace Honeywell.Controllers
                 return BadRequest(new { Success = false, Message = "Invalid request payload." });
             }
 
-            var phone = !string.IsNullOrWhiteSpace(request.SupportPhoneNumber) ? request.SupportPhoneNumber :
-                        (!string.IsNullOrWhiteSpace(request.Phone) ? request.Phone :
-                        (!string.IsNullOrWhiteSpace(request.SupportPhone) ? request.SupportPhone : ""));
-
-            var timings = !string.IsNullOrWhiteSpace(request.WorkTimings) ? request.WorkTimings :
-                          (!string.IsNullOrWhiteSpace(request.Timings) ? request.Timings : "Mon-Sat: 9:00 AM - 6:00 PM");
-
-            var email = !string.IsNullOrWhiteSpace(request.SupportEmail) ? request.SupportEmail :
-                        (!string.IsNullOrWhiteSpace(request.Email) ? request.Email : "");
+            var phone = request.SupportPhoneNumber ?? request.Phone ?? request.SupportPhone;
+            var timings = request.WorkTimings ?? request.Timings;
+            var email = request.SupportEmail ?? request.Email;
 
             var config = await _context.SupportConfigs.FirstOrDefaultAsync();
             if (config == null)
@@ -96,15 +101,15 @@ namespace Honeywell.Controllers
                 _context.SupportConfigs.Add(config);
             }
 
-            if (!string.IsNullOrWhiteSpace(phone))
+            if (phone != null)
             {
                 config.SupportPhoneNumber = phone.Trim();
             }
-            if (!string.IsNullOrWhiteSpace(timings))
+            if (timings != null)
             {
                 config.WorkTimings = timings.Trim();
             }
-            if (!string.IsNullOrWhiteSpace(email))
+            if (email != null)
             {
                 config.SupportEmail = email.Trim();
             }
@@ -119,10 +124,14 @@ namespace Honeywell.Controllers
                 {
                     supportPhoneNumber = config.SupportPhoneNumber,
                     SupportPhoneNumber = config.SupportPhoneNumber,
+                    phone = config.SupportPhoneNumber,
+                    Phone = config.SupportPhoneNumber,
                     workTimings = config.WorkTimings,
                     WorkTimings = config.WorkTimings,
                     supportEmail = config.SupportEmail,
-                    SupportEmail = config.SupportEmail
+                    SupportEmail = config.SupportEmail,
+                    email = config.SupportEmail,
+                    Email = config.SupportEmail
                 }
             });
         }
@@ -160,7 +169,7 @@ namespace Honeywell.Controllers
             // 3. Check Warranty Keywords
             else if (text.Contains("warranty") || text.Contains("damage") || text.Contains("broken") || text.Contains("repair") || text.Contains("claim") || text.Contains("defect"))
             {
-                reply = "All Shyam Agro tools come with a standard 12-month manufacturer warranty covering technical and manufacturing defects. To file a claim, please submit a clear video/photo of the defect along with your tax invoice receipt to our support ticket system.";
+                reply = "All Honeywell hardware and surveillance equipment come with standard manufacturer warranty covering technical and manufacturing defects. To file a claim, please submit your tax invoice receipt and serial number to our support ticket system.";
                 suggestedLinks.Add(new { title = "Warranty Claim", path = "/support/warranty-claim", code = "WARRANTY_CLAIM" });
             }
             // 4. Check Invoice Keywords
@@ -172,7 +181,7 @@ namespace Honeywell.Controllers
             // 5. Check Greetings
             else if (text.Contains("hello") || text.Contains("hi") || text.Contains("hey") || text.Contains("greeting"))
             {
-                reply = "Hello! I am your Shyam Agro assistant. How can I help you today? You can ask me about order tracking, return policies, warranty claims, or downloading invoices.";
+                reply = "Hello! I am your Honeywell Assistant. How can I help you today? You can ask me about order tracking, technical datasheets, warranty claims, or service requests.";
             }
             // 6. Fallback response
             else
@@ -259,7 +268,7 @@ namespace Honeywell.Controllers
                     </div>
                 </div>
                 <div style='background-color: #f4f4f4; padding: 12px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 6px 6px;'>
-                    Honeywell / Shyam Agro Tools Admin Portal
+                    Honeywell Industrial & Commercial Admin Portal
                 </div>
             </div>";
 
@@ -367,7 +376,7 @@ namespace Honeywell.Controllers
                     </div>
                 </div>
                 <div style='background-color: #f4f4f4; padding: 12px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 6px 6px;'>
-                    Honeywell / Shyam Agro Tools Admin Portal
+                    Honeywell Industrial & Commercial Admin Portal
                 </div>
             </div>";
 

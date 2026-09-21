@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Check, Download, ExternalLink, Minus, Plus, ShoppingCart, Star, ChevronRight, Loader2, AlertCircle, FileText, Cpu, Monitor, HardDrive, Calendar, Layers, ShieldCheck, Truck, RotateCcw, Eye } from 'lucide-react';
+import { ArrowLeft, Check, Download, ExternalLink, Minus, Plus, ShoppingCart, Star, ChevronRight, Loader2, AlertCircle, FileText, Cpu, Monitor, HardDrive, Calendar, Layers, ShieldCheck, Truck, RotateCcw, Eye, Info } from 'lucide-react';
 import { productService } from '../services/productService';
 import { reviewService } from '../services/reviewService';
 import { softwareService } from '../services/softwareService';
+import { getDescriptionManager } from '../services/settingsApi';
 import { generateProductPdf } from '../utils/pdfGenerator';
 import ProductCard from '../components/products/ProductCard';
 import { useCart } from '../context/CartContext';
@@ -80,11 +81,20 @@ export function ProductDetailsContent() {
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewMsg, setReviewMsg] = useState('');
 
+  const [descSettings, setDescSettings] = useState(null);
   const [quantity, setQuantity] = useState(1);
   const [tab, setTab] = useState('Overview');
   const [image, setImage] = useState(0);
   const { addItem } = useCart();
   const { openEnquiry, openQuote, notify } = useUI();
+
+  useEffect(() => {
+    getDescriptionManager()
+      .then((data) => {
+        if (data) setDescSettings(data);
+      })
+      .catch((err) => console.warn('Could not load description settings:', err));
+  }, []);
 
   useDocumentTitle(safeString(product?.name, 'Product Details'), safeString(product?.description, 'Product details page'));
 
@@ -423,7 +433,18 @@ export function ProductDetailsContent() {
             })}
           </div>
           <div className="tab-content">
-            {tab === 'Overview' && <div><h2>Product Overview</h2><p>{product.description || product.productDetails || product.shortDescription || 'Complete technical details for this product model.'}</p></div>}
+            {tab === 'Overview' && (
+              <div>
+                <h2>Product Overview</h2>
+                <p>{product.description || product.productDetails || product.shortDescription || descSettings?.defaultProductOverview || 'High-performance Honeywell solution engineered for mission-critical industrial reliability and seamless system integration.'}</p>
+                {descSettings?.warrantyTerms && (
+                  <div style={{ marginTop: '20px', padding: '14px 18px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <ShieldCheck size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+                    <span style={{ fontSize: '13.5px', color: '#166534' }}><strong>Warranty & Service:</strong> {descSettings.warrantyTerms}</span>
+                  </div>
+                )}
+              </div>
+            )}
             {tab === 'Features' && <div><h2>Features & Capabilities</h2><ul className="feature-list large">{highlights.map((item) => <li key={item}><Check /> {item}</li>)}</ul></div>}
             {tab === 'Specifications' && (
               <div>
@@ -454,8 +475,31 @@ export function ProductDetailsContent() {
                       );
                     })}
                   </dl>
+                ) : descSettings?.technicalSpecsTemplate ? (
+                  <dl>
+                    {descSettings.technicalSpecsTemplate.split('\n').filter(Boolean).map((line, idx) => {
+                      const colonIdx = line.indexOf(':');
+                      const key = colonIdx > 0 ? line.slice(0, colonIdx).trim() : `Spec ${idx + 1}`;
+                      const val = colonIdx > 0 ? line.slice(colonIdx + 1).trim() : line.trim();
+                      return (
+                        <div key={`template-${idx}`}>
+                          <dt>{key}</dt>
+                          <dd>{val || 'Standard'}</dd>
+                        </div>
+                      );
+                    })}
+                  </dl>
                 ) : (
                   <p style={{ color: '#64748b', fontStyle: 'italic' }}>Detailed technical specification sheet available upon project request.</p>
+                )}
+
+                {descSettings?.disclaimerText && (
+                  <div style={{ marginTop: '24px', padding: '12px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <Info size={16} style={{ color: '#64748b', marginTop: '2px', flexShrink: 0 }} />
+                    <span style={{ fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+                      {descSettings.disclaimerText}
+                    </span>
+                  </div>
                 )}
               </div>
             )}

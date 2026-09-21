@@ -220,7 +220,7 @@ namespace Honeywell.Controllers
                 Type = "Credit",
                 Source = "WelcomeBonus",
                 Title = "Welcome Bonus",
-                Description = $"{bonus} coins added for joining Shyam Agro Tools",
+                Description = $"{bonus} coins added for joining Honeywell Products & Solutions",
                 Coins = bonus,
                 OrderId = null,
                 CreatedDate = DateTime.UtcNow,

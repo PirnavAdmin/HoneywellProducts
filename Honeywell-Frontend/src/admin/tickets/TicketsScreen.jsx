@@ -589,7 +589,7 @@ const TicketsScreen = () => {
                           {selectedTicket.chatHistory.map((chat, idx) => (
                             <div key={idx} className={`transcript-bubble-wrapper ${chat.sender}`}>
                               <span className="bubble-sender-label">
-                                {chat.sender === 'bot' ? 'Agro Bot' : 'Customer'}
+                                {chat.sender === 'bot' ? 'Honeywell Bot' : 'Customer'}
                               </span>
                               <div className="transcript-bubble">
                                 {chat.text}

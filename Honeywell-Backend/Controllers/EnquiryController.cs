@@ -114,7 +114,7 @@ namespace Honeywell.Controllers
                     </div>
                 </div>
                 <div style='background-color: #f4f4f4; padding: 12px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 6px 6px;'>
-                    Honeywell / Shyam Agro Tools Admin Portal
+                    Honeywell Industrial & Commercial Admin Portal
                 </div>
             </div>";
 
@@ -218,7 +218,7 @@ namespace Honeywell.Controllers
                     </div>
                 </div>
                 <div style='background-color: #f4f4f4; padding: 12px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 6px 6px;'>
-                    Honeywell / Shyam Agro Tools Admin Portal
+                    Honeywell Industrial & Commercial Admin Portal
                 </div>
             </div>";
 
@@ -298,7 +298,7 @@ namespace Honeywell.Controllers
                     </table>
                 </div>
                 <div style='background-color: #f4f4f4; padding: 12px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 6px 6px;'>
-                    Honeywell / Shyam Agro Tools Admin Portal
+                    Honeywell Industrial & Commercial Admin Portal
                 </div>
             </div>";
 

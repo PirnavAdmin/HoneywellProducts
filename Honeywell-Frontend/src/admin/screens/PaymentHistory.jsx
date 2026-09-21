@@ -74,7 +74,7 @@ const PaymentHistory = () => {
   });
   const [upiId, setUpiId] = useState('');
   const [originalUpiDetails, setOriginalUpiDetails] = useState({});
-  const [notificationsEnabled, setNotificationsEnabled] = useState(() => (localStorage.getItem('honeywell_payment_notifications') || localStorage.getItem('shyam_agro_payment_notifications')) !== 'false');
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => localStorage.getItem('honeywell_payment_notifications') !== 'false');
   
   // Feedback Messages
   const [saveStatus, setSaveStatus] = useState({ type: '', message: '' });

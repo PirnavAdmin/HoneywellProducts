@@ -23,7 +23,7 @@ namespace Honeywell.Services
 
             message.To.Add(MailboxAddress.Parse(email));
 
-            message.Subject = "Honeywell / Shyam Agro Tools - Admin Login OTP";
+            message.Subject = "Honeywell Admin Portal - Login Verification OTP";
 
             var bodyBuilder = new BodyBuilder();
 
@@ -59,8 +59,9 @@ namespace Honeywell.Services
 
                                         <h1 style='color:#ffffff;
                                                    margin:0;
-                                                   font-size:42px;'>
-                                            HONEYWELL / SHYAM AGRO
+                                                   font-size:42px;
+                                                   letter-spacing:1px;'>
+                                            HONEYWELL
                                         </h1>
 
                                         <p style='color:#ffffff;
@@ -75,7 +76,7 @@ namespace Honeywell.Services
                                 <tr>
                                     <td style='padding:40px;'>
 
-                                        <h2 style='color:#2E7D32;
+                                        <h2 style='color:#00529B;
                                                    text-align:center;'>
                                             Admin Login Verification
                                         </h2>
@@ -87,8 +88,7 @@ namespace Honeywell.Services
 
                                         <p style='font-size:18px;
                                                   color:#333;'>
-                                            Your OTP for Admin login to
-                                            <b>Shyam Agro Tools</b> is:
+                                            Your OTP for Honeywell Admin Portal login is:
                                         </p>
 
                                         <!-- OTP Box -->
@@ -99,13 +99,13 @@ namespace Honeywell.Services
                                                 <td align='center'
                                                     style='padding:30px 0;'>
 
-                                                    <div style='background:#F1F8E9;
-                                                                border:2px dashed #4CAF50;
+                                                    <div style='background:#EBF3FB;
+                                                                border:2px dashed #00529B;
                                                                 border-radius:10px;
                                                                 padding:25px;
                                                                 font-size:60px;
                                                                 font-weight:bold;
-                                                                color:#1B5E20;
+                                                                color:#00529B;
                                                                 letter-spacing:10px;'>
 
                                                         {otp}
@@ -119,7 +119,7 @@ namespace Honeywell.Services
                                                   color:#666;
                                                   font-size:16px;'>
 
-                                            ? This OTP is valid for
+                                            ⏳ This OTP is valid for
                                             <b>5 minutes only.</b>
 
                                         </p>
@@ -131,8 +131,8 @@ namespace Honeywell.Services
                                                     margin-top:20px;
                                                     text-align:center;'>
 
-                                            ?? Do not share this OTP with anyone.
-                                            Shyam Agro Tools will never ask for your OTP.
+                                            🔒 Do not share this OTP with anyone.
+                                            Honeywell will never ask for your OTP.
 
                                         </div>
 
@@ -144,7 +144,7 @@ namespace Honeywell.Services
 
                                             Thank you,<br>
 
-                                            <b>Shyam Agro Tools Team</b>
+                                            <b>Honeywell Security & Solutions Team</b>
 
                                         </p>
 
@@ -153,7 +153,7 @@ namespace Honeywell.Services
 
                                 <!-- Footer -->
                                 <tr>
-                                    <td style='background:#2E7D32;
+                                    <td style='background:#00529B;
                                                color:#ffffff;
                                                text-align:center;
                                                padding:20px;'>

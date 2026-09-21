@@ -147,10 +147,10 @@ namespace Honeywell.Controllers
             {
                 return Ok(new
                 {
-                    defaultWarrantyTemplate = "1-Year Manufacturer Warranty included. Terms & Conditions apply.",
-                    defaultReturnPolicyTemplate = "7-Day Easy Returns & Replacements for defective items.",
-                    defaultShippingNotice = "Free shipping on orders above ₹1000 across India.",
-                    disclaimerText = "Specifications are subject to change without prior notice."
+                    defaultProductOverview = "High-performance Honeywell scanning engine designed for intensive POS operations and warehouse barcode verification.",
+                    technicalSpecsTemplate = "Scanning Technology: 2D Imager\nInterface: USB / Bluetooth 5.0\nOperating Temp: -10°C to 50°C\nDrop Specs: 1.8m to concrete",
+                    warrantyTerms = "Includes 3-Year Factory Warranty with optional Honeywell Sentinel Service coverage.",
+                    disclaimerText = "Specifications are subject to change without prior notice. Contact sales for custom firmware configurations."
                 });
             }
 

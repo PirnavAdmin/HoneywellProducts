@@ -7,14 +7,14 @@ import { Toast } from '../components/Toast';
 
 const emptyForm = {
   title:       '',
-  category:    'Agriculture',
+  category:    'CCTV',
   authorName:  'Admin',
   publishDate: '',
   summary:     '',
   description: '',
 };
 
-const CATEGORIES = ['Agriculture', 'Equipment', 'Irrigation', 'Tips & Tricks', 'Agro News', 'General'];
+const CATEGORIES = ['CCTV', 'Solar', 'Electronics', 'Security', 'Technical Guides', 'General'];
 
 const BlogForm = () => {
   const navigate        = useNavigate();
