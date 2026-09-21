@@ -40,8 +40,6 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # local environment
-.env*
-**/.env
 **/.env.local
 **/.env.development.local
 **/.env.production.local
