@@ -268,15 +268,16 @@ const SuppliersList = () => {
         </div>
 
         {/* Data Table */}
-        <div className="catalog-table-wrap" style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
-          <table className="catalog-table suppliers-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="catalog-table-wrap" style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflowX: 'auto', width: '100%' }}>
+          <table className="catalog-table" style={{ width: '100%', minWidth: '860px', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
-                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Supplier</th>
-                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Contact</th>
-                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lead Time</th>
-                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</th>
-                <th style={{ padding: '10px 14px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>Action</th>
+                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Supplier</th>
+                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Contact Details</th>
+                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Category</th>
+                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lead Time</th>
+                <th style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Status</th>
+                <th className="catalog-center-cell" style={{ padding: '12px 16px', fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -288,14 +289,16 @@ const SuppliersList = () => {
                   onMouseOver={(e) => (e.currentTarget.style.background = '#f8fafc')}
                   onMouseOut={(e) => (e.currentTarget.style.background = '#ffffff')}
                 >
-                  <td style={{ padding: '10px 14px' }}>
+                  <td style={{ padding: '12px 16px' }}>
                     <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>{supplier.name}</div>
-                    <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '1px' }}>Rating {supplier.rating || '4.5'}/5</div>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                      {supplier.city ? `${supplier.city} • ` : ''}Rating {supplier.rating || '4.5'}/5
+                    </div>
                   </td>
-                  <td style={{ padding: '10px 14px' }}>
+                  <td style={{ padding: '12px 16px' }}>
                     <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>{supplier.contactPerson || supplier.name}</div>
                     {supplier.phone && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748b', marginTop: '1px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                         <Phone size={11} />
                         {supplier.phone}
                       </div>
@@ -307,17 +310,26 @@ const SuppliersList = () => {
                       </div>
                     )}
                   </td>
-                  <td style={{ padding: '10px 14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11.5px', color: '#334155' }}>
+                  <td style={{ padding: '12px 16px' }}>
+                    {supplier.category ? (
+                      <span className="catalog-badge" style={{ fontSize: '11px' }}>
+                        {supplier.category}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '12px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', color: '#334155' }}>
                       <Truck size={13} style={{ color: '#64748b' }} />
                       {supplier.leadTime || '4-6 days'}
                     </div>
                   </td>
-                  <td style={{ padding: '10px 14px' }}>
+                  <td style={{ padding: '12px 16px' }}>
                     <SupplierStatusBadge status={supplier.status} />
                   </td>
-                  <td style={{ padding: '10px 14px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                    <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', alignItems: 'center' }}>
+                  <td className="catalog-center-cell" style={{ padding: '12px 16px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                    <div className="catalog-inline-actions" style={{ display: 'flex', gap: '10px', justifyContent: 'center', alignItems: 'center' }}>
                       <AnimatedViewButton
                         onClick={() => setActivePopupSupplier(supplier)}
                         title="View supplier snapshot"
@@ -337,7 +349,7 @@ const SuppliersList = () => {
 
               {!filteredSuppliers.length && (
                 <tr>
-                  <td colSpan="5" style={{ padding: '32px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
+                  <td colSpan="6" style={{ padding: '32px', textAlign: 'center', color: '#64748b', fontSize: '12px' }}>
                     No suppliers match the current search or filters.
                   </td>
                 </tr>
