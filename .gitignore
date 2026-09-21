@@ -9,8 +9,12 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# testing and local caches
+/coverage/
+**/coverage/
+**/.cache/
+**/.vite/
+**/TestResults/
 
 # next.js & vite & build outputs
 /.next/
@@ -47,10 +51,14 @@ yarn-error.log*
 # deployment and generated files
 .vercel
 next-env.d.ts
+docker-data/
+**/.openai/
 
 # BACKEND - .NET
 **/bin/
 **/obj/
+**/publish/
+Honeywell-Backend/wwwroot/uploads/
 
 # Visual Studio & VS Code
 .vs/
