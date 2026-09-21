@@ -4,8 +4,7 @@
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 USER $APP_UID
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
+EXPOSE 5000
 
 
 # This stage is used to build the service project
@@ -15,7 +14,6 @@ WORKDIR /src
 COPY ["Honeywell.csproj", "."]
 RUN dotnet restore "./Honeywell.csproj"
 COPY . .
-WORKDIR "/src/."
 RUN dotnet build "./Honeywell.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
 # This stage is used to publish the service project to be copied to the final stage

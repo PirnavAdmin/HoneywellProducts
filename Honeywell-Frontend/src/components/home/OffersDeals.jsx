@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Tag, Loader2 } from 'lucide-react';
 import { offersService } from '../../services/offersService';
 import { productService } from '../../services/productService';
+import { getApiDomain } from '../../utils/apiConfig';
 import ProductCard from '../products/ProductCard';
 
 export default function OffersDeals() {
@@ -186,7 +187,7 @@ export default function OffersDeals() {
                 ? '/honeywell-products-logo.png'
                 : (rawImg.startsWith('http') || rawImg.startsWith('data:')
                     ? rawImg
-                    : `https://wildlife-unwieldy-devotee.ngrok-free.dev${rawImg.startsWith('/') ? '' : '/'}${rawImg}`);
+                    : `${getApiDomain()}${rawImg.startsWith('/') ? '' : '/'}${rawImg}`);
 
               const mappedProduct = {
                 id: String(matchedProduct?.id || offer.productId || offer.id || ''),
