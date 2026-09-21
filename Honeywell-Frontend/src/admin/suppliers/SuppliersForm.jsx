@@ -19,7 +19,7 @@ import { fetchSupplier, createSupplier, updateSupplier } from './suppliersApi';
 const initialSupplier = {
   name: '',
   contactPerson: '',
-  category: supplierCategories[0],
+  category: '',
   status: 'Pending',
   email: '',
   phone: '',
@@ -261,6 +261,7 @@ const SuppliersForm = () => {
                   onChange={handleChange}
                   style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', cursor: 'pointer', boxSizing: 'border-box' }}
                 >
+                  <option value="">Select category</option>
                   {supplierCategories.map((category) => (
                     <option value={category} key={category}>{category}</option>
                   ))}
@@ -469,7 +470,7 @@ const SuppliersForm = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <ShieldCheck size={15} style={{ color: '#10b981', flexShrink: 0 }} />
-                <span style={{ fontWeight: 600 }}>{supplier.status || 'Pending'} | {supplier.category || 'Farm Tools'}</span>
+                <span style={{ fontWeight: 600 }}>{supplier.status || 'Pending'} | {supplier.category || 'Select category'}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Phone size={15} style={{ color: '#10b981', flexShrink: 0 }} />

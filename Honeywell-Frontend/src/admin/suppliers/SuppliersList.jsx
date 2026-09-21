@@ -21,12 +21,10 @@ import SuppliersPopup from './SuppliersPopup';
 import { fetchSuppliers, deleteSupplier } from './suppliersApi';
 
 export const supplierCategories = [
-  'Farm Tools',
-  'Irrigation',
-  'Machinery',
-  'Seeds & Inputs',
-  'Safety Gear',
-  'Packaging'
+  'CCTV',
+  'Solar',
+  'Electrical',
+  'Electronics'
 ];
 
 export const suppliers = [];

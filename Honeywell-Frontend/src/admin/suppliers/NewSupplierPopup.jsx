@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Mail, Phone, MapPin, Shield, Calendar, Building, FileText, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
 const formatPhoneNumber = (phone) => {
@@ -13,17 +14,26 @@ const formatPhoneNumber = (phone) => {
 const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
   if (!registration) return null;
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const categoryLabels = {
-    tools: 'Hand Tools',
-    agri: 'Agri Equipment',
-    power: 'Power Tools'
+    cctv: 'CCTV',
+    solar: 'Solar',
+    electrical: 'Electrical',
+    electronics: 'Electronics'
   };
 
-  const getCategoryLabel = (cat) => categoryLabels[cat] || cat || 'Unassigned';
+  const getCategoryLabel = (cat) => categoryLabels[String(cat || '').toLowerCase()] || cat || 'General Supplier';
 
   const getStatusBadge = (status) => {
     const s = String(status || '').toLowerCase();
-    if (s === 'approved' || s === 'verified') {
+    if (s === 'approved' || s === 'verified' || s === 'active') {
       return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '3px 8px', borderRadius: '9999px', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0' }}>
           <CheckCircle2 size={11} /> Approved
@@ -44,7 +54,7 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
     );
   };
 
-  return (
+  const modalContent = (
     <div 
       onClick={onClose}
       style={{
@@ -53,13 +63,15 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         left: 0,
         right: 0,
         bottom: 0,
+        width: '100vw',
+        height: '100vh',
         backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(5px)',
-        zIndex: 99999,
+        zIndex: 999999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '32px 20px',
+        padding: '24px 16px',
         overflowY: 'auto',
         boxSizing: 'border-box'
       }}
@@ -68,18 +80,19 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: '#ffffff',
-          borderRadius: '16px',
-          maxWidth: '680px',
+          borderRadius: '14px',
+          maxWidth: '640px',
           width: '100%',
-          padding: '24px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          padding: '18px 22px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(0,0,0,0.05)',
           border: '1px solid #e2e8f0',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column',
-          gap: '16px',
+          gap: '12px',
           margin: 'auto',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          overflow: 'hidden'
         }}
       >
         {/* Modal Top Row: Header & Close Button */}
@@ -347,6 +360,8 @@ const NewSupplierPopup = ({ registration, onClose, onStatusChange }) => {
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 };
 
 export default NewSupplierPopup;

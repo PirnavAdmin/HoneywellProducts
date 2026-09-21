@@ -26,7 +26,10 @@ export async function updateBankDetails(data) {
     headers: getHeaders(),
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Failed to update bank details: ${res.status}`);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.message || errorBody.Message || `Failed to update bank details: ${res.status}`);
+  }
   return res.json().catch(() => ({ success: true }));
 }
 
@@ -43,7 +46,10 @@ export async function updateUpiDetails(data) {
     headers: getHeaders(),
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Failed to update UPI details: ${res.status}`);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.message || errorBody.Message || `Failed to update UPI details: ${res.status}`);
+  }
   return res.json().catch(() => ({ success: true }));
 }
 
@@ -60,7 +66,10 @@ export async function updateQrConfig(data) {
     headers: getHeaders(),
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Failed to update QR config: ${res.status}`);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.message || errorBody.Message || `Failed to update QR config: ${res.status}`);
+  }
   return res.json().catch(() => ({ success: true }));
 }
 
@@ -77,7 +86,10 @@ export async function updateSupportConfig(data) {
     headers: getHeaders(),
     body: JSON.stringify(data),
   });
-  if (!res.ok) throw new Error(`Failed to update support config: ${res.status}`);
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.message || errorBody.Message || `Failed to update support config: ${res.status}`);
+  }
   return res.json().catch(() => ({ success: true }));
 }
 

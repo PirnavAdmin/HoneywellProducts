@@ -111,22 +111,34 @@ export const fetchSupplier = async (id) => {
 
 // POST /api/Suppliers
 export const createSupplier = async (supplierData) => {
+  const category = supplierData.category || supplierData.productCategory || '';
+  const terms = supplierData.paymentTerms || supplierData.commercialTerms || supplierData.terms || 'Net 15';
+  const phone = supplierData.phone || supplierData.mobile || '';
+
   const payload = {
     name: supplierData.name || supplierData.businessName || '',
+    businessName: supplierData.name || supplierData.businessName || '',
     contactPerson: supplierData.contactPerson || '',
-    productCategory: supplierData.category || supplierData.productCategory || '',
+    category: category,
+    productCategory: category,
     status: supplierData.status || 'Pending',
     email: supplierData.email || '',
-    phone: supplierData.phone || supplierData.mobile || '',
+    phone: phone,
+    mobile: phone,
+    mobileNumber: phone,
     city: supplierData.city || '',
     address: supplierData.address || '',
     gstin: supplierData.gstin || '',
     leadTime: supplierData.leadTime || '4-6 days',
-    commercialTerms: supplierData.paymentTerms || supplierData.terms || 'Net 15',
+    commercialTerms: terms,
+    paymentTerms: terms,
     productLines: supplierData.productLines || supplierData.products || '',
+    products: supplierData.productLines || supplierData.products || '',
     performanceRating: Number(supplierData.rating ?? 4.5),
+    rating: Number(supplierData.rating ?? 4.5),
     activePo: Number(supplierData.activePo ?? 0),
-    monthlySpend: Number(supplierData.monthlySpend ?? 0)
+    monthlySpend: Number(supplierData.monthlySpend ?? 0),
+    isActive: supplierData.isActive !== false
   };
   
   const response = await api.post('/api/Suppliers', payload);
@@ -135,23 +147,35 @@ export const createSupplier = async (supplierData) => {
 
 // PUT /api/Suppliers/{id}
 export const updateSupplier = async (id, supplierData) => {
+  const category = supplierData.category || supplierData.productCategory || '';
+  const terms = supplierData.paymentTerms || supplierData.commercialTerms || supplierData.terms || 'Net 15';
+  const phone = supplierData.phone || supplierData.mobile || '';
+
   const payload = {
     id: parseInt(id, 10) || id,
     name: supplierData.name || supplierData.businessName || '',
+    businessName: supplierData.name || supplierData.businessName || '',
     contactPerson: supplierData.contactPerson || '',
-    productCategory: supplierData.category || supplierData.productCategory || '',
+    category: category,
+    productCategory: category,
     status: supplierData.status || 'Pending',
     email: supplierData.email || '',
-    phone: supplierData.phone || supplierData.mobile || '',
+    phone: phone,
+    mobile: phone,
+    mobileNumber: phone,
     city: supplierData.city || '',
     address: supplierData.address || '',
     gstin: supplierData.gstin || '',
     leadTime: supplierData.leadTime || '4-6 days',
-    commercialTerms: supplierData.paymentTerms || supplierData.terms || 'Net 15',
+    commercialTerms: terms,
+    paymentTerms: terms,
     productLines: supplierData.productLines || supplierData.products || '',
+    products: supplierData.productLines || supplierData.products || '',
     performanceRating: Number(supplierData.rating ?? 4.5),
+    rating: Number(supplierData.rating ?? 4.5),
     activePo: Number(supplierData.activePo ?? 0),
-    monthlySpend: Number(supplierData.monthlySpend ?? 0)
+    monthlySpend: Number(supplierData.monthlySpend ?? 0),
+    isActive: supplierData.isActive !== false
   };
 
   const response = await api.put(`/api/Suppliers/${id}`, payload);

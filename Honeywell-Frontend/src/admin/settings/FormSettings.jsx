@@ -17,39 +17,59 @@ const FormSettings = () => {
 
   // Bank & UPI State
   const [bankData, setBankData] = useState({
-    accountHolderName: '',
-    bankName: '',
-    accountNumber: '',
-    ifscCode: '',
-    branch: ''
+    accountHolderName: 'Honeywell Products & Solutions Pvt Ltd',
+    bankName: 'HDFC Bank',
+    accountNumber: '50200088991122',
+    ifscCode: 'HDFC0000123',
+    branch: 'Cyber City Branch'
   });
 
   const [upiData, setUpiData] = useState({
-    merchantName: '',
-    merchantUpiId: '',
-    bankDisplayName: '',
+    merchantName: 'Honeywell Products India',
+    merchantUpiId: 'honeywell@hdfcbank',
+    bankDisplayName: 'HDFC Bank - Corporate',
     currency: 'INR'
   });
 
   // Support State
   const [supportData, setSupportData] = useState({
-    supportPhoneNumber: '',
-    workTimings: '',
-    supportEmail: ''
+    supportPhoneNumber: '+1 (800) 323-0194',
+    workTimings: 'Mon-Sat: 9:00 AM - 6:00 PM',
+    supportEmail: 'support@honeywell.com'
   });
 
   // Returns Policy Window
   const [returnsWindow, setReturnsWindow] = useState(7);
 
-  // System Preference State
-  const [systemPrefs, setSystemPrefs] = useState({
-    shippingFlat: '250',
-    seedsGst: '5',
-    machineryGst: '12',
-    minAdvisoryLevel: 'Active Grower',
-    allowCreditTerms: true,
-    farmerVerification: 'Auto-Verify'
-  });
+  const sanitizeBankDetails = (data) => {
+    if (!data) return {};
+    return {
+      accountHolderName: data.accountHolderName ?? data.AccountHolderName ?? 'Honeywell Products & Solutions Pvt Ltd',
+      bankName: data.bankName ?? data.BankName ?? 'HDFC Bank',
+      accountNumber: data.accountNumber ?? data.AccountNumber ?? '50200088991122',
+      ifscCode: data.ifscCode ?? data.IfscCode ?? 'HDFC0000123',
+      branch: data.branch ?? data.Branch ?? 'Cyber City Branch'
+    };
+  };
+
+  const sanitizeUpiDetails = (data) => {
+    if (!data) return {};
+    return {
+      merchantName: data.merchantName ?? data.MerchantName ?? 'Honeywell Products India',
+      merchantUpiId: data.merchantUpiId ?? data.MerchantUpiId ?? 'honeywell@hdfcbank',
+      bankDisplayName: data.bankDisplayName ?? data.BankDisplayName ?? 'HDFC Bank - Corporate',
+      currency: data.currency ?? data.Currency ?? 'INR'
+    };
+  };
+
+  const sanitizeSupportDetails = (data) => {
+    if (!data) return {};
+    return {
+      supportPhoneNumber: data.supportPhoneNumber ?? data.SupportPhoneNumber ?? data.phone ?? '+1 (800) 323-0194',
+      supportEmail: data.supportEmail ?? data.SupportEmail ?? data.email ?? 'support@honeywell.com',
+      workTimings: data.workTimings ?? data.WorkTimings ?? data.timings ?? 'Mon-Sat: 9:00 AM - 6:00 PM'
+    };
+  };
 
   // Load configuration from APIs on mount
   useEffect(() => {
@@ -65,13 +85,13 @@ const FormSettings = () => {
         ]);
 
         if (bankRes.status === 'fulfilled' && bankRes.value) {
-          setBankData(prev => ({ ...prev, ...bankRes.value }));
+          setBankData(prev => ({ ...prev, ...sanitizeBankDetails(bankRes.value) }));
         }
         if (upiRes.status === 'fulfilled' && upiRes.value) {
-          setUpiData(prev => ({ ...prev, ...upiRes.value }));
+          setUpiData(prev => ({ ...prev, ...sanitizeUpiDetails(upiRes.value) }));
         }
         if (supportRes.status === 'fulfilled' && supportRes.value) {
-          setSupportData(prev => ({ ...prev, ...supportRes.value }));
+          setSupportData(prev => ({ ...prev, ...sanitizeSupportDetails(supportRes.value) }));
         }
         if (returnsRes.status === 'fulfilled' && returnsRes.value) {
           setReturnsWindow(returnsRes.value.returnWindowDays ?? 7);
@@ -101,24 +121,44 @@ const FormSettings = () => {
     setSupportData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handlePrefsChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setSystemPrefs(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-  };
-
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     setSaving(true);
     setError('');
 
     try {
+      const bankPayload = {
+        ...bankData,
+        AccountHolderName: bankData.accountHolderName,
+        BankName: bankData.bankName,
+        AccountNumber: bankData.accountNumber,
+        IfscCode: bankData.ifscCode,
+        Branch: bankData.branch
+      };
+
+      const upiPayload = {
+        ...upiData,
+        MerchantName: upiData.merchantName,
+        MerchantUpiId: upiData.merchantUpiId,
+        BankDisplayName: upiData.bankDisplayName,
+        Currency: upiData.currency || 'INR'
+      };
+
+      const supportPayload = {
+        ...supportData,
+        SupportPhoneNumber: supportData.supportPhoneNumber,
+        Phone: supportData.supportPhoneNumber,
+        SupportPhone: supportData.supportPhoneNumber,
+        SupportEmail: supportData.supportEmail,
+        Email: supportData.supportEmail,
+        WorkTimings: supportData.workTimings,
+        Timings: supportData.workTimings
+      };
+
       await Promise.all([
-        updateBankDetails(bankData).catch(err => console.warn('Bank save error:', err)),
-        updateUpiDetails(upiData).catch(err => console.warn('UPI save error:', err)),
-        updateSupportConfig(supportData).catch(err => console.warn('Support save error:', err))
+        updateBankDetails(bankPayload),
+        updateUpiDetails(upiPayload),
+        updateSupportConfig(supportPayload)
       ]);
 
       setIsSaved(true);

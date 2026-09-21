@@ -103,9 +103,9 @@ namespace Honeywell.Controllers
 
             // Retrieve UPI Details from DB or Fallback
             var upiConfig = await _context.UpiDetailsConfigs.FirstOrDefaultAsync();
-            string merchantUpi = upiConfig?.MerchantUpiId ?? "9177758571@ybl";
-            string merchantName = upiConfig?.MerchantName ?? "Shyam Agro Tools";
-            string bankDisplayName = upiConfig?.BankDisplayName ?? "Andhra Bank - 0863";
+            string merchantUpi = upiConfig?.MerchantUpiId ?? "honeywell@hdfcbank";
+            string merchantName = upiConfig?.MerchantName ?? "Honeywell Products India";
+            string bankDisplayName = upiConfig?.BankDisplayName ?? "HDFC Bank - Corporate";
             string currency = upiConfig?.Currency ?? "INR";
 
             string note = "Order Payment";
@@ -460,10 +460,10 @@ namespace Honeywell.Controllers
 
             string transactionId = orderSuccess?.TransactionId ?? ("TXN" + DateTime.UtcNow.ToString("yyyyMMdd") + new Random().Next(100000, 999999).ToString());
 
-            // Retrieve VPA Details from DB or Fallback (fallback VPA: 9177758571@ybl)
+            // Retrieve VPA Details from DB or Fallback (fallback VPA: honeywell@hdfcbank)
             var upiConfig = await _context.UpiDetailsConfigs.FirstOrDefaultAsync();
-            string merchantUpi = upiConfig?.MerchantUpiId ?? "9177758571@ybl";
-            string merchantName = upiConfig?.MerchantName ?? "Shyam Agro Tools";
+            string merchantUpi = upiConfig?.MerchantUpiId ?? "honeywell@hdfcbank";
+            string merchantName = upiConfig?.MerchantName ?? "Honeywell Products India";
             string currency = upiConfig?.Currency ?? "INR";
             string note = "Order Payment";
             
@@ -497,6 +497,15 @@ namespace Honeywell.Controllers
             });
         }
 
+        public class BankDetailsRequestDto
+        {
+            public string? AccountHolderName { get; set; }
+            public string? BankName { get; set; }
+            public string? AccountNumber { get; set; }
+            public string? IfscCode { get; set; }
+            public string? Branch { get; set; }
+        }
+
         // GET: api/Payment/bank-details
         [HttpGet("bank-details")]
         public async Task<IActionResult> GetBankDetails()
@@ -507,32 +516,42 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     accountHolderName = config.AccountHolderName,
+                    AccountHolderName = config.AccountHolderName,
                     bankName = config.BankName,
+                    BankName = config.BankName,
                     accountNumber = config.AccountNumber,
+                    AccountNumber = config.AccountNumber,
                     ifscCode = config.IfscCode,
-                    branch = config.Branch
+                    IfscCode = config.IfscCode,
+                    branch = config.Branch,
+                    Branch = config.Branch
                 });
             }
 
             return Ok(new
             {
-                accountHolderName = "Agro Store Payments",
+                accountHolderName = "Honeywell Products & Solutions Pvt Ltd",
+                AccountHolderName = "Honeywell Products & Solutions Pvt Ltd",
                 bankName = "HDFC Bank",
-                accountNumber = "123456789012",
-                ifscCode = "HDFC0001234",
-                branch = "Main Branch"
+                BankName = "HDFC Bank",
+                accountNumber = "50200088991122",
+                AccountNumber = "50200088991122",
+                ifscCode = "HDFC0000123",
+                IfscCode = "HDFC0000123",
+                branch = "Cyber City Branch",
+                Branch = "Cyber City Branch"
             });
         }
 
         // PUT: api/Payment/bank-details
+        // POST: api/Payment/bank-details
         [HttpPut("bank-details")]
-        public async Task<IActionResult> UpdateBankDetails([FromBody] BankDetailsConfig request)
+        [HttpPost("bank-details")]
+        public async Task<IActionResult> UpdateBankDetails([FromBody] BankDetailsRequestDto request)
         {
-            if (string.IsNullOrEmpty(request.IfscCode) || string.IsNullOrEmpty(request.BankName) || 
-                string.IsNullOrEmpty(request.Branch) || string.IsNullOrEmpty(request.AccountNumber) || 
-                string.IsNullOrEmpty(request.AccountHolderName))
+            if (request == null)
             {
-                return BadRequest(new { Success = false, Message = "All fields (IfscCode, BankName, Branch, AccountNumber, AccountHolderName) are required." });
+                return BadRequest(new { Success = false, Message = "Request payload is required." });
             }
 
             var config = await _context.BankDetailsConfigs.FirstOrDefaultAsync();
@@ -542,15 +561,40 @@ namespace Honeywell.Controllers
                 _context.BankDetailsConfigs.Add(config);
             }
 
-            config.IfscCode = request.IfscCode;
-            config.BankName = request.BankName;
-            config.Branch = request.Branch;
-            config.AccountNumber = request.AccountNumber;
-            config.AccountHolderName = request.AccountHolderName;
+            if (!string.IsNullOrWhiteSpace(request.IfscCode)) config.IfscCode = request.IfscCode.Trim();
+            if (!string.IsNullOrWhiteSpace(request.BankName)) config.BankName = request.BankName.Trim();
+            if (!string.IsNullOrWhiteSpace(request.Branch)) config.Branch = request.Branch.Trim();
+            if (!string.IsNullOrWhiteSpace(request.AccountNumber)) config.AccountNumber = request.AccountNumber.Trim();
+            if (!string.IsNullOrWhiteSpace(request.AccountHolderName)) config.AccountHolderName = request.AccountHolderName.Trim();
             config.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return Ok(new { Success = true, Message = "Bank details updated successfully.", Data = config });
+            return Ok(new
+            {
+                Success = true,
+                Message = "Bank details updated successfully.",
+                Data = new
+                {
+                    accountHolderName = config.AccountHolderName,
+                    AccountHolderName = config.AccountHolderName,
+                    bankName = config.BankName,
+                    BankName = config.BankName,
+                    accountNumber = config.AccountNumber,
+                    AccountNumber = config.AccountNumber,
+                    ifscCode = config.IfscCode,
+                    IfscCode = config.IfscCode,
+                    branch = config.Branch,
+                    Branch = config.Branch
+                }
+            });
+        }
+
+        public class UpiDetailsRequestDto
+        {
+            public string? MerchantName { get; set; }
+            public string? MerchantUpiId { get; set; }
+            public string? BankDisplayName { get; set; }
+            public string? Currency { get; set; }
         }
 
         // GET: api/Payment/upi-details
@@ -563,29 +607,38 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     merchantName = config.MerchantName,
+                    MerchantName = config.MerchantName,
                     merchantUpiId = config.MerchantUpiId,
+                    MerchantUpiId = config.MerchantUpiId,
                     bankDisplayName = config.BankDisplayName,
-                    currency = config.Currency
+                    BankDisplayName = config.BankDisplayName,
+                    currency = config.Currency,
+                    Currency = config.Currency
                 });
             }
 
             return Ok(new
             {
-                merchantName = "Shyam Agro Tools",
-                merchantUpiId = "9398649798@ybl",
-                bankDisplayName = "Andhra Bank - 0863",
-                currency = "INR"
+                merchantName = "Honeywell Products India",
+                MerchantName = "Honeywell Products India",
+                merchantUpiId = "honeywell@hdfcbank",
+                MerchantUpiId = "honeywell@hdfcbank",
+                bankDisplayName = "HDFC Bank - Corporate",
+                BankDisplayName = "HDFC Bank - Corporate",
+                currency = "INR",
+                Currency = "INR"
             });
         }
 
         // PUT: api/Payment/upi-details
+        // POST: api/Payment/upi-details
         [HttpPut("upi-details")]
-        public async Task<IActionResult> UpdateUpiDetails([FromBody] UpiDetailsConfig request)
+        [HttpPost("upi-details")]
+        public async Task<IActionResult> UpdateUpiDetails([FromBody] UpiDetailsRequestDto request)
         {
-            if (string.IsNullOrEmpty(request.MerchantUpiId) || string.IsNullOrEmpty(request.MerchantName) || 
-                string.IsNullOrEmpty(request.BankDisplayName))
+            if (request == null)
             {
-                return BadRequest(new { Success = false, Message = "MerchantUpiId, MerchantName, and BankDisplayName are required." });
+                return BadRequest(new { Success = false, Message = "Request payload is required." });
             }
 
             var config = await _context.UpiDetailsConfigs.FirstOrDefaultAsync();
@@ -595,14 +648,29 @@ namespace Honeywell.Controllers
                 _context.UpiDetailsConfigs.Add(config);
             }
 
-            config.MerchantUpiId = request.MerchantUpiId;
-            config.MerchantName = request.MerchantName;
-            config.BankDisplayName = request.BankDisplayName;
-            config.Currency = string.IsNullOrEmpty(request.Currency) ? "INR" : request.Currency;
+            if (!string.IsNullOrWhiteSpace(request.MerchantUpiId)) config.MerchantUpiId = request.MerchantUpiId.Trim();
+            if (!string.IsNullOrWhiteSpace(request.MerchantName)) config.MerchantName = request.MerchantName.Trim();
+            if (!string.IsNullOrWhiteSpace(request.BankDisplayName)) config.BankDisplayName = request.BankDisplayName.Trim();
+            if (!string.IsNullOrWhiteSpace(request.Currency)) config.Currency = request.Currency.Trim();
             config.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return Ok(new { Success = true, Message = "UPI details updated successfully.", Data = config });
+            return Ok(new
+            {
+                Success = true,
+                Message = "UPI details updated successfully.",
+                Data = new
+                {
+                    merchantName = config.MerchantName,
+                    MerchantName = config.MerchantName,
+                    merchantUpiId = config.MerchantUpiId,
+                    MerchantUpiId = config.MerchantUpiId,
+                    bankDisplayName = config.BankDisplayName,
+                    BankDisplayName = config.BankDisplayName,
+                    currency = config.Currency,
+                    Currency = config.Currency
+                }
+            });
         }
 
         // GET: api/Payment/qr-config

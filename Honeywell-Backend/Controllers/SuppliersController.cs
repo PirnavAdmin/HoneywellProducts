@@ -189,14 +189,12 @@ namespace Honeywell.Controllers
             supplier.ProductCount = updateData.ProductCount;
             supplier.PerformanceRating = updateData.PerformanceRating;
             supplier.CommercialTerms = updateData.CommercialTerms;
+            supplier.Gstin = updateData.Gstin;
+            supplier.ProductCategory = updateData.ProductCategory;
+            supplier.Status = updateData.Status;
+            supplier.City = updateData.City;
+            supplier.LeadTime = updateData.LeadTime;
             supplier.IsActive = updateData.IsActive;
-
-            // If updated by form, let them sync gstin/category/city/leadtime
-            if (!string.IsNullOrEmpty(updateData.Gstin)) supplier.Gstin = updateData.Gstin;
-            if (!string.IsNullOrEmpty(updateData.ProductCategory)) supplier.ProductCategory = updateData.ProductCategory;
-            if (!string.IsNullOrEmpty(updateData.Status)) supplier.Status = updateData.Status;
-            if (!string.IsNullOrEmpty(updateData.City)) supplier.City = updateData.City;
-            if (!string.IsNullOrEmpty(updateData.LeadTime)) supplier.LeadTime = updateData.LeadTime;
 
             // Notify Admin
             var notification = new Notification

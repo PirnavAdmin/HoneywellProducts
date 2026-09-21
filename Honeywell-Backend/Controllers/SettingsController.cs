@@ -84,8 +84,8 @@ namespace Honeywell.Controllers
             {
                 return Ok(new
                 {
-                    copyrightText = "© 2026 Shyam Agro & Honeywell Solutions. All rights reserved.",
-                    tagline = "Empowering Agriculture and Industrial Security Scanning Solutions",
+                    copyrightText = "© 2026 Honeywell International Inc. All rights reserved.",
+                    tagline = "Smart technology. Stronger protection. Discover security, surveillance and solar solutions.",
                     quickLinks = new[]
                     {
                         new { label = "About Us", url = "/about" },

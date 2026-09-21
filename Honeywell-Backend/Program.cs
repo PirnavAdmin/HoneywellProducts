@@ -594,6 +594,82 @@ using (var scope = app.Services.CreateScope())
                 cmd.ExecuteNonQuery();
             }
 
+            // Auto-seed or update BankDetailsConfigs
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS `BankDetailsConfigs` (
+                    `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `AccountHolderName` VARCHAR(200) NOT NULL,
+                    `BankName` VARCHAR(150) NOT NULL,
+                    `AccountNumber` VARCHAR(100) NOT NULL,
+                    `IfscCode` VARCHAR(50) NOT NULL,
+                    `Branch` VARCHAR(150) NOT NULL,
+                    `UpdatedAt` DATETIME NOT NULL
+                );";
+            cmd.ExecuteNonQuery();
+
+            cmd.CommandText = "SELECT COUNT(*) FROM `BankDetailsConfigs`;";
+            int bankConfigCount = Convert.ToInt32(cmd.ExecuteScalar());
+            if (bankConfigCount == 0)
+            {
+                cmd.CommandText = @"
+                    INSERT INTO `BankDetailsConfigs` (
+                        `AccountHolderName`, `BankName`, `AccountNumber`, `IfscCode`, `Branch`, `UpdatedAt`
+                    ) VALUES (
+                        'Honeywell Products & Solutions Pvt Ltd', 'HDFC Bank', '50200088991122', 'HDFC0000123', 'Cyber City Branch', NOW()
+                    );";
+                cmd.ExecuteNonQuery();
+            }
+            else
+            {
+                cmd.CommandText = @"
+                    UPDATE `BankDetailsConfigs`
+                    SET `AccountHolderName` = 'Honeywell Products & Solutions Pvt Ltd',
+                        `BankName` = 'HDFC Bank',
+                        `AccountNumber` = '50200088991122',
+                        `IfscCode` = 'HDFC0000123',
+                        `Branch` = 'Cyber City Branch',
+                        `UpdatedAt` = NOW()
+                    WHERE LOWER(`AccountHolderName`) LIKE '%agro%' OR LOWER(`AccountHolderName`) LIKE '%shyam%' OR `AccountNumber` = '123456789012';";
+                cmd.ExecuteNonQuery();
+            }
+
+            // Auto-seed or update UpiDetailsConfigs
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS `UpiDetailsConfigs` (
+                    `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `MerchantName` VARCHAR(200) NOT NULL,
+                    `MerchantUpiId` VARCHAR(150) NOT NULL,
+                    `BankDisplayName` VARCHAR(150) NOT NULL,
+                    `Currency` VARCHAR(10) NOT NULL DEFAULT 'INR',
+                    `UpdatedAt` DATETIME NOT NULL
+                );";
+            cmd.ExecuteNonQuery();
+
+            cmd.CommandText = "SELECT COUNT(*) FROM `UpiDetailsConfigs`;";
+            int upiConfigCount = Convert.ToInt32(cmd.ExecuteScalar());
+            if (upiConfigCount == 0)
+            {
+                cmd.CommandText = @"
+                    INSERT INTO `UpiDetailsConfigs` (
+                        `MerchantName`, `MerchantUpiId`, `BankDisplayName`, `Currency`, `UpdatedAt`
+                    ) VALUES (
+                        'Honeywell Products India', 'honeywell@hdfcbank', 'HDFC Bank - Corporate', 'INR', NOW()
+                    );";
+                cmd.ExecuteNonQuery();
+            }
+            else
+            {
+                cmd.CommandText = @"
+                    UPDATE `UpiDetailsConfigs`
+                    SET `MerchantName` = 'Honeywell Products India',
+                        `MerchantUpiId` = 'honeywell@hdfcbank',
+                        `BankDisplayName` = 'HDFC Bank - Corporate',
+                        `Currency` = 'INR',
+                        `UpdatedAt` = NOW()
+                    WHERE LOWER(`MerchantName`) LIKE '%agro%' OR LOWER(`MerchantName`) LIKE '%shyam%' OR `MerchantUpiId` LIKE '%9398649798%' OR `MerchantUpiId` LIKE '%9177758571%';";
+                cmd.ExecuteNonQuery();
+            }
+
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS `SupportTickets` (
                     `Id` INT AUTO_INCREMENT PRIMARY KEY,

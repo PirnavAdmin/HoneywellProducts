@@ -24,6 +24,17 @@ namespace Honeywell.Controllers
             _emailService = emailService;
         }
 
+        public class SupportConfigRequestDto
+        {
+            public string? SupportPhoneNumber { get; set; }
+            public string? Phone { get; set; }
+            public string? SupportPhone { get; set; }
+            public string? WorkTimings { get; set; }
+            public string? Timings { get; set; }
+            public string? SupportEmail { get; set; }
+            public string? Email { get; set; }
+        }
+
         // GET: api/Support/config
         [HttpGet("config")]
         public async Task<IActionResult> GetSupportConfig()
@@ -34,27 +45,49 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     supportPhoneNumber = config.SupportPhoneNumber,
+                    SupportPhoneNumber = config.SupportPhoneNumber,
+                    phone = config.SupportPhoneNumber,
                     workTimings = config.WorkTimings,
-                    supportEmail = config.SupportEmail
+                    WorkTimings = config.WorkTimings,
+                    supportEmail = config.SupportEmail,
+                    SupportEmail = config.SupportEmail,
+                    email = config.SupportEmail
                 });
             }
 
             return Ok(new
             {
-                supportPhoneNumber = "",
-                workTimings = "",
-                supportEmail = ""
+                supportPhoneNumber = "+1 (800) 323-0194",
+                SupportPhoneNumber = "+1 (800) 323-0194",
+                phone = "+1 (800) 323-0194",
+                workTimings = "Mon-Sat: 9:00 AM - 6:00 PM",
+                WorkTimings = "Mon-Sat: 9:00 AM - 6:00 PM",
+                supportEmail = "support@honeywell.com",
+                SupportEmail = "support@honeywell.com",
+                email = "support@honeywell.com"
             });
         }
 
         // PUT: api/Support/config
+        // POST: api/Support/config
         [HttpPut("config")]
-        public async Task<IActionResult> UpdateSupportConfig([FromBody] SupportConfig request)
+        [HttpPost("config")]
+        public async Task<IActionResult> UpdateSupportConfig([FromBody] SupportConfigRequestDto request)
         {
-            if (string.IsNullOrEmpty(request.SupportPhoneNumber) || string.IsNullOrEmpty(request.WorkTimings))
+            if (request == null)
             {
-                return BadRequest(new { Success = false, Message = "SupportPhoneNumber and WorkTimings are required." });
+                return BadRequest(new { Success = false, Message = "Invalid request payload." });
             }
+
+            var phone = !string.IsNullOrWhiteSpace(request.SupportPhoneNumber) ? request.SupportPhoneNumber :
+                        (!string.IsNullOrWhiteSpace(request.Phone) ? request.Phone :
+                        (!string.IsNullOrWhiteSpace(request.SupportPhone) ? request.SupportPhone : ""));
+
+            var timings = !string.IsNullOrWhiteSpace(request.WorkTimings) ? request.WorkTimings :
+                          (!string.IsNullOrWhiteSpace(request.Timings) ? request.Timings : "Mon-Sat: 9:00 AM - 6:00 PM");
+
+            var email = !string.IsNullOrWhiteSpace(request.SupportEmail) ? request.SupportEmail :
+                        (!string.IsNullOrWhiteSpace(request.Email) ? request.Email : "");
 
             var config = await _context.SupportConfigs.FirstOrDefaultAsync();
             if (config == null)
@@ -63,13 +96,35 @@ namespace Honeywell.Controllers
                 _context.SupportConfigs.Add(config);
             }
 
-            config.SupportPhoneNumber = request.SupportPhoneNumber;
-            config.WorkTimings = request.WorkTimings;
-            config.SupportEmail = request.SupportEmail ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(phone))
+            {
+                config.SupportPhoneNumber = phone.Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(timings))
+            {
+                config.WorkTimings = timings.Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                config.SupportEmail = email.Trim();
+            }
             config.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return Ok(new { Success = true, Message = "Support config updated successfully.", Data = config });
+            return Ok(new
+            {
+                Success = true,
+                Message = "Support config updated successfully.",
+                Data = new
+                {
+                    supportPhoneNumber = config.SupportPhoneNumber,
+                    SupportPhoneNumber = config.SupportPhoneNumber,
+                    workTimings = config.WorkTimings,
+                    WorkTimings = config.WorkTimings,
+                    supportEmail = config.SupportEmail,
+                    SupportEmail = config.SupportEmail
+                }
+            });
         }
 
         public class BotChatRequest
