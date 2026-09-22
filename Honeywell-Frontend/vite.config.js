@@ -89,7 +89,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://wildlife-unwieldy-devotee.ngrok-free.dev',
+        target: 'https://honeywellproducts.com',
         changeOrigin: true,
         secure: false,
         headers: {
@@ -97,7 +97,7 @@ export default defineConfig({
         },
       },
       '/uploads': {
-        target: 'https://wildlife-unwieldy-devotee.ngrok-free.dev',
+        target: 'https://honeywellproducts.com',
         changeOrigin: true,
         secure: false,
         headers: {

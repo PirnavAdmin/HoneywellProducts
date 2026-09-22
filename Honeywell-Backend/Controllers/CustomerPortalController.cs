@@ -661,7 +661,7 @@ namespace Honeywell.Controllers
                     price = firstItem.Price,
                     priceFormatted = $"${firstItem.Price:F2}",
                     imageUrl = string.IsNullOrWhiteSpace(firstItem.ImageUrl) 
-                        ? "https://wildlife-unwieldy-devotee.ngrok-free.dev/images/placeholder.png" 
+                        ? "https://honeywellproducts.com/images/placeholder.png" 
                         : firstItem.ImageUrl
                 } : null;
 
@@ -696,7 +696,7 @@ namespace Honeywell.Controllers
                         price = i.Price,
                         subtotal = i.Subtotal,
                         imageUrl = string.IsNullOrWhiteSpace(i.ImageUrl)
-                            ? "https://wildlife-unwieldy-devotee.ngrok-free.dev/images/placeholder.png"
+                            ? "https://honeywellproducts.com/images/placeholder.png"
                             : i.ImageUrl
                     })
                 };
@@ -764,7 +764,7 @@ namespace Honeywell.Controllers
                     price = i.Price,
                     subtotal = i.Subtotal,
                     imageUrl = string.IsNullOrWhiteSpace(i.ImageUrl)
-                        ? "https://wildlife-unwieldy-devotee.ngrok-free.dev/images/placeholder.png"
+                        ? "https://honeywellproducts.com/images/placeholder.png"
                         : i.ImageUrl
                 })
             });

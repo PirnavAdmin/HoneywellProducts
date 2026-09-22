@@ -94,7 +94,7 @@ Keep replacement image proportions intact and use optimized web assets before la
 Copy `.env.example` to `.env.local` and update:
 
 ```text
-VITE_API_BASE_URL=https://localhost:7001
+VITE_API_BASE_URL=https://honeywellproducts.com
 ```
 
 The value is centralized in `src/services/api.js`; do not place API URLs throughout components. Never store secrets in Vite environment variables because frontend values are public.

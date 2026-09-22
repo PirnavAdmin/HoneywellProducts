@@ -8,7 +8,7 @@ RUN npm ci
 
 COPY Honeywell-Frontend/ ./
 
-ARG VITE_API_BASE_URL=
+ARG VITE_API_BASE_URL=https://honeywellproducts.com
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 RUN chmod +x node_modules/.bin/vite && npm run build
