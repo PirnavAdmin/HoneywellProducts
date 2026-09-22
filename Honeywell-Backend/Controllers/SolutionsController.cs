@@ -24,7 +24,7 @@ namespace Honeywell.Controllers
                 Description = "Comprehensive IP surveillance systems with 4K recording, AI analytics, and thermal monitoring.",
                 Application = "Commercial & Industrial",
                 CategoryId = "cctv-cameras",
-                ImageUrl = "/assets/images/catalog/cctv-camera.jpg",
+                ImageUrl = "/assets/images/catalog/industry-commercial.png",
                 Features = new List<string> { "4K Ultra-HD Resolution", "AI Motion Detection & Human Filtering", "24/7 Night Vision with Smart Infrared" }
             },
             new Solution
@@ -34,7 +34,7 @@ namespace Honeywell.Controllers
                 Description = "Smart biometric readers, RFID barriers, and cloud-managed access entry points for facilities.",
                 Application = "Office & Facility Security",
                 CategoryId = "networking",
-                ImageUrl = "/assets/images/catalog/bullet-camera.jpg",
+                ImageUrl = "/assets/images/catalog/solution-office.jpg",
                 Features = new List<string> { "Biometric Fingerprint & RFID Readers", "Centralized Real-Time Access Logs", "Emergency Automated Lockdown Support" }
             },
             new Solution
@@ -44,7 +44,7 @@ namespace Honeywell.Controllers
                 Description = "High-definition video monitoring to prevent shoplifting and audit cashier points.",
                 Application = "Retail & POS Security",
                 CategoryId = "dome-camera",
-                ImageUrl = "/assets/images/catalog/dome-camera.jpg",
+                ImageUrl = "/assets/images/catalog/industry-retail.png",
                 Features = new List<string> { "POS Cashier Overlay Integration", "Foot-Traffic & Queue Analytics", "360° Panoramic Dome Coverage" }
             },
             new Solution
@@ -54,7 +54,7 @@ namespace Honeywell.Controllers
                 Description = "Flexible camera and sensor solutions for houses, apartments, and residential properties.",
                 Application = "Residential & Apartments",
                 CategoryId = "wifi-cameras",
-                ImageUrl = "/assets/images/catalog/wifi-camera.jpg",
+                ImageUrl = "/assets/images/catalog/industry-residential.png",
                 Features = new List<string> { "Wireless Wi-Fi Connectivity", "Two-Way Audio Intercom", "Mobile Push Alerts & Cloud Recording" }
             },
             new Solution
@@ -64,7 +64,7 @@ namespace Honeywell.Controllers
                 Description = "Wide-area monitoring for loading bays, logistics zones, and inventory protection.",
                 Application = "Warehouses & Distribution",
                 CategoryId = "bullet-cameras",
-                ImageUrl = "/assets/images/catalog/bullet-camera.jpg",
+                ImageUrl = "/assets/images/catalog/industry-industrial.png",
                 Features = new List<string> { "Long-Range Infrared Night Vision", "License Plate Recognition (ANPR)", "Perimeter Breach Detection" }
             },
             new Solution
