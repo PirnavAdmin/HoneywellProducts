@@ -24,17 +24,6 @@ namespace Honeywell.Controllers
             _emailService = emailService;
         }
 
-        public class SupportConfigRequestDto
-        {
-            public string? SupportPhoneNumber { get; set; }
-            public string? Phone { get; set; }
-            public string? SupportPhone { get; set; }
-            public string? WorkTimings { get; set; }
-            public string? Timings { get; set; }
-            public string? SupportEmail { get; set; }
-            public string? Email { get; set; }
-        }
-
         // GET: api/Support/config
         [HttpGet("config")]
         public async Task<IActionResult> GetSupportConfig()
@@ -42,57 +31,30 @@ namespace Honeywell.Controllers
             var config = await _context.SupportConfigs.FirstOrDefaultAsync();
             if (config != null)
             {
-                if (config.SupportEmail.ToLower().Contains("shyam") || config.SupportEmail.ToLower().Contains("agro"))
-                {
-                    config.SupportEmail = "support@honeywell.com";
-                    config.UpdatedAt = DateTime.UtcNow;
-                    await _context.SaveChangesAsync();
-                }
-
                 return Ok(new
                 {
                     supportPhoneNumber = config.SupportPhoneNumber,
-                    SupportPhoneNumber = config.SupportPhoneNumber,
-                    phone = config.SupportPhoneNumber,
-                    Phone = config.SupportPhoneNumber,
                     workTimings = config.WorkTimings,
-                    WorkTimings = config.WorkTimings,
-                    supportEmail = config.SupportEmail,
-                    SupportEmail = config.SupportEmail,
-                    email = config.SupportEmail,
-                    Email = config.SupportEmail
+                    supportEmail = config.SupportEmail
                 });
             }
 
             return Ok(new
             {
-                supportPhoneNumber = "+1 (800) 323-0194",
-                SupportPhoneNumber = "+1 (800) 323-0194",
-                phone = "+1 (800) 323-0194",
-                Phone = "+1 (800) 323-0194",
-                workTimings = "Mon-Sat: 9:00 AM - 6:00 PM",
-                WorkTimings = "Mon-Sat: 9:00 AM - 6:00 PM",
-                supportEmail = "support@honeywell.com",
-                SupportEmail = "support@honeywell.com",
-                email = "support@honeywell.com",
-                Email = "support@honeywell.com"
+                supportPhoneNumber = "",
+                workTimings = "",
+                supportEmail = ""
             });
         }
 
         // PUT: api/Support/config
-        // POST: api/Support/config
         [HttpPut("config")]
-        [HttpPost("config")]
-        public async Task<IActionResult> UpdateSupportConfig([FromBody] SupportConfigRequestDto request)
+        public async Task<IActionResult> UpdateSupportConfig([FromBody] SupportConfig request)
         {
-            if (request == null)
+            if (string.IsNullOrEmpty(request.SupportPhoneNumber) || string.IsNullOrEmpty(request.WorkTimings))
             {
-                return BadRequest(new { Success = false, Message = "Invalid request payload." });
+                return BadRequest(new { Success = false, Message = "SupportPhoneNumber and WorkTimings are required." });
             }
-
-            var phone = request.SupportPhoneNumber ?? request.Phone ?? request.SupportPhone;
-            var timings = request.WorkTimings ?? request.Timings;
-            var email = request.SupportEmail ?? request.Email;
 
             var config = await _context.SupportConfigs.FirstOrDefaultAsync();
             if (config == null)
@@ -101,39 +63,13 @@ namespace Honeywell.Controllers
                 _context.SupportConfigs.Add(config);
             }
 
-            if (phone != null)
-            {
-                config.SupportPhoneNumber = phone.Trim();
-            }
-            if (timings != null)
-            {
-                config.WorkTimings = timings.Trim();
-            }
-            if (email != null)
-            {
-                config.SupportEmail = email.Trim();
-            }
+            config.SupportPhoneNumber = request.SupportPhoneNumber;
+            config.WorkTimings = request.WorkTimings;
+            config.SupportEmail = request.SupportEmail ?? string.Empty;
             config.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
-            return Ok(new
-            {
-                Success = true,
-                Message = "Support config updated successfully.",
-                Data = new
-                {
-                    supportPhoneNumber = config.SupportPhoneNumber,
-                    SupportPhoneNumber = config.SupportPhoneNumber,
-                    phone = config.SupportPhoneNumber,
-                    Phone = config.SupportPhoneNumber,
-                    workTimings = config.WorkTimings,
-                    WorkTimings = config.WorkTimings,
-                    supportEmail = config.SupportEmail,
-                    SupportEmail = config.SupportEmail,
-                    email = config.SupportEmail,
-                    Email = config.SupportEmail
-                }
-            });
+            return Ok(new { Success = true, Message = "Support config updated successfully.", Data = config });
         }
 
         public class BotChatRequest
@@ -169,7 +105,7 @@ namespace Honeywell.Controllers
             // 3. Check Warranty Keywords
             else if (text.Contains("warranty") || text.Contains("damage") || text.Contains("broken") || text.Contains("repair") || text.Contains("claim") || text.Contains("defect"))
             {
-                reply = "All Honeywell hardware and surveillance equipment come with standard manufacturer warranty covering technical and manufacturing defects. To file a claim, please submit your tax invoice receipt and serial number to our support ticket system.";
+                reply = "All Shyam Agro tools come with a standard 12-month manufacturer warranty covering technical and manufacturing defects. To file a claim, please submit a clear video/photo of the defect along with your tax invoice receipt to our support ticket system.";
                 suggestedLinks.Add(new { title = "Warranty Claim", path = "/support/warranty-claim", code = "WARRANTY_CLAIM" });
             }
             // 4. Check Invoice Keywords
@@ -181,7 +117,7 @@ namespace Honeywell.Controllers
             // 5. Check Greetings
             else if (text.Contains("hello") || text.Contains("hi") || text.Contains("hey") || text.Contains("greeting"))
             {
-                reply = "Hello! I am your Honeywell Assistant. How can I help you today? You can ask me about order tracking, technical datasheets, warranty claims, or service requests.";
+                reply = "Hello! I am your Shyam Agro assistant. How can I help you today? You can ask me about order tracking, return policies, warranty claims, or downloading invoices.";
             }
             // 6. Fallback response
             else
@@ -268,7 +204,7 @@ namespace Honeywell.Controllers
                     </div>
                 </div>
                 <div style='background-color: #f4f4f4; padding: 12px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 6px 6px;'>
-                    Honeywell Industrial & Commercial Admin Portal
+                    Honeywell / Shyam Agro Tools Admin Portal
                 </div>
             </div>";
 
@@ -376,7 +312,7 @@ namespace Honeywell.Controllers
                     </div>
                 </div>
                 <div style='background-color: #f4f4f4; padding: 12px; text-align: center; font-size: 12px; color: #666; border-radius: 0 0 6px 6px;'>
-                    Honeywell Industrial & Commercial Admin Portal
+                    Honeywell / Shyam Agro Tools Admin Portal
                 </div>
             </div>";
 
