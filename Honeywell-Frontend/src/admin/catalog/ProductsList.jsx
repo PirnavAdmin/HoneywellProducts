@@ -150,10 +150,11 @@ const ProductsList = () => {
     setErrorMessage('');
     try {
       await deleteProductApi(id);
-    } catch (error) {
-      console.warn('Delete product warning:', error);
-    } finally {
       setProducts((current) => current.filter((p) => String(p.id) !== String(id)));
+    } catch (error) {
+      console.error('Delete product failed:', error);
+      setErrorMessage(error?.response?.data?.message || error?.message || 'Failed to delete product.');
+    } finally {
       setIsDeletingId('');
     }
   };

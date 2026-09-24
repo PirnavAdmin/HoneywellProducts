@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Search, Upload, Check, X, Image as ImageIcon, Trash2, Edit2, ExternalLink } from 'lucide-react';
 import {
   fetchAdminBanners,
@@ -6,18 +7,11 @@ import {
   updateBanner,
   toggleBannerActive,
   deleteBanner,
-  uploadBannerImage
+  uploadBannerImage,
+  resolveBannerImage
 } from './bannersApi';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getApiDomain, DEFAULT_BACKEND_URL } from '../../utils/apiConfig';
 import '../catalog/adminModule.css';
-
-const resolveBannerImage = (url) => {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
-  const apiDomain = getApiDomain();
-  const cleanUrl = url.startsWith('/') ? url : `/${url}`;
-  return `${apiDomain}${cleanUrl}`;
-};
 
 const BannersList = () => {
   const [banners, setBanners] = useState([]);
@@ -227,7 +221,8 @@ const BannersList = () => {
         </div>
 
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {['All', 'Hero', 'Promo', 'Trust'].map(type => (
+          {/* Promo and Trust banner filters are temporarily hidden. To recall, add 'Promo', 'Trust' back to the array. */}
+          {['All', 'Hero'].map(type => (
             <button
               key={type}
               type="button"
@@ -243,7 +238,7 @@ const BannersList = () => {
                 cursor: 'pointer'
               }}
             >
-              {type} Banners
+              {type === 'All' ? 'All Banners' : `${type} Banners`}
             </button>
           ))}
         </div>
@@ -366,134 +361,386 @@ const BannersList = () => {
       </div>
 
       {/* Modal Dialog for Create/Edit Banner */}
-      {isModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '16px' }}>
-          <div style={{ background: '#fff', width: '100%', maxWidth: '540px', borderRadius: '16px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                {editingBanner ? 'Edit Banner' : 'Add New Banner'}
-              </h2>
-              <button type="button" onClick={handleCloseModal} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}>
-                <X size={20} />
+      {isModalOpen && createPortal(
+        <div
+          onClick={handleCloseModal}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 999999,
+            padding: '24px 16px',
+            overflowY: 'auto',
+            boxSizing: 'border-box'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: '#ffffff',
+              width: '100%',
+              maxWidth: '560px',
+              maxHeight: 'calc(100vh - 48px)',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: '16px',
+              boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,0,0,0.08)',
+              overflow: 'hidden',
+              margin: 'auto',
+              boxSizing: 'border-box'
+            }}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '18px 24px',
+                borderBottom: '1px solid #f1f5f9',
+                backgroundColor: '#f8fafc',
+                flexShrink: 0
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  {editingBanner ? 'Edit Banner' : 'Create New Banner'}
+                </h2>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0' }}>
+                  {editingBanner ? `Modify banner settings for ID #${editingBanner.id}` : 'Configure and upload a new marketing banner'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#64748b',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Banner Type</label>
-                <select
-                  value={formData.bannerType}
-                  onChange={(e) => setFormData({ ...formData, bannerType: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                >
-                  <option value="Hero">Hero Carousel Banner (Homepage Slider)</option>
-                  <option value="Promo">Promotional Banner (Offer Sections)</option>
-                  <option value="Trust">Trust & Rating Banner (Customer Testimonial Slider)</option>
-                </select>
-              </div>
+            {/* Modal Body / Form */}
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', flex: 1, margin: 0 }}>
+              <div style={{ padding: '24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '18px', flex: 1 }}>
+                
+                {/* Banner Type */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Banner Type <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <select
+                    value={formData.bannerType}
+                    onChange={(e) => setFormData({ ...formData, bannerType: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      backgroundColor: '#fff',
+                      color: '#0f172a',
+                      fontWeight: 500,
+                      outline: 'none'
+                    }}
+                  >
+                    <option value="Hero">Hero Carousel Banner (Homepage Slider)</option>
+                    {/* To recall Promo and Trust banners in the future, uncomment below options:
+                    <option value="Promo">Promotional Banner (Offer Sections)</option>
+                    <option value="Trust">Trust &amp; Rating Banner (Customer Testimonial Slider)</option>
+                    */}
+                  </select>
+                </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Banner Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Featured Machinery & Sprayers"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Subtitle / Short Description</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Explore Powerful Farming Equipment at Best Prices"
-                  value={formData.subtitle}
-                  onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Banner Image</label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                {/* Banner Title */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Banner Title
+                  </label>
                   <input
                     type="text"
-                    placeholder="Upload image below or paste image URL..."
-                    value={formData.imageUrl}
-                    onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                    style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    placeholder="e.g. Industrial Barcode Scanners &amp; POS Systems"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      color: '#0f172a',
+                      boxSizing: 'border-box'
+                    }}
                   />
-                  <label style={{ padding: '10px 14px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#475569' }}>
-                    <Upload size={14} />
-                    {isUploading ? 'Uploading...' : 'Upload'}
-                    <input type="file" accept="image/*" onChange={handleImageFileChange} style={{ display: 'none' }} />
-                  </label>
                 </div>
 
-                {formData.imageUrl && (
-                  <div style={{ marginTop: '10px', textAlign: 'center' }}>
-                    <img
-                      src={resolveBannerImage(formData.imageUrl)}
-                      alt="Preview"
-                      style={{ maxHeight: '100px', maxWidth: '100%', objectFit: 'contain', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                {/* Subtitle */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Subtitle / Short Description
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Discover enterprise-grade security, scanning and RFID solutions"
+                    value={formData.subtitle}
+                    onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      color: '#0f172a',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                {/* Banner Image */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Banner Image <span style={{ color: '#ef4444' }}>*</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                    <input
+                      type="text"
+                      placeholder="Paste image URL or click Upload..."
+                      value={formData.imageUrl}
+                      onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                      style={{
+                        flex: 1,
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        outline: 'none',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <label
+                      style={{
+                        padding: '10px 16px',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        cursor: isUploading ? 'not-allowed' : 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#475569',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      <Upload size={15} />
+                      {isUploading ? 'Uploading…' : 'Upload'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        disabled={isUploading}
+                        onChange={handleImageFileChange}
+                        style={{ display: 'none' }}
+                      />
+                    </label>
+                  </div>
+
+                  {formData.imageUrl && (
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        padding: '10px',
+                        background: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                        <img
+                          src={resolveBannerImage(formData.imageUrl)}
+                          alt="Preview"
+                          style={{
+                            height: '52px',
+                            width: '90px',
+                            objectFit: 'cover',
+                            borderRadius: '6px',
+                            border: '1px solid #cbd5e1',
+                            flexShrink: 0
+                          }}
+                        />
+                        <span style={{ fontSize: '12px', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {formData.imageUrl}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, imageUrl: '' })}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          color: '#ef4444',
+                          padding: '4px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title="Remove image"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Target Click URL */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                    Target Click URL
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /products, /solutions, or /offers"
+                    value={formData.targetUrl}
+                    onChange={(e) => setFormData({ ...formData, targetUrl: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #cbd5e1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      color: '#0f172a',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                </div>
+
+                {/* Display Order & Active Toggle */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'center' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Display Order
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.displayOrder}
+                      onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value, 10) || 0 })}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '13px',
+                        outline: 'none',
+                        color: '#0f172a',
+                        boxSizing: 'border-box'
+                      }}
                     />
                   </div>
-                )}
-              </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Target Click URL</label>
-                <input
-                  type="text"
-                  placeholder="e.g. /categories, /products, or /offers"
-                  value={formData.targetUrl}
-                  onChange={(e) => setFormData({ ...formData, targetUrl: e.target.value })}
-                  style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '16px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>Display Order</label>
-                  <input
-                    type="number"
-                    value={formData.displayOrder}
-                    onChange={(e) => setFormData({ ...formData, displayOrder: parseInt(e.target.value, 10) || 0 })}
-                    style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                  />
+                  <div style={{ paddingTop: '22px' }}>
+                    <label
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#0f172a',
+                        userSelect: 'none'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={formData.isActive}
+                        onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                        style={{ width: '18px', height: '18px', accentColor: '#10b981', cursor: 'pointer' }}
+                      />
+                      Publish / Active Banner
+                    </label>
+                  </div>
                 </div>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', marginTop: '20px' }}>
-                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.isActive}
-                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
-                      style={{ width: '18px', height: '18px', accentColor: '#10b981' }}
-                    />
-                    Publish / Active
-                  </label>
-                </div>
+
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+              {/* Modal Footer */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  padding: '16px 24px',
+                  borderTop: '1px solid #f1f5f9',
+                  backgroundColor: '#f8fafc',
+                  flexShrink: 0
+                }}
+              >
                 <button
                   type="button"
                   onClick={handleCloseModal}
-                  style={{ padding: '10px 16px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#64748b' }}
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    color: '#64748b'
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: '#10b981', color: '#fff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                  disabled={isUploading}
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: '#10b981',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
                 >
-                  {editingBanner ? 'Update Changes' : 'Create Banner'}
+                  {editingBanner ? 'Update Banner' : 'Create Banner'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

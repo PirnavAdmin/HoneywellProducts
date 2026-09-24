@@ -544,10 +544,12 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
   return await apiCache.fetchWithCache('products_all', async () => {
     const response = await api.get('/api/products');
     const rawList = unwrapList(response);
-    const apiProducts = rawList.map((p) => {
-      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
-      return mapProductFromApi(p, categories, subcategories, [], prodReviews);
-    });
+    const apiProducts = rawList
+      .filter((p) => p.isActive !== false && p.IsActive !== false)
+      .map((p) => {
+        const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
+        return mapProductFromApi(p, categories, subcategories, [], prodReviews);
+      });
     return apiProducts;
   }, 5 * 60 * 1000);
 };
@@ -557,10 +559,12 @@ export const searchProducts = async (keyword, categories = [], subcategories = [
   const cacheKey = `search_${(keyword || '').toLowerCase()}`;
   return await apiCache.fetchWithCache(cacheKey, async () => {
     const response = await api.get('/api/products/search', { params: { keyword } });
-    return unwrapList(response).map((p) => {
-      const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
-      return mapProductFromApi(p, categories, subcategories, [], prodReviews);
-    });
+    return unwrapList(response)
+      .filter((p) => p.isActive !== false && p.IsActive !== false)
+      .map((p) => {
+        const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
+        return mapProductFromApi(p, categories, subcategories, [], prodReviews);
+      });
   }, 3 * 60 * 1000);
 };
 
@@ -1007,15 +1011,45 @@ export const deleteProduct = async (id) => {
     if (status === 404) {
       console.warn(`DELETE /api/products/${id} returned 404 (item not found on server). Cleaning up locally.`);
     } else {
+      let deleted = false;
       try {
         await api.delete(`/api/products/delete/${id}`);
+        deleted = true;
       } catch (err2) {
-        if (err2.response?.status !== 404) {
-          console.warn(`DELETE /api/products/delete/${id} failed:`, err2.message);
+        if (err2.response?.status === 404) {
+          deleted = true;
+        }
+      }
+
+      // If hard delete failed (e.g. server missing WishlistItems table or FK restriction), deactivate product via PUT
+      if (!deleted) {
+        try {
+          const fd = new FormData();
+          fd.append('IsActive', 'false');
+          fd.append('isActive', 'false');
+          await api.put(`/api/products/${id}`, fd);
+          deleted = true;
+        } catch {
+          try {
+            await api.put(`/api/products/${id}`, { isActive: false, IsActive: false }, {
+              headers: { 'Content-Type': 'application/json' }
+            });
+            deleted = true;
+          } catch (putErr) {
+            console.warn('Fallback product deactivation also failed:', putErr.message);
+          }
         }
       }
     }
   } finally {
+    apiCache.invalidate('products');
+    apiCache.invalidate('product');
+    apiCache.invalidate('prod_');
+    apiCache.invalidate('paged');
+    apiCache.invalidate('search');
+    apiCache.invalidate('cat_prods');
+    apiCache.invalidate('subcat_prods');
+    apiCache.invalidate('related');
     deleteProductFromStore(id);
   }
 };

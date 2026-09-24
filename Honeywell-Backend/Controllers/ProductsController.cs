@@ -172,7 +172,8 @@ namespace Honeywell.Controllers
             [FromQuery] int? limit = null,
             [FromQuery] string? search = null,
             [FromQuery] int? categoryId = null,
-            [FromQuery] int? subcategoryId = null)
+            [FromQuery] int? subcategoryId = null,
+            [FromQuery] bool? includeInactive = false)
         {
             var query = _context.Products
                 .AsNoTracking()
@@ -184,6 +185,11 @@ namespace Honeywell.Controllers
                 .Include(x => x.Features)
                 .Include(x => x.Reviews)
                 .AsQueryable();
+
+            if (includeInactive != true)
+            {
+                query = query.Where(x => x.IsActive);
+            }
 
             if (!string.IsNullOrWhiteSpace(search))
             {
@@ -253,7 +259,7 @@ namespace Honeywell.Controllers
                     .Include(x => x.Videos)
                     .Include(x => x.Features)
                     .Include(x => x.Reviews)
-                    .FirstOrDefaultAsync(x => x.Id == id);
+                    .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
             }
 
             // 2. Direct SQL lookup by SKU, exact Name, or formatted Slug
@@ -273,10 +279,11 @@ namespace Honeywell.Controllers
                     .Include(x => x.Features)
                     .Include(x => x.Reviews)
                     .FirstOrDefaultAsync(p =>
+                        p.IsActive && (
                         p.SKU.ToLower() == lowerClean ||
                         p.ProductName.ToLower() == lowerClean ||
                         p.ProductName.ToLower() == unslugClean ||
-                        p.ProductName.ToLower().Replace(" ", "-") == slugClean);
+                        p.ProductName.ToLower().Replace(" ", "-") == slugClean));
             }
 
             // 3. Fallback: targeted candidates search (max 10) instead of loading full table
@@ -293,7 +300,7 @@ namespace Honeywell.Controllers
                     .Include(x => x.Videos)
                     .Include(x => x.Features)
                     .Include(x => x.Reviews)
-                    .Where(p => EF.Functions.Like(p.ProductName, $"%{searchKeyword}%") || EF.Functions.Like(p.SKU, $"%{cleanId}%"))
+                    .Where(p => p.IsActive && (EF.Functions.Like(p.ProductName, $"%{searchKeyword}%") || EF.Functions.Like(p.SKU, $"%{cleanId}%")))
                     .Take(10)
                     .ToListAsync();
 
@@ -1310,7 +1317,7 @@ namespace Honeywell.Controllers
                 {
                     foreach (var img in product.Images)
                     {
-                        if (!string.IsNullOrWhiteSpace(img.ImageUrl) && !img.ImageUrl.Contains("placeholder"))
+                        if (!string.IsNullOrWhiteSpace(img.ImageUrl) && !img.ImageUrl.Contains("placeholder") && !img.ImageUrl.Contains("logo"))
                         {
                             try
                             {
@@ -1346,47 +1353,45 @@ namespace Honeywell.Controllers
                     }
                 }
 
-                // 2. Remove related references to avoid foreign key constraint violations
-                var cartItems = await _context.CartItems.Where(c => c.ProductId == productId).ToListAsync();
-                if (cartItems.Count > 0)
+                // 2. Remove related references safely
+                try
                 {
-                    _context.CartItems.RemoveRange(cartItems);
-                }
+                    var cartItems = await _context.CartItems.Where(c => c.ProductId == productId).ToListAsync();
+                    if (cartItems.Count > 0) _context.CartItems.RemoveRange(cartItems);
 
-                var wishlistItems = await _context.WishlistItems.Where(w => w.ProductId == productId).ToListAsync();
-                if (wishlistItems.Count > 0)
-                {
-                    _context.WishlistItems.RemoveRange(wishlistItems);
-                }
+                    var wishlistItems = await _context.WishlistItems.Where(w => w.ProductId == productId).ToListAsync();
+                    if (wishlistItems.Count > 0) _context.WishlistItems.RemoveRange(wishlistItems);
 
-                if (product.Features != null && product.Features.Count > 0)
-                {
-                    _context.ProductFeatures.RemoveRange(product.Features);
-                }
+                    var stockLogs = await _context.StockLedgerLogs.Where(s => s.ProductId == productId).ToListAsync();
+                    if (stockLogs.Count > 0) _context.StockLedgerLogs.RemoveRange(stockLogs);
 
-                if (product.Reviews != null && product.Reviews.Count > 0)
-                {
-                    _context.ProductReviews.RemoveRange(product.Reviews);
-                }
+                    var offers = await _context.Offers.Where(o => o.ProductId == productId).ToListAsync();
+                    foreach (var off in offers) off.ProductId = null;
 
-                if (product.Images != null && product.Images.Count > 0)
-                {
-                    _context.ProductImages.RemoveRange(product.Images);
+                    await _context.SaveChangesAsync();
                 }
+                catch { }
 
-                if (product.Videos != null && product.Videos.Count > 0)
-                {
-                    _context.ProductVideos.RemoveRange(product.Videos);
-                }
-
-                if (product.SoftwareList != null && product.SoftwareList.Count > 0)
-                {
-                    _context.ProductSoftware.RemoveRange(product.SoftwareList);
-                }
-
-                // 3. Remove Product entity
-                _context.Products.Remove(product);
+                // 3. Mark inactive (soft delete) first so it is immediately removed from all active product listings
+                product.IsActive = false;
                 await _context.SaveChangesAsync();
+
+                // 4. Attempt hard deletion if foreign key constraints allow
+                try
+                {
+                    if (product.Features != null && product.Features.Count > 0) _context.ProductFeatures.RemoveRange(product.Features);
+                    if (product.Reviews != null && product.Reviews.Count > 0) _context.ProductReviews.RemoveRange(product.Reviews);
+                    if (product.Images != null && product.Images.Count > 0) _context.ProductImages.RemoveRange(product.Images);
+                    if (product.Videos != null && product.Videos.Count > 0) _context.ProductVideos.RemoveRange(product.Videos);
+                    if (product.SoftwareList != null && product.SoftwareList.Count > 0) _context.ProductSoftware.RemoveRange(product.SoftwareList);
+
+                    _context.Products.Remove(product);
+                    await _context.SaveChangesAsync();
+                }
+                catch
+                {
+                    // If hard delete is restricted (e.g. by order history), soft-delete is already committed and active
+                }
 
                 return Ok(new
                 {
@@ -1464,7 +1469,7 @@ namespace Honeywell.Controllers
                 .Include(x => x.Videos)
                 .Include(x => x.Features)
                 .Include(x => x.Reviews)
-                .Where(x => x.ProductName.ToLower().Contains(kw) || x.SKU.ToLower().Contains(kw) || x.Brand.ToLower().Contains(kw))
+                .Where(x => x.IsActive && (x.ProductName.ToLower().Contains(kw) || x.SKU.ToLower().Contains(kw) || x.Brand.ToLower().Contains(kw)))
                 .ToListAsync();
 
             var result = products.Select(MapProductToNormalizedResponse).ToList();
@@ -1559,7 +1564,7 @@ namespace Honeywell.Controllers
                 .Include(x => x.Videos)
                 .Include(x => x.Features)
                 .Include(x => x.Reviews)
-                .Where(x => x.CategoryId == categoryId)
+                .Where(x => x.IsActive && x.CategoryId == categoryId)
                 .ToListAsync();
 
             var result = products.Select(MapProductToNormalizedResponse).ToList();
@@ -1578,7 +1583,7 @@ namespace Honeywell.Controllers
                 .Include(x => x.Videos)
                 .Include(x => x.Features)
                 .Include(x => x.Reviews)
-                .Where(x => x.SubcategoryId == subcategoryId)
+                .Where(x => x.IsActive && x.SubcategoryId == subcategoryId)
                 .ToListAsync();
 
             var result = products.Select(MapProductToNormalizedResponse).ToList();
@@ -1591,7 +1596,7 @@ namespace Honeywell.Controllers
         {
             var result = new
             {
-                totalProducts = await _context.Products.CountAsync(),
+                totalProducts = await _context.Products.CountAsync(p => p.IsActive),
                 totalCategories = await _context.Categories.CountAsync(),
                 totalSubcategories = await _context.Subcategories.CountAsync()
             };
@@ -1603,7 +1608,7 @@ namespace Honeywell.Controllers
         [HttpGet("related/{productId}")]
         public async Task<IActionResult> GetRelatedProducts(int productId)
         {
-            var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == productId);
+            var product = await _context.Products.AsNoTracking().FirstOrDefaultAsync(x => x.Id == productId && x.IsActive);
 
             if (product == null)
                 return NotFound();
@@ -1616,7 +1621,7 @@ namespace Honeywell.Controllers
                 .Include(x => x.Videos)
                 .Include(x => x.Features)
                 .Include(x => x.Reviews)
-                .Where(x => x.CategoryId == product.CategoryId && x.Id != productId)
+                .Where(x => x.IsActive && x.CategoryId == product.CategoryId && x.Id != productId)
                 .Take(4)
                 .ToListAsync();
 

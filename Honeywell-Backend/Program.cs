@@ -984,6 +984,8 @@ app.Use(async (context, next) =>
             !path.Contains("/categories", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/catalog", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/offers", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/banners", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/banner", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/products", StringComparison.OrdinalIgnoreCase))
         {
             context.Response.Headers["Cache-Control"] = "public, max-age=300";

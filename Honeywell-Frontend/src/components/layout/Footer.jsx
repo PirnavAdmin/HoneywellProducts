@@ -1,19 +1,97 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Facebook, Instagram, Linkedin, Mail, Youtube } from 'lucide-react';
+import { Facebook, Instagram, Linkedin, Mail, Twitter, Youtube } from 'lucide-react';
 import Brand from '../common/Brand';
 import WhatsAppIcon from '../common/WhatsAppIcon';
 import { socialLinks } from '../../config/socialLinks';
 import { siteConfig } from '../../config/siteConfig';
+import { getFooterConfig } from '../../services/settingsApi';
 
-const socialIcons = { facebook: Facebook, instagram: Instagram, linkedin: Linkedin, youtube: Youtube, whatsapp: WhatsAppIcon, email: Mail };
+const socialIcons = {
+  facebook: Facebook,
+  twitter: Twitter,
+  instagram: Instagram,
+  linkedin: Linkedin,
+  youtube: Youtube,
+  whatsapp: WhatsAppIcon,
+  email: Mail
+};
+
+const DEFAULT_FOOTER = {
+  copyrightText: `© ${new Date().getFullYear()} Honeywell International Inc. All rights reserved.`,
+  aboutSummary: '',
+  privacyPolicyUrl: '/privacy-policy',
+  termsUrl: '/terms-and-conditions',
+  cookiePolicyUrl: '/cookie-policy',
+  warrantyPolicyUrl: '/warranty-policy',
+  facebookUrl: 'https://facebook.com/honeywell',
+  twitterUrl: 'https://twitter.com/honeywell',
+  linkedinUrl: 'https://linkedin.com/company/honeywell'
+};
 
 export default function Footer() {
+  const [footerData, setFooterData] = useState(DEFAULT_FOOTER);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadFooterData = async () => {
+      try {
+        const data = await getFooterConfig();
+        if (data && isMounted) {
+          setFooterData(prev => ({ ...prev, ...data }));
+        }
+      } catch (err) {
+        console.warn('Failed to load dynamic footer configuration:', err);
+      }
+    };
+
+    loadFooterData();
+
+    const handleUpdate = () => {
+      loadFooterData();
+    };
+
+    window.addEventListener('footer-config-updated', handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('footer-config-updated', handleUpdate);
+    };
+  }, []);
+
+  const getSocialUrl = (name) => {
+    if (name === 'facebook' && footerData.facebookUrl) return footerData.facebookUrl;
+    if (name === 'twitter' && footerData.twitterUrl) return footerData.twitterUrl;
+    if (name === 'linkedin' && footerData.linkedinUrl) return footerData.linkedinUrl;
+    return socialLinks[name] || '';
+  };
+
+  const renderPolicyLink = (label, url, defaultUrl) => {
+    const target = url || defaultUrl;
+    if (!target) return null;
+    const isExternal = target.startsWith('http://') || target.startsWith('https://') || target.startsWith('//');
+    if (isExternal) {
+      return (
+        <a key={label} href={target} target="_blank" rel="noreferrer">
+          {label}
+        </a>
+      );
+    }
+    return (
+      <Link key={label} to={target}>
+        {label}
+      </Link>
+    );
+  };
+
   return (
     <footer className="footer">
       <div className="footer-top">
         <div className="footer-brand">
           <Brand light />
-          <p>Professional security, surveillance and solar product discovery for homes, businesses and industrial environments.</p>
+          {Boolean(footerData.aboutSummary && footerData.aboutSummary.trim()) && (
+            <p>{footerData.aboutSummary}</p>
+          )}
           <span>{siteConfig.tagline}</span>
         </div>
         <div>
@@ -64,15 +142,18 @@ export default function Footer() {
         <div className="footer-social">
           <h3>Contact &amp; Social</h3>
           <div className="socials">
-            {Object.entries(socialIcons).map(([name, Icon]) => socialLinks[name] ? (
-              <a key={name} href={socialLinks[name]} target="_blank" rel="noreferrer" aria-label={`Open ${name}`}>
-                <Icon size={18} />
-              </a>
-            ) : (
-              <span key={name} className="disabled" aria-label={`${name} link not configured`} title="Link not configured">
-                <Icon size={18} />
-              </span>
-            ))}
+            {Object.entries(socialIcons).map(([name, Icon]) => {
+              const url = getSocialUrl(name);
+              return url ? (
+                <a key={name} href={url} target="_blank" rel="noreferrer" aria-label={`Open ${name}`}>
+                  <Icon size={18} />
+                </a>
+              ) : (
+                <span key={name} className="disabled" aria-label={`${name} link not configured`} title="Link not configured">
+                  <Icon size={18} />
+                </span>
+              );
+            })}
           </div>
           <address className="footer-contact">
             <a href={siteConfig.emailLink}>{siteConfig.email}</a>
@@ -82,14 +163,15 @@ export default function Footer() {
         </div>
       </div>
       <div className="footer-bottom">
-        <p>© {new Date().getFullYear()} HONEYWELL PRODUCTS. All Rights Reserved.</p>
+        <p>{footerData.copyrightText || `© ${new Date().getFullYear()} HONEYWELL PRODUCTS. All Rights Reserved.`}</p>
         <div>
-          <Link to="/privacy-policy">Privacy Policy</Link>
-          <Link to="/terms-and-conditions">Terms &amp; Conditions</Link>
-          <Link to="/cookie-policy">Cookie Policy</Link>
-          <Link to="/warranty-policy">Warranty Policy</Link>
+          {renderPolicyLink('Privacy Policy', footerData.privacyPolicyUrl, '/privacy-policy')}
+          {renderPolicyLink('Terms & Conditions', footerData.termsUrl, '/terms-and-conditions')}
+          {renderPolicyLink('Cookie Policy', footerData.cookiePolicyUrl, '/cookie-policy')}
+          {renderPolicyLink('Warranty Policy', footerData.warrantyPolicyUrl, '/warranty-policy')}
         </div>
       </div>
     </footer>
   );
 }
+

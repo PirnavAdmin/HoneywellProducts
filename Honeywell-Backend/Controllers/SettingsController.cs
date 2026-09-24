@@ -85,21 +85,14 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     copyrightText = "© 2026 Honeywell International Inc. All rights reserved.",
-                    tagline = "Smart technology. Stronger protection. Discover security, surveillance and solar solutions.",
-                    quickLinks = new[]
-                    {
-                        new { label = "About Us", url = "/about" },
-                        new { label = "Products", url = "/catalog" },
-                        new { label = "Software Downloads", url = "/resources/software" },
-                        new { label = "Contact Support", url = "/support" }
-                    },
-                    socialLinks = new
-                    {
-                        facebook = "https://facebook.com/honeywell",
-                        twitter = "https://twitter.com/honeywell",
-                        linkedin = "https://linkedin.com/company/honeywell",
-                        youtube = "https://youtube.com/honeywell"
-                    }
+                    aboutSummary = "",
+                    privacyPolicyUrl = "/privacy-policy",
+                    termsUrl = "/terms-and-conditions",
+                    cookiePolicyUrl = "/cookie-policy",
+                    warrantyPolicyUrl = "/warranty-policy",
+                    facebookUrl = "https://facebook.com/honeywell",
+                    twitterUrl = "https://twitter.com/honeywell",
+                    linkedinUrl = "https://linkedin.com/company/honeywell"
                 });
             }
 

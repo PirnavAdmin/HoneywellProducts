@@ -13,7 +13,7 @@ const API_URL = `${getApiDomain()}/api/Settings/footer`;
 const FooterConfig = () => {
   const [footerData, setFooterData] = useState({
     copyrightText: '© 2026 Honeywell International Inc. All rights reserved.',
-    aboutSummary: 'Honeywell POS & Inventory Management System provides high-performance barcode scanners, mobile computers, RFID solutions, and point-of-sale hardware for enterprise commerce.',
+    aboutSummary: '',
     privacyPolicyUrl: '/privacy-policy',
     termsUrl: '/terms-and-conditions',
     cookiePolicyUrl: '/cookie-policy',
@@ -52,9 +52,11 @@ const FooterConfig = () => {
         headers: { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
       });
       setMessage({ type: 'success', text: 'Footer configuration saved successfully!' });
+      window.dispatchEvent(new Event('footer-config-updated'));
     } catch (err) {
       console.error('Save Footer Config error:', err);
-      setMessage({ type: 'success', text: 'Footer configuration saved successfully.' });
+      const errMsg = err.response?.data?.message || err.message || 'Failed to save footer configuration.';
+      setMessage({ type: 'error', text: errMsg });
     } finally {
       setSaving(false);
     }

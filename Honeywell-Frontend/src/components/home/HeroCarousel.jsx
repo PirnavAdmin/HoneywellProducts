@@ -3,9 +3,29 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useUI } from '../../context/UIContext';
 import { bannerService } from '../../services/bannerService';
+import { getApiDomain, DEFAULT_BACKEND_URL } from '../../utils/apiConfig';
 import productsHeroImage from '../../assets/images/cctv-solar-products-hero.jpg';
 import heroPosterImage from '../../assets/images/cctv-hero-poster.jpg';
 import smartTechnologyImage from '../../assets/images/smart-technology-trends.png';
+
+export const resolveBannerImage = (url, fallback = heroPosterImage) => {
+  if (!url || typeof url !== 'string' || !url.trim() || url.toLowerCase().includes('placeholder')) {
+    return fallback;
+  }
+  let cleanUrl = url.trim().replace(/\\/g, '/');
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
+    return cleanUrl;
+  }
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    return cleanUrl;
+  }
+  if (!cleanUrl.startsWith('/')) {
+    cleanUrl = `/${cleanUrl}`;
+  }
+  const domain = getApiDomain() || DEFAULT_BACKEND_URL;
+  const normalizedDomain = domain ? domain.replace(/\/$/, '') : '';
+  return `${normalizedDomain}${cleanUrl}`;
+};
 
 const fallbackSlides = [
   { eyebrow: 'TECHNOLOGY • SECURITY • RELIABILITY', title: 'SMART TECHNOLOGY. STRONGER PROTECTION.', text: 'Professional security, surveillance and technology solutions designed for homes, businesses and industrial environments.', primary: 'EXPLORE PRODUCTS', to: '/products', secondary: 'CONTACT SALES', secondaryTo: '/contact', image: heroPosterImage },
@@ -24,16 +44,23 @@ export default function HeroCarousel() {
     bannerService.getActiveBanners()
       .then((banners) => {
         if (isMounted && Array.isArray(banners) && banners.length > 0) {
-          const liveSlides = banners.map(b => ({
-            eyebrow: 'FEATURED PROMO BANNER',
-            title: b.title || 'SPECIAL PROMOTION',
-            text: b.subtitle || 'Explore our latest Honeywell products and solution offers.',
-            primary: 'EXPLORE OFFERS',
-            to: b.targetUrl || '/products',
-            secondary: 'GET A QUOTE',
-            quote: true,
-            image: b.imageUrl || smartSecurityImage
-          }));
+          const heroOnly = banners.filter(b => !b.bannerType || b.bannerType.toLowerCase() === 'hero');
+          const bannersToRender = heroOnly.length > 0 ? heroOnly : banners;
+          const liveSlides = bannersToRender.map((b, idx) => {
+            const fallbackImg = idx % 3 === 0 ? heroPosterImage : (idx % 3 === 1 ? productsHeroImage : smartTechnologyImage);
+            const resolvedImg = resolveBannerImage(b.imageUrl, fallbackImg);
+            return {
+              id: b.id || idx,
+              eyebrow: b.subtitle ? 'FEATURED HERO BANNER' : 'TECHNOLOGY • SECURITY • RELIABILITY',
+              title: b.title || 'SPECIAL PROMOTION',
+              text: b.subtitle || 'Explore our latest Honeywell products and solution offers.',
+              primary: 'EXPLORE OFFERS',
+              to: b.targetUrl || '/products',
+              secondary: 'GET A QUOTE',
+              quote: true,
+              image: resolvedImg
+            };
+          });
           setSlides(liveSlides);
         }
       })
@@ -55,15 +82,29 @@ export default function HeroCarousel() {
   return (
     <section className="hero-carousel" aria-roledescription="carousel" aria-label="Featured content" tabIndex="0" onKeyDown={(event) => { if (event.key === 'ArrowLeft') move(-1); if (event.key === 'ArrowRight') move(1); }} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)}>
       {slides.map((slide, index) => (
-        <article key={`${slide.eyebrow}-${index}`} className={`hero-slide ${index === active ? 'active' : ''}`} aria-hidden={index !== active} style={{ '--hero-image': `url(${slide.image})` }}>
+        <article
+          key={`hero-slide-${slide.id || index}-${index}`}
+          className={`hero-slide ${index === active ? 'active' : ''}`}
+          aria-hidden={index !== active}
+          style={{
+            backgroundImage: `url("${slide.image}")`,
+            '--hero-image': `url("${slide.image}")`
+          }}
+        >
           <div className="hero-overlay" />
           <div className="hero-content">
-            <p className="eyebrow">{slide.eyebrow}</p>
-            <h1>{slide.title}</h1>
-            <p>{slide.text}</p>
-            <div className="hero-actions">
-              <Link className="button" to={slide.to}>{slide.primary} <ArrowRight size={18} /></Link>
-              {slide.quote ? <button className="text-link" onClick={() => openQuote()}>{slide.secondary} <ArrowRight size={18} /></button> : <Link className="text-link" to={slide.secondaryTo}>{slide.secondary} <ArrowRight size={18} /></Link>}
+            <div className="hero-text-wrap">
+              <span className="eyebrow">{slide.eyebrow}</span>
+              <h1>{slide.title}</h1>
+              <p>{slide.text}</p>
+              <div className="hero-actions">
+                <Link className="button" to={slide.to}>{slide.primary} <ArrowRight size={18} /></Link>
+                {slide.quote ? (
+                  <button className="text-link" onClick={() => openQuote()}>{slide.secondary} <ArrowRight size={18} /></button>
+                ) : (
+                  <Link className="text-link" to={slide.secondaryTo}>{slide.secondary} <ArrowRight size={18} /></Link>
+                )}
+              </div>
             </div>
           </div>
         </article>

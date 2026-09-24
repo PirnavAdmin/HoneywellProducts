@@ -120,3 +120,29 @@ export async function updateDescriptionManager(data) {
   return res.json().catch(() => ({ success: true }));
 }
 
+// ── Footer Config API ──
+export async function getFooterConfig() {
+  const res = await fetch(`${getApiDomain()}/api/Settings/footer`, {
+    headers: {
+      'ngrok-skip-browser-warning': 'true',
+      'Accept': 'application/json',
+    },
+  });
+  if (!res.ok) throw new Error(`Failed to fetch footer config: ${res.status}`);
+  return res.json();
+}
+
+export async function updateFooterConfig(data) {
+  const res = await fetch(`${getApiDomain()}/api/Settings/footer`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const errorBody = await res.json().catch(() => ({}));
+    throw new Error(errorBody.message || errorBody.Message || `Failed to update footer config: ${res.status}`);
+  }
+  return res.json().catch(() => ({ success: true }));
+}
+
+

@@ -1,6 +1,25 @@
 import axios from 'axios';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getApiDomain, DEFAULT_BACKEND_URL } from '../../utils/apiConfig';
 import heroPosterImage from '../../assets/images/cctv-hero-poster.jpg';
+
+export const resolveBannerImage = (url, fallback = heroPosterImage) => {
+  if (!url || typeof url !== 'string' || !url.trim() || url.toLowerCase().includes('placeholder')) {
+    return fallback;
+  }
+  let cleanUrl = url.trim().replace(/\\/g, '/');
+  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
+    return cleanUrl;
+  }
+  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+    return cleanUrl;
+  }
+  if (!cleanUrl.startsWith('/')) {
+    cleanUrl = `/${cleanUrl}`;
+  }
+  const domain = getApiDomain() || DEFAULT_BACKEND_URL;
+  const normalizedDomain = domain ? domain.replace(/\/$/, '') : '';
+  return `${normalizedDomain}${cleanUrl}`;
+};
 
 const API_BASE = `${getApiDomain()}/api/Banners`;
 
@@ -24,20 +43,28 @@ const api = axios.create({
 
 export const mapBannerFromApi = (item) => {
   if (!item) return null;
-  const rawId = item.id ?? item.bannerId ?? item._id ?? '';
-  const rawImage = item.imageUrl || item.image || item.bannerImage || '';
-  const isInvalidImage = !rawImage || rawImage.includes('placeholder.png') || rawImage.includes('placeholder');
+  const rawId = item.id ?? item.Id ?? item.bannerId ?? item.BannerId ?? item._id ?? '';
+  const rawImage = (
+    item.imageUrl || item.ImageUrl ||
+    item.image || item.Image ||
+    item.bannerImage || item.BannerImage ||
+    item.url || item.Url ||
+    item.path || item.Path ||
+    item.image_url || item.banner_image ||
+    item.filePath || item.FilePath ||
+    ''
+  );
 
   return {
     id: String(rawId),
-    title: item.title || item.name || '',
-    subtitle: item.subtitle || item.description || '',
-    imageUrl: isInvalidImage ? heroPosterImage : rawImage,
-    targetUrl: item.targetUrl || item.link || item.url || '/products',
-    bannerType: item.bannerType || item.type || 'Hero',
-    isActive: item.isActive !== undefined ? Boolean(item.isActive) : (item.active !== undefined ? Boolean(item.active) : true),
-    displayOrder: Number(item.displayOrder || item.order || 0),
-    createdAt: item.createdAt || item.dateCreated || new Date().toISOString()
+    title: item.title || item.Title || item.name || item.Name || '',
+    subtitle: item.subtitle || item.Subtitle || item.description || item.Description || '',
+    imageUrl: String(rawImage || '').trim(),
+    targetUrl: item.targetUrl || item.TargetUrl || item.link || item.Link || item.url || item.Url || '/products',
+    bannerType: item.bannerType || item.BannerType || item.type || item.Type || 'Hero',
+    isActive: item.isActive !== undefined ? Boolean(item.isActive) : (item.IsActive !== undefined ? Boolean(item.IsActive) : (item.active !== undefined ? Boolean(item.active) : true)),
+    displayOrder: Number(item.displayOrder ?? item.DisplayOrder ?? item.order ?? item.Order ?? 0),
+    createdAt: item.createdAt || item.CreatedAt || item.dateCreated || new Date().toISOString()
   };
 };
 
@@ -120,6 +147,7 @@ export const createBanner = async (bannerData) => {
     displayOrder: Number(bannerData.displayOrder || 0)
   };
   const response = await api.post('', payload, { headers: getHeaders() });
+  apiCache.invalidate('banners');
   return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
 };
 
@@ -139,6 +167,7 @@ export const updateBanner = async (id, bannerData) => {
     displayOrder: Number(bannerData.displayOrder || 0)
   };
   const response = await api.put(`/${id}`, payload, { headers: getHeaders() });
+  apiCache.invalidate('banners');
   return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
 };
 
@@ -150,6 +179,7 @@ export const toggleBannerActive = async (id, currentActiveState) => {
   try {
     const response = await api.put(`/${id}/toggle`, {}, { headers: getHeaders() });
     if (response.status === 200) {
+      apiCache.invalidate('banners');
       return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
     }
   } catch (err) {
@@ -185,5 +215,6 @@ export const uploadBannerImage = async (file) => {
  */
 export const deleteBanner = async (id) => {
   await api.delete(`/${id}`, { headers: getHeaders() });
+  apiCache.invalidate('banners');
   return true;
 };

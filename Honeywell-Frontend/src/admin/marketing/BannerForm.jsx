@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Save, Upload, Image as ImageIcon, ExternalLink, RotateCcw } from 'lucide-react';
-import { createBanner, updateBanner, uploadBannerImage, fetchAdminBanners } from './bannersApi';
+import { ArrowLeft, Upload, Save, Trash2 } from 'lucide-react';
+import { createBanner, updateBanner, uploadBannerImage, fetchAdminBanners, resolveBannerImage } from './bannersApi';
 import '../catalog/adminModule.css';
 
 const BannerForm = () => {
@@ -138,8 +138,10 @@ const BannerForm = () => {
               style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
             >
               <option value="Hero">Hero Carousel Banner (Homepage Slider)</option>
+              {/* To recall Promo and Trust banners in the future, uncomment below options:
               <option value="Promo">Promotional Banner (Offer Sections)</option>
               <option value="Trust">Trust & Rating Banner (Customer Testimonial Slider)</option>
+              */}
             </select>
           </div>
 
@@ -185,7 +187,7 @@ const BannerForm = () => {
             {formData.imageUrl && (
               <div style={{ marginTop: '12px', textAlign: 'center', background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                 <img
-                  src={formData.imageUrl}
+                  src={resolveBannerImage(formData.imageUrl)}
                   alt="Banner Preview"
                   style={{ maxHeight: '140px', maxWidth: '100%', objectFit: 'contain', borderRadius: '6px' }}
                 />

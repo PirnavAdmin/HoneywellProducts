@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
+import { apiCache } from '../../utils/apiCache';
 import { 
   getCategories, 
   saveCategories, 
@@ -490,9 +491,34 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null) =>
   });
 
   const saved = mapProductFromApi(unwrapItem(response));
+  apiCache.invalidate('products');
+  apiCache.invalidate('product');
+  apiCache.invalidate('prod_');
+  apiCache.invalidate('paged');
+  apiCache.invalidate('search');
+  apiCache.invalidate('cat_prods');
+  apiCache.invalidate('subcat_prods');
+  apiCache.invalidate('related');
   return { ...saved, id: saved.id || product.id || '' };
 };
 
 export const deleteProduct = async (id) => {
-  await api.delete(`/api/products/${id}`);
+  try {
+    await api.delete(`/api/products/${id}`);
+  } catch (err) {
+    try {
+      const fd = new FormData();
+      fd.append('IsActive', 'false');
+      await api.put(`/api/products/${id}`, fd);
+    } catch {}
+  } finally {
+    apiCache.invalidate('products');
+    apiCache.invalidate('product');
+    apiCache.invalidate('prod_');
+    apiCache.invalidate('paged');
+    apiCache.invalidate('search');
+    apiCache.invalidate('cat_prods');
+    apiCache.invalidate('subcat_prods');
+    apiCache.invalidate('related');
+  }
 };

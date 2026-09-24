@@ -125,12 +125,8 @@ namespace Honeywell.Data
                 .ToTable("Orders");
 
             // OrderItem Table
-            modelBuilder.Entity<OrderItem>(entity =>
-            {
-                entity.ToTable("orderitems");
-                entity.Property(e => e.Price).HasColumnName("UnitPrice");
-                entity.Property(e => e.Subtotal).HasColumnName("LineTotal");
-            });
+            modelBuilder.Entity<OrderItem>()
+                .ToTable("OrderItems");
 
             // Customer -> GrowerUser (many-to-one, optional)
             modelBuilder.Entity<Customer>()
