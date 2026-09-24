@@ -105,6 +105,7 @@ const FooterConfig = lazy(() => import('./admin/screens/FooterConfig'));
 const DescriptionManager = lazy(() => import('./admin/screens/DescriptionManager'));
 const GrowthJourneyScreen = lazy(() => import('./admin/growth/GrowthJourneyScreen'));
 const PartnerApplicationsScreen = lazy(() => import('./admin/partner/PartnerApplicationsScreen'));
+const AboutConfig = lazy(() => import('./admin/screens/AboutConfig'));
 
 
 
@@ -205,6 +206,8 @@ export default function App() {
               <Route path="partner-applications" element={<PartnerApplicationsScreen />} />
               <Route path="contact-card" element={<ContactCard />} />
               <Route path="footer" element={<FooterConfig />} />
+              <Route path="about" element={<AboutConfig />} />
+              <Route path="about-us" element={<AboutConfig />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Route>
 

@@ -1,5 +1,5 @@
 // Central API configuration for ASP.NET Core Web API.
-export const DEFAULT_BACKEND_URL = 'https://honeywellproducts.com';
+export const DEFAULT_BACKEND_URL = 'https://snowplow-mummy-diligent.ngrok-free.dev';
 
 // In dev mode, force relative path ('') so requests route through Vite proxy (/api) to eliminate CORS blocks
 export const API_BASE_URL = import.meta.env.DEV 

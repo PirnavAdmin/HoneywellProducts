@@ -89,7 +89,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://honeywellproducts.com',
+        target: 'https://snowplow-mummy-diligent.ngrok-free.dev',
         changeOrigin: true,
         secure: false,
         headers: {
@@ -97,7 +97,7 @@ export default defineConfig({
         },
       },
       '/uploads': {
-        target: 'https://honeywellproducts.com',
+        target: 'https://snowplow-mummy-diligent.ngrok-free.dev',
         changeOrigin: true,
         secure: false,
         headers: {
