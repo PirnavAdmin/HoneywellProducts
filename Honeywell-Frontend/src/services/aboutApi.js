@@ -33,6 +33,58 @@ export const resolveImageUrl = (url) => {
   return `${domain}${cleanPath}`;
 };
 
+export const DEFAULT_ABOUT_DATA = {
+  hero: {
+    eyebrow: 'ABOUT US',
+    title: 'Security Technology With a Clear Purpose',
+    description: 'A premium framework prepared for official company story, market position and leadership content.',
+    image: '/uploads/about/hero.jpg'
+  },
+  overview: {
+    eyebrow: 'COMPANY OVERVIEW',
+    title: 'Built for Product Discovery and Security Solutions',
+    lead: 'The official company overview statement.',
+    description: 'Scalable foundation for CCTV, security, solar product discovery, eCommerce preparation, bulk enquiries and channel partnerships.',
+    image: '/uploads/about/overview.jpg'
+  },
+  vision: {
+    title: 'Long-term Vision Statement',
+    description: 'Detailed vision goals.'
+  },
+  mission: {
+    title: 'Company Mission Statement',
+    description: 'Detailed mission goals.'
+  },
+  portfolio: {
+    eyebrow: 'PRODUCT PORTFOLIO',
+    title: 'Security, CCTV & Solar Power Product Portfolio',
+    description: 'Comprehensive surveillance systems, solar panels, inverters, storage batteries, and recording solutions.',
+    items: [
+      { icon: 'Camera', title: 'CCTV & Surveillance', text: 'Analog, Dome, Bullet, PTZ, and IP security cameras.' },
+      { icon: 'Sun', title: 'Solar Panels & Energy', text: 'High-efficiency Monocrystalline, Polycrystalline, and Bifacial modules.' },
+      { icon: 'Zap', title: 'Solar Inverters & Storage', text: 'Off-grid and hybrid solar inverters, lithium & gel batteries.' },
+      { icon: 'Network', title: 'Recording & Networking', text: 'NVRs, DVRs, surveillance drives, and PoE network switches.' }
+    ]
+  },
+  whyChooseUs: {
+    eyebrow: 'WHY CHOOSE US',
+    title: 'A Conservative, Client-Ready Approach',
+    description: 'Statements avoid unsupported claims and remain ready for verified company information.',
+    items: [
+      { icon: 'ShieldCheck', title: 'Practical Security Focus', text: 'Product discovery organized around clear application needs.' },
+      { icon: 'Eye', title: 'Transparent Product Data', text: 'Verified models and specifications.' },
+      { icon: 'Handshake', title: 'Business Ready', text: 'Dedicated enquiry journeys for retail, bulk and partner requirements.' }
+    ]
+  },
+  ceo: {
+    name: 'CEO Full Name',
+    designation: 'Chief Executive Officer',
+    message: 'Approved executive statement.',
+    subtext: 'Supporting leadership statement.',
+    image: '/uploads/about/ceo.jpg'
+  }
+};
+
 export const aboutApi = {
   /**
    * Fetch public About Us configuration
@@ -46,15 +98,20 @@ export const aboutApi = {
         headers: HEADERS,
         timeout: 15000
       });
-      return response.data;
+      return response.data || DEFAULT_ABOUT_DATA;
     } catch (err) {
       // If primary endpoint fails, try alternative alias endpoint
       console.warn('Primary /api/About endpoint failed, attempting alias /api/Settings/about-us...', err.message);
-      const altResponse = await axios.get(altUrl, {
-        headers: HEADERS,
-        timeout: 15000
-      });
-      return altResponse.data;
+      try {
+        const altResponse = await axios.get(altUrl, {
+          headers: HEADERS,
+          timeout: 15000
+        });
+        return altResponse.data || DEFAULT_ABOUT_DATA;
+      } catch (altErr) {
+        console.warn('Both About API endpoints failed, returning default fallback data:', altErr.message);
+        return DEFAULT_ABOUT_DATA;
+      }
     }
   },
 
