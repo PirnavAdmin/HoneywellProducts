@@ -49,14 +49,15 @@ const BlogForm = () => {
       .then(data => {
         setFormData({
           title:       data.title       || '',
-          category:    data.category    || 'Agriculture',
+          category:    data.category    || 'CCTV',
           authorName:  data.authorName  || 'Admin',
           publishDate: data.publishDate ? data.publishDate.split('T')[0] : '',
           summary:     data.summary     || '',
           description: data.description || '',
         });
-        if (data.coverImage || data.image) {
-          const src = resolveBlogImageUrl(data.coverImage || data.image);
+        const rawCover = data.coverImage || data.CoverImage || data.image || data.imageUrl;
+        if (rawCover) {
+          const src = resolveBlogImageUrl(rawCover);
           setImagePreview(src);
         }
       })
@@ -101,6 +102,9 @@ const BlogForm = () => {
 
       if (imageFile) {
         body.append('coverImage', imageFile, imageFile.name);
+        body.append('CoverImage', imageFile, imageFile.name);
+        body.append('file', imageFile, imageFile.name);
+        body.append('image', imageFile, imageFile.name);
       }
 
       if (isEditing) {

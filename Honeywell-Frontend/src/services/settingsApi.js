@@ -1,4 +1,5 @@
 import { getApiDomain } from '../utils/apiConfig';
+import { apiCache } from '../utils/apiCache';
 
 const getHeaders = () => {
   const token = localStorage.getItem('adminToken');
@@ -122,14 +123,16 @@ export async function updateDescriptionManager(data) {
 
 // ── Footer Config API ──
 export async function getFooterConfig() {
-  const res = await fetch(`${getApiDomain()}/api/Settings/footer`, {
-    headers: {
-      'ngrok-skip-browser-warning': 'true',
-      'Accept': 'application/json',
-    },
-  });
-  if (!res.ok) throw new Error(`Failed to fetch footer config: ${res.status}`);
-  return res.json();
+  return await apiCache.fetchWithCache('settings_footer', async () => {
+    const res = await fetch(`${getApiDomain()}/api/Settings/footer`, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'Accept': 'application/json',
+      },
+    });
+    if (!res.ok) throw new Error(`Failed to fetch footer config: ${res.status}`);
+    return res.json();
+  }, 10 * 60 * 1000);
 }
 
 export async function updateFooterConfig(data) {
@@ -142,6 +145,7 @@ export async function updateFooterConfig(data) {
     const errorBody = await res.json().catch(() => ({}));
     throw new Error(errorBody.message || errorBody.Message || `Failed to update footer config: ${res.status}`);
   }
+  apiCache.invalidate('settings_footer');
   return res.json().catch(() => ({ success: true }));
 }
 

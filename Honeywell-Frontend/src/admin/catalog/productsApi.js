@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getApiDomain, resolveMediaUrl } from '../../utils/apiConfig';
 import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore, defaultProducts } from './catalogStore';
 import { apiCache } from '../../utils/apiCache';
 
@@ -30,40 +30,7 @@ export const computeStockStatus = (stockVal, reorderVal) => {
 
 /** Resolve a relative image path to a full URL */
 export const resolveImageUrl = (url) => {
-  if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-  if (trimmed.toLowerCase().includes('placeholder') || trimmed.includes('honeywell-products-logo.png')) {
-    return '/honeywell-products-logo.png';
-  }
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
-    return trimmed;
-  }
-
-  let result = '';
-  if (/^https?:\/\//i.test(trimmed)) {
-    result = trimmed;
-  } else if (trimmed.includes('/uploads/')) {
-    const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
-    const cleanBase = (BASE_URL || '').replace(/\/$/, '');
-    result = `${cleanBase}${uploadPath}`;
-  } else if (
-    trimmed.startsWith('/assets/') ||
-    trimmed.startsWith('assets/') ||
-    trimmed.startsWith('/images/') ||
-    trimmed.startsWith('images/') ||
-    trimmed.startsWith('/honeywell-products-logo')
-  ) {
-    result = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  } else {
-    const cleanBase = (BASE_URL || '').replace(/\/$/, '');
-    result = !cleanBase ? (trimmed.startsWith('/') ? trimmed : `/${trimmed}`) : `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
-  }
-
-  if (result.includes('/uploads/')) {
-    return result;
-  }
-  return result;
+  return resolveMediaUrl(url);
 };
 
 /** Extract an array from various API response shapes */
@@ -95,7 +62,7 @@ export const mapCategoryFromApi = (raw = {}) => ({
   slug: raw.slug || '',
   description: raw.description || '',
   status: raw.isActive === false ? 'Inactive' : 'Active',
-  displayOrder: raw.displayOrder ?? '',
+  displayOrder: Number(raw.displayOrder ?? raw.display_order ?? 0),
   metaTitle: raw.metaTitle || `${raw.categoryName || raw.name || ''} | Honeywell`,
   metaDescription: raw.metaDescription || raw.description || '',
   image: resolveImageUrl(raw.imageUrl || raw.image || ''),
@@ -435,7 +402,17 @@ export const mapProductFromApi = (
 
 export const fetchCategories = async () => {
   const response = await api.get('/api/Category');
-  return unwrapList(response).map(mapCategoryFromApi);
+  const cats = unwrapList(response).map(mapCategoryFromApi);
+  return cats.sort((a, b) => {
+    const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
+    const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
+    if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
+      if (orderA === 0) return 1;
+      if (orderB === 0) return -1;
+      return orderA - orderB;
+    }
+    return (Number(a.id) || 0) - (Number(b.id) || 0);
+  });
 };
 
 // ─── Subcategories ────────────────────────────────────────────────────────────

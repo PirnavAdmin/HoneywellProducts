@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Eye, Plus, X } from 'lucide-react';
+import { Search, MapPin, Eye, Plus, X, RefreshCw, Mail, Phone, UserCheck } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
 import { OutlookDeleteButton, AnimatedViewButton, Pagination } from '../components/ActionButtons';
 
@@ -9,6 +9,7 @@ const CustomersList = () => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState('All');
@@ -34,12 +35,10 @@ const CustomersList = () => {
     gstin: ''
   });
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  const fetchCustomers = useCallback((silent = false) => {
+    if (!silent) setLoading(true);
+    else setIsRefreshing(true);
 
-  const fetchCustomers = () => {
-    setLoading(true);
     fetch(`${getApiDomain()}/api/Customers`, {
       headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
     })
@@ -48,14 +47,35 @@ const CustomersList = () => {
         return res.json();
       })
       .then(data => {
-        setCustomers(data);
-        setLoading(false);
+        const list = Array.isArray(data) ? data : (data?.data || data?.items || []);
+        setCustomers(list);
+        setError(null);
       })
       .catch(err => {
-        setError(err.message);
+        if (!silent) setError(err.message);
+      })
+      .finally(() => {
         setLoading(false);
+        setIsRefreshing(false);
       });
-  };
+  }, []);
+
+  // Initial fetch and automatic background polling every 15 seconds
+  useEffect(() => {
+    fetchCustomers(false);
+
+    const interval = setInterval(() => {
+      fetchCustomers(true);
+    }, 15000);
+
+    const handleFocus = () => fetchCustomers(true);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [fetchCustomers]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this customer?')) return;
@@ -149,17 +169,40 @@ const CustomersList = () => {
   };
 
   const filteredCustomers = useMemo(() => {
+    const q = searchTerm.toLowerCase().trim();
     return customers.filter(c => {
       const nameVal = c.name ? c.name.toLowerCase() : '';
       const idVal = c.id ? String(c.id).toLowerCase() : '';
       const phoneVal = c.phone ? String(c.phone).toLowerCase() : '';
+      const emailVal = c.email ? c.email.toLowerCase() : '';
+      const compVal = c.companyOrganization ? c.companyOrganization.toLowerCase() : '';
+
       const matchesSearch =
-        nameVal.includes(searchTerm.toLowerCase()) ||
-        idVal.includes(searchTerm.toLowerCase()) ||
-        phoneVal.includes(searchTerm.toLowerCase());
+        !q ||
+        nameVal.includes(q) ||
+        idVal.includes(q) ||
+        phoneVal.includes(q) ||
+        emailVal.includes(q) ||
+        compVal.includes(q);
       
-      const customerType = c.type || c.role || 'System Integrator';
-      const matchesType = typeFilter === 'All' || customerType.toLowerCase() === typeFilter.toLowerCase();
+      const rawType = (c.type || c.role || '').trim();
+      const isWebsiteAccount =
+        !rawType ||
+        rawType.toUpperCase() === 'CUSTOMER ACCOUNT' ||
+        rawType.toLowerCase() === 'customer' ||
+        rawType.toLowerCase() === 'registered customer' ||
+        rawType.toLowerCase() === 'individual account';
+
+      const customerType = isWebsiteAccount ? 'Customer Account' : rawType;
+
+      let matchesType = true;
+      if (typeFilter === 'All') {
+        matchesType = true;
+      } else if (typeFilter === 'Customer Account') {
+        matchesType = isWebsiteAccount;
+      } else {
+        matchesType = customerType.toLowerCase() === typeFilter.toLowerCase();
+      }
       
       return matchesSearch && matchesType;
     });
@@ -171,26 +214,37 @@ const CustomersList = () => {
   }, [searchTerm, typeFilter]);
 
   const getTagBadgeStyle = (type) => {
-    const t = type || 'System Integrator';
+    const t = (type || '').trim();
+    if (
+      !t ||
+      t.toUpperCase() === 'CUSTOMER ACCOUNT' ||
+      t.toLowerCase() === 'customer' ||
+      t.toLowerCase() === 'customer account' ||
+      t.toLowerCase() === 'registered customer' ||
+      t.toLowerCase() === 'individual account'
+    ) {
+      return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', label: 'Customer Account' };
+    }
+
     switch (t) {
       case 'System Integrator':
-        return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' };
+        return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', label: 'System Integrator' };
       case 'CCTV Installer':
-        return { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' };
+        return { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd', label: 'CCTV Installer' };
       case 'Commercial & Enterprise':
-        return { bg: '#f1f5f9', color: '#0f172a', border: '#cbd5e1' };
+        return { bg: '#f1f5f9', color: '#0f172a', border: '#cbd5e1', label: 'Commercial & Enterprise' };
       case 'Distributor':
-        return { bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
+        return { bg: '#fffbeb', color: '#b45309', border: '#fde68a', label: 'Distributor' };
       case 'Dealer / Reseller':
       case 'Dealer':
       case 'Reseller':
-        return { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' };
+        return { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff', label: 'Dealer / Reseller' };
       case 'Residential & Facility Owner':
-        return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+        return { bg: '#fef3c7', color: '#92400e', border: '#fde68a', label: 'Residential & Facility Owner' };
       case 'Channel Partner':
-        return { bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4' };
+        return { bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4', label: 'Channel Partner' };
       default:
-        return { bg: '#eff6ff', color: '#1268a5', border: '#bfdbfe' };
+        return { bg: '#eff6ff', color: '#1268a5', border: '#bfdbfe', label: t };
     }
   };
 
@@ -200,8 +254,8 @@ const CustomersList = () => {
   const currentCustomers = filteredCustomers.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredCustomers.length / itemsPerPage);
 
-  if (loading) return <div className="text-center py-8">Loading customers...</div>;
-  if (error) return <div className="text-center py-8 text-red-600">Error: {error}</div>;
+  if (loading && customers.length === 0) return <div className="text-center py-8">Loading customers...</div>;
+  if (error && customers.length === 0) return <div className="text-center py-8 text-red-600">Error: {error}</div>;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '20px', backgroundColor: '#f8fafc', minHeight: '100vh' }}>
@@ -221,32 +275,57 @@ const CustomersList = () => {
             Customers Directory
           </h1>
           <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
-            Manage registered system integrators, installers, dealers, and enterprise clients.
+            Manage registered online customers, system integrators, installers, dealers, and enterprise clients.
           </p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          style={{
-            backgroundColor: '#1268a5',
-            color: '#ffffff',
-            fontSize: '13px',
-            fontWeight: 700,
-            padding: '10px 20px',
-            borderRadius: '10px',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            boxShadow: '0 1px 3px rgba(18, 104, 165, 0.25)',
-            whiteSpace: 'nowrap',
-            transition: 'background-color 0.15s ease'
-          }}
-          onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0e5586')}
-          onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1268a5')}
-        >
-          <Plus size={16} /> Add Customer
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={() => fetchCustomers(true)}
+            disabled={isRefreshing || loading}
+            title="Refresh customers list"
+            style={{
+              backgroundColor: '#f8fafc',
+              color: '#334155',
+              fontSize: '13px',
+              fontWeight: 600,
+              padding: '10px 14px',
+              borderRadius: '10px',
+              border: '1px solid #cbd5e1',
+              cursor: isRefreshing ? 'wait' : 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <RefreshCw size={15} style={{ animation: isRefreshing ? 'spin 1s linear infinite' : 'none' }} />
+            <span>{isRefreshing ? 'Refreshing...' : 'Refresh'}</span>
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              backgroundColor: '#1268a5',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 700,
+              padding: '10px 20px',
+              borderRadius: '10px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 1px 3px rgba(18, 104, 165, 0.25)',
+              whiteSpace: 'nowrap',
+              transition: 'background-color 0.15s ease'
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#0e5586')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1268a5')}
+          >
+            <Plus size={16} /> Add Customer
+          </button>
+        </div>
       </section>
 
       {/* Search Bar & Filter Toolbar */}
@@ -265,7 +344,7 @@ const CustomersList = () => {
           <Search size={16} style={{ position: 'absolute', left: '14px', color: '#94a3b8' }} />
           <input
             type="text"
-            placeholder="Search by customer name, phone, id..."
+            placeholder="Search by customer name, email, phone, id, or company..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -295,7 +374,8 @@ const CustomersList = () => {
             cursor: 'pointer'
           }}
         >
-          <option value="All">All Customer Types</option>
+          <option value="All">All Customer Types ({customers.length})</option>
+          <option value="Customer Account">Website / Online Accounts</option>
           <option value="System Integrator">System Integrators</option>
           <option value="CCTV Installer">CCTV Installers</option>
           <option value="Commercial & Enterprise">Commercial & Enterprise</option>
@@ -320,7 +400,7 @@ const CustomersList = () => {
             <thead>
               <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
                 <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>ID</th>
-                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Customer Name</th>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Customer Name &amp; Contact</th>
                 <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Phone Number</th>
                 <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Address</th>
                 <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Orders</th>
@@ -337,7 +417,7 @@ const CustomersList = () => {
                 const displayAddress = formatAddr();
                 const orderCount = cust.orders?.length || 0;
                 const totalSpent = cust.orders?.reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0) || 0;
-                const customerType = cust.type || cust.role || 'System Integrator';
+                const customerType = cust.type || cust.role || 'Customer Account';
                 const badgeStyle = getTagBadgeStyle(customerType);
 
                 return (
@@ -352,23 +432,37 @@ const CustomersList = () => {
                       #{cust.id}
                     </td>
                     <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0f172a', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                      <span>{cust.name}</span>
-                      <span style={{
-                        backgroundColor: badgeStyle.bg,
-                        color: badgeStyle.color,
-                        border: `1px solid ${badgeStyle.border}`,
-                        fontSize: '10.5px',
-                        fontWeight: 700,
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        marginLeft: '8px',
-                        display: 'inline-block'
-                      }}>
-                        {customerType}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{cust.name || 'Valued Customer'}</span>
+                          <span style={{
+                            backgroundColor: badgeStyle.bg,
+                            color: badgeStyle.color,
+                            border: `1px solid ${badgeStyle.border}`,
+                            fontSize: '10px',
+                            fontWeight: 700,
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            display: 'inline-block'
+                          }}>
+                            {badgeStyle.label || customerType}
+                          </span>
+                        </div>
+                        {cust.email && (
+                          <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 500 }}>
+                            {cust.email}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: '14px 18px', fontWeight: 500, color: '#475569', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                      {cust.phone}
+                      {cust.phone && cust.phone.trim() ? (
+                        cust.phone
+                      ) : (
+                        <span style={{ color: '#94a3b8', fontSize: '12px', fontStyle: 'italic' }}>
+                          {cust.email || '—'}
+                        </span>
+                      )}
                     </td>
                     <td style={{ padding: '14px 18px', color: '#64748b', fontSize: '13px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

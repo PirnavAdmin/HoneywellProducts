@@ -1,27 +1,16 @@
 import axios from 'axios';
-import { getApiDomain, DEFAULT_BACKEND_URL } from '../../utils/apiConfig';
-import heroPosterImage from '../../assets/images/cctv-hero-poster.jpg';
+import { getApiDomain, DEFAULT_BACKEND_URL, resolveMediaUrl } from '../../utils/apiConfig';
+import { apiCache } from '../../utils/apiCache';
 
-export const resolveBannerImage = (url, fallback = heroPosterImage) => {
-  if (!url || typeof url !== 'string' || !url.trim() || url.toLowerCase().includes('placeholder')) {
-    return fallback;
-  }
-  let cleanUrl = url.trim().replace(/\\/g, '/');
-  if (cleanUrl.startsWith('data:') || cleanUrl.startsWith('blob:')) {
-    return cleanUrl;
-  }
-  if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
-    return cleanUrl;
-  }
-  if (!cleanUrl.startsWith('/')) {
-    cleanUrl = `/${cleanUrl}`;
-  }
-  const domain = getApiDomain() || DEFAULT_BACKEND_URL;
-  const normalizedDomain = domain ? domain.replace(/\/$/, '') : '';
-  return `${normalizedDomain}${cleanUrl}`;
+export const resolveBannerImage = (url) => {
+  if (!url) return '';
+  return resolveMediaUrl(url);
 };
 
-const API_BASE = `${getApiDomain()}/api/Banners`;
+const getBaseUrl = () => {
+  const domain = getApiDomain() || '';
+  return domain ? `${domain.replace(/\/$/, '')}/api/Banners` : '/api/Banners';
+};
 
 const getHeaders = () => {
   const token = localStorage.getItem('adminToken');
@@ -36,13 +25,8 @@ const getHeaders = () => {
   return headers;
 };
 
-const api = axios.create({
-  baseURL: API_BASE,
-  validateStatus: status => status < 500
-});
-
 export const mapBannerFromApi = (item) => {
-  if (!item) return null;
+  if (!item || typeof item !== 'object') return null;
   const rawId = item.id ?? item.Id ?? item.bannerId ?? item.BannerId ?? item._id ?? '';
   const rawImage = (
     item.imageUrl || item.ImageUrl ||
@@ -74,7 +58,7 @@ export const mapBannerFromApi = (item) => {
  */
 export const fetchAdminBanners = async () => {
   try {
-    const response = await api.get('/admin', { headers: getHeaders() });
+    const response = await axios.get(`${getBaseUrl()}/admin`, { headers: getHeaders() });
     if (response.status === 200) {
       const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
       return list.map(mapBannerFromApi).filter(Boolean);
@@ -82,7 +66,7 @@ export const fetchAdminBanners = async () => {
   } catch (err) {
     // Fallback to GET /api/Banners
     try {
-      const response = await api.get('', { headers: getHeaders() });
+      const response = await axios.get(getBaseUrl(), { headers: getHeaders() });
       if (response.status === 200) {
         const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
         return list.map(mapBannerFromApi).filter(Boolean);
@@ -94,16 +78,16 @@ export const fetchAdminBanners = async () => {
   return [];
 };
 
-import { apiCache } from '../../utils/apiCache';
-
 /**
  * GET /api/Banners
- * Fetch active banners for public frontend
+ * Fetch active banners dynamically for public frontend
  */
 export const fetchActiveBanners = async (type = '') => {
-  return await apiCache.fetchWithCache(`banners_active_${type}`, async () => {
+  const cacheKey = `banners_active_${type || 'all'}`;
+  return await apiCache.fetchWithCache(cacheKey, async () => {
     try {
-      const response = await api.get(type ? `?type=${encodeURIComponent(type)}` : '', { headers: getHeaders() });
+      const url = type ? `${getBaseUrl()}?type=${encodeURIComponent(type)}` : getBaseUrl();
+      const response = await axios.get(url, { headers: getHeaders() });
       if (response.status === 200) {
         const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
         return list.map(mapBannerFromApi).filter(Boolean);
@@ -115,14 +99,13 @@ export const fetchActiveBanners = async (type = '') => {
   }, 10 * 60 * 1000);
 };
 
-
 /**
  * GET /api/Banners/{id}
  * Fetch single banner by ID
  */
 export const fetchBannerById = async (id) => {
   try {
-    const response = await api.get(`/${id}`, { headers: getHeaders() });
+    const response = await axios.get(`${getBaseUrl()}/${id}`, { headers: getHeaders() });
     if (response.status === 200) {
       return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
     }
@@ -140,13 +123,14 @@ export const createBanner = async (bannerData) => {
   const payload = {
     title: bannerData.title || '',
     subtitle: bannerData.subtitle || '',
+    description: bannerData.description || bannerData.subtitle || '',
     imageUrl: bannerData.imageUrl || '',
     targetUrl: bannerData.targetUrl || '/products',
     bannerType: bannerData.bannerType || 'Hero',
     isActive: bannerData.isActive !== undefined ? bannerData.isActive : true,
     displayOrder: Number(bannerData.displayOrder || 0)
   };
-  const response = await api.post('', payload, { headers: getHeaders() });
+  const response = await axios.post(getBaseUrl(), payload, { headers: getHeaders() });
   apiCache.invalidate('banners');
   return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
 };
@@ -156,17 +140,19 @@ export const createBanner = async (bannerData) => {
  * Update banner
  */
 export const updateBanner = async (id, bannerData) => {
+  const cleanId = isNaN(Number(id)) ? id : Number(id);
   const payload = {
-    id: isNaN(Number(id)) ? id : Number(id),
+    id: cleanId,
     title: bannerData.title || '',
     subtitle: bannerData.subtitle || '',
+    description: bannerData.description || bannerData.subtitle || '',
     imageUrl: bannerData.imageUrl || '',
     targetUrl: bannerData.targetUrl || '/products',
     bannerType: bannerData.bannerType || 'Hero',
     isActive: bannerData.isActive !== undefined ? bannerData.isActive : true,
     displayOrder: Number(bannerData.displayOrder || 0)
   };
-  const response = await api.put(`/${id}`, payload, { headers: getHeaders() });
+  const response = await axios.put(`${getBaseUrl()}/${id}`, payload, { headers: getHeaders() });
   apiCache.invalidate('banners');
   return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
 };
@@ -177,7 +163,7 @@ export const updateBanner = async (id, bannerData) => {
  */
 export const toggleBannerActive = async (id, currentActiveState) => {
   try {
-    const response = await api.put(`/${id}/toggle`, {}, { headers: getHeaders() });
+    const response = await axios.put(`${getBaseUrl()}/${id}/toggle`, {}, { headers: getHeaders() });
     if (response.status === 200) {
       apiCache.invalidate('banners');
       return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
@@ -190,23 +176,47 @@ export const toggleBannerActive = async (id, currentActiveState) => {
 
 /**
  * POST /api/Banners/upload-image
- * Upload banner image helper
+ * Upload banner image with automatic fallback
  */
 export const uploadBannerImage = async (file) => {
+  const domain = getApiDomain() || '';
+  const bannerUploadUrl = domain ? `${domain.replace(/\/$/, '')}/api/Banners/upload-image` : '/api/Banners/upload-image';
+  const fallbackUploadUrl = domain ? `${domain.replace(/\/$/, '')}/api/Category/upload-image` : '/api/Category/upload-image';
+
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('image', file);
+  formData.append('imageFile', file);
+
   try {
-    const response = await axios.post(`${API_BASE}/upload-image`, formData, {
+    const response = await axios.post(bannerUploadUrl, formData, {
       headers: {
         'ngrok-skip-browser-warning': 'true',
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data?.url || response.data?.imageUrl || response.data?.path || '';
+    const url = response.data?.imageUrl || response.data?.url || response.data?.image || response.data?.path || '';
+    if (url) return url;
   } catch (err) {
-    console.warn('Upload banner image error:', err.message);
-    return URL.createObjectURL(file);
+    console.warn('Banner upload primary route error, attempting fallback route:', err?.message);
   }
+
+  // Fallback to Category/upload-image which is verified active on backend
+  try {
+    const fallbackResponse = await axios.post(fallbackUploadUrl, formData, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    const finalUrl = fallbackResponse.data?.imageUrl || fallbackResponse.data?.url || fallbackResponse.data?.image || fallbackResponse.data?.path || '';
+    if (finalUrl) return finalUrl;
+  } catch (fallbackErr) {
+    console.error('All banner upload routes failed:', fallbackErr);
+    throw fallbackErr;
+  }
+
+  throw new Error('Upload failed: Server did not return an image URL.');
 };
 
 /**
@@ -214,7 +224,7 @@ export const uploadBannerImage = async (file) => {
  * Delete banner
  */
 export const deleteBanner = async (id) => {
-  await api.delete(`/${id}`, { headers: getHeaders() });
+  await axios.delete(`${getBaseUrl()}/${id}`, { headers: getHeaders() });
   apiCache.invalidate('banners');
   return true;
 };

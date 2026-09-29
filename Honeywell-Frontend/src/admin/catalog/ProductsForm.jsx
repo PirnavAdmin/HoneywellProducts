@@ -33,7 +33,7 @@ import './ProductsForm.css';
 
 const resolveImageUrl = (url) => {
   if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
+  const trimmed = url.trim().replace(/\\/g, '/');
   if (!trimmed) return '';
   if (trimmed.toLowerCase().includes('placeholder') || trimmed.includes('honeywell-products-logo.png')) {
     return '/honeywell-products-logo.png';
@@ -41,12 +41,16 @@ const resolveImageUrl = (url) => {
   if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
     return trimmed;
   }
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
+
+  // If the URL contains an /uploads/ path (even if saved with an old expired ngrok or localhost origin)
   if (trimmed.includes('/uploads/')) {
     const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
-    const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
     return `${cleanBase}${uploadPath}`;
   }
+
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
   if (
     trimmed.startsWith('/assets/') ||
     trimmed.startsWith('assets/') ||
@@ -56,7 +60,6 @@ const resolveImageUrl = (url) => {
   ) {
     return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   }
-  const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
   if (!cleanBase) return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
   return `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
 };

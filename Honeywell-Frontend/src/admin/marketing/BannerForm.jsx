@@ -89,7 +89,8 @@ const BannerForm = () => {
       }, 1200);
     } catch (err) {
       console.error('Failed to save banner:', err);
-      setMsg({ text: 'Failed to save banner. Please try again.', type: 'error' });
+      const errMsg = err.response?.data?.message || err.response?.data?.title || (typeof err.response?.data === 'string' ? err.response.data : null) || err.message || 'Failed to save banner. Please try again.';
+      setMsg({ text: `Failed to save banner: ${errMsg}`, type: 'error' });
     } finally {
       setIsSaving(false);
     }

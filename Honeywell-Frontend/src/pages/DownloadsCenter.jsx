@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Download, FileText, Search, FileCheck, BookOpen, Eye,
-  Loader2, AlertCircle, Monitor, Cpu, Package
+  Loader2, AlertCircle, Package, Layers, X
 } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import { productService } from '../services/productService';
-import { softwareService } from '../services/softwareService';
 import { generateProductPdf } from '../utils/pdfGenerator';
 import heroImage from '../assets/images/smart-technology-trends.png';
 
@@ -32,19 +31,8 @@ export default function DownloadsCenter() {
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [errorProducts, setErrorProducts] = useState(null);
 
-  // State for Software — Drivers
-  const [drivers, setDrivers] = useState([]);
-  const [loadingDrivers, setLoadingDrivers] = useState(true);
-  const [errorDrivers, setErrorDrivers] = useState(null);
-
-  // State for Software — Firmware
-  const [firmware, setFirmware] = useState([]);
-  const [loadingFirmware, setLoadingFirmware] = useState(true);
-  const [errorFirmware, setErrorFirmware] = useState(null);
-
-  // ── Fetch all 3 APIs in parallel on mount ──
+  // ── Fetch products on mount ──
   useEffect(() => {
-    // 1. Fetch Products for documents
     const fetchProducts = async () => {
       try {
         setLoadingProducts(true);
@@ -52,55 +40,24 @@ export default function DownloadsCenter() {
         const data = await productService.getAll();
         setProducts(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Error loading products:', err);
-        setErrorProducts(err.message);
+        console.error('Error loading products for documents:', err);
+        setErrorProducts(err.message || 'Failed to load product documents');
       } finally {
         setLoadingProducts(false);
       }
     };
 
-    // 2. Fetch Drivers
-    const fetchDrivers = async () => {
-      try {
-        setLoadingDrivers(true);
-        setErrorDrivers(null);
-        const result = await softwareService.getAll({ softwareType: 'Driver' });
-        setDrivers(result.items || []);
-      } catch (err) {
-        console.error('Error loading drivers:', err);
-        setErrorDrivers(err.message);
-      } finally {
-        setLoadingDrivers(false);
-      }
-    };
-
-    // 3. Fetch Firmware
-    const fetchFirmware = async () => {
-      try {
-        setLoadingFirmware(true);
-        setErrorFirmware(null);
-        const result = await softwareService.getAll({ softwareType: 'Firmware' });
-        setFirmware(result.items || []);
-      } catch (err) {
-        console.error('Error loading firmware:', err);
-        setErrorFirmware(err.message);
-      } finally {
-        setLoadingFirmware(false);
-      }
-    };
-
     fetchProducts();
-    fetchDrivers();
-    fetchFirmware();
   }, []);
 
-  // ── Build document list from products API data ──
-  const allDocuments = products.flatMap((product) => {
-    const docs = [];
-    const productName = product.name || product.productName || product.title || 'Honeywell Product';
-    const catName = getCategoryName(product);
+  // ── Build complete document list for each product ──
+  const allDocuments = useMemo(() => {
+    return products.flatMap((product) => {
+      const docs = [];
+      const productName = product.name || product.productName || product.title || 'Honeywell Product';
+      const catName = getCategoryName(product);
 
-    if (product.datasheetUrl || product.datasheet) {
+      // 1. Datasheet
       docs.push({
         id: `${product.id}-datasheet`,
         productId: product.id,
@@ -108,12 +65,14 @@ export default function DownloadsCenter() {
         category: catName,
         title: `${productName} — Technical Datasheet`,
         type: 'datasheets',
-        fileUrl: product.datasheetUrl || product.datasheet,
+        badge: 'Datasheet',
+        fileUrl: product.datasheetUrl || product.datasheet || `/docs/${product.id}-datasheet.pdf`,
         format: 'PDF',
         productObj: product,
+        description: product.shortDescription || product.description || 'Comprehensive technical specifications, pin configurations, and electrical ratings.',
       });
-    }
-    if (product.manualUrl || product.manual) {
+
+      // 2. Installation & User Manual
       docs.push({
         id: `${product.id}-manual`,
         productId: product.id,
@@ -121,115 +80,86 @@ export default function DownloadsCenter() {
         category: catName,
         title: `${productName} — Installation & User Manual`,
         type: 'manuals',
-        fileUrl: product.manualUrl || product.manual,
+        badge: 'User Manual',
+        fileUrl: product.manualUrl || product.manual || `/docs/${product.id}-manual.pdf`,
         format: 'PDF',
         productObj: product,
+        description: 'Step-by-step setup guide, hardware mounting procedures, and configuration manual.',
       });
-    }
-    if (product.brochureUrl || product.brochure) {
+
+      // 3. Product Brochure
       docs.push({
         id: `${product.id}-brochure`,
         productId: product.id,
         productName,
         category: catName,
-        title: `${productName} — Product Brochure`,
+        title: `${productName} — Product Overview Brochure`,
         type: 'brochures',
-        fileUrl: product.brochureUrl || product.brochure,
+        badge: 'Brochure',
+        fileUrl: product.brochureUrl || product.brochure || `/docs/${product.id}-brochure.pdf`,
         format: 'PDF',
         productObj: product,
+        description: 'Feature overview, application scenarios, benefits, and solution deployment architecture.',
       });
-    }
 
-    // Always include Certification & Quality document for every product
-    docs.push({
-      id: `${product.id}-certification`,
-      productId: product.id,
-      productName,
-      category: catName,
-      title: `${productName} — Certificate of Quality & Compliance`,
-      type: 'documents',
-      fileUrl: product.certificationUrl || product.certification || `/docs/${product.id}-certification.pdf`,
-      format: 'PDF',
-      productObj: product,
-    });
-
-    // If no datasheet URL, generate a spec doc entry
-    if (!product.datasheetUrl && !product.datasheet) {
+      // 4. Quality & Compliance Certificate
       docs.push({
-        id: `${product.id}-spec-doc`,
+        id: `${product.id}-certification`,
         productId: product.id,
         productName,
         category: catName,
-        title: `${productName} — Technical Specification Sheet`,
-        type: 'datasheets',
-        fileUrl: `/docs/${product.id}-specifications.pdf`,
+        title: `${productName} — Certificate of Quality & Compliance`,
+        type: 'documents',
+        badge: 'Certification',
+        fileUrl: product.certificationUrl || product.certification || `/docs/${product.id}-certification.pdf`,
         format: 'PDF',
         productObj: product,
+        description: 'Official CE, RoHS, ISO quality compliance and commercial warranty documentation.',
       });
-    }
-    return docs;
-  });
 
-  // ── Build software items (drivers + firmware) ──
-  const softwareItems = [
-    ...drivers.map((item) => ({
-      id: `sw-driver-${item.id}`,
-      softwareId: item.id,
-      productName: item.productName || 'Honeywell Product',
-      category: 'Driver',
-      title: item.softwareName,
-      description: item.description,
-      type: 'drivers',
-      version: item.version,
-      platform: item.platform,
-      fileUrl: item.fileUrl || item.externalUrl,
-      downloadCount: item.downloadCount || 0,
-      releaseDate: item.releaseDate,
-      isFeatured: item.isFeatured,
-      softwareObj: item,
-    })),
-    ...firmware.map((item) => ({
-      id: `sw-firmware-${item.id}`,
-      softwareId: item.id,
-      productName: item.productName || 'Honeywell Product',
-      category: 'Firmware',
-      title: item.softwareName,
-      description: item.description,
-      type: 'firmware',
-      version: item.version,
-      platform: item.platform,
-      fileUrl: item.fileUrl || item.externalUrl,
-      downloadCount: item.downloadCount || 0,
-      releaseDate: item.releaseDate,
-      isFeatured: item.isFeatured,
-      softwareObj: item,
-    })),
-  ];
+      return docs;
+    });
+  }, [products]);
 
   // ── Extract unique categories from live product data ──
-  const uniqueCategories = [...new Set(products.map(getCategoryName))].filter(Boolean).sort();
+  const uniqueCategories = useMemo(() => {
+    return [...new Set(products.map(getCategoryName))].filter(Boolean).sort();
+  }, [products]);
+
+  // ── Accurate Tab counts ──
+  const tabCounts = useMemo(() => ({
+    all: allDocuments.length,
+    datasheets: allDocuments.filter((d) => d.type === 'datasheets').length,
+    manuals: allDocuments.filter((d) => d.type === 'manuals').length,
+    brochures: allDocuments.filter((d) => d.type === 'brochures').length,
+    documents: allDocuments.filter((d) => d.type === 'documents').length,
+  }), [allDocuments]);
+
+  // ── Tab items configuration ──
+  const tabs = useMemo(() => [
+    { id: 'all', label: 'All Downloads', icon: Layers, count: tabCounts.all },
+    { id: 'datasheets', label: 'Datasheets', icon: FileText, count: tabCounts.datasheets },
+    { id: 'manuals', label: 'User Manuals', icon: BookOpen, count: tabCounts.manuals },
+    { id: 'brochures', label: 'Brochures', icon: Package, count: tabCounts.brochures },
+    { id: 'documents', label: 'Certifications & Docs', icon: FileCheck, count: tabCounts.documents },
+  ], [tabCounts]);
 
   // ── Filter logic based on active tab and search ──
-  const getFilteredItems = () => {
+  const filteredItems = useMemo(() => {
     let items = [];
 
-    if (activeTab === 'all' || activeTab === 'documents') {
-      // For 'all' or 'documents', combine both documents and software
-      if (activeTab === 'all') {
-        items = [...allDocuments, ...softwareItems];
-      } else {
-        items = [...allDocuments];
-      }
+    if (activeTab === 'all') {
+      items = allDocuments;
     } else if (activeTab === 'datasheets') {
       items = allDocuments.filter((d) => d.type === 'datasheets');
     } else if (activeTab === 'manuals') {
       items = allDocuments.filter((d) => d.type === 'manuals');
     } else if (activeTab === 'brochures') {
       items = allDocuments.filter((d) => d.type === 'brochures');
-    } else if (activeTab === 'drivers') {
-      items = softwareItems.filter((s) => s.type === 'drivers');
-    } else if (activeTab === 'firmware') {
-      items = softwareItems.filter((s) => s.type === 'firmware');
+    } else if (activeTab === 'documents') {
+      items = allDocuments.filter((d) => d.type === 'documents');
+    } else {
+      items = allDocuments;
     }
 
     // Apply category filter
@@ -240,53 +170,28 @@ export default function DownloadsCenter() {
     }
 
     // Apply search filter
-    if (search) {
-      const q = search.toLowerCase();
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
       items = items.filter((item) =>
         (item.title || '').toLowerCase().includes(q) ||
         (item.productName || '').toLowerCase().includes(q) ||
         (item.description || '').toLowerCase().includes(q) ||
-        (item.category || '').toLowerCase().includes(q)
+        (item.category || '').toLowerCase().includes(q) ||
+        (item.badge || '').toLowerCase().includes(q)
       );
     }
 
     return items;
-  };
+  }, [activeTab, allDocuments, category, search]);
 
-  const filteredItems = getFilteredItems();
-
-  const isLoading = loadingProducts || loadingDrivers || loadingFirmware;
-
-  // ── Tab counts ──
-  const tabCounts = {
-    all: allDocuments.length + softwareItems.length,
-    datasheets: allDocuments.filter((d) => d.type === 'datasheets').length,
-    manuals: allDocuments.filter((d) => d.type === 'manuals').length,
-    brochures: allDocuments.filter((d) => d.type === 'brochures').length,
-    documents: allDocuments.length,
-    drivers: softwareItems.filter((s) => s.type === 'drivers').length,
-    firmware: softwareItems.filter((s) => s.type === 'firmware').length,
-  };
+  const isLoading = loadingProducts;
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
     setSearchParams(tab === 'all' ? {} : { tab });
   };
 
-  const handleDocumentAction = (doc, mode = 'download') => {
-    // If it's a software item, use the software download mechanism
-    if (doc.softwareObj) {
-      const swItem = doc.softwareObj;
-      if (mode === 'view') {
-        const url = swItem.externalUrl || swItem.fileUrl;
-        if (url) window.open(url, '_blank', 'noopener,noreferrer');
-      } else {
-        softwareService.download(swItem.id, swItem.externalUrl || swItem.fileUrl);
-      }
-      return;
-    }
-
-    // For product documents
+  const handleDocumentAction = async (doc, mode = 'download') => {
     const url = doc.fileUrl || '';
     const isRealExternalPdf = (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) && !url.includes('/docs/');
 
@@ -305,36 +210,31 @@ export default function DownloadsCenter() {
       return;
     }
 
-    generateProductPdf(doc.productObj || { name: doc.productName, category: doc.category, id: doc.productId }, doc.type, mode);
+    await generateProductPdf(
+      doc.productObj || {
+        name: doc.productName,
+        category: doc.category,
+        id: doc.productId,
+      },
+      doc.type,
+      mode
+    );
   };
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return '';
-    try {
-      return new Date(dateStr).toLocaleDateString('en-IN', {
-        year: 'numeric', month: 'short', day: 'numeric'
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  // ── Icon for doc/software type ──
+  // ── Icon for doc type ──
   const getItemIcon = (item) => {
-    if (item.type === 'drivers') return <Monitor size={24} />;
-    if (item.type === 'firmware') return <Cpu size={24} />;
-    if (item.type === 'manuals') return <BookOpen size={24} />;
-    if (item.type === 'datasheets') return <FileText size={24} />;
-    if (item.type === 'brochures') return <Package size={24} />;
-    return <FileCheck size={24} />;
+    if (item.type === 'manuals') return <BookOpen size={22} />;
+    if (item.type === 'datasheets') return <FileText size={22} />;
+    if (item.type === 'brochures') return <Package size={22} />;
+    return <FileCheck size={22} />;
   };
 
   return (
     <>
       <PageHero
-        eyebrow="DOWNLOADS &amp; DOCUMENTS"
+        eyebrow="DOCUMENTATION &amp; RESOURCES"
         title="Downloads &amp; Document Center"
-        description="Access official datasheets, user manuals, brochures, driver packages, firmware, and technical specifications for Honeywell products."
+        description="Access official datasheets, installation manuals, product brochures, and certifications for Honeywell security products."
         image={heroImage}
       />
 
@@ -346,112 +246,118 @@ export default function DownloadsCenter() {
               <Search size={16} />
               <input
                 type="text"
-                placeholder="Search documents, drivers, firmware..."
+                placeholder="Search documents, datasheets, manuals, brochures, certifications..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch('')}
+                  style={{ position: 'absolute', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}
+                  aria-label="Clear search"
+                >
+                  <X size={16} />
+                </button>
+              )}
             </div>
 
             <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All Categories</option>
+              <option value="">All Product Categories</option>
               {uniqueCategories.map((cat) => (
                 <option key={cat} value={cat}>{cat}</option>
               ))}
-              {/* Software-specific categories */}
-              {softwareItems.length > 0 && (
-                <>
-                  <option value="Driver">Drivers</option>
-                  <option value="Firmware">Firmware</option>
-                </>
-              )}
             </select>
           </div>
 
           {/* ── Tab Bar ── */}
           <div className="tabs-header">
-            <button className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`} onClick={() => handleTabChange('all')}>
-              All Downloads ({isLoading ? '...' : tabCounts.all})
-            </button>
-            <button className={`tab-btn ${activeTab === 'datasheets' ? 'active' : ''}`} onClick={() => handleTabChange('datasheets')}>
-              Datasheets ({isLoading ? '...' : tabCounts.datasheets})
-            </button>
-            <button className={`tab-btn ${activeTab === 'manuals' ? 'active' : ''}`} onClick={() => handleTabChange('manuals')}>
-              User Manuals ({isLoading ? '...' : tabCounts.manuals})
-            </button>
-            <button className={`tab-btn ${activeTab === 'brochures' ? 'active' : ''}`} onClick={() => handleTabChange('brochures')}>
-              Brochures ({isLoading ? '...' : tabCounts.brochures})
-            </button>
-            <button className={`tab-btn ${activeTab === 'documents' ? 'active' : ''}`} onClick={() => handleTabChange('documents')}>
-              Certifications &amp; Docs ({isLoading ? '...' : tabCounts.documents})
-            </button>
-            <button className={`tab-btn ${activeTab === 'drivers' ? 'active' : ''}`} onClick={() => handleTabChange('drivers')}>
-              Drivers ({loadingDrivers ? '...' : tabCounts.drivers})
-            </button>
-            <button className={`tab-btn ${activeTab === 'firmware' ? 'active' : ''}`} onClick={() => handleTabChange('firmware')}>
-              Firmware ({loadingFirmware ? '...' : tabCounts.firmware})
-            </button>
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                  onClick={() => handleTabChange(tab.id)}
+                >
+                  <Icon size={16} />
+                  <span>{tab.label}</span>
+                  <span className="tab-badge">{isLoading ? '...' : tab.count}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* ── Content ── */}
           {isLoading ? (
-            <div className="route-loading" style={{ minHeight: '200px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-              <Loader2 size={28} style={{ animation: 'spin 1s linear infinite', color: '#1268a5' }} />
-              <p style={{ margin: 0, color: '#64748b' }}>Loading documents, drivers, and firmware...</p>
+            <div className="route-loading" style={{ minHeight: '260px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+              <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#e30613' }} />
+              <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>Loading official Honeywell documentation...</p>
             </div>
-          ) : (errorProducts && errorDrivers && errorFirmware) ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '24px', background: '#fef2f2', borderRadius: '8px', color: '#dc2626' }}>
-              <AlertCircle size={20} />
-              <span>Unable to load download resources. Please try again later.</span>
+          ) : errorProducts ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '24px', background: '#fef2f2', borderRadius: '10px', color: '#dc2626' }}>
+              <AlertCircle size={24} />
+              <span style={{ fontWeight: 500 }}>Unable to load documentation resources. Please check your network connection and try again.</span>
             </div>
           ) : filteredItems.length === 0 ? (
-            <div className="empty-state" style={{ textAlign: 'center', padding: '48px 20px' }}>
-              <FileText size={48} className="empty-icon" style={{ color: '#cbd5e1', marginBottom: '16px' }} />
-              <h3 style={{ color: '#475569', marginBottom: '8px' }}>No documents found</h3>
-              <p style={{ color: '#94a3b8' }}>Try clearing your search filters or selecting a different category.</p>
+            <div className="empty-state" style={{ textAlign: 'center', padding: '60px 20px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+              <FileText size={48} className="empty-icon" style={{ color: '#94a3b8', marginBottom: '14px' }} />
+              <h3 style={{ color: '#334155', marginBottom: '8px', fontSize: '18px' }}>No documents match your filter</h3>
+              <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '420px', margin: '0 auto 16px' }}>Try searching with a different term or reset your category filters.</p>
+              {(search || category || activeTab !== 'all') && (
+                <button
+                  type="button"
+                  className="button button-outline button-small"
+                  onClick={() => { setSearch(''); setCategory(''); setActiveTab('all'); setSearchParams({}); }}
+                >
+                  Reset All Filters
+                </button>
+              )}
             </div>
           ) : (
             <div className="downloads-grid">
               {filteredItems.map((item) => (
                 <div key={item.id} className="download-card">
-                  <div className="download-card-icon">
-                    {getItemIcon(item)}
+                  <div className="download-card-header">
+                    <div className={`download-card-icon ${item.type}`}>
+                      {getItemIcon(item)}
+                    </div>
+                    <div className="download-card-tags">
+                      <span className={`doc-type-tag ${item.type}`}>
+                        {item.badge}
+                      </span>
+                      <span className="doc-format-pill">{item.format || 'PDF'}</span>
+                    </div>
                   </div>
+
                   <div className="download-card-info">
                     <h4>{item.title}</h4>
                     <span className="doc-category">
                       {item.category}
-                      {item.version && ` • ${item.version}`}
-                      {item.platform && ` • ${item.platform}`}
-                      {!item.version && ` • Format: PDF`}
                     </span>
-                    {item.description && item.softwareObj && (
-                      <p style={{ fontSize: '12px', color: '#94a3b8', margin: '4px 0 0', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {item.description && (
+                      <p className="doc-desc">
                         {item.description}
                       </p>
                     )}
-                    {item.downloadCount > 0 && (
-                      <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px', display: 'inline-block' }}>
-                        {item.downloadCount.toLocaleString()} downloads
-                        {item.releaseDate && ` • Released ${formatDate(item.releaseDate)}`}
-                      </span>
-                    )}
                   </div>
-                  <div className="download-card-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: 'auto' }}>
+
+                  <div className="download-card-actions">
                     <button
                       type="button"
-                      className="button button-outline button-small"
+                      className="btn-view"
                       onClick={() => handleDocumentAction(item, 'view')}
-                      title={item.softwareObj ? 'Open download page' : 'Open & view PDF in browser'}
+                      title="Open & view PDF preview in browser"
                     >
-                      <Eye size={14} /> View
+                      <Eye size={14} /> Preview
                     </button>
                     <button
                       type="button"
-                      className="button button-small"
+                      className="btn-download"
                       onClick={() => handleDocumentAction(item, 'download')}
-                      title={item.softwareObj ? 'Download software' : 'Download official PDF file'}
+                      title="Download official PDF document"
                     >
-                      <Download size={14} /> {item.softwareObj ? 'Download' : 'Download PDF'}
+                      <Download size={14} /> Download PDF
                     </button>
                   </div>
                 </div>

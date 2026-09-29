@@ -174,7 +174,8 @@ const BlogsList = () => {
                 </tr>
               ) : filteredBlogs.length > 0 ? (
                 pagedBlogs.map((blog) => {
-                  const imgSrc = resolveBlogImageUrl(blog.coverImage || blog.image);
+                  const rawCover = blog.coverImage || blog.CoverImage || blog.image || blog.imageUrl || blog.ImageUrl;
+                  const imgSrc = resolveBlogImageUrl(rawCover);
                   return (
                     <tr key={blog.id} style={{ fontSize: '12px' }}>
                       {/* Article column */}
@@ -183,9 +184,12 @@ const BlogsList = () => {
                           {imgSrc ? (
                             <img
                               src={imgSrc}
-                              alt={blog.title}
+                              alt={blog.title || 'Article'}
                               style={{ width: 48, height: 32, objectFit: 'cover', borderRadius: 4, border: '1px solid #e2e8f0', flexShrink: 0 }}
-                              onError={(e) => { e.target.style.display = 'none'; }}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = '/honeywell-products-logo.png';
+                              }}
                             />
                           ) : (
                             <div style={{ width: 48, height: 32, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 4, border: '1px solid #e2e8f0', flexShrink: 0 }}>

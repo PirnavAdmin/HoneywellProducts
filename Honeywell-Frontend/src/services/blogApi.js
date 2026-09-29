@@ -1,4 +1,5 @@
-import { getApiDomain, DEFAULT_BACKEND_URL } from '../utils/apiConfig';
+import { getApiDomain, DEFAULT_BACKEND_URL, resolveMediaUrl } from '../utils/apiConfig';
+import { apiCache } from '../utils/apiCache';
 
 const getBaseUrl = () => {
   const domain = getApiDomain();
@@ -18,11 +19,8 @@ const getHeaders = () => {
 };
 
 export const resolveBlogImageUrl = (url) => {
-  if (!url) return null;
-  if (url.startsWith('data:')) return url;
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const domain = getApiDomain() || DEFAULT_BACKEND_URL;
-  return `${domain}${url.startsWith('/') ? '' : '/'}${url}`;
+  if (!url) return '';
+  return resolveMediaUrl(url);
 };
 
 /**
@@ -30,14 +28,16 @@ export const resolveBlogImageUrl = (url) => {
  * Fetch all blog articles
  */
 export async function getBlogs() {
-  const res = await fetch(getBaseUrl(), {
-    headers: getHeaders(),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch blogs: ${res.status}`);
-  }
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
+  return await apiCache.fetchWithCache('blogs_all', async () => {
+    const res = await fetch(getBaseUrl(), {
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch blogs: ${res.status}`);
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  }, 10 * 60 * 1000);
 }
 
 /**
@@ -77,6 +77,7 @@ export async function createBlog(data) {
     throw new Error(errText || `Failed to create blog: ${res.status}`);
   }
 
+  apiCache.invalidate('blogs');
   return res.json().catch(() => ({ success: true }));
 }
 
@@ -103,6 +104,7 @@ export async function updateBlog(id, data) {
     throw new Error(errText || `Failed to update blog ${id}: ${res.status}`);
   }
 
+  apiCache.invalidate('blogs');
   return res.json().catch(() => ({ success: true }));
 }
 
@@ -121,5 +123,6 @@ export async function deleteBlog(id) {
     throw new Error(errText || `Failed to delete blog ${id}: ${res.status}`);
   }
 
+  apiCache.invalidate('blogs');
   return true;
 }

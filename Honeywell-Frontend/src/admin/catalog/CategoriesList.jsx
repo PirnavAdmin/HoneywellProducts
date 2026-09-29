@@ -81,7 +81,11 @@ const CategoriesList = () => {
       .sort((a, b) => {
         const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
         const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
-        if (orderA !== orderB) return orderA - orderB;
+        if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
+          if (orderA === 0) return 1;
+          if (orderB === 0) return -1;
+          return orderA - orderB;
+        }
         return Number(a.id) - Number(b.id);
       });
   }, [categories, searchTerm]);

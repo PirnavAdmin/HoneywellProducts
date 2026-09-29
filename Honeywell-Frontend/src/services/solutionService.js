@@ -1,4 +1,5 @@
 import { API_BASE_URL } from './api';
+import { apiCache } from '../utils/apiCache';
 import { applications } from '../data/solutions';
 import { applicationImages, solutionPortfolioImages } from '../data/imageLibrary';
 
@@ -74,20 +75,22 @@ export const solutionService = {
     if (import.meta.env.VITE_ADMIN_DATA_MODE === 'mock') {
       return getLocalFallbackSolutions();
     }
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/solutions`, {
-        headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-        if (list.length > 0) return list.map(mapSolutionFromApi);
+    return await apiCache.fetchWithCache('solutions_all', async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/solutions`, {
+          headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+          if (list.length > 0) return list.map(mapSolutionFromApi);
+        }
+      } catch (e) {
+        // Fallthrough to local applications data
       }
-    } catch (e) {
-      // Fallthrough to local applications data
-    }
 
-    return getLocalFallbackSolutions();
+      return getLocalFallbackSolutions();
+    }, 15 * 60 * 1000);
   },
 
   // 2. GET (ById)

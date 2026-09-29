@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { ArrowRight, BriefcaseBusiness, Building2, Check, Handshake, Network, Store, Wrench } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, Building2, Check, Handshake, Network, Store, Wrench, Truck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHero from '../components/common/PageHero';
 import SectionHeading from '../components/common/SectionHeading';
 import PartnerTermsModal from '../components/business/PartnerTermsModal';
+import DistributorsDirectory from '../components/business/DistributorsDirectory';
 import { partnerTermsData } from '../data/partnerTerms';
 import { partnerService } from '../services/partnerService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -98,35 +99,56 @@ export default function Business() {
           />
           <div className="business-card-grid">
             {pathways.map(({ icon: Icon, ...item }) => (
-              <article key={item.id} id={item.id}>
-                <Icon />
-                <h2>{item.title}</h2>
-                <p>{item.text}</p>
-                <ul>
+              <article key={item.id} id={item.id} className="partner-pathway-card">
+                <div className="partner-card-header">
+                  <div className="partner-card-icon-wrap">
+                    <Icon size={22} />
+                  </div>
+                  <h3>{item.title}</h3>
+                </div>
+                <p className="partner-card-text">{item.text}</p>
+                <div className="partner-card-divider" />
+                <ul className="partner-card-benefits">
                   {item.benefits.map((benefit) => (
                     <li key={benefit}>
-                      <Check size={16} />
-                      {benefit}
+                      <span className="benefit-check-badge">
+                        <Check size={13} strokeWidth={2.5} />
+                      </span>
+                      <span>{benefit}</span>
                     </li>
                   ))}
                 </ul>
                 <div className="partner-card-actions">
-                  <button className="arrow-link" onClick={() => openForm(item.title)}>
-                    Apply as {item.title} <ArrowRight />
+                  <button className="partner-apply-btn" onClick={() => openForm(item.title)}>
+                    <span>Apply as {item.title}</span>
+                    <ArrowRight size={15} />
                   </button>
-                  <button
-                    className="arrow-link secondary"
-                    type="button"
-                    onClick={() => openTermsModal(item.id)}
-                  >
-                    View Terms & Conditions <ArrowRight />
-                  </button>
+                  <div className="partner-card-sub-actions">
+                    <button
+                      className="partner-terms-btn"
+                      type="button"
+                      onClick={() => openTermsModal(item.id)}
+                    >
+                      Terms & Conditions
+                    </button>
+                    {item.id === 'distributor' && (
+                      <Link
+                        to="/partner/dashboard"
+                        className="partner-directory-btn"
+                      >
+                        Distributors Directory →
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </article>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Authorized Regional Distributors & Partner Directory */}
+      <DistributorsDirectory />
 
       <section className="business-extras">
         <div className="container">

@@ -85,8 +85,18 @@ export default function Home() {
     ])
       .then(([prods, cats, subs, sols, blogs]) => {
         if (isMounted) {
+          const sortedCats = (Array.isArray(cats) ? cats : []).slice().sort((a, b) => {
+            const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
+            const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
+            if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
+              if (orderA === 0) return 1;
+              if (orderB === 0) return -1;
+              return orderA - orderB;
+            }
+            return (Number(a.id) || 0) - (Number(b.id) || 0);
+          });
           setProductsList(Array.isArray(prods) ? prods : []);
-          setCategoriesList(Array.isArray(cats) ? cats : []);
+          setCategoriesList(sortedCats);
           setSubcategoriesList(Array.isArray(subs) ? subs : []);
           setSolutionsList(Array.isArray(sols) ? sols : []);
           setBlogsList(Array.isArray(blogs) && blogs.length > 0 ? blogs : marketTrends);

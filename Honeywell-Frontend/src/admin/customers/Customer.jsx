@@ -221,26 +221,37 @@ const Customer = () => {
   };
 
   const getTagBadgeStyle = (type) => {
-    const t = type || 'System Integrator';
+    const t = (type || '').trim();
+    if (
+      !t ||
+      t.toUpperCase() === 'CUSTOMER ACCOUNT' ||
+      t.toLowerCase() === 'customer' ||
+      t.toLowerCase() === 'customer account' ||
+      t.toLowerCase() === 'registered customer' ||
+      t.toLowerCase() === 'individual account'
+    ) {
+      return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', label: 'Customer Account' };
+    }
+
     switch (t) {
       case 'System Integrator':
-        return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe' };
+        return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', label: 'System Integrator' };
       case 'CCTV Installer':
-        return { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd' };
+        return { bg: '#f0f9ff', color: '#0369a1', border: '#bae6fd', label: 'CCTV Installer' };
       case 'Commercial & Enterprise':
-        return { bg: '#f1f5f9', color: '#0f172a', border: '#cbd5e1' };
+        return { bg: '#f1f5f9', color: '#0f172a', border: '#cbd5e1', label: 'Commercial & Enterprise' };
       case 'Distributor':
-        return { bg: '#fffbeb', color: '#b45309', border: '#fde68a' };
+        return { bg: '#fffbeb', color: '#b45309', border: '#fde68a', label: 'Distributor' };
       case 'Dealer / Reseller':
       case 'Dealer':
       case 'Reseller':
-        return { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff' };
+        return { bg: '#faf5ff', color: '#7e22ce', border: '#e9d5ff', label: 'Dealer / Reseller' };
       case 'Residential & Facility Owner':
-        return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0' };
+        return { bg: '#fef3c7', color: '#92400e', border: '#fde68a', label: 'Residential & Facility Owner' };
       case 'Channel Partner':
-        return { bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4' };
+        return { bg: '#f0fdfa', color: '#0f766e', border: '#99f6e4', label: 'Channel Partner' };
       default:
-        return { bg: '#eff6ff', color: '#1268a5', border: '#bfdbfe' };
+        return { bg: '#eff6ff', color: '#1268a5', border: '#bfdbfe', label: t };
     }
   };
 

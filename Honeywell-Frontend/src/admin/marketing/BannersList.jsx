@@ -117,12 +117,12 @@ const BannersList = () => {
     }
 
     const duplicateOrder = banners.find(b => 
-      b.displayOrder === formData.displayOrder && 
-      b.id !== (editingBanner?.id)
+      Number(b.displayOrder) === Number(formData.displayOrder) && 
+      String(b.id) !== String(editingBanner?.id || '')
     );
     
-    if (duplicateOrder) {
-      alert('This display order is already in use by another banner. Please choose a unique order number.');
+    if (duplicateOrder && formData.displayOrder > 0) {
+      alert(`Display order #${formData.displayOrder} is already in use by "${duplicateOrder.title}". Please choose a different order number.`);
       return;
     }
 
@@ -139,7 +139,8 @@ const BannersList = () => {
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
       console.error('Failed to save banner:', err);
-      alert('Error saving banner. Please try again.');
+      const errMsg = err.response?.data?.message || err.response?.data?.title || (typeof err.response?.data === 'string' ? err.response.data : null) || err.message || 'Error saving banner. Please try again.';
+      alert(`Error saving banner: ${errMsg}`);
     }
   };
 

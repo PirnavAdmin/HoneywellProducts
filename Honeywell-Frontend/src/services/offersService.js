@@ -1,4 +1,5 @@
 import { apiRequest } from './api';
+import { apiCache } from '../utils/apiCache';
 
 export const mapOfferFromApi = (item) => {
   if (!item) return null;
@@ -24,18 +25,21 @@ export const mapOfferFromApi = (item) => {
 export const offersService = {
   /** GET public active offers — GET /api/Offers or GET /api/Offers?category={category} */
   async getAll(category = '') {
-    try {
-      let path = '/api/Offers';
-      if (category && category.trim() !== '' && category.toLowerCase() !== 'all') {
-        path += `?category=${encodeURIComponent(category.trim())}`;
+    const cacheKey = `offers_active_${category || 'all'}`;
+    return await apiCache.fetchWithCache(cacheKey, async () => {
+      try {
+        let path = '/api/Offers';
+        if (category && category.trim() !== '' && category.toLowerCase() !== 'all') {
+          path += `?category=${encodeURIComponent(category.trim())}`;
+        }
+        const data = await apiRequest(path);
+        const list = Array.isArray(data) ? data : (data.offers || data.items || data.data || []);
+        return list.map(mapOfferFromApi).filter(Boolean);
+      } catch (err) {
+        console.error('Offers API getAll() error:', err.message);
+        throw err;
       }
-      const data = await apiRequest(path);
-      const list = Array.isArray(data) ? data : (data.offers || data.items || data.data || []);
-      return list.map(mapOfferFromApi).filter(Boolean);
-    } catch (err) {
-      console.error('Offers API getAll() error:', err.message);
-      throw err;
-    }
+    }, 10 * 60 * 1000);
   },
 
   /** GET admin offers (includes both active and inactive) — GET /api/Offers/admin */
@@ -96,6 +100,7 @@ export const offersService = {
         body: JSON.stringify(apiPayload)
       });
       const createdItem = data.offer || data.data || data;
+      apiCache.invalidate('offers');
       return mapOfferFromApi(createdItem) || apiPayload;
     } catch (err) {
       // If backend returns 400 because of productId FK/null constraint, retry without productId
@@ -108,6 +113,7 @@ export const offersService = {
           body: JSON.stringify(fallbackPayload)
         });
         const createdItem = data.offer || data.data || data;
+        apiCache.invalidate('offers');
         return mapOfferFromApi(createdItem) || fallbackPayload;
       }
       throw err;
@@ -148,6 +154,7 @@ export const offersService = {
         body: JSON.stringify(apiPayload)
       });
       const updatedItem = data.offer || data.data || data;
+      apiCache.invalidate('offers');
       return mapOfferFromApi(updatedItem) || apiPayload;
     } catch (err) {
       if (err.message && err.message.includes('400') && apiPayload.productId !== null) {
@@ -159,6 +166,7 @@ export const offersService = {
           body: JSON.stringify(fallbackPayload)
         });
         const updatedItem = data.offer || data.data || data;
+        apiCache.invalidate('offers');
         return mapOfferFromApi(updatedItem) || fallbackPayload;
       }
       throw err;
@@ -170,6 +178,7 @@ export const offersService = {
     const data = await apiRequest(`/api/Offers/${id}/status`, {
       method: 'PATCH'
     });
+    apiCache.invalidate('offers');
     return data;
   },
 
@@ -178,6 +187,7 @@ export const offersService = {
     const data = await apiRequest(`/api/Offers/${id}`, {
       method: 'DELETE'
     });
+    apiCache.invalidate('offers');
     return data;
   }
 };

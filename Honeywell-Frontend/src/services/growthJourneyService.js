@@ -1,4 +1,5 @@
 import { getApiDomain, DEFAULT_BACKEND_URL } from '../utils/apiConfig';
+import { apiCache } from '../utils/apiCache';
 
 const getBaseUrl = () => {
   const domain = getApiDomain();
@@ -23,14 +24,16 @@ const getHeaders = () => {
  * Retrieves full Growth Journey section data (eyebrow, title, description, metrics, growthData)
  */
 export async function getGrowthJourney() {
-  const url = getBaseUrl();
-  const res = await fetch(url, {
-    headers: getHeaders(),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch Growth Journey section data: ${res.status}`);
-  }
-  return res.json();
+  return await apiCache.fetchWithCache('growth_journey_full', async () => {
+    const url = getBaseUrl();
+    const res = await fetch(url, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch Growth Journey section data: ${res.status}`);
+    }
+    return res.json();
+  }, 10 * 60 * 1000);
 }
 
 /**
@@ -38,15 +41,17 @@ export async function getGrowthJourney() {
  * Retrieves raw array of Growth Journey records
  */
 export async function getGrowthJourneyData() {
-  const url = `${getBaseUrl()}/data`;
-  const res = await fetch(url, {
-    headers: getHeaders(),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch Growth Journey records: ${res.status}`);
-  }
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
+  return await apiCache.fetchWithCache('growth_journey_data', async () => {
+    const url = `${getBaseUrl()}/data`;
+    const res = await fetch(url, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch Growth Journey records: ${res.status}`);
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  }, 10 * 60 * 1000);
 }
 
 /**
@@ -74,6 +79,7 @@ export async function createGrowthJourney(payload) {
     throw new Error(parsedErr || `Failed to create Growth Journey record (${res.status})`);
   }
 
+  apiCache.invalidate('growth_journey');
   return res.json();
 }
 
@@ -102,6 +108,7 @@ export async function bulkUpdateGrowthJourney(payloadArray) {
     throw new Error(parsedErr || `Failed to bulk update Growth Journey records (${res.status})`);
   }
 
+  apiCache.invalidate('growth_journey');
   return res.json();
 }
 
@@ -128,6 +135,7 @@ export async function deleteGrowthJourney(idOrYear) {
     throw new Error(parsedErr || `Failed to delete Growth Journey record (${res.status})`);
   }
 
+  apiCache.invalidate('growth_journey');
   return true;
 }
 

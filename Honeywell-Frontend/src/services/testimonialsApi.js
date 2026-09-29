@@ -1,4 +1,5 @@
-import { getApiDomain } from '../utils/apiConfig';
+import { getApiDomain, resolveMediaUrl } from '../utils/apiConfig';
+import { apiCache } from '../utils/apiCache';
 
 const getBaseUrl = () => {
   const domain = getApiDomain();
@@ -18,33 +19,7 @@ const getHeaders = () => {
 };
 
 export const resolveImageUrl = (url) => {
-  if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-  if (trimmed.toLowerCase().includes('placeholder') || trimmed.includes('honeywell-products-logo.png')) {
-    return '/honeywell-products-logo.png';
-  }
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
-    return trimmed;
-  }
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.includes('/uploads/')) {
-    const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
-    const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
-    return `${cleanBase}${uploadPath}`;
-  }
-  if (
-    trimmed.startsWith('/assets/') ||
-    trimmed.startsWith('assets/') ||
-    trimmed.startsWith('/images/') ||
-    trimmed.startsWith('images/') ||
-    trimmed.startsWith('/honeywell-products-logo')
-  ) {
-    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  }
-  const cleanBase = (getApiDomain() || '').replace(/\/$/, '');
-  if (!cleanBase) return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+  return resolveMediaUrl(url);
 };
 
 /**
@@ -67,14 +42,16 @@ export async function getTestimonials() {
  * GET /api/Testimonials/active
  */
 export async function getActiveTestimonials() {
-  const res = await fetch(`${getBaseUrl()}/active`, {
-    headers: getHeaders(),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch active testimonials: ${res.status}`);
-  }
-  const data = await res.json();
-  return Array.isArray(data) ? data : [];
+  return await apiCache.fetchWithCache('testimonials_active', async () => {
+    const res = await fetch(`${getBaseUrl()}/active`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch active testimonials: ${res.status}`);
+    }
+    const data = await res.json();
+    return Array.isArray(data) ? data : [];
+  }, 10 * 60 * 1000);
 }
 
 /**
@@ -114,6 +91,7 @@ export async function createTestimonial(data) {
     throw new Error(errText || `Failed to create testimonial: ${res.status}`);
   }
 
+  apiCache.invalidate('testimonials');
   return res.json().catch(() => ({ success: true }));
 }
 
@@ -140,6 +118,7 @@ export async function updateTestimonial(id, data) {
     throw new Error(errText || `Failed to update testimonial ${id}: ${res.status}`);
   }
 
+  apiCache.invalidate('testimonials');
   return res.json().catch(() => ({ success: true }));
 }
 
@@ -158,5 +137,6 @@ export async function deleteTestimonial(id) {
     throw new Error(errText || `Failed to delete testimonial ${id}: ${res.status}`);
   }
 
+  apiCache.invalidate('testimonials');
   return true;
 }

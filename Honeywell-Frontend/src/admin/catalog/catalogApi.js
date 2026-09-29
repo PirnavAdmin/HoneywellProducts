@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getApiDomain } from '../../utils/apiConfig';
+import { getApiDomain, resolveMediaUrl } from '../../utils/apiConfig';
 import { apiCache } from '../../utils/apiCache';
 import { 
   getCategories, 
@@ -39,40 +39,7 @@ api.interceptors.request.use((config) => {
 
 /** Resolve a relative image path to a full URL */
 const resolveImageUrl = (url) => {
-  if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-  if (trimmed.toLowerCase().includes('placeholder') || trimmed.includes('honeywell-products-logo.png')) {
-    return '/honeywell-products-logo.png';
-  }
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:') || trimmed.startsWith('/honeywell-products-logo.png') || trimmed.startsWith('/admin-') || trimmed.startsWith('/favicon')) {
-    return trimmed;
-  }
-
-  let result = '';
-  if (/^https?:\/\//i.test(trimmed)) {
-    result = trimmed;
-  } else if (trimmed.includes('/uploads/')) {
-    const uploadPath = trimmed.slice(trimmed.indexOf('/uploads/'));
-    const cleanBase = (BASE_URL || '').replace(/\/$/, '');
-    result = `${cleanBase}${uploadPath}`;
-  } else if (
-    trimmed.startsWith('/assets/') ||
-    trimmed.startsWith('assets/') ||
-    trimmed.startsWith('/images/') ||
-    trimmed.startsWith('images/') ||
-    trimmed.startsWith('/honeywell-products-logo')
-  ) {
-    result = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  } else {
-    const cleanBase = (BASE_URL || '').replace(/\/$/, '');
-    result = !cleanBase ? (trimmed.startsWith('/') ? trimmed : `/${trimmed}`) : `${cleanBase}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
-  }
-
-  if (result.includes('/uploads/')) {
-    return result;
-  }
-  return result;
+  return resolveMediaUrl(url);
 };
 
 /** Extract an array from various API response shapes */
@@ -253,17 +220,36 @@ export const mapProductFromApi = (raw = {}, categories = [], subcategories = [])
   };
 };
 
+// ─── Category Sorter ─────────────────────────────────────────────────────────
+
+export const sortCategoriesByDisplayOrder = (categories = []) => {
+  if (!Array.isArray(categories)) return [];
+  return [...categories].sort((a, b) => {
+    const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
+    const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
+
+    if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
+      if (orderA === 0) return 1;
+      if (orderB === 0) return -1;
+      return orderA - orderB;
+    }
+    return (Number(a.id) || 0) - (Number(b.id) || 0);
+  });
+};
+
 // ─── Category API ─────────────────────────────────────────────────────────────
 
 export const fetchCategories = async () => {
-  try {
-    const response = await api.get('/api/Category');
-    const apiCategories = unwrapList(response).map(mapCategoryFromApi);
-    return apiCategories;
-  } catch (err) {
-    console.error('API error fetching categories:', err.message);
-    throw new Error('Unable to connect to backend server or fetch categories.');
-  }
+  return await apiCache.fetchWithCache('categories_all', async () => {
+    try {
+      const response = await api.get('/api/Category');
+      const apiCategories = unwrapList(response).map(mapCategoryFromApi);
+      return sortCategoriesByDisplayOrder(apiCategories);
+    } catch (err) {
+      console.error('API error fetching categories:', err.message);
+      throw new Error('Unable to connect to backend server or fetch categories.');
+    }
+  }, 10 * 60 * 1000);
 };
 
 export const fetchCategory = async (id) => {
@@ -319,6 +305,9 @@ export const saveCategory = async (category) => {
       mapped.image = categoryImage;
       mapped.imageUrl = categoryImage;
     }
+    apiCache.invalidate('cat');
+    apiCache.invalidate('category');
+    apiCache.invalidate('categories');
     upsertCategory(mapped);
     return mapped;
   } catch (err) {
@@ -353,6 +342,9 @@ export const saveCategory = async (category) => {
       mapped.image = categoryImage;
       mapped.imageUrl = categoryImage;
     }
+    apiCache.invalidate('cat');
+    apiCache.invalidate('category');
+    apiCache.invalidate('categories');
     upsertCategory(mapped);
     return mapped;
   } catch (err) {
@@ -364,6 +356,9 @@ export const saveCategory = async (category) => {
 export const deleteCategory = async (id) => {
   try {
     await api.delete(`/api/Category/${id}`);
+    apiCache.invalidate('cat');
+    apiCache.invalidate('category');
+    apiCache.invalidate('categories');
   } catch (err) {
     console.warn(`DELETE /api/Category/${id} failed:`, err.message);
   }

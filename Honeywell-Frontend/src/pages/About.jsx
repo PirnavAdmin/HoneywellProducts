@@ -1,6 +1,30 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
-import * as Icons from 'lucide-react';
+import {
+  ArrowRight,
+  RefreshCw,
+  AlertCircle,
+  ShieldCheck,
+  Camera,
+  Image,
+  MonitorSmartphone,
+  Network,
+  Headphones,
+  PlugZap,
+  Expand,
+  Sun,
+  Lock,
+  Award,
+  CheckCircle2,
+  Star,
+  Users,
+  Building,
+  Cpu,
+  Layers,
+  Eye,
+  Server,
+  Radio,
+  Video
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import PageHero from '../components/common/PageHero';
 import SectionHeading from '../components/common/SectionHeading';
@@ -9,9 +33,33 @@ import { aboutApi, resolveImageUrl } from '../services/aboutApi';
 import defaultHeroImg from '../assets/images/capital-park2.jpg';
 import defaultOverviewImg from '../assets/images/smart-security-sustainable-future.png';
 
+const iconMap = {
+  ShieldCheck,
+  Camera,
+  Image,
+  MonitorSmartphone,
+  Network,
+  Headphones,
+  PlugZap,
+  Expand,
+  Sun,
+  Lock,
+  Award,
+  CheckCircle2,
+  Star,
+  Users,
+  Building,
+  Cpu,
+  Layers,
+  Eye,
+  Server,
+  Radio,
+  Video
+};
+
 const getIconComponent = (iconName) => {
-  if (!iconName || typeof iconName !== 'string') return Icons.ShieldCheck;
-  return Icons[iconName] || Icons.ShieldCheck;
+  if (!iconName || typeof iconName !== 'string') return ShieldCheck;
+  return iconMap[iconName] || ShieldCheck;
 };
 
 export default function About() {

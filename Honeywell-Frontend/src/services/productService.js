@@ -7,6 +7,7 @@ import {
   saveProduct,
   deleteProduct,
   fetchCategories,
+  fetchSubcategories,
 } from '../admin/catalog/productsApi';
 
 /**
@@ -73,5 +74,8 @@ export const productService = {
   },
   async categories() {
     return await fetchCategories();
+  },
+  async subcategories() {
+    return await fetchSubcategories();
   },
 };

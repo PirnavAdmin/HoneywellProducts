@@ -1,21 +1,14 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Check, Filter, Package, Plus, Search, Star, AlertTriangle } from 'lucide-react';
+import { Check, Filter, Plus, Search, X, AlertTriangle } from 'lucide-react';
 import { getCategoryName, getSubcategoryName } from './catalogStore';
 import { deleteProduct as deleteProductApi, fetchCategories, fetchProducts, fetchSubcategories, searchProducts } from './productsApi';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
 import './adminModule.css';
 
-// alias so JSX isn't confused
 const Link = RouterLink;
 
 const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
-
-const getStatusClass = (status) => {
-  if (status === 'In Stock') return 'catalog-badge--stock';
-  if (status === 'Low Stock') return 'catalog-badge--low';
-  return 'catalog-badge--out';
-};
 
 const parsePriceNumber = (val) => {
   if (val === null || val === undefined) return 0;
@@ -26,29 +19,26 @@ const parsePriceNumber = (val) => {
 };
 
 const getDiscountLabel = (product) => {
-  if (!product) return 'No discount';
+  if (!product) return '—';
 
   const mrp = parsePriceNumber(product.mrp);
   const price = parsePriceNumber(product.price);
   const discountVal = parsePriceNumber(product.discountValue);
 
-  // 1. If product explicitly specifies percentage discountType AND discountVal is a valid percentage (1% to 99%)
   if (product.discountType === 'percentage' && discountVal > 0 && discountVal <= 99) {
     const formatted = discountVal % 1 === 0 ? discountVal.toFixed(0) : discountVal.toFixed(1);
     return `${formatted}% off`;
   }
 
-  // 2. If product explicitly specifies flat rupee discountType
   if (product.discountType === 'fixed' && discountVal > 0) {
     return `₹${discountVal.toLocaleString('en-IN')} off`;
   }
 
-  // 3. Compute from MRP vs Selling Price safely
   const effectiveMrp = mrp > 0 ? mrp : price;
-  if (effectiveMrp <= 0 || price <= 0 || effectiveMrp <= price) return 'No discount';
+  if (effectiveMrp <= 0 || price <= 0 || effectiveMrp <= price) return '—';
 
   const rawPercentage = ((effectiveMrp - price) / effectiveMrp) * 100;
-  if (rawPercentage <= 0 || isNaN(rawPercentage)) return 'No discount';
+  if (rawPercentage <= 0 || isNaN(rawPercentage)) return '—';
 
   if (rawPercentage > 99) {
     const savedAmount = effectiveMrp - price;
@@ -57,6 +47,16 @@ const getDiscountLabel = (product) => {
 
   const formattedPct = rawPercentage % 1 === 0 ? rawPercentage.toFixed(0) : rawPercentage.toFixed(1);
   return `${formattedPct}% off`;
+};
+
+const getStatusBadgeStyle = (status) => {
+  if (status === 'In Stock') {
+    return { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' };
+  }
+  if (status === 'Low Stock') {
+    return { background: '#fffbeb', color: '#92400e', border: '1px solid #fde68a' };
+  }
+  return { background: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' };
 };
 
 const ProductsList = () => {
@@ -92,8 +92,8 @@ const ProductsList = () => {
     }
   }, []);
 
-
-    useEffect(() => {
+  // Search debounce
+  useEffect(() => {
     if (!searchTerm.trim()) return;
     let cancelled = false;
     const timer = setTimeout(async () => {
@@ -121,12 +121,12 @@ const ProductsList = () => {
     return () => { isMounted = false; };
   }, [searchTerm, loadAll]);
 
-  // ── Client-side filter by category + status ───────────────────────────────
+  // Client-side filter by category + status
   const filteredProducts = useMemo(() => {
     return products
       .filter((product) => {
         const matchesCategory =
-          selectedCategoryId === 'All' || product.categoryId === selectedCategoryId;
+          selectedCategoryId === 'All' || String(product.categoryId) === String(selectedCategoryId);
         const matchesStatus =
           selectedStatus === 'All' || product.status === selectedStatus;
         return matchesCategory && matchesStatus;
@@ -135,7 +135,9 @@ const ProductsList = () => {
   }, [products, selectedCategoryId, selectedStatus]);
 
   // Reset page on filter change
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, selectedCategoryId, selectedStatus]);
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategoryId, selectedStatus]);
 
   // Pagination calculations
   const indexOfLastItem = currentPage * itemsPerPage;
@@ -143,7 +145,6 @@ const ProductsList = () => {
   const currentPageProducts = filteredProducts.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
 
-  // ── Delete ────────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this product?')) return;
     setIsDeletingId(id);
@@ -162,50 +163,139 @@ const ProductsList = () => {
   const busy = isLoading || isSearching;
 
   return (
-    <div className="catalog-page">
-      <section className="catalog-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff', padding: '24px 28px', borderRadius: '16px', border: '1px solid #e2e8f0', borderLeft: '4px solid #1d4ed8', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', marginBottom: '20px' }}>
+    <div className="catalog-page" style={{ padding: '0px', maxWidth: '100%', margin: '0px' }}>
+      {/* ── HEADER ── */}
+      <section
+        className="catalog-header"
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+          padding: '24px 28px',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          borderLeft: '4px solid #1d4ed8',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+          marginBottom: '20px',
+        }}
+      >
         <div className="catalog-title-wrap">
-          <span className="catalog-kicker" style={{ fontSize: '11px', textTransform: 'uppercase', color: '#1d4ed8', fontWeight: 800, display: 'block', letterSpacing: '0.05em', marginBottom: '6px' }}>STEP 3 OF 3</span>
-          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>Products</h1>
-          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Products are created after category and subcategory setup, keeping inventory organized for filters and reports.</p>
+          <span
+            className="catalog-kicker"
+            style={{
+              fontSize: '11px',
+              textTransform: 'uppercase',
+              color: '#1d4ed8',
+              fontWeight: 800,
+              display: 'block',
+              letterSpacing: '0.05em',
+              marginBottom: '6px',
+            }}
+          >
+            STEP 3 OF 3
+          </span>
+          <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
+            Products
+          </h1>
+          <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>
+            Products are created after category and subcategory setup, keeping inventory organized for filters and reports.
+          </p>
         </div>
 
         <div className="catalog-header__actions" style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto', flexWrap: 'nowrap' }}>
-          <Link to="/admin/catalog/subcategories" style={{ backgroundColor: '#2d8a54', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', border: 'none' }}>
+          <Link
+            to="/admin/catalog/subcategories"
+            style={{
+              backgroundColor: '#2d8a54',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 700,
+              padding: '10px 18px',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              border: 'none',
+            }}
+          >
             View Subcategories
           </Link>
-          <Link to="/admin/catalog/products-form" style={{ backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, padding: '10px 18px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', boxShadow: '0 1px 2px rgba(37,99,235,0.2)' }}>
+          <Link
+            to="/admin/catalog/products-form"
+            style={{
+              backgroundColor: '#2563eb',
+              color: '#ffffff',
+              fontSize: '13px',
+              fontWeight: 700,
+              padding: '10px 18px',
+              borderRadius: '8px',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              whiteSpace: 'nowrap',
+              boxShadow: '0 1px 2px rgba(37,99,235,0.2)',
+            }}
+          >
             <Plus size={16} /> Add Product
           </Link>
         </div>
       </section>
 
-      <section className="catalog-card">
+      {/* ── CARD & TABLE ── */}
+      <section
+        className="catalog-card"
+        style={{
+          borderRadius: '12px',
+          border: '1px solid #e2e8f0',
+          boxShadow: 'none',
+          overflow: 'hidden',
+          backgroundColor: '#ffffff',
+          padding: 0,
+        }}
+      >
         {errorMessage && (
-          <div className="catalog-alert catalog-alert--warning">
+          <div className="catalog-alert catalog-alert--warning" style={{ margin: '16px' }}>
             {errorMessage}
           </div>
         )}
 
-        <div className="catalog-filterbar">
-          {/* API-backed search */}
-          <div className="catalog-search">
-            <Search size={18} />
+        {/* Filter Bar */}
+        <div
+          className="catalog-filterbar"
+          style={{
+            padding: '12px 16px',
+            background: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid #f1f5f9',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div className="catalog-search" style={{ maxWidth: '320px' }}>
+            <Search size={16} />
             <input
               type="text"
-              placeholder="Search product name, SKU…"
+              placeholder="Search product name, SKU..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ padding: '6px 10px 6px 32px', fontSize: '13px' }}
             />
           </div>
 
-          <div className="catalog-inline-actions">
-            {/* Category filter */}
-            <label className="catalog-filter">
-              <Filter size={16} />
+          <div className="catalog-inline-actions" style={{ gap: '12px', display: 'flex', alignItems: 'center' }}>
+            {/* Category Filter */}
+            <label className="catalog-filter" style={{ display: 'inline-flex', alignItems: 'center' }}>
+              <Filter size={14} style={{ color: '#64748b' }} />
               <select
                 value={selectedCategoryId}
                 onChange={(e) => setSelectedCategoryId(e.target.value)}
+                style={{ padding: '4px 8px', fontSize: '13px' }}
               >
                 <option value="All">All Categories</option>
                 {categories.map((cat) => (
@@ -216,11 +306,12 @@ const ProductsList = () => {
               </select>
             </label>
 
-            {/* Status filter */}
-            <label className="catalog-filter">
+            {/* Status Filter */}
+            <label className="catalog-filter" style={{ display: 'inline-flex', alignItems: 'center' }}>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
+                style={{ padding: '4px 8px', fontSize: '13px' }}
               >
                 <option value="All">All Status</option>
                 <option value="In Stock">In Stock</option>
@@ -229,110 +320,160 @@ const ProductsList = () => {
               </select>
             </label>
 
-            <span className="catalog-count">
-              {busy ? '…' : filteredProducts.length} products
+            <span className="catalog-count" style={{ fontSize: '13px' }}>
+              {busy ? '…' : `${filteredProducts.length} products`}
             </span>
           </div>
         </div>
 
-        <div className="catalog-table-wrap">
-          <table className="catalog-table">
+        {/* Formal Table */}
+        <div className="catalog-table-wrap" style={{ border: 'none', borderRadius: 0 }}>
+          <table className="catalog-table" style={{ fontSize: '13px', width: '100%' }}>
             <thead>
-              <tr>
-                <th>Product</th>
-                <th>SKU</th>
-                <th>Category</th>
-                <th>Subcategory</th>
-                <th className="catalog-number-cell">MRP / Price</th>
-                <th>Discount</th>
-                <th>Rating</th>
-                <th className="catalog-center-cell">Stock</th>
-                <th>Status</th>
-                <th className="catalog-center-cell">Actions</th>
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th style={{ padding: '10px 16px', width: '60px' }}>ID</th>
+                <th style={{ padding: '10px 16px' }}>Product Name</th>
+                <th style={{ padding: '10px 16px' }}>SKU</th>
+                <th style={{ padding: '10px 16px' }}>Category</th>
+                <th style={{ padding: '10px 16px' }}>Subcategory</th>
+                <th style={{ padding: '10px 16px', textAlign: 'right' }}>Price</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center' }}>Discount</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center' }}>Stock</th>
+                <th style={{ padding: '10px 16px', textAlign: 'center' }}>Status</th>
+                <th className="catalog-center-cell" style={{ padding: '10px 16px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {busy && (
                 <tr>
-                  <td colSpan="10" className="catalog-center-cell" style={{ fontSize: '12px', padding: '16px' }}>
-                    {isLoading ? 'Loading products from API…' : 'Searching…'}
+                  <td colSpan="10" className="catalog-center-cell" style={{ padding: '32px', color: '#64748b' }}>
+                    {isLoading ? 'Loading products...' : 'Searching products...'}
                   </td>
                 </tr>
               )}
 
-              {!busy && currentPageProducts.map((product) => (
-                <tr key={product.id} style={{ fontSize: '12px' }}>
-                  <td style={{ padding: '8px 10px' }}>
-                    <div>
-                      <span className="catalog-badge" style={{ fontSize: '10px' }}>
-                        <Package size={11} /> #{product.id}
-                      </span>
-                      <div className="catalog-table__title" style={{ fontSize: '12px', fontWeight: '600' }}>{product.name}</div>
-                      <div className="catalog-table__muted" style={{ fontSize: '10px' }}>
-                        Brand: <strong>{product.brand && product.brand.trim() ? product.brand : 'No Brand'}</strong> · {product.specifications?.weight || 'N/A'}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="catalog-path" style={{ padding: '5px 8px', fontSize: '11px' }}>{product.sku || '—'}</td>
-                  <td style={{ padding: '5px 8px', fontSize: '11px' }}>{getCategoryName(categories, product.categoryId)}</td>
-                  <td style={{ padding: '5px 8px', fontSize: '11px' }}>{getSubcategoryName(subcategories, product.subcategoryId)}</td>
-                  <td className="catalog-number-cell" style={{ padding: '5px 8px', fontSize: '11px' }}>
-                    {(() => {
-                      const priceNum = parsePriceNumber(product.price);
-                      const mrpNum = parsePriceNumber(product.mrp);
-                      const effectiveMrp = mrpNum > 0 ? mrpNum : priceNum;
-                      const isDiscounted = mrpNum > priceNum;
-                      return (
-                        <>
-                          <div style={{ fontWeight: '600', color: '#0f172a' }}>{formatCurrency(priceNum)}</div>
-                          <div className="catalog-table__muted" style={{ fontSize: '10px', color: '#64748b', textDecoration: isDiscounted ? 'line-through' : 'none' }}>
-                            MRP {formatCurrency(effectiveMrp)}
+              {!busy &&
+                currentPageProducts.map((product) => {
+                  const priceNum = parsePriceNumber(product.price);
+                  const mrpNum = parsePriceNumber(product.mrp);
+                  const isDiscounted = mrpNum > priceNum;
+                  const discountStr = getDiscountLabel(product);
+                  const statusStyle = getStatusBadgeStyle(product.status);
+
+                  return (
+                    <tr key={product.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      {/* ID */}
+                      <td style={{ padding: '10px 16px', fontWeight: '600', color: '#64748b' }}>
+                        {product.id}
+                      </td>
+
+                      {/* Product Name & Details */}
+                      <td style={{ padding: '10px 16px' }}>
+                        <div style={{ fontWeight: '600', color: '#1e293b' }}>
+                          {product.name}
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                          Brand: {product.brand?.trim() || 'Honeywell'}
+                          {product.specificationsObj?.weight ? ` · ${product.specificationsObj.weight}` : ''}
+                        </div>
+                      </td>
+
+                      {/* SKU */}
+                      <td className="catalog-path" style={{ padding: '10px 16px', color: '#334155', fontFamily: 'monospace', fontSize: '12px' }}>
+                        {product.sku || '—'}
+                      </td>
+
+                      {/* Category */}
+                      <td style={{ padding: '10px 16px', color: '#334155' }}>
+                        {getCategoryName(categories, product.categoryId) || '—'}
+                      </td>
+
+                      {/* Subcategory */}
+                      <td style={{ padding: '10px 16px', color: '#64748b' }}>
+                        {getSubcategoryName(subcategories, product.subcategoryId) || '—'}
+                      </td>
+
+                      {/* Price / MRP */}
+                      <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: '700', color: '#0f172a' }}>
+                          {formatCurrency(priceNum)}
+                        </div>
+                        {isDiscounted && (
+                          <div style={{ fontSize: '11px', color: '#94a3b8', textDecoration: 'line-through' }}>
+                            MRP {formatCurrency(mrpNum)}
                           </div>
-                        </>
-                      );
-                    })()}
-                  </td>
-                  <td style={{ padding: '5px 8px' }}>
-                    <span className={`catalog-badge ${parsePriceNumber(product.mrp) > parsePriceNumber(product.price) ? 'catalog-badge--low' : ''}`} style={{ fontSize: '10px' }}>
-                      {getDiscountLabel(product)}
-                    </span>
-                  </td>
-                  <td style={{ padding: '5px 8px' }}>
-                    <span className="catalog-badge" style={{ fontSize: '10px' }}>
-                      <Star size={11} fill="currentColor" />{' '}
-                      {Number(product.rating || 0).toFixed(1)}
-                    </span>
-                    <div className="catalog-table__muted" style={{ fontSize: '10px' }}>
-                      {Number(product.totalReviews || 0)} {Number(product.totalReviews || 0) === 1 ? 'review' : 'reviews'}
-                    </div>
-                  </td>
-                  <td className="catalog-center-cell" style={{ padding: '5px 8px', fontSize: '11px' }}>{product.stock}</td>
-                  <td style={{ padding: '5px 8px' }}>
-                    <span className={`catalog-badge ${getStatusClass(product.status)}`} style={{ fontSize: '10px' }}>
-                      {product.status === 'In Stock' ? <Check size={11} /> : <AlertTriangle size={11} />}
-                      {product.status}
-                    </span>
-                  </td>
-                  <td className="catalog-center-cell" style={{ padding: '5px 8px' }}>
-                    <div className="catalog-inline-actions">
-                      <AnimatedEditButton
-                        to={`/admin/catalog/products-form?id=${product.id}`}
-                        title="Edit product"
-                      />
-                      <OutlookDeleteButton
-                        onClick={() => handleDelete(product.id)}
-                        disabled={isDeletingId === product.id}
-                        title="Delete product"
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        )}
+                      </td>
+
+                      {/* Discount */}
+                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                        {discountStr !== '—' ? (
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: '600',
+                              color: '#166534',
+                              background: '#f0fdf4',
+                              border: '1px solid #bbf7d0',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {discountStr}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#94a3b8' }}>—</span>
+                        )}
+                      </td>
+
+                      {/* Stock */}
+                      <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: '600', color: '#334155' }}>
+                        {product.stock || 0}
+                      </td>
+
+                      {/* Status */}
+                      <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                        <span
+                          style={{
+                            ...statusStyle,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            padding: '2px 8px',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            borderRadius: '4px',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {product.status === 'In Stock' && <Check size={11} />}
+                          {product.status}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="catalog-center-cell" style={{ padding: '10px 16px' }}>
+                        <div className="catalog-inline-actions">
+                          <AnimatedEditButton
+                            to={`/admin/catalog/products-form?id=${product.id}`}
+                            title="Edit product"
+                          />
+                          <OutlookDeleteButton
+                            onClick={() => handleDelete(product.id)}
+                            disabled={isDeletingId === product.id}
+                            title="Delete product"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
 
               {!busy && !filteredProducts.length && (
                 <tr>
-                  <td colSpan="10" className="catalog-center-cell" style={{ fontSize: '12px', padding: '16px' }}>
-                    No products match your filters.
+                  <td colSpan="10" className="catalog-center-cell" style={{ padding: '32px', color: '#64748b' }}>
+                    No products match your search or filters.
                   </td>
                 </tr>
               )}
@@ -353,4 +494,3 @@ const ProductsList = () => {
 };
 
 export default ProductsList;
-

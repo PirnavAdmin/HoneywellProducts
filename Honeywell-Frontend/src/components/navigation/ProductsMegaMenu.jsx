@@ -1,50 +1,69 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Sun, ShieldCheck, Wrench, Search, Tag, Download, FileText, HelpCircle, ArrowRight } from 'lucide-react';
+import { Camera, Sun, ShieldCheck, Wrench, Search, Tag, Download, FileText, HelpCircle, ArrowRight, Layers, Video } from 'lucide-react';
+import { categoryService } from '../../services/categoryService';
+
+const getCategoryIcon = (name = '') => {
+  const lower = name.toLowerCase();
+  if (lower.includes('solar') || lower.includes('sun') || lower.includes('panel') || lower.includes('kit')) {
+    return <Sun size={18} className="mega-icon" />;
+  }
+  if (lower.includes('turbo') || lower.includes('shield') || lower.includes('security')) {
+    return <ShieldCheck size={18} className="mega-icon" />;
+  }
+  if (lower.includes('nvr') || lower.includes('dvr') || lower.includes('recorder') || lower.includes('video')) {
+    return <Video size={18} className="mega-icon" />;
+  }
+  if (lower.includes('camera') || lower.includes('cctv') || lower.includes('network') || lower.includes('dome') || lower.includes('bullet') || lower.includes('ptz')) {
+    return <Camera size={18} className="mega-icon" />;
+  }
+  return <Layers size={18} className="mega-icon" />;
+};
+
+const defaultCategories = [
+  { id: 'network-cameras', slug: 'network-cameras', name: 'Network Cameras', description: 'High-Definition IP Network Cameras' },
+  { id: 'solar-kit', slug: 'solar-kit', name: 'Solar kit', description: 'Complete Solar Power Kit Systems' },
+  { id: 'solar-panels', slug: 'solar-panels', name: 'Solar panels', description: 'High-Efficiency Solar Modules' },
+  { id: 'turbo-hd-cameras', slug: 'turbo-hd-cameras', name: 'Turbo HD Cameras', description: 'High-Definition Turbo HD Cameras' },
+];
 
 export default function ProductsMegaMenu({ onClose }) {
+  const [categories, setCategories] = useState(defaultCategories);
+
+  useEffect(() => {
+    let isMounted = true;
+    categoryService.getAll()
+      .then((cats) => {
+        if (isMounted && Array.isArray(cats) && cats.length > 0) {
+          const activeOnly = cats.filter(c => c.status !== 'Inactive' && c.isActive !== false);
+          if (activeOnly.length > 0) {
+            setCategories(activeOnly);
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load categories for mega menu:', err);
+      });
+    return () => { isMounted = false; };
+  }, []);
+
   return (
     <div className="mega-menu mega-menu-products" onClick={(e) => e.stopPropagation()}>
       <div className="mega-menu-grid">
         <div className="mega-column">
           <h4 className="mega-title">Product Categories</h4>
           <ul className="mega-list">
-            <li>
-              <Link to="/products?category=network-cameras" onClick={onClose}>
-                <Camera size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Network Cameras</span>
-                  <span className="mega-link-desc">High-Definition IP Network Cameras</span>
-                </div>
-              </Link>
-            </li>
-            <li>
-              <Link to="/products?category=solar-kit" onClick={onClose}>
-                <Sun size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Solar kit</span>
-                  <span className="mega-link-desc">Complete Solar Power Kit Systems</span>
-                </div>
-              </Link>
-            </li>
-            <li>
-              <Link to="/products?category=solar-panels" onClick={onClose}>
-                <Sun size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Solar panels</span>
-                  <span className="mega-link-desc">High-Efficiency Solar Modules</span>
-                </div>
-              </Link>
-            </li>
-            <li>
-              <Link to="/products?category=turbo-hd-cameras" onClick={onClose}>
-                <ShieldCheck size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Turbo HD Cameras</span>
-                  <span className="mega-link-desc">High-Definition Turbo HD Cameras</span>
-                </div>
-              </Link>
-            </li>
+            {categories.map((cat) => (
+              <li key={cat.id || cat.slug}>
+                <Link to={`/products?category=${cat.id || cat.slug}`} onClick={onClose}>
+                  {getCategoryIcon(cat.name)}
+                  <div>
+                    <span className="mega-link-title">{cat.name}</span>
+                    <span className="mega-link-desc">{cat.description || `Explore ${cat.name}`}</span>
+                  </div>
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
 

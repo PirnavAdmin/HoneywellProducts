@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { getApiDomain } from '../utils/apiConfig';
+import { getApiDomain, resolveMediaUrl } from '../utils/apiConfig';
+import { apiCache } from '../utils/apiCache';
 
 const HEADERS = {
   'ngrok-skip-browser-warning': 'true',
@@ -19,18 +20,7 @@ const getAuthHeaders = (isMultipart = false) => {
 };
 
 export const resolveImageUrl = (url) => {
-  if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
-    return trimmed;
-  }
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed;
-  }
-  const domain = getApiDomain().replace(/\/$/, '');
-  const cleanPath = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return `${domain}${cleanPath}`;
+  return resolveMediaUrl(url);
 };
 
 export const DEFAULT_ABOUT_DATA = {
@@ -90,29 +80,31 @@ export const aboutApi = {
    * Fetch public About Us configuration
    */
   async getAboutData() {
-    const primaryUrl = `${getApiDomain()}/api/About`;
-    const altUrl = `${getApiDomain()}/api/Settings/about-us`;
+    return await apiCache.fetchWithCache('about_data', async () => {
+      const primaryUrl = `${getApiDomain()}/api/About`;
+      const altUrl = `${getApiDomain()}/api/Settings/about-us`;
 
-    try {
-      const response = await axios.get(primaryUrl, {
-        headers: HEADERS,
-        timeout: 15000
-      });
-      return response.data || DEFAULT_ABOUT_DATA;
-    } catch (err) {
-      // If primary endpoint fails, try alternative alias endpoint
-      console.warn('Primary /api/About endpoint failed, attempting alias /api/Settings/about-us...', err.message);
       try {
-        const altResponse = await axios.get(altUrl, {
+        const response = await axios.get(primaryUrl, {
           headers: HEADERS,
           timeout: 15000
         });
-        return altResponse.data || DEFAULT_ABOUT_DATA;
-      } catch (altErr) {
-        console.warn('Both About API endpoints failed, returning default fallback data:', altErr.message);
-        return DEFAULT_ABOUT_DATA;
+        return response.data || DEFAULT_ABOUT_DATA;
+      } catch (err) {
+        // If primary endpoint fails, try alternative alias endpoint
+        console.warn('Primary /api/About endpoint failed, attempting alias /api/Settings/about-us...', err.message);
+        try {
+          const altResponse = await axios.get(altUrl, {
+            headers: HEADERS,
+            timeout: 15000
+          });
+          return altResponse.data || DEFAULT_ABOUT_DATA;
+        } catch (altErr) {
+          console.warn('Both About API endpoints failed, returning default fallback data:', altErr.message);
+          return DEFAULT_ABOUT_DATA;
+        }
       }
-    }
+    }, 15 * 60 * 1000);
   },
 
   /**
@@ -127,6 +119,7 @@ export const aboutApi = {
         headers: getAuthHeaders(false),
         timeout: 20000
       });
+      apiCache.invalidate('about_data');
       return response.data;
     } catch (err) {
       console.warn('PUT to primary endpoint failed, attempting POST/alt endpoint...', err.message);
@@ -135,6 +128,7 @@ export const aboutApi = {
           headers: getAuthHeaders(false),
           timeout: 20000
         });
+        apiCache.invalidate('about_data');
         return altResponse.data;
       } catch (postErr) {
         // Try POST method if PUT is disallowed by a server route
@@ -142,6 +136,7 @@ export const aboutApi = {
           headers: getAuthHeaders(false),
           timeout: 20000
         });
+        apiCache.invalidate('about_data');
         return postResponse.data;
       }
     }
