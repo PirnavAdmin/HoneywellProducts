@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import '../catalog/adminModule.css';
 
 export const OutlookDeleteButton = ({ onClick, title = "Delete", disabled = false, className = "" }) => {
   return (
@@ -8,7 +9,7 @@ export const OutlookDeleteButton = ({ onClick, title = "Delete", disabled = fals
       className={`outlook-delete-btn ${className}`}
       onClick={(e) => {
         e.stopPropagation();
-        onClick(e);
+        if (onClick) onClick(e);
       }}
       disabled={disabled}
       title={title}
@@ -66,7 +67,7 @@ export const AnimatedEditButton = ({ onClick, to, title = "Edit", className = ""
   }
 
   return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); onClick(e); }} className={`animated-edit-btn ${className}`} title={title}>
+    <button type="button" onClick={(e) => { e.stopPropagation(); if (onClick) onClick(e); }} className={`animated-edit-btn ${className}`} title={title}>
       {content}
     </button>
   );
@@ -105,23 +106,24 @@ export const AnimatedViewButton = ({ onClick, to, title = "View", className = ""
   }
 
   return (
-    <button type="button" onClick={(e) => { e.stopPropagation(); onClick(e); }} className={btnClass} title={title}>
+    <button type="button" onClick={(e) => { e.stopPropagation(); if (onClick) onClick(e); }} className={btnClass} title={title}>
       {content}
     </button>
   );
 };
 
-export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage }) => {
-  const page = Number(currentPage) || 1;
-  const maxPages = Number(totalPages) || 1;
+export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, itemsPerPage = 10 }) => {
+  const page = Math.max(1, Number(currentPage) || 1);
+  const maxPages = Math.max(1, Number(totalPages) || 1);
+  const count = typeof totalItems === 'number' ? totalItems : (maxPages * itemsPerPage);
 
-  if (maxPages <= 1) return null;
+  if (count === 0 && maxPages <= 1) return null;
 
   const isFirstPage = page <= 1;
   const isLastPage = page >= maxPages;
 
-  const startItem = (page - 1) * itemsPerPage + 1;
-  const endItem = Math.min(page * itemsPerPage, totalItems);
+  const startItem = count === 0 ? 0 : (page - 1) * itemsPerPage + 1;
+  const endItem = Math.min(page * itemsPerPage, count);
 
   const getPageNumbers = () => {
     const pages = [];
@@ -142,19 +144,24 @@ export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, 
   return (
     <div className="admin-pagination">
       <div className="admin-pagination__info">
-        Showing {startItem}–{endItem} of {totalItems} entries
+        {count > 0 ? (
+          <>
+            Showing <strong>{startItem}</strong>–<strong>{endItem}</strong> of <strong>{count}</strong> entries
+          </>
+        ) : (
+          <span>Showing 0 entries</span>
+        )}
       </div>
       <div className="admin-pagination__buttons">
-        {!isFirstPage && (
-          <button 
-            className="admin-pagination__btn" 
-            type="button"
-            onClick={() => onPageChange(page - 1)} 
-            disabled={isFirstPage}
-          >
-            ‹ Prev
-          </button>
-        )}
+        <button 
+          className="admin-pagination__btn" 
+          type="button"
+          onClick={() => onPageChange(page - 1)} 
+          disabled={isFirstPage}
+          style={{ opacity: isFirstPage ? 0.45 : 1, cursor: isFirstPage ? 'not-allowed' : 'pointer' }}
+        >
+          ‹ Prev
+        </button>
         <div className="admin-pagination__pages">
           {getPageNumbers().map((p, idx) =>
             p === '...' ? (
@@ -165,22 +172,22 @@ export const Pagination = ({ currentPage, totalPages, onPageChange, totalItems, 
                 type="button"
                 className={`admin-pagination__page ${page === p ? 'admin-pagination__page--active' : ''}`}
                 onClick={() => onPageChange(p)}
+                disabled={page === p}
               >
                 {p}
               </button>
             )
           )}
         </div>
-        {!isLastPage && (
-          <button 
-            className="admin-pagination__btn" 
-            type="button"
-            onClick={() => onPageChange(page + 1)} 
-            disabled={isLastPage}
-          >
-            Next ›
-          </button>
-        )}
+        <button 
+          className="admin-pagination__btn" 
+          type="button"
+          onClick={() => onPageChange(page + 1)} 
+          disabled={isLastPage}
+          style={{ opacity: isLastPage ? 0.45 : 1, cursor: isLastPage ? 'not-allowed' : 'pointer' }}
+        >
+          Next ›
+        </button>
       </div>
     </div>
   );

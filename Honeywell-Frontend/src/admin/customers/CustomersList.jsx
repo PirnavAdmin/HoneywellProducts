@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, MapPin, Eye, Plus, X, RefreshCw, Mail, Phone, UserCheck } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
-import { OutlookDeleteButton, AnimatedViewButton, Pagination } from '../components/ActionButtons';
+import { OutlookDeleteButton, AnimatedEditButton, AnimatedViewButton, Pagination } from '../components/ActionButtons';
+import '../catalog/adminModule.css';
 
 const CustomersList = () => {
   const navigate = useNavigate();
@@ -34,6 +35,11 @@ const CustomersList = () => {
     projectScale: 'Commercial & Industrial',
     gstin: ''
   });
+
+  // Edit customer modal states
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchCustomers = useCallback((silent = false) => {
     if (!silent) setLoading(true);
@@ -165,6 +171,84 @@ const CustomersList = () => {
       };
       setCustomers(prev => [fallbackCustomer, ...prev]);
       setShowAddModal(false);
+    }
+  };
+
+  const handleOpenEdit = (cust) => {
+    setEditingCustomer({
+      id: cust.id,
+      name: cust.name || '',
+      phone: cust.phone || '',
+      email: (cust.email || '').toLowerCase(),
+      status: cust.status || 'Active',
+      type: cust.type || cust.role || 'Customer Account',
+      companyOrganization: cust.companyOrganization || '',
+      sector: cust.sector || 'Security & CCTV Surveillance',
+      projectScale: cust.projectScale || 'Commercial & Industrial',
+      gstin: cust.gstin || '',
+      address: cust.address || '',
+      district: cust.district || '',
+      state: cust.state || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingCustomer || !editingCustomer.id) return;
+
+    const nameVal = (editingCustomer.name || '').trim();
+    if (!nameVal || nameVal.length < 2) {
+      alert('Please enter a valid Customer Name.');
+      return;
+    }
+
+    const phoneVal = (editingCustomer.phone || '').trim();
+    if (!phoneVal || phoneVal.length < 6) {
+      alert('Please enter a valid phone number.');
+      return;
+    }
+
+    setIsUpdating(true);
+    const payload = {
+      name: editingCustomer.name.trim(),
+      phone: editingCustomer.phone.trim(),
+      email: (editingCustomer.email || '').trim().toLowerCase(),
+      status: editingCustomer.status || 'Active',
+      role: editingCustomer.type || 'Customer Account',
+      type: editingCustomer.type || 'Customer Account',
+      companyOrganization: editingCustomer.companyOrganization || '',
+      sector: editingCustomer.sector || 'Security & CCTV Surveillance',
+      projectScale: editingCustomer.projectScale || 'Commercial & Industrial',
+      gstin: (editingCustomer.gstin || '').trim().toUpperCase(),
+      address: editingCustomer.address || '',
+      district: editingCustomer.district || '',
+      state: editingCustomer.state || ''
+    };
+
+    try {
+      const res = await fetch(`${getApiDomain()}/api/Customers/${editingCustomer.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error('Failed to update customer');
+      
+      setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...payload } : c));
+      setShowEditModal(false);
+      setEditingCustomer(null);
+    } catch (err) {
+      console.error('Error updating customer:', err);
+      // Fallback
+      setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...payload } : c));
+      setShowEditModal(false);
+      setEditingCustomer(null);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -405,7 +489,7 @@ const CustomersList = () => {
                 <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' }}>Address</th>
                 <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Orders</th>
                 <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Total Spent</th>
-                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Actions</th>
+                <th style={{ padding: '14px 18px', fontSize: '11px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -479,9 +563,14 @@ const CustomersList = () => {
                     <td style={{ padding: '14px 18px', textAlign: 'right', fontWeight: 800, color: '#0f172a', fontSize: '13px', whiteSpace: 'nowrap' }}>
                       ₹{totalSpent.toLocaleString('en-IN')}
                     </td>
-                    <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                    <td style={{ padding: '14px 18px', textAlign: 'center' }}>
+                      <div 
+                        className="catalog-inline-actions" 
+                        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        onClick={e => e.stopPropagation()}
+                      >
                         <AnimatedViewButton to={`/admin/customers/customer?id=${cust.id}`} title="View Profile" />
+                        <AnimatedEditButton onClick={() => handleOpenEdit(cust)} title="Edit Customer" />
                         <OutlookDeleteButton onClick={() => handleDelete(cust.id)} title="Delete Customer" />
                       </div>
                     </td>
@@ -498,15 +587,15 @@ const CustomersList = () => {
             </tbody>
           </table>
         </div>
-      </section>
 
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={setCurrentPage}
-        totalItems={filteredCustomers.length}
-        itemsPerPage={itemsPerPage}
-      />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredCustomers.length}
+          itemsPerPage={itemsPerPage}
+        />
+      </section>
 
       {/* Add Customer Modal */}
       {showAddModal && createPortal(
@@ -770,6 +859,252 @@ const CustomersList = () => {
                   onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#1268a5')}
                 >
                   Save Customer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Edit Customer Modal */}
+      {showEditModal && editingCustomer && createPortal(
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 999999 }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.3)', maxWidth: '640px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden', margin: 'auto' }}>
+            
+            {/* MODAL HEADER */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '22px 28px', borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
+              <div>
+                <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.01em' }}>Edit Customer</h3>
+                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Customer ID: #{editingCustomer.id}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => { setShowEditModal(false); setEditingCustomer(null); }}
+                style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid #e2e8f0', backgroundColor: '#f8fafc', color: '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s ease' }}
+                onMouseOver={(e) => { e.currentTarget.style.backgroundColor = '#f1f5f9'; e.currentTarget.style.color = '#0f172a'; }}
+                onMouseOut={(e) => { e.currentTarget.style.backgroundColor = '#f8fafc'; e.currentTarget.style.color = '#64748b'; }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* SCROLLABLE FORM BODY */}
+            <form onSubmit={handleEditSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflowY: 'auto', padding: '28px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* BASIC INFORMATION */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BASIC INFORMATION</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Full Name <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editingCustomer.name || ''}
+                      placeholder="e.g. Ramesh Kumar"
+                      onChange={e => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Phone Number <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={editingCustomer.phone || ''}
+                      placeholder="e.g. +919876543210"
+                      onChange={e => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      value={editingCustomer.email || ''}
+                      placeholder="e.g. client@company.com"
+                      onChange={e => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Customer Type <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <select
+                      required
+                      value={editingCustomer.type || 'Customer Account'}
+                      onChange={e => setEditingCustomer({ ...editingCustomer, type: e.target.value })}
+                      style={{
+                        width: '100%',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '10px',
+                        padding: '10px 14px',
+                        fontSize: '13.5px',
+                        color: '#0f172a',
+                        outline: 'none',
+                        backgroundColor: '#ffffff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="Customer Account">Website / Online Account</option>
+                      <option value="System Integrator">System Integrator</option>
+                      <option value="CCTV Installer">CCTV Installer</option>
+                      <option value="Commercial & Enterprise">Commercial & Enterprise</option>
+                      <option value="Distributor">Distributor</option>
+                      <option value="Dealer / Reseller">Dealer / Reseller</option>
+                      <option value="Residential & Facility Owner">Residential & Facility Owner</option>
+                      <option value="Channel Partner">Channel Partner</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ADDRESS & LOCATION */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>ADDRESS & LOCATION</h4>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Street Address
+                    </label>
+                    <input
+                      type="text"
+                      value={editingCustomer.address || ''}
+                      placeholder="e.g. 42 Industrial Area Phase II, Electronic City, Bengaluru, Karnataka"
+                      onChange={e => setEditingCustomer({ ...editingCustomer, address: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        City / District
+                      </label>
+                      <input
+                        type="text"
+                        value={editingCustomer.district || ''}
+                        placeholder="e.g. Bengaluru"
+                        onChange={e => setEditingCustomer({ ...editingCustomer, district: e.target.value })}
+                        style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        State
+                      </label>
+                      <input
+                        type="text"
+                        value={editingCustomer.state || ''}
+                        placeholder="e.g. Karnataka"
+                        onChange={e => setEditingCustomer({ ...editingCustomer, state: e.target.value })}
+                        style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Account Status
+                      </label>
+                      <select
+                        value={editingCustomer.status || 'Active'}
+                        onChange={e => setEditingCustomer({ ...editingCustomer, status: e.target.value })}
+                        style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                      >
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BUSINESS & PROJECT PROFILE */}
+                <h4 style={{ fontSize: '11px', fontWeight: 800, color: '#1268a5', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '8px 0 0 0', borderBottom: '1px solid #f1f5f9', paddingBottom: '8px' }}>BUSINESS &amp; PROJECT PROFILE</h4>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div style={{ gridColumn: 'span 2' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Company / Organization Name
+                    </label>
+                    <input
+                      type="text"
+                      value={editingCustomer.companyOrganization || ''}
+                      placeholder="e.g. Apex Security Solutions Ltd"
+                      onChange={e => setEditingCustomer({ ...editingCustomer, companyOrganization: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Project / Operation Scale
+                    </label>
+                    <select
+                      value={editingCustomer.projectScale || 'Commercial & Industrial'}
+                      onChange={e => setEditingCustomer({ ...editingCustomer, projectScale: e.target.value })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    >
+                      <option value="Commercial & Industrial">Commercial &amp; Industrial</option>
+                      <option value="Enterprise / Multi-Site">Enterprise / Multi-Site</option>
+                      <option value="Government & Public Sector">Government &amp; Public Sector</option>
+                      <option value="Small / Mid-size Business (SMB)">Small / Mid-size Business (SMB)</option>
+                      <option value="Residential / Facility">Residential / Facility</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      GSTIN / Tax ID (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingCustomer.gstin || ''}
+                      placeholder="e.g. 29ABCDE1234F1Z5"
+                      onChange={e => setEditingCustomer({ ...editingCustomer, gstin: e.target.value.toUpperCase() })}
+                      style={{ width: '100%', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 14px', fontSize: '13.5px', color: '#0f172a', outline: 'none', backgroundColor: '#ffffff' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* FOOTER BUTTONS */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '20px', marginTop: '24px', backgroundColor: '#ffffff' }}>
+                <button
+                  type="button"
+                  onClick={() => { setShowEditModal(false); setEditingCustomer(null); }}
+                  style={{ backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 24px', fontSize: '13px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdating}
+                  style={{
+                    backgroundColor: '#1268a5',
+                    color: '#ffffff',
+                    borderRadius: '10px',
+                    padding: '10px 26px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    border: 'none',
+                    cursor: isUpdating ? 'wait' : 'pointer',
+                    boxShadow: '0 2px 4px rgba(18,104,165,0.25)',
+                    transition: 'background-color 0.15s ease',
+                    opacity: isUpdating ? 0.7 : 1
+                  }}
+                  onMouseOver={(e) => { if (!isUpdating) e.currentTarget.style.backgroundColor = '#0e5586'; }}
+                  onMouseOut={(e) => { if (!isUpdating) e.currentTarget.style.backgroundColor = '#1268a5'; }}
+                >
+                  {isUpdating ? 'Saving...' : 'Update Customer'}
                 </button>
               </div>
             </form>

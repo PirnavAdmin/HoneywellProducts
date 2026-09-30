@@ -347,8 +347,8 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
               </li>
             )}
 
-            {/* Procurement / Purchase */}
-            {(hasAccess('purchase indent') || hasAccess('purchase order')) && (
+            {/* Procurement / Purchase - Hidden (Can be re-enabled anytime by uncommenting below) */}
+            {/* {(hasAccess('purchase indent') || hasAccess('purchase order')) && (
               <li>
                 <div
                   onClick={() => toggleDropdown('purchase', '/admin/purchase-indent')}
@@ -370,7 +370,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                   {hasAccess('purchase order') && <li><NavLink to="/admin/purchase-orders" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Purchase Order</NavLink></li>}
                 </ul>
               </li>
-            )}
+            )} */}
 
             {/* Orders */}
             {hasAccess('orders') && (
@@ -620,8 +620,8 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
               </li>
             )}
 
-            {/* Coins Converter */}
-            {hasAccess('coins converter') && (
+            {/* Coins Converter - Hidden (Can be re-enabled anytime by uncommenting below) */}
+            {/* {hasAccess('coins converter') && (
               <li>
                 <NavLink
                   to="/admin/coins"
@@ -635,7 +635,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                   </div>
                 </NavLink>
               </li>
-            )}
+            )} */}
 
             {/* Payment Settings */}
             {hasAccess('orders') && (

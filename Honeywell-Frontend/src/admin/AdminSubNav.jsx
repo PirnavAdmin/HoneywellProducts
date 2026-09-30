@@ -6,7 +6,7 @@ const AdminSubNav = () => {
   const menuItems = [
     { name: 'Suppliers', path: '/admin/suppliers', icon: 'fas fa-truck-loading' },
     { name: 'Orders', path: '/admin/orders', icon: 'fas fa-shopping-bag' },
-    { name: 'Coins Converter', path: '/admin/coins', icon: 'fas fa-coins' },
+    // { name: 'Coins Converter', path: '/admin/coins', icon: 'fas fa-coins' }, // Hidden - can be re-enabled anytime
     { name: 'Payment History', path: '/admin/payments', icon: 'fas fa-history' },
     { name: 'Categories', path: '/admin/categories', icon: 'fas fa-list' },
     { name: 'Product Lists', path: '/admin/products', icon: 'fas fa-box-open' },

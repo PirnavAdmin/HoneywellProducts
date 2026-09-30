@@ -235,7 +235,17 @@ const normaliseOrder = (o) => {
     customerType: o.customerType || o.customerRole || (o.customerDetails?.type) || 'Farmer',
     phone: o.customerPhone || o.phone || (o.customerDetails?.phone) || '',
     email: o.customerEmail || o.email || (o.customerDetails?.email) || '',
-    date: o.dateBooked ? o.dateBooked.slice(0, 10) : (o.orderDate ? o.orderDate.slice(0, 10) : (o.date ? o.date.slice(0, 10) : '')),
+    date: (() => {
+      const rawDate = o.dateBooked || o.bookedDate || o.bookingDate || o.orderDate || o.createdAt || o.createdDate || o.dateCreated || o.date || '';
+      if (!rawDate) return new Date().toISOString().slice(0, 10);
+      if (typeof rawDate === 'string' && rawDate.includes('T')) return rawDate.split('T')[0];
+      try {
+        const d = new Date(rawDate);
+        if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+      } catch (e) {}
+      return String(rawDate).slice(0, 10);
+    })(),
+    orderDate: o.orderDate || o.dateBooked || o.bookedDate || o.createdAt || o.createdDate || o.date || new Date().toISOString(),
     deliveryDate: o.deliveryDate ? o.deliveryDate.slice(0, 10) : (o.expectedDelivery || 'TBD'),
     subtotal: parseAmount(o.totalAmount || 0),
     shippingFee: parseAmount(o.shippingFee || 0),
@@ -279,14 +289,30 @@ const normaliseOrder = (o) => {
 
 const formatDateToDMyLong = (dateStr) => {
   if (!dateStr) return '';
-  const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
-  const parts = cleanDate.split('-');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const monthStr = months[d.getMonth()];
+      const year = d.getFullYear();
+      return `${day}-${monthStr}-${year}`;
+    }
+  } catch (e) {}
+
+  const cleanDate = typeof dateStr === 'string' && dateStr.includes('T') ? dateStr.split('T')[0] : String(dateStr);
+  const parts = cleanDate.split(/[-/]/);
   if (parts.length === 3) {
-    const year = parts[0];
+    if (parts[0].length === 4) {
+      const year = parts[0];
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parts[2].padStart(2, '0');
+      return `${day}-${months[monthIndex] || parts[1]}-${year}`;
+    }
+    const day = parts[0].padStart(2, '0');
     const monthIndex = parseInt(parts[1], 10) - 1;
-    const day = parts[2];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${day}-${months[monthIndex]}-${year}`;
+    const year = parts[2];
+    return `${day}-${months[monthIndex] || parts[1]}-${year}`;
   }
   return dateStr;
 };
@@ -732,10 +758,23 @@ const printInvoice = (order) => {
 
 const formatDateToDMY = (dateStr) => {
   if (!dateStr) return '';
-  const cleanDate = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
-  const parts = cleanDate.split('-');
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+  } catch (e) {}
+
+  const cleanDate = typeof dateStr === 'string' && dateStr.includes('T') ? dateStr.split('T')[0] : String(dateStr);
+  const parts = cleanDate.split(/[-/]/);
   if (parts.length === 3) {
-    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    if (parts[0].length === 4) {
+      return `${parts[2].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[0]}`;
+    }
+    return `${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}-${parts[2]}`;
   }
   return dateStr;
 };

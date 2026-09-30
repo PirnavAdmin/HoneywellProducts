@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getApiDomain } from '../../utils/apiConfig';
 import { ArrowLeft, User, Phone, Mail, MapPin, Building2, CreditCard, Activity, Edit, Plus, X, Search, ChevronDown, ShieldCheck, Briefcase } from 'lucide-react';
+import '../catalog/adminModule.css';
 
 const Customer = () => {
   const navigate = useNavigate();

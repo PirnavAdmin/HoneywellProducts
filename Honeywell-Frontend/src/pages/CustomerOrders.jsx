@@ -59,17 +59,20 @@ export default function CustomerOrders() {
         const userPhone = (user?.phone || localStorage.getItem('customerPhone') || '').replace(/\D/g, '');
         const userName = (user?.name || localStorage.getItem('customerName') || '').toLowerCase().trim();
 
-        // Strict customer isolation filter: exclude orders that explicitly belong to other customers
+        // Recent orders created by this client are always included
+        const myRecent = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
+        const recentNums = new Set(myRecent.map(r => String(r.orderNumber || r.id)));
+
+        // Customer isolation filter
         const validOrders = rawList.filter((o) => {
+          const num = String(o.orderNumber || o.id);
+          if (recentNums.has(num)) return true;
+
           const orderEmail = (o.email || o.customerEmail || '').toLowerCase().trim();
           const orderPhone = (o.phone || o.customerPhone || o.mobile || '').replace(/\D/g, '');
-          const orderCustomerName = (o.customerName || o.customer || '').toLowerCase().trim();
 
           if (orderEmail && userEmail && orderEmail !== userEmail) return false;
           if (orderPhone && userPhone && orderPhone !== userPhone && orderEmail !== userEmail) return false;
-          if (orderCustomerName && userName && !orderCustomerName.includes(userName) && !userName.includes(orderCustomerName)) {
-            if (userEmail && orderEmail !== userEmail) return false;
-          }
           return true;
         });
 

@@ -398,62 +398,76 @@ export async function getMyOrders({ customerId, email, status, search } = {}) {
   if (search) params.set('search', search);
   const q = params.toString() ? `?${params.toString()}` : '';
   
+  let apiOrders = [];
   try {
     const res = await fetch(url(`/api/Customer/my-orders${q}`), {
       method: 'GET',
       headers: authHeaders(),
     });
-    if (res.status === 404 || res.status === 204) return [];
-    if (!res.ok) throw new Error();
-    const data = await handleResponse(res);
-    return Array.isArray(data) ? data : (data.orders || data.items || data.data || []);
-  } catch (e) {
+    if (res.ok) {
+      const data = await handleResponse(res);
+      apiOrders = Array.isArray(data) ? data : (data.orders || data.items || data.data || []);
+    }
+  } catch (e) {}
+
+  if (!apiOrders.length) {
     try {
       const res2 = await fetch(url(`/api/CustomerPortal/my-orders${q}`), {
         method: 'GET',
         headers: authHeaders(),
       });
-      if (res2.status === 404 || res2.status === 204) return [];
-      const data2 = await handleResponse(res2);
-      return Array.isArray(data2) ? data2 : (data2.orders || data2.items || data2.data || []);
-    } catch (err) {
-      try {
-        const res3 = await fetch(url(`/api/Orders/my-orders${q}`), {
-          method: 'GET',
-          headers: authHeaders(),
-        });
-        if (res3.ok) {
-          const data3 = await handleResponse(res3);
-          if (Array.isArray(data3) && data3.length > 0) return data3;
-          if (data3 && (data3.orders || data3.items || data3.data)) return data3.orders || data3.items || data3.data;
-        }
-      } catch (e3) {}
+      if (res2.ok) {
+        const data2 = await handleResponse(res2);
+        apiOrders = Array.isArray(data2) ? data2 : (data2.orders || data2.items || data2.data || []);
+      }
+    } catch (e2) {}
+  }
 
-      // Fallback: Query all system orders from /api/orders
-      try {
-        const res4 = await fetch(url('/api/orders'), {
-          method: 'GET',
-          headers: authHeaders(),
-        });
-        if (res4.ok) {
-          const data4 = await handleResponse(res4);
-          const list4 = Array.isArray(data4) ? data4 : (data4.orders || data4.items || data4.data || []);
-          if (list4.length > 0) return list4;
-        }
-      } catch (e4) {}
+  if (!apiOrders.length) {
+    try {
+      const res3 = await fetch(url(`/api/Orders/my-orders${q}`), {
+        method: 'GET',
+        headers: authHeaders(),
+      });
+      if (res3.ok) {
+        const data3 = await handleResponse(res3);
+        apiOrders = Array.isArray(data3) ? data3 : (data3.orders || data3.items || data3.data || []);
+      }
+    } catch (e3) {}
+  }
 
-      // Fallback: Read client-side saved orders from local storage
-      try {
-        const local = localStorage.getItem('honeywell_orders') || localStorage.getItem('my_recent_orders');
-        if (local) {
-          const parsed = JSON.parse(local);
-          if (Array.isArray(parsed)) return parsed;
-        }
-      } catch (e5) {}
+  if (!apiOrders.length) {
+    try {
+      const res4 = await fetch(url('/api/orders'), {
+        method: 'GET',
+        headers: authHeaders(),
+      });
+      if (res4.ok) {
+        const data4 = await handleResponse(res4);
+        apiOrders = Array.isArray(data4) ? data4 : (data4.orders || data4.items || data4.data || []);
+      }
+    } catch (e4) {}
+  }
 
-      return [];
+  // Always merge with local orders so placed orders show up immediately in My Orders
+  let localOrders = [];
+  try {
+    const r1 = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
+    const r2 = JSON.parse(localStorage.getItem('honeywell_orders') || '[]');
+    localOrders = [...r1, ...r2];
+  } catch (e5) {}
+
+  const seen = new Set();
+  const merged = [];
+  for (const o of [...localOrders, ...apiOrders]) {
+    const key = String(o.orderNumber || o.orderNo || o.id || '').trim();
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      merged.push(o);
     }
   }
+
+  return merged;
 }
 
 export async function getOrderDetails(orderId) {
@@ -462,15 +476,46 @@ export async function getOrderDetails(orderId) {
       method: 'GET',
       headers: authHeaders(),
     });
-    if (!res.ok) throw new Error();
-    return await handleResponse(res);
-  } catch (e) {
+    if (res.ok) {
+      const data = await handleResponse(res);
+      if (data && (data.id || data.orderNumber)) return data;
+    }
+  } catch (e) {}
+
+  try {
     const res2 = await fetch(url(`/api/CustomerPortal/order-details/${orderId}`), {
       method: 'GET',
       headers: authHeaders(),
     });
-    return await handleResponse(res2);
-  }
+    if (res2.ok) {
+      const data2 = await handleResponse(res2);
+      if (data2 && (data2.id || data2.orderNumber)) return data2;
+    }
+  } catch (e) {}
+
+  try {
+    const res3 = await fetch(url(`/api/orders/${orderId}`), {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    if (res3.ok) {
+      const data3 = await handleResponse(res3);
+      if (data3 && (data3.id || data3.orderNumber)) return data3;
+    }
+  } catch (e) {}
+
+  // Fallback: search local orders cache
+  try {
+    const r1 = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
+    const r2 = JSON.parse(localStorage.getItem('honeywell_orders') || '[]');
+    const found = [...r1, ...r2].find(o => 
+      String(o.id) === String(orderId) || 
+      String(o.orderNumber).toLowerCase() === String(orderId).toLowerCase()
+    );
+    if (found) return found;
+  } catch (e) {}
+
+  return null;
 }
 
 export async function trackOrder(orderNumber, emailOrMobile) {
@@ -515,25 +560,38 @@ export async function trackOrder(orderNumber, emailOrMobile) {
     try {
       const details = await getOrderDetails(cand);
       if (details && (details.id || details.orderNumber)) {
+        const currentStatus = details.status || details.statusBadge || details.currentStatus || 'Processing';
+        const st = String(currentStatus).toUpperCase();
+        const isCancelled = st === 'CANCELLED' || st === 'CANCELED';
+        const isDelivered = st === 'COMPLETED' || st === 'DELIVERED';
+        const isShipped = isDelivered || st === 'SHIPPED' || st === 'DISPATCHED';
+        const isProcessing = isShipped || st === 'PROCESSING' || st === 'PACKED' || st === 'CONFIRMED';
+        const isPlaced = true;
+
+        const dynamicTimeline = isCancelled ? [
+          { step: 1, title: 'Order Placed', description: 'Your order was placed.', isCompleted: true },
+          { step: 2, title: 'Cancelled', description: 'Order was cancelled.', isCompleted: true, isCurrent: true }
+        ] : [
+          { step: 1, title: 'Order Placed', description: 'Your order has been confirmed and verified.', isCompleted: isPlaced, isCurrent: st === 'PENDING' || st === 'CONFIRMED' },
+          { step: 2, title: 'Processing & Packed', description: 'Order items are packed and prepared for pickup.', isCompleted: isProcessing, isCurrent: st === 'PROCESSING' || st === 'PACKED' },
+          { step: 3, title: 'Shipped', description: 'Package is in transit with logistics carrier.', isCompleted: isShipped, isCurrent: st === 'SHIPPED' || st === 'DISPATCHED' },
+          { step: 4, title: 'Delivered', description: 'Package delivered successfully.', isCompleted: isDelivered, isCurrent: isDelivered }
+        ];
+
         return {
           success: true,
           found: true,
           orderId: details.id,
           orderNumber: details.orderNumber || (details.id ? `ORD-${details.id}` : cand),
-          orderDateFormatted: details.orderDateFormatted || 'Placed on Recent',
-          currentStatus: details.status || details.statusBadge || 'PROCESSING',
-          statusBadge: details.statusBadge || details.status || 'PROCESSING',
-          carrierName: details.carrierName || 'BlueDart Express',
-          trackingNumber: details.trackingNumber || 'AWB-10214987',
-          shippingAddress: details.shippingAddress || '',
+          orderDateFormatted: details.orderDateFormatted || (details.createdAt ? new Date(details.createdAt).toLocaleDateString() : 'Placed on Recent'),
+          currentStatus: currentStatus,
+          status: currentStatus,
+          statusBadge: currentStatus,
+          carrierName: details.carrierName || details.logistics || 'Delhivery Express',
+          trackingNumber: details.trackingNumber || details.trackingNo || (details.id ? `AWB-${details.id}` : 'AWB-10214987'),
+          shippingAddress: details.shippingAddress || details.address || '',
           items: details.items || [],
-          timeline: details.timeline || [
-            { step: 1, title: 'Order Placed', description: 'Your order has been placed successfully.', isCompleted: true },
-            { step: 2, title: 'Processing', description: 'Order is being packed and prepared.', isCompleted: true, isCurrent: true },
-            { step: 3, title: 'Shipped', description: 'Handed over to courier partner.', isCompleted: false },
-            { step: 4, title: 'Out for Delivery', description: 'Package is out for delivery.', isCompleted: false },
-            { step: 5, title: 'Delivered', description: 'Package delivered.', isCompleted: false }
-          ]
+          timeline: Array.isArray(details.timeline) && details.timeline.length > 0 ? details.timeline : dynamicTimeline
         };
       }
     } catch (e) {}
