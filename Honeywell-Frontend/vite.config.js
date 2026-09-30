@@ -32,7 +32,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://chewer-stillness-family.ngrok-free.dev',
+        target: 'https://army-shakily-overhand.ngrok-free.dev',
         changeOrigin: true,
         secure: false,
         headers: {
@@ -40,7 +40,7 @@ export default defineConfig({
         },
       },
       '/uploads': {
-        target: 'https://chewer-stillness-family.ngrok-free.dev',
+        target: 'https://army-shakily-overhand.ngrok-free.dev',
         changeOrigin: true,
         secure: false,
         headers: {

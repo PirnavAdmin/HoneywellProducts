@@ -77,7 +77,7 @@ const AdminLayout = () => {
   const isPathAllowed = (pathname) => {
     const path = pathname.replace('/admin/', '').split('/')[0];
     if (userRole === 'super admin' || userRole === 'superadmin' || userRole === 'admin' || userRole === 'administrator') return true;
-    if (path === 'dashboard' || path === 'profile' || path === 'account-settings' || path === 'testimonials' || path === 'tickets' || path === 'reports' || path === '') return true;
+    if (path === 'dashboard' || path === 'profile' || path === 'account-settings' || path === 'testimonials' || path === 'tickets' || path === 'reports' || path === 'distributors' || path === 'dealers' || path === '') return true;
 
     let moduleKey = path;
     if (path === 'purchase-indent') moduleKey = 'purchase indent';

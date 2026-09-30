@@ -1,5 +1,5 @@
 // Central API configuration for ASP.NET Core Web API.
-export const DEFAULT_BACKEND_URL = 'https://chewer-stillness-family.ngrok-free.dev';
+export const DEFAULT_BACKEND_URL = 'https://army-shakily-overhand.ngrok-free.dev';
 
 // In dev mode, force relative path ('') so requests route through Vite proxy (/api) to eliminate CORS blocks
 export const API_BASE_URL = import.meta.env.DEV 
@@ -10,9 +10,13 @@ export async function apiRequest(path, options = {}) {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const url = path.startsWith('http') ? path : `${API_BASE_URL}${cleanPath}`;
   const response = await fetch(url, {
+    cache: 'no-store',
     headers: { 
       'ngrok-skip-browser-warning': 'true',
-      'Content-Type': 'application/json', 
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
       ...options.headers 
     },
     ...options,

@@ -1,1 +1,0 @@
-var e=`/assets/cctv-hero-poster-CKRRfYNS.jpg`;export{e as t};

@@ -105,6 +105,7 @@ const FooterConfig = lazy(() => import('./admin/screens/FooterConfig'));
 const DescriptionManager = lazy(() => import('./admin/screens/DescriptionManager'));
 const GrowthJourneyScreen = lazy(() => import('./admin/growth/GrowthJourneyScreen'));
 const PartnerApplicationsScreen = lazy(() => import('./admin/partner/PartnerApplicationsScreen'));
+const DistributorsList = lazy(() => import('./admin/distributors/DistributorsList'));
 const AboutConfig = lazy(() => import('./admin/screens/AboutConfig'));
 
 
@@ -204,6 +205,8 @@ export default function App() {
               <Route path="descriptions" element={<DescriptionManager />} />
               <Route path="growth-journey" element={<GrowthJourneyScreen />} />
               <Route path="partner-applications" element={<PartnerApplicationsScreen />} />
+              <Route path="distributors" element={<DistributorsList />} />
+              <Route path="dealers" element={<DistributorsList />} />
               <Route path="contact-card" element={<ContactCard />} />
               <Route path="footer" element={<FooterConfig />} />
               <Route path="about" element={<AboutConfig />} />

@@ -3,7 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Box, Users, ShoppingCart, Target, 
   FolderOpen, BarChart2, Settings, ChevronRight, ChevronDown, FileText, Boxes,
-  PhoneCall, FileSpreadsheet, Shield, MessageSquare, CreditCard, Ticket, Mail, TrendingUp
+  PhoneCall, FileSpreadsheet, Shield, MessageSquare, CreditCard, Ticket, Mail, TrendingUp, Building2
 } from 'lucide-react';
 import './AdminMenuBar.css';
 
@@ -90,7 +90,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   const hasAccess = (moduleName) => {
     if (!moduleName) return true;
     if (userRole === 'super admin' || userRole === 'superadmin' || userRole === 'admin' || userRole === 'administrator') return true;
-    if (moduleName === 'testimonials' || moduleName === 'tickets' || moduleName === 'enquiries' || moduleName === 'contact-submissions' || moduleName === 'quotes' || moduleName === 'reports' || moduleName === 'growth journey' || moduleName === 'partner applications') return true;
+    if (moduleName === 'testimonials' || moduleName === 'tickets' || moduleName === 'enquiries' || moduleName === 'contact-submissions' || moduleName === 'quotes' || moduleName === 'reports' || moduleName === 'growth journey' || moduleName === 'partner applications' || moduleName === 'distributors' || moduleName === 'dealers') return true;
     if (moduleName === 'staff') return true;
 
     const norm = moduleName.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
@@ -325,6 +325,23 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                   <div className="nav-left">
                     <div className="icon-box"><Shield size={18} className="nav-icon" /></div>
                     <span className="nav-label-text">Partner Applications</span>
+                  </div>
+                </NavLink>
+              </li>
+            )}
+
+            {/* Dealers & Distributors */}
+            {hasAccess('distributors') && (
+              <li>
+                <NavLink
+                  to="/admin/distributors"
+                  className={({ isActive }) => (isActive || location.pathname.includes('/admin/dealers')) ? 'stroyka-nav-link active' : 'stroyka-nav-link'}
+                  data-tooltip="Dealers & Distributors"
+                  title={!expanded ? "Dealers & Distributors" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><Building2 size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Dealers &amp; Distributors</span>
                   </div>
                 </NavLink>
               </li>
