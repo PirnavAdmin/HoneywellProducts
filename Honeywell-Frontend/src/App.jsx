@@ -255,6 +255,7 @@ export default function App() {
               {/* Resources & Legal */}
               <Route path="resources" element={<ResourcesHub />} />
               <Route path="resources/software" element={<SoftwareDownloads />} />
+              <Route path="software" element={<Navigate to="/resources/software" replace />} />
               <Route path="downloads" element={<DownloadsCenter />} />
               <Route path="blogs/:id" element={<BlogDetails />} />
               <Route path="blog/:id" element={<BlogDetails />} />

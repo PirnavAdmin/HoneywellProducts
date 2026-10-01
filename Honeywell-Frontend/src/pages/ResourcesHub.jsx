@@ -108,9 +108,9 @@ export default function ResourcesHub() {
       <PageHero
         pageType="Resources"
         eyebrow="RESOURCES &amp; LEARNING"
-        title="Honeywell Resources &amp; Learning Hub"
-        description="Technical whitepapers, case studies, video guides, software downloads, and security articles."
-        image={heroImage}
+        title={banner.title}
+        description={banner.description}
+        image={banner.image}
       />
 
       {/* ── Quick Nav Cards ── */}

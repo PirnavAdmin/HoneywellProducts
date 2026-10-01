@@ -57,62 +57,82 @@ export default function DownloadsCenter() {
       const productName = product.name || product.productName || product.title || 'Honeywell Product';
       const catName = getCategoryName(product);
 
+      // Helper to test if a raw URL is a real external file
+      const checkRealUrl = (urlStr) => Boolean(
+        urlStr &&
+        typeof urlStr === 'string' &&
+        (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('blob:') || urlStr.startsWith('data:')) &&
+        !urlStr.includes('/docs/')
+      );
+
       // 1. Datasheet
+      const dsUrl = product.datasheetUrl || product.datasheet;
+      const isRealDs = checkRealUrl(dsUrl);
       docs.push({
         id: `${product.id}-datasheet`,
         productId: product.id,
         productName,
         category: catName,
-        title: `${productName} — Technical Datasheet`,
+        title: isRealDs ? `${productName} — Official Datasheet` : `${productName} — Generated Product Datasheet`,
         type: 'datasheets',
         badge: 'Datasheet',
-        fileUrl: product.datasheetUrl || product.datasheet || `/docs/${product.id}-datasheet.pdf`,
-        format: 'PDF',
+        hasRealUrl: isRealDs,
+        fileUrl: dsUrl || `/docs/${product.id}-datasheet.pdf`,
+        format: isRealDs ? 'Official Doc' : 'Generated PDF',
         productObj: product,
         description: product.shortDescription || product.description || 'Comprehensive technical specifications, pin configurations, and electrical ratings.',
       });
 
       // 2. Installation & User Manual
+      const manualUrl = product.manualUrl || product.manual;
+      const isRealManual = checkRealUrl(manualUrl);
       docs.push({
         id: `${product.id}-manual`,
         productId: product.id,
         productName,
         category: catName,
-        title: `${productName} — Installation & User Manual`,
+        title: isRealManual ? `${productName} — Official User Manual` : `${productName} — Generated User Guide`,
         type: 'manuals',
         badge: 'User Manual',
-        fileUrl: product.manualUrl || product.manual || `/docs/${product.id}-manual.pdf`,
-        format: 'PDF',
+        hasRealUrl: isRealManual,
+        fileUrl: manualUrl || `/docs/${product.id}-manual.pdf`,
+        format: isRealManual ? 'Official Doc' : 'Generated PDF',
         productObj: product,
         description: 'Step-by-step setup guide, hardware mounting procedures, and configuration manual.',
       });
 
       // 3. Product Brochure
+      const brochureUrl = product.brochureUrl || product.brochure;
+      const isRealBrochure = checkRealUrl(brochureUrl);
       docs.push({
         id: `${product.id}-brochure`,
         productId: product.id,
         productName,
         category: catName,
-        title: `${productName} — Product Overview Brochure`,
+        title: isRealBrochure ? `${productName} — Official Brochure` : `${productName} — Generated Overview Sheet`,
         type: 'brochures',
         badge: 'Brochure',
-        fileUrl: product.brochureUrl || product.brochure || `/docs/${product.id}-brochure.pdf`,
-        format: 'PDF',
+        hasRealUrl: isRealBrochure,
+        fileUrl: brochureUrl || `/docs/${product.id}-brochure.pdf`,
+        format: isRealBrochure ? 'Official Doc' : 'Generated PDF',
         productObj: product,
         description: 'Feature overview, application scenarios, benefits, and solution deployment architecture.',
       });
 
       // 4. Quality & Compliance Certificate
+      const certUrl = product.certificationUrl || product.certification;
+      const isRealCert = checkRealUrl(certUrl);
       docs.push({
         id: `${product.id}-certification`,
         productId: product.id,
         productName,
         category: catName,
-        title: `${productName} — Certificate of Quality & Compliance`,
+        title: isRealCert ? `${productName} — Official Quality Certificate` : `${productName} — Generated Compliance Summary`,
         type: 'documents',
         badge: 'Certification',
-        fileUrl: product.certificationUrl || product.certification || `/docs/${product.id}-certification.pdf`,
-        format: 'PDF',
+        hasRealUrl: isRealCert,
+        fileUrl: certUrl || `/docs/${product.id}-certification.pdf`,
+        format: isRealCert ? 'Official Doc' : 'Generated PDF',
         productObj: product,
         description: 'Official CE, RoHS, ISO quality compliance and commercial warranty documentation.',
       });
@@ -326,7 +346,16 @@ export default function DownloadsCenter() {
                       <span className={`doc-type-tag ${item.type}`}>
                         {item.badge}
                       </span>
-                      <span className="doc-format-pill">{item.format || 'PDF'}</span>
+                      <span
+                        className="doc-format-pill"
+                        style={{
+                          background: item.hasRealUrl ? '#dcfce7' : '#fef3c7',
+                          color: item.hasRealUrl ? '#166534' : '#92400e',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {item.hasRealUrl ? 'Official Doc' : 'Generated PDF'}
+                      </span>
                     </div>
                   </div>
 
@@ -347,7 +376,7 @@ export default function DownloadsCenter() {
                       type="button"
                       className="btn-view"
                       onClick={() => handleDocumentAction(item, 'view')}
-                      title="Open & view PDF preview in browser"
+                      title={item.hasRealUrl ? "Open official document in browser" : "Preview generated product datasheet"}
                     >
                       <Eye size={14} /> Preview
                     </button>
@@ -355,9 +384,9 @@ export default function DownloadsCenter() {
                       type="button"
                       className="btn-download"
                       onClick={() => handleDocumentAction(item, 'download')}
-                      title="Download official PDF document"
+                      title={item.hasRealUrl ? "Download official uploaded manufacturer document" : "Generate product datasheet PDF from live product specifications"}
                     >
-                      <Download size={14} /> Download PDF
+                      <Download size={14} /> {item.hasRealUrl ? 'Download Official PDF' : 'Generate Product PDF'}
                     </button>
                   </div>
                 </div>

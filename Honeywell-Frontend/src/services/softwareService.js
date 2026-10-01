@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../utils/apiConfig';
-
+import { apiCache } from '../utils/apiCache';
 
 const BASE_URL = getApiDomain();
 
@@ -206,6 +206,7 @@ export const softwareService = {
     const response = await api.post('/api/software', fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    apiCache.invalidate('software');
     return unwrapItem(response);
   },
 
@@ -219,6 +220,7 @@ export const softwareService = {
     const response = await api.put(`/api/software/${id}`, fd, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    apiCache.invalidate('software');
     return unwrapItem(response);
   },
 
@@ -227,6 +229,7 @@ export const softwareService = {
    */
   async delete(id) {
     await api.delete(`/api/software/${id}`);
+    apiCache.invalidate('software');
     return true;
   },
 
@@ -235,6 +238,7 @@ export const softwareService = {
    */
   async updateStatus(id, status) {
     const response = await api.patch(`/api/software/${id}/status`, { status });
+    apiCache.invalidate('software');
     return unwrapItem(response);
   },
 };
