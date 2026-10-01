@@ -39,13 +39,45 @@ export const mapBannerFromApi = (item) => {
     ''
   );
 
+  const rawTarget = item.targetUrl || item.TargetUrl || item.link || item.Link || item.url || item.Url || '';
+  const rawSub = item.subtitle || item.Subtitle || item.description || item.Description || '';
+  let rawType = item.bannerType || item.BannerType || item.type || item.Type;
+
+  // Infer bannerType from targetUrl, subtitle or description tag if missing or defaulted
+  const targetLower = String(rawTarget).toLowerCase();
+  const subLower = String(rawSub).toLowerCase();
+  const titleLower = String(item.title || item.Title || '').toLowerCase();
+
+  if (targetLower.includes('products') || subLower.includes('[type:products]') || titleLower.includes('products banner')) {
+    rawType = 'Products';
+  } else if (targetLower.includes('solutions') || subLower.includes('[type:solutions]') || titleLower.includes('solutions banner')) {
+    rawType = 'Solutions';
+  } else if (targetLower.includes('business') || subLower.includes('[type:business]') || titleLower.includes('business banner')) {
+    rawType = 'Business';
+  } else if (targetLower.includes('about') || subLower.includes('[type:about]') || titleLower.includes('about banner')) {
+    rawType = 'About';
+  } else if (targetLower.includes('resources') || subLower.includes('[type:resources]') || titleLower.includes('resources banner')) {
+    rawType = 'Resources';
+  } else if (targetLower.includes('contact') || subLower.includes('[type:contact]') || titleLower.includes('contact banner')) {
+    rawType = 'Contact';
+  } else if (targetLower.includes('offers') || targetLower.includes('promo') || subLower.includes('[type:promo]')) {
+    rawType = 'Promo';
+  } else if (targetLower.includes('trust') || subLower.includes('[type:trust]')) {
+    rawType = 'Trust';
+  } else if (!rawType) {
+    rawType = 'Hero';
+  }
+
+  // Clean tag from displayed subtitle
+  const cleanSubtitle = String(rawSub).replace(/\[Type:\w+\]/gi, '').trim();
+
   return {
     id: String(rawId),
     title: item.title || item.Title || item.name || item.Name || '',
-    subtitle: item.subtitle || item.Subtitle || item.description || item.Description || '',
+    subtitle: cleanSubtitle,
     imageUrl: String(rawImage || '').trim(),
-    targetUrl: item.targetUrl || item.TargetUrl || item.link || item.Link || item.url || item.Url || '/products',
-    bannerType: item.bannerType || item.BannerType || item.type || item.Type || 'Hero',
+    targetUrl: rawTarget || (rawType === 'Products' ? '/products' : '/'),
+    bannerType: rawType,
     isActive: item.isActive !== undefined ? Boolean(item.isActive) : (item.IsActive !== undefined ? Boolean(item.IsActive) : (item.active !== undefined ? Boolean(item.active) : true)),
     displayOrder: Number(item.displayOrder ?? item.DisplayOrder ?? item.order ?? item.Order ?? 0),
     createdAt: item.createdAt || item.CreatedAt || item.dateCreated || new Date().toISOString()
@@ -86,11 +118,16 @@ export const fetchActiveBanners = async (type = '') => {
   const cacheKey = `banners_active_${type || 'all'}`;
   return await apiCache.fetchWithCache(cacheKey, async () => {
     try {
-      const url = type ? `${getBaseUrl()}?type=${encodeURIComponent(type)}` : getBaseUrl();
-      const response = await axios.get(url, { headers: getHeaders() });
+      const response = await axios.get(getBaseUrl(), { headers: getHeaders() });
       if (response.status === 200) {
         const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
-        return list.map(mapBannerFromApi).filter(Boolean);
+        let mapped = list.map(mapBannerFromApi).filter(Boolean);
+        if (type) {
+          const typeLower = type.toLowerCase();
+          const matched = mapped.filter(b => (b.bannerType && b.bannerType.toLowerCase() === typeLower) || (b.targetUrl && b.targetUrl.toLowerCase().includes(typeLower)));
+          if (matched.length > 0) return matched;
+        }
+        return mapped;
       }
     } catch (err) {
       console.warn('Fetch Active Banners Error:', err.message);
@@ -120,13 +157,34 @@ export const fetchBannerById = async (id) => {
  * Create a new banner
  */
 export const createBanner = async (bannerData) => {
+  const type = bannerData.bannerType || 'Hero';
+  let targetUrl = bannerData.targetUrl || '/products';
+  if (type === 'Products' && (!targetUrl || targetUrl === '/categories' || targetUrl === '/products')) {
+    targetUrl = '/products?type=Products';
+  } else if (type === 'Solutions' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/solutions?type=Solutions';
+  } else if (type === 'Business' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/business?type=Business';
+  } else if (type === 'About' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/about-us?type=About';
+  } else if (type === 'Resources' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/resources?type=Resources';
+  } else if (type === 'Contact' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/contact?type=Contact';
+  } else if (type === 'Promo' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/offers?type=Promo';
+  }
+
+  const rawSub = bannerData.subtitle || bannerData.description || '';
+  const taggedSub = rawSub.includes('[Type:') ? rawSub : `${rawSub} [Type:${type}]`.trim();
+
   const payload = {
     title: bannerData.title || '',
-    subtitle: bannerData.subtitle || '',
-    description: bannerData.description || bannerData.subtitle || '',
+    subtitle: taggedSub,
+    description: taggedSub,
     imageUrl: bannerData.imageUrl || '',
-    targetUrl: bannerData.targetUrl || '/products',
-    bannerType: bannerData.bannerType || 'Hero',
+    targetUrl: targetUrl,
+    bannerType: type,
     isActive: bannerData.isActive !== undefined ? bannerData.isActive : true,
     displayOrder: Number(bannerData.displayOrder || 0)
   };
@@ -141,14 +199,36 @@ export const createBanner = async (bannerData) => {
  */
 export const updateBanner = async (id, bannerData) => {
   const cleanId = isNaN(Number(id)) ? id : Number(id);
+  const type = bannerData.bannerType || 'Hero';
+  let targetUrl = bannerData.targetUrl || '/products';
+  if (type === 'Products' && (!targetUrl || targetUrl === '/categories' || targetUrl === '/products')) {
+    targetUrl = '/products?type=Products';
+  } else if (type === 'Solutions' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/solutions?type=Solutions';
+  } else if (type === 'Business' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/business?type=Business';
+  } else if (type === 'About' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/about-us?type=About';
+  } else if (type === 'Resources' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/resources?type=Resources';
+  } else if (type === 'Contact' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/contact?type=Contact';
+  } else if (type === 'Promo' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/offers?type=Promo';
+  }
+
+  const rawSub = bannerData.subtitle || bannerData.description || '';
+  const cleanSub = rawSub.replace(/\[Type:\w+\]/gi, '').trim();
+  const taggedSub = `${cleanSub} [Type:${type}]`.trim();
+
   const payload = {
     id: cleanId,
     title: bannerData.title || '',
-    subtitle: bannerData.subtitle || '',
-    description: bannerData.description || bannerData.subtitle || '',
+    subtitle: taggedSub,
+    description: taggedSub,
     imageUrl: bannerData.imageUrl || '',
-    targetUrl: bannerData.targetUrl || '/products',
-    bannerType: bannerData.bannerType || 'Hero',
+    targetUrl: targetUrl,
+    bannerType: type,
     isActive: bannerData.isActive !== undefined ? bannerData.isActive : true,
     displayOrder: Number(bannerData.displayOrder || 0)
   };

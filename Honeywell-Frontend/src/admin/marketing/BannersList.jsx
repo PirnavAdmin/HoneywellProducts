@@ -221,9 +221,8 @@ const BannersList = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {/* Promo and Trust banner filters are temporarily hidden. To recall, add 'Promo', 'Trust' back to the array. */}
-          {['All', 'Hero'].map(type => (
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {['All', 'Hero', 'Products', 'Solutions', 'Business', 'About', 'Resources', 'Contact', 'Promo', 'Trust'].map(type => (
             <button
               key={type}
               type="button"
@@ -452,7 +451,19 @@ const BannersList = () => {
                   </label>
                   <select
                     value={formData.bannerType}
-                    onChange={(e) => setFormData({ ...formData, bannerType: e.target.value })}
+                    onChange={(e) => {
+                      const newType = e.target.value;
+                      let newTarget = formData.targetUrl;
+                      if (newType === 'Products') newTarget = '/products?type=Products';
+                      else if (newType === 'Solutions') newTarget = '/solutions?type=Solutions';
+                      else if (newType === 'Business') newTarget = '/business?type=Business';
+                      else if (newType === 'About') newTarget = '/about-us?type=About';
+                      else if (newType === 'Resources') newTarget = '/resources?type=Resources';
+                      else if (newType === 'Contact') newTarget = '/contact?type=Contact';
+                      else if (newType === 'Promo') newTarget = '/offers?type=Promo';
+                      else if (newType === 'Hero') newTarget = '/products';
+                      setFormData({ ...formData, bannerType: newType, targetUrl: newTarget });
+                    }}
                     style={{
                       width: '100%',
                       padding: '10px 12px',
@@ -466,10 +477,14 @@ const BannersList = () => {
                     }}
                   >
                     <option value="Hero">Hero Carousel Banner (Homepage Slider)</option>
-                    {/* To recall Promo and Trust banners in the future, uncomment below options:
+                    <option value="Products">Products Page Banner</option>
+                    <option value="Solutions">Solutions Page Banner</option>
+                    <option value="Business">Business &amp; Partner Page Banner</option>
+                    <option value="About">About Us Page Banner</option>
+                    <option value="Resources">Resources Page Banner</option>
+                    <option value="Contact">Contact Us Page Banner</option>
                     <option value="Promo">Promotional Banner (Offer Sections)</option>
                     <option value="Trust">Trust &amp; Rating Banner (Customer Testimonial Slider)</option>
-                    */}
                   </select>
                 </div>
 

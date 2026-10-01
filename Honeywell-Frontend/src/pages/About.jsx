@@ -126,6 +126,7 @@ export default function About() {
       {/* ── 1. Hero Section ── */}
       {hero && (
         <PageHero
+          pageType="About"
           eyebrow={hero.eyebrow || 'ABOUT US'}
           title={hero.title || 'Security Technology With a Clear Purpose'}
           description={hero.description || ''}

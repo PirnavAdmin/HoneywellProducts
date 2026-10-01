@@ -135,14 +135,30 @@ const BannerForm = () => {
             <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Banner Type</label>
             <select
               value={formData.bannerType}
-              onChange={(e) => setFormData({ ...formData, bannerType: e.target.value })}
+              onChange={(e) => {
+                const newType = e.target.value;
+                let newTarget = formData.targetUrl;
+                if (newType === 'Products') newTarget = '/products?type=Products';
+                else if (newType === 'Solutions') newTarget = '/solutions?type=Solutions';
+                else if (newType === 'Business') newTarget = '/business?type=Business';
+                else if (newType === 'About') newTarget = '/about-us?type=About';
+                else if (newType === 'Resources') newTarget = '/resources?type=Resources';
+                else if (newType === 'Contact') newTarget = '/contact?type=Contact';
+                else if (newType === 'Promo') newTarget = '/offers?type=Promo';
+                else if (newType === 'Hero') newTarget = '/products';
+                setFormData({ ...formData, bannerType: newType, targetUrl: newTarget });
+              }}
               style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
             >
               <option value="Hero">Hero Carousel Banner (Homepage Slider)</option>
-              {/* To recall Promo and Trust banners in the future, uncomment below options:
+              <option value="Products">Products Page Banner</option>
+              <option value="Solutions">Solutions Page Banner</option>
+              <option value="Business">Business & Partner Page Banner</option>
+              <option value="About">About Us Page Banner</option>
+              <option value="Resources">Resources Page Banner</option>
+              <option value="Contact">Contact Us Page Banner</option>
               <option value="Promo">Promotional Banner (Offer Sections)</option>
               <option value="Trust">Trust & Rating Banner (Customer Testimonial Slider)</option>
-              */}
             </select>
           </div>
 

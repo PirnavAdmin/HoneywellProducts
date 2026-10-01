@@ -6,12 +6,20 @@ import {
   Calendar, User, ChevronRight
 } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
+import { usePageBanner } from '../hooks/usePageBanner';
 import { softwareService } from '../services/softwareService';
 import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
 import { getSupportConfig } from '../services/settingsApi';
 import heroImage from '../assets/images/smart-technology-trends.png';
 
 export default function ResourcesHub() {
+  const { banner } = usePageBanner(
+    'Resources',
+    'Honeywell Resources & Learning Hub',
+    'Technical whitepapers, case studies, video guides, software downloads, and security articles.',
+    heroImage
+  );
+
   // ── State for all 3 APIs ──
   const [software, setSoftware] = useState([]);
   const [blogs, setBlogs] = useState([]);
@@ -98,6 +106,7 @@ export default function ResourcesHub() {
   return (
     <>
       <PageHero
+        pageType="Resources"
         eyebrow="RESOURCES &amp; LEARNING"
         title="Honeywell Resources &amp; Learning Hub"
         description="Technical whitepapers, case studies, video guides, software downloads, and security articles."
