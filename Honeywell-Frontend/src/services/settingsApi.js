@@ -74,6 +74,13 @@ export async function updateQrConfig(data) {
   return res.json().catch(() => ({ success: true }));
 }
 
+// ── Contact Card API ──
+export async function getContactCard() {
+  const res = await fetch(`${getApiDomain()}/api/Settings/contact-card`, { headers: getHeaders() });
+  if (!res.ok) throw new Error(`Failed to fetch contact card: ${res.status}`);
+  return res.json();
+}
+
 // ── Support Config API ──
 export async function getSupportConfig() {
   const res = await fetch(`${getApiDomain()}/api/Support/config`, { headers: getHeaders() });
