@@ -1,7 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { Search, Printer, Trash2, CheckCircle2, AlertCircle, RefreshCw, Plus } from 'lucide-react';
+import React, { useEffect, useState, useMemo } from 'react';
+import { 
+  Search, Printer, Trash2, CheckCircle2, AlertCircle, RefreshCw, 
+  Plus, X, Filter, RotateCcw, FileText, CheckCircle, Clock, 
+  DollarSign, TrendingUp, User, Calendar, CreditCard, Mail, Ban
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { getInvoices, getInvoiceById, updateInvoice, deleteInvoice } from '../../services/invoicesApi';
+import { Pagination } from '../components/ActionButtons';
+import { Toast } from '../components/Toast';
 import './invoices.css';
 
 const normalizeInvoiceId = (raw) => {
@@ -14,6 +20,31 @@ const normalizeInvoiceId = (raw) => {
   return `INV-${clean}`;
 };
 
+const formatDateToDMY = (dateInput) => {
+  if (!dateInput) return '-';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return String(dateInput);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-IN', { month: 'short' });
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
+const formatCurrency = (val) => {
+  if (typeof val === 'number') return `₹${val.toLocaleString('en-IN')}`;
+  if (!val) return '₹0';
+  let str = String(val).trim().replace(/^(rs\.?|inr|₹)\s*/i, '').replace(/,/g, '');
+  const num = Number(str) || 0;
+  return `₹${num.toLocaleString('en-IN')}`;
+};
+
+const getInitials = (name) => {
+  if (!name) return 'IN';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 const InvoicesList = () => {
   const [invoices, setInvoices] = useState([]);
   const [metrics, setMetrics] = useState({
@@ -24,14 +55,30 @@ const InvoicesList = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [toast, setToast] = useState(null);
 
-  const fetchInvoicesData = async (search = '') => {
-    setLoading(true);
+  // Filters & Search
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset pagination on filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const fetchInvoicesData = async (search = '', isBackground = false) => {
+    if (!isBackground) setLoading(true);
     setError('');
     try {
       const data = await getInvoices(search);
-      
       const normalizedList = (data.invoices || []).map(inv => ({
         ...inv,
         invoiceId: normalizeInvoiceId(inv.invoiceId)
@@ -44,38 +91,44 @@ const InvoicesList = () => {
         cancelledInvoices: data.cancelledInvoices || 0
       });
     } catch (err) {
-      setError(err.message || 'Failed to fetch invoices.');
+      if (!isBackground) {
+        setError(err.message || 'Failed to fetch invoices.');
+        showToast('Failed to load invoices data.', 'error');
+      }
     } finally {
-      setLoading(false);
+      if (!isBackground) setLoading(false);
     }
   };
 
   useEffect(() => {
+    fetchInvoicesData('', false);
+  }, []);
+
+  useEffect(() => {
     const delayDebounce = setTimeout(() => {
-      fetchInvoicesData(searchTerm);
-    }, 450);
+      fetchInvoicesData(searchTerm, true);
+    }, 400);
     return () => clearTimeout(delayDebounce);
   }, [searchTerm]);
 
   const handleUpdateStatus = async (id, currentStatus, nextStatus) => {
-    if (!window.confirm(`This invoice is currently ${currentStatus.toUpperCase()}. Are you sure you want to mark it as ${nextStatus.toUpperCase()}?`)) return;
-
     try {
       await updateInvoice(id, { status: nextStatus });
-      fetchInvoicesData(searchTerm);
+      showToast(`Invoice status updated to ${nextStatus}.`, 'success');
+      fetchInvoicesData(searchTerm, true);
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      showToast(`Error updating status: ${err.message}`, 'error');
     }
   };
 
   const handleDeleteInvoice = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel/delete this invoice?')) return;
-
+    if (!window.confirm('Are you sure you want to cancel this invoice?')) return;
     try {
       await deleteInvoice(id);
-      fetchInvoicesData(searchTerm);
+      showToast('Invoice marked as cancelled.', 'success');
+      fetchInvoicesData(searchTerm, true);
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      showToast(`Error cancelling invoice: ${err.message}`, 'error');
     }
   };
 
@@ -138,38 +191,23 @@ const InvoicesList = () => {
               <div style="font-weight: 700; color: #0f172a;">${item.productName || 'Product'}</div>
               ${item.productCode ? `<div style="font-size: 11px; color: #64748b;">SKU: ${item.productCode}</div>` : ''}
             </td>
-            <td style="text-align: center;">${itemQty}</td>
+            <td style="text-align: center; font-weight: 600;">${itemQty}</td>
             <td style="text-align: right;">₹${itemPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
             <td style="text-align: right;">₹${itemTax.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-            <td style="text-align: right; font-weight: 700; color: #0f172a;">₹${itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td style="text-align: right; font-weight: 700;">₹${itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           </tr>
         `;
       }).join('');
 
-      const formatDate = (dateStr) => {
-        if (!dateStr) return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        try {
-          const d = new Date(dateStr);
-          if (isNaN(d.getTime())) return dateStr;
-          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-        } catch {
-          return dateStr;
-        }
-      };
+      const docTitle = "TAX INVOICE";
+      const docSubTitle = "ORIGINAL FOR RECIPIENT";
+      const currentStatus = (order.status || 'Paid').toLowerCase();
+      const isPaid = currentStatus === 'paid';
+      const isCancelled = currentStatus === 'cancelled';
+      const statusColor = isPaid ? '#10b981' : isCancelled ? '#ef4444' : '#f59e0b';
 
-      const currentStatus = order.paymentStatus || order.status || 'Unpaid';
-      const isPaid = currentStatus.toLowerCase() === 'paid';
-      const isCancelled = currentStatus.toLowerCase() === 'cancelled';
-
-      const docTitle = isPaid ? 'TAX INVOICE' : isCancelled ? 'CANCELLED INVOICE' : 'PROFORMA INVOICE';
-      const docSubTitle = isPaid ? 'Original for Recipient' : isCancelled ? 'Void / Cancelled Document' : 'Proforma / Quotation - Payment Pending';
-      const statusColor = isPaid ? '#047857' : isCancelled ? '#dc2626' : '#d97706';
-      const statusBg = isPaid ? '#ecfdf5' : isCancelled ? '#fef2f2' : '#fffbe5';
-      const statusBorder = isPaid ? '#a7f3d0' : isCancelled ? '#fca5a5' : '#fde68a';
-
-      const printWin = printIframe.contentWindow || printIframe.contentDocument;
-      const doc = printWin.document || printWin;
-
+      const printWin = printIframe.contentWindow || printIframe;
+      const doc = printWin.document;
       doc.open();
       doc.write(`
         <!DOCTYPE html>
@@ -177,262 +215,61 @@ const InvoicesList = () => {
           <head>
             <title>${docTitle} - ${order.invoiceId}</title>
             <style>
-              @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-              @page {
+              @page { size: A4 portrait; margin: 12mm; }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                color: #1e293b;
                 margin: 0;
-                size: auto;
+                padding: 0;
+                font-size: 11.5px;
+                line-height: 1.4;
               }
-              @media print {
-                html, body { margin: 0 !important; padding: 0 !important; background: #ffffff !important; }
-                .invoice-container { border: none !important; box-shadow: none !important; padding: 12mm 15mm !important; max-width: 100% !important; width: 100% !important; }
-              }
-              * { box-sizing: border-box; margin: 0; padding: 0; }
-              body { 
-                font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif; 
-                background: #ffffff;
-                color: #0f172a;
-                padding: 20px;
-                line-height: 1.5;
-              }
-              .invoice-container { 
-                max-width: 820px; 
-                margin: auto; 
-                background: #ffffff;
-                border: 1px solid #e2e8f0;
-                border-radius: 12px;
-                padding: 32px;
-              }
-              
-              /* Header */
-              .invoice-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-start;
-                padding-bottom: 20px;
-                border-bottom: 2px solid #0f172a;
-                margin-bottom: 20px;
-              }
-              .company-title {
-                font-size: 22px;
-                font-weight: 800;
-                color: #065f46;
-                letter-spacing: -0.5px;
-                text-transform: uppercase;
-              }
-              .company-subtitle {
-                font-size: 11px;
-                font-weight: 700;
-                color: #047857;
-                margin-top: 2px;
-                letter-spacing: 0.5px;
-              }
-              .company-meta {
-                font-size: 11px;
-                color: #475569;
-                margin-top: 6px;
-                line-height: 1.5;
-              }
-              .badge-tax-invoice {
-                text-align: right;
-              }
-              .tax-title {
-                font-size: 20px;
-                font-weight: 800;
-                color: #0f172a;
-                letter-spacing: 1px;
-              }
-              .tax-subtitle {
-                display: inline-block;
-                background: ${statusBg};
-                color: ${statusColor};
-                border: 1px solid ${statusBorder};
-                font-size: 10px;
-                font-weight: 700;
-                padding: 4px 8px;
-                border-radius: 20px;
-                margin-top: 4px;
-                text-transform: uppercase;
-              }
-              
-              /* Metadata Grid */
-              .info-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-                background: #f8fafc;
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 14px 18px;
-                margin-bottom: 20px;
-              }
-              .info-block {
-                font-size: 12px;
-              }
-              .info-block-title {
-                font-size: 10px;
-                font-weight: 700;
-                text-transform: uppercase;
-                color: #64748b;
-                letter-spacing: 0.5px;
-                margin-bottom: 6px;
-              }
-              .info-row {
-                display: flex;
-                margin-bottom: 4px;
-              }
-              .info-label {
-                width: 110px;
-                color: #64748b;
-                font-weight: 500;
-              }
-              .info-val {
-                font-weight: 700;
-                color: #0f172a;
-              }
-              
-              /* Addresses Grid */
-              .address-grid {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 20px;
-                margin-bottom: 20px;
-              }
-              .address-card {
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                padding: 14px;
-              }
-              .address-card-title {
-                font-size: 10px;
-                font-weight: 800;
-                text-transform: uppercase;
-                color: #047857;
-                letter-spacing: 0.5px;
-                margin-bottom: 6px;
-              }
-              .address-card p {
-                font-size: 12px;
-                color: #334155;
-                line-height: 1.5;
-              }
-
-              /* Table */
-              table.item-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 20px;
-              }
-              table.item-table th {
-                background: #0f172a;
-                color: #ffffff;
-                font-size: 11px;
-                font-weight: 700;
-                text-transform: uppercase;
-                padding: 8px 10px;
-                letter-spacing: 0.5px;
-              }
-              table.item-table td {
-                padding: 10px;
-                font-size: 12px;
-                border-bottom: 1px solid #e2e8f0;
-                color: #334155;
-              }
-              table.item-table tr:nth-child(even) {
-                background: #f8fafc;
-              }
-
-              /* Summary & Financials */
-              .summary-flex {
-                display: flex;
-                justify-content: space-between;
-                gap: 20px;
-                margin-bottom: 24px;
-              }
-              .bank-box {
-                flex: 1;
-                background: #f0fdf4;
-                border: 1px solid #bbf7d0;
-                border-radius: 8px;
-                padding: 14px;
-                font-size: 11px;
-              }
-              .bank-box-title {
-                font-size: 10px;
-                font-weight: 800;
-                color: #166534;
-                text-transform: uppercase;
-                margin-bottom: 6px;
-              }
-              .bank-row {
-                display: flex;
-                margin-bottom: 3px;
-              }
-              .bank-label {
-                width: 90px;
-                color: #15803d;
-                font-weight: 600;
-              }
-              .bank-val {
-                font-weight: 700;
-                color: #166534;
-              }
-              .financial-totals {
-                width: 320px;
-                font-size: 12px;
-              }
-              .total-line {
-                display: flex;
-                justify-content: space-between;
-                padding: 5px 0;
-                color: #475569;
-                border-bottom: 1px solid #f1f5f9;
-              }
-              .grand-total-line {
-                display: flex;
-                justify-content: space-between;
-                font-size: 15px;
-                font-weight: 800;
-                color: #0f172a;
-                padding: 8px 0;
-                border-top: 2px solid #0f172a;
-                border-bottom: 2px solid #0f172a;
-                margin-top: 4px;
-              }
-
-              /* Footer */
-              .invoice-footer {
-                display: flex;
-                justify-content: space-between;
-                align-items: flex-end;
-                padding-top: 16px;
-                border-top: 1px solid #e2e8f0;
-                font-size: 11px;
-                color: #64748b;
-              }
-              .signatory-box {
-                text-align: center;
-                width: 180px;
-              }
-              .signatory-line {
-                height: 35px;
-                border-bottom: 1px dashed #94a3b8;
-                margin-bottom: 4px;
-              }
+              .invoice-container { max-width: 800px; margin: 0 auto; }
+              .invoice-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 16px; border-bottom: 2px solid #0f172a; margin-bottom: 16px; }
+              .company-title { font-size: 20px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px; }
+              .company-subtitle { font-size: 10.5px; font-weight: 700; color: #1268a5; letter-spacing: 0.5px; margin-bottom: 4px; }
+              .company-meta { font-size: 10px; color: #475569; line-height: 1.35; }
+              .badge-tax-invoice { text-align: right; }
+              .tax-title { font-size: 18px; font-weight: 800; color: #1268a5; letter-spacing: 1px; }
+              .tax-subtitle { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-top: 2px; }
+              .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+              .info-block { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
+              .info-block-title { font-size: 11px; font-weight: 800; color: #0f172a; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; margin-bottom: 6px; }
+              .info-row { display: flex; justify-content: space-between; margin-bottom: 3px; font-size: 11px; }
+              .info-label { color: #64748b; font-weight: 600; }
+              .info-val { color: #0f172a; font-weight: 700; }
+              .address-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+              .address-card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; }
+              .address-card-title { font-size: 10.5px; font-weight: 800; text-transform: uppercase; color: #1268a5; margin-bottom: 6px; }
+              .address-card p { margin: 0; font-size: 11px; line-height: 1.4; color: #334155; }
+              .item-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+              .item-table th { background: #0f172a; color: #ffffff; font-weight: 700; font-size: 10.5px; text-transform: uppercase; padding: 8px 10px; border: 1px solid #0f172a; }
+              .item-table td { padding: 8px 10px; border: 1px solid #e2e8f0; font-size: 11px; }
+              .summary-flex { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+              .bank-box { flex: 1; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 10px 12px; font-size: 10.5px; }
+              .bank-box-title { font-size: 10px; font-weight: 800; color: #166534; text-transform: uppercase; margin-bottom: 4px; }
+              .bank-row { display: flex; margin-bottom: 2px; }
+              .bank-label { width: 85px; color: #15803d; font-weight: 600; }
+              .bank-val { font-weight: 700; color: #166534; }
+              .financial-totals { width: 300px; font-size: 11.5px; }
+              .total-line { display: flex; justify-content: space-between; padding: 4px 0; color: #475569; border-bottom: 1px solid #f1f5f9; }
+              .grand-total-line { display: flex; justify-content: space-between; font-size: 14px; font-weight: 800; color: #0f172a; padding: 6px 0; border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; margin-top: 4px; }
+              .invoice-footer { display: flex; justify-content: space-between; align-items: flex-end; padding-top: 14px; border-top: 1px solid #e2e8f0; font-size: 10.5px; color: #64748b; }
+              .signatory-box { text-align: center; width: 160px; }
+              .signatory-line { height: 30px; border-bottom: 1px dashed #94a3b8; margin-bottom: 4px; }
             </style>
           </head>
           <body>
             <div class="invoice-container">
-              <!-- Header -->
               <div class="invoice-header">
-                <div style="display: flex; align-items: flex-start; gap: 18px;">
-                  <img src="/honeywell-products-logo.png" style="height: 70px; width: auto; object-fit: contain; margin-top: 4px;" alt="Honeywell Products" />
+                <div style="display: flex; align-items: flex-start; gap: 14px;">
+                  <img src="/honeywell-products-logo.png" style="height: 60px; width: auto; object-fit: contain;" alt="Honeywell Products" />
                   <div>
                     <div class="company-title">Honeywell</div>
                     <div class="company-subtitle">SECURITY & SURVEILLANCE SOLUTIONS</div>
                     <div class="company-meta">
-                      101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana<br/>
-                      GSTIN: <strong>24DYYPP1677P1Z6</strong> | Phone: 040 4855 5758<br/>
-                      Email: info@honeywellproducts.com
+                      101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081<br/>
+                      GSTIN: <strong>24DYYPP1677P1Z6</strong> | Phone: 040 4855 5758
                     </div>
                   </div>
                 </div>
@@ -442,46 +279,39 @@ const InvoicesList = () => {
                 </div>
               </div>
 
-              <!-- Info Grid -->
               <div class="info-grid">
                 <div class="info-block">
                   <div class="info-block-title">Invoice & Order Details</div>
                   <div class="info-row"><span class="info-label">Invoice No:</span><span class="info-val">${order.invoiceId}</span></div>
-                  <div class="info-row"><span class="info-label">Invoice Date:</span><span class="info-val">${formatDate(order.date)}</span></div>
+                  <div class="info-row"><span class="info-label">Invoice Date:</span><span class="info-val">${order.date || 'Recent'}</span></div>
                   <div class="info-row"><span class="info-label">Order Ref ID:</span><span class="info-val">ORD-${order.id}</span></div>
-                  <div class="info-row"><span class="info-label">Place of Supply:</span><span class="info-val">Andhra Pradesh (37)</span></div>
                 </div>
                 <div class="info-block">
                   <div class="info-block-title">Payment & Settlement Status</div>
                   <div class="info-row"><span class="info-label">Payment Method:</span><span class="info-val">${order.paymentMethod || 'UPI / Bank Transfer'}</span></div>
-                  <div class="info-row"><span class="info-label">Payment Status:</span><span class="info-val" style="color: ${statusColor}; font-weight: 800;">${currentStatus.toUpperCase()} ${!isPaid && !isCancelled ? '(Payment Pending)' : ''}</span></div>
-                  <div class="info-row"><span class="info-label">Billing Currency:</span><span class="info-val">INR ₹${grandTotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+                  <div class="info-row"><span class="info-label">Payment Status:</span><span class="info-val" style="color: ${statusColor}; font-weight: 800;">${currentStatus.toUpperCase()}</span></div>
+                  <div class="info-row"><span class="info-label">Total Amount:</span><span class="info-val">₹${grandTotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                 </div>
               </div>
 
-              <!-- Customer & Shipping Addresses -->
               <div class="address-grid">
                 <div class="address-card">
                   <div class="address-card-title">Billed To (Customer Details)</div>
                   <p>
                     <strong>${order.client}</strong><br/>
-                    ${(order.address && order.address !== 'N/A') ? `Address: ${order.address.replace(/\n/g, '<br/>')}<br/>` : ''}
                     ${order.phone ? `Phone: ${order.phone}<br/>` : ''}
-                    ${order.email && !order.email.includes('N/A') ? `Email: ${order.email.toLowerCase()}<br/>` : ''}
+                    ${order.email && !order.email.includes('N/A') ? `Email: ${order.email.toLowerCase()}` : ''}
                   </p>
                 </div>
                 <div class="address-card">
-                  <div class="address-card-title">Shipped To (Delivery Destination)</div>
+                  <div class="address-card-title">Delivery Location</div>
                   <p>
                     <strong>${order.client}</strong><br/>
-                    Address: ${(order.shippingAddress || order.address || 'Full Delivery Address Pending / Not Provided').replace(/\n/g, '<br/>')}<br/>
-                    ${order.phone ? `Contact Phone: ${order.phone}<br/>` : ''}
-                    ${order.email && !order.email.includes('N/A') ? `Email: ${order.email.toLowerCase()}<br/>` : ''}
+                    ${(order.shippingAddress || order.address || 'Standard Delivery Location').replace(/\n/g, '<br/>')}
                   </p>
                 </div>
               </div>
 
-              <!-- Items Table -->
               <table class="item-table">
                 <thead>
                   <tr>
@@ -498,21 +328,17 @@ const InvoicesList = () => {
                 </tbody>
               </table>
 
-              <!-- Summary Flex -->
               <div class="summary-flex">
                 <div class="bank-box">
                   <div class="bank-box-title">Remittance / Bank Account Details</div>
                   <div class="bank-row"><span class="bank-label">Bank Name:</span><span class="bank-val">State Bank of India</span></div>
-                  <div class="bank-row"><span class="bank-label">Account Name:</span><span class="bank-val">Honeywell</span></div>
+                  <div class="bank-row"><span class="bank-label">Account Name:</span><span class="bank-val">Honeywell Products</span></div>
                   <div class="bank-row"><span class="bank-label">Account No:</span><span class="bank-val">50200012345678</span></div>
                   <div class="bank-row"><span class="bank-label">IFSC Code:</span><span class="bank-val">SBIN0001234</span></div>
-                  <div class="bank-row"><span class="bank-label">UPI VPA:</span><span class="bank-val">sales@honeywell.local</span></div>
                 </div>
 
                 <div class="financial-totals">
-                  <div class="total-line"><span>Subtotal (Taxable Value)</span><span>₹${subtotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-                  ${discountNum > 0 ? `<div class="total-line" style="color: #dc2626;"><span>Discount</span><span>-₹${discountNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>` : ''}
-                  ${shippingNum > 0 ? `<div class="total-line"><span>Shipping Charges</span><span>₹${shippingNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>` : ''}
+                  <div class="total-line"><span>Subtotal</span><span>₹${subtotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                   <div class="total-line"><span>CGST (9%)</span><span>₹${cgstNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                   <div class="total-line"><span>SGST (9%)</span><span>₹${sgstNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                   <div class="grand-total-line">
@@ -522,15 +348,10 @@ const InvoicesList = () => {
                 </div>
               </div>
 
-              <!-- Footer & About Section -->
               <div class="invoice-footer">
                 <div style="flex-grow: 1; max-width: 65%;">
-                  <strong>About Honeywell:</strong><br/>
-                  Leading provider of professional security, surveillance, and smart technology solutions.<br/><br/>
-                  <strong>About Invoice & Notes:</strong><br/>
-                  ${order.packerName || order.notes || 'Official tax & commercial invoice generated for recipient commercial use. Valid for commercial warranty and tax deduction.'}<br/>
-                  <span style="font-size: 10px; color: #64748b;">1. Goods once sold will not be returned without valid RMA approval. 2. Subject to Hyderabad Jurisdiction only.</span><br/>
-                  <em>This is a computer-generated tax invoice requiring no physical signature.</em>
+                  <strong>Terms & Notes:</strong><br/>
+                  <span>Official computer-generated tax invoice. Valid for commercial warranty and tax credit.</span>
                 </div>
                 <div class="signatory-box">
                   <div class="signatory-line"></div>
@@ -557,157 +378,375 @@ const InvoicesList = () => {
         printWin.print();
       }, 300);
     } catch (err) {
-      alert(`Failed to print invoice: ${err.message}`);
+      showToast(`Failed to print invoice: ${err.message}`, 'error');
     }
   };
 
+  // Filtered invoices
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter((item) => {
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchesSearch = !searchLower || (
+        (item.invoiceId || '').toLowerCase().includes(searchLower) ||
+        (item.client || '').toLowerCase().includes(searchLower) ||
+        (item.email || '').toLowerCase().includes(searchLower) ||
+        (item.billed || '').toLowerCase().includes(searchLower) ||
+        (item.status || '').toLowerCase().includes(searchLower)
+      );
+
+      const matchesStatus = statusFilter === 'All'
+        ? true
+        : statusFilter === 'Paid'
+          ? (item.status || '').toLowerCase() === 'paid'
+          : statusFilter === 'Unpaid'
+            ? (item.status || '').toLowerCase() === 'unpaid'
+            : (item.status || '').toLowerCase() === 'cancelled';
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [invoices, searchTerm, statusFilter]);
+
+  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'All';
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setCurrentPage(1);
+  };
+
+  // Paginated records
+  const paginatedInvoices = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredInvoices.slice(startIndex, startIndex + pageSize);
+  }, [filteredInvoices, currentPage, pageSize]);
+
   return (
-    <div className="invoices-ledger-container">
-      {/* Header */}
-      <div className="invoices-header-flex">
-        <div>
-          <h1 className="invoices-title">Invoices Manager</h1>
-          <p className="invoices-subtitle">Track, search, and generate customer and staff sales invoices.</p>
-        </div>
-        <Link to="/admin/invoice/add" className="add-invoice-button">
-          <Plus size={16} /> Create Invoice
-        </Link>
-      </div>
+    <div className="invoices-mgmt-container">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
 
-      {/* Metrics Grid */}
-      <div className="invoices-metrics-grid">
-        <div className="invoice-metric-card revenue">
-          <div className="metric-info">
-            <span className="metric-label">Total Revenue</span>
-            <h3 className="metric-value">{metrics.totalRevenue}</h3>
-          </div>
+      {/* Header Card */}
+      <div className="invoices-header-card">
+        <div className="invoices-title-wrap">
+          <div className="invoices-kicker">BILLING &amp; FINANCIAL LEDGER</div>
+          <h1>Invoices Ledger</h1>
+          <p>Generate, track, filter, and print customer tax invoices and commercial billing records</p>
         </div>
-        <div className="invoice-metric-card success">
-          <div className="metric-info">
-            <span className="metric-label">Paid Invoices</span>
-            <h3 className="metric-value">{metrics.paidInvoices}</h3>
-          </div>
-        </div>
-        <div className="invoice-metric-card warning">
-          <div className="metric-info">
-            <span className="metric-label">Unpaid Invoices</span>
-            <h3 className="metric-value">{metrics.unpaidInvoices}</h3>
-          </div>
-        </div>
-        <div className="invoice-metric-card danger">
-          <div className="metric-info">
-            <span className="metric-label">Cancelled</span>
-            <h3 className="metric-value">{metrics.cancelledInvoices}</h3>
-          </div>
+        <div className="invoices-header-actions">
+          <button 
+            type="button" 
+            className="btn-invoices-secondary" 
+            onClick={() => fetchInvoicesData(searchTerm, false)} 
+            disabled={loading}
+            title="Refresh list"
+          >
+            <RefreshCw size={15} className={loading ? 'spin-icon' : ''} />
+            <span>Refresh</span>
+          </button>
+          <Link to="/admin/invoice/add" className="btn-invoices-primary">
+            <Plus size={16} />
+            <span>Create Invoice</span>
+          </Link>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="invoices-filter-card">
-        <div className="search-input-wrapper">
-          <Search size={18} className="search-icon-svg" />
+      {/* Error Alert */}
+      {error && (
+        <div className="invoices-error-banner">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+          <button type="button" onClick={() => fetchInvoicesData(searchTerm, false)} className="btn-retry">
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* Interactive Metric Cards */}
+      <div className="invoices-stats-grid">
+        <div 
+          className={`invoices-stat-card ${statusFilter === 'All' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter('All')}
+          title="Click to view all invoices"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Total Revenue</span>
+              <span className="stat-card-value">{formatCurrency(metrics.totalRevenue)}</span>
+            </div>
+            <div className="stat-card-icon icon-revenue">
+              <TrendingUp size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge">All invoices</span>
+          </div>
+        </div>
+
+        <div 
+          className={`invoices-stat-card ${statusFilter === 'Paid' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Paid' ? 'All' : 'Paid')}
+          title="Click to filter paid invoices"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Paid Invoices</span>
+              <span className="stat-card-value">{metrics.paidInvoices}</span>
+            </div>
+            <div className="stat-card-icon icon-paid">
+              <CheckCircle size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-paid">Settled</span>
+          </div>
+        </div>
+
+        <div 
+          className={`invoices-stat-card ${statusFilter === 'Unpaid' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Unpaid' ? 'All' : 'Unpaid')}
+          title="Click to filter unpaid invoices"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Unpaid Invoices</span>
+              <span className="stat-card-value">{metrics.unpaidInvoices}</span>
+            </div>
+            <div className="stat-card-icon icon-unpaid">
+              <Clock size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-unpaid">Pending payment</span>
+          </div>
+        </div>
+
+        <div 
+          className={`invoices-stat-card ${statusFilter === 'Cancelled' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Cancelled' ? 'All' : 'Cancelled')}
+          title="Click to filter cancelled invoices"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Cancelled</span>
+              <span className="stat-card-value">{metrics.cancelledInvoices}</span>
+            </div>
+            <div className="stat-card-icon icon-cancelled">
+              <Ban size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-cancelled">Void / Refunded</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Toolbar Card */}
+      <div className="invoices-toolbar-card">
+        <div className="invoices-search-box">
+          <Search size={16} className="search-icon" />
           <input
             type="text"
-            placeholder="Search by client, invoice number, or email..."
+            placeholder="Search by Invoice ID, client name, email, or amount..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="invoice-search-input"
           />
+          {searchTerm && (
+            <button 
+              type="button" 
+              className="clear-search-btn" 
+              onClick={() => setSearchTerm('')}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="invoices-filter-group">
+          <div className="select-wrapper">
+            <Filter size={14} className="select-icon" />
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="invoice-select"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Paid">Paid</option>
+              <option value="Unpaid">Unpaid</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+
+          {hasActiveFilters && (
+            <button 
+              type="button" 
+              className="btn-reset-filters" 
+              onClick={handleResetFilters}
+              title="Reset all active filters"
+            >
+              <RotateCcw size={13} />
+              <span>Reset</span>
+            </button>
+          )}
+
+          <div className="invoices-count-tag">
+            <span>{filteredInvoices.length} {filteredInvoices.length === 1 ? 'invoice' : 'invoices'}</span>
+          </div>
         </div>
       </div>
 
-      {/* Data Table */}
-      <div className="invoice-table-card">
-        {loading ? (
-          <div className="invoice-loading-state">
-            <RefreshCw size={24} className="animate-spin" />
-            <span>Loading Invoices...</span>
+      {/* Main Table Card */}
+      <div className="invoices-table-card">
+        {loading && invoices.length === 0 ? (
+          <div className="invoices-loading-state">
+            <div className="loading-spinner"></div>
+            <p>Loading invoice records...</p>
           </div>
-        ) : error ? (
-          <div className="invoice-error-state">
-            <AlertCircle size={24} />
-            <span>{error}</span>
-          </div>
-        ) : invoices.length === 0 ? (
-          <div className="invoice-empty-state">
-            <AlertCircle size={24} />
-            <span>No invoices found.</span>
+        ) : filteredInvoices.length === 0 ? (
+          <div className="invoices-empty-state">
+            <div className="empty-icon-wrap">
+              <FileText size={36} />
+            </div>
+            <h3>No invoices found</h3>
+            <p>
+              {hasActiveFilters 
+                ? "No invoice records matched your search filters." 
+                : "No billing invoices have been generated yet."}
+            </p>
+            {hasActiveFilters && (
+              <button type="button" className="btn-invoices-secondary" onClick={handleResetFilters}>
+                <RotateCcw size={14} /> Clear Search Filters
+              </button>
+            )}
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="invoices-data-table">
+          <div className="invoices-table-wrapper">
+            <table className="invoices-table">
               <thead>
                 <tr>
-                  <th>Invoice ID</th>
-                  <th>Client</th>
-                  <th>Date</th>
-                  <th>Billed Amount</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'center' }}>Actions</th>
+                  <th style={{ width: '18%' }}>INVOICE ID</th>
+                  <th style={{ width: '25%' }}>CLIENT / BILLED TO</th>
+                  <th style={{ width: '14%' }}>DATE</th>
+                  <th style={{ width: '16%' }}>BILLED AMOUNT</th>
+                  <th style={{ width: '12%' }}>STATUS</th>
+                  <th style={{ width: '15%', textAlign: 'center' }}>ACTIONS</th>
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv) => (
-                  <tr key={inv.id}>
-                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{inv.invoiceId}</td>
-                    <td>
-                      <div className="client-cell-info">
-                        <strong>{inv.client}</strong>
-                        <span>{inv.email}</span>
-                      </div>
-                    </td>
-                    <td>{inv.date}</td>
-                    <td style={{ fontWeight: 700, color: '#10b981' }}>{inv.billed}</td>
-                    <td>
-                      <span className={`invoice-status-badge ${inv.status ? inv.status.toLowerCase().replace(/\s+/g, '-') : 'unpaid'}`}>
-                        {inv.status}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="invoice-action-buttons">
-                        <button
-                          onClick={() => handlePrintInvoice(inv.id)}
-                          className="inv-action-btn print"
-                          title="Print / View PDF"
-                        >
-                          <Printer size={14} /> Print
-                        </button>
-                        {inv.status?.toLowerCase() !== 'cancelled' && (() => {
-                          const statusLower = (inv.status || '').toLowerCase();
-                          const isPaymentNotApplicable =
-                            statusLower.includes('not applicable') ||
-                            statusLower.includes('n/a') ||
-                            statusLower.includes('not required') ||
-                            statusLower === 'na';
-                          const isPaid = statusLower === 'paid';
-                          const nextTarget = isPaid ? 'Unpaid' : 'Paid';
+                {paginatedInvoices.map((inv) => {
+                  const statusLower = (inv.status || 'unpaid').toLowerCase();
+                  const isPaid = statusLower === 'paid';
+                  const isCancelled = statusLower === 'cancelled';
+                  const isPaymentNotApplicable =
+                    statusLower.includes('not applicable') ||
+                    statusLower.includes('n/a') ||
+                    statusLower.includes('not required') ||
+                    statusLower === 'na';
+                  const nextTarget = isPaid ? 'Unpaid' : 'Paid';
+                  const initials = getInitials(inv.client);
 
-                          return (
-                            <button
-                              onClick={() => !isPaymentNotApplicable && handleUpdateStatus(inv.id, inv.status, nextTarget)}
-                              disabled={isPaymentNotApplicable}
-                              className={`inv-action-btn toggle ${isPaymentNotApplicable ? 'disabled' : ''}`}
-                              title={isPaymentNotApplicable ? 'Payment is not required for this invoice' : `Mark as ${nextTarget}`}
-                            >
-                              <CheckCircle2 size={14} /> Mark as {nextTarget}
-                            </button>
-                          );
-                        })()}
-                        {inv.status !== 'Cancelled' && (
+                  return (
+                    <tr key={inv.id} className="invoice-table-row">
+                      {/* Invoice ID */}
+                      <td>
+                        <div className="invoice-id-cell">
+                          <FileText size={14} className="invoice-id-icon" />
+                          <span className="invoice-id-text">{inv.invoiceId || `INV-${inv.id}`}</span>
+                        </div>
+                      </td>
+
+                      {/* Client */}
+                      <td>
+                        <div className="customer-cell">
+                          <div className="customer-avatar" title={inv.client || 'Client'}>
+                            {initials}
+                          </div>
+                          <div className="customer-meta">
+                            <span className="customer-name">{inv.client || 'General Customer'}</span>
+                            {inv.email && <span className="contact-subtext">{inv.email}</span>}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Date */}
+                      <td>
+                        <div className="date-cell">
+                          <span className="date-main">{inv.date || formatDateToDMY(inv.createdAt)}</span>
+                        </div>
+                      </td>
+
+                      {/* Billed Amount */}
+                      <td>
+                        <div className="amount-cell">
+                          <strong className="amount-text">{formatCurrency(inv.billed || inv.totalAmount || inv.finalAmount)}</strong>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td>
+                        <span className={`status-pill status-${isPaid ? 'resolved' : isCancelled ? 'closed' : 'pending'}`}>
+                          {isPaid ? <CheckCircle size={12} /> : isCancelled ? <X size={12} /> : <Clock size={12} />}
+                          <span>{inv.status || 'Unpaid'}</span>
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td>
+                        <div className="table-actions-group">
                           <button
-                            onClick={() => handleDeleteInvoice(inv.id)}
-                            className="inv-action-btn delete"
-                            title="Cancel Invoice"
+                            type="button"
+                            onClick={() => handlePrintInvoice(inv.id)}
+                            className="action-icon-btn action-print"
+                            title="Print / View Tax Invoice PDF"
                           >
-                            <Trash2 size={14} /> Cancel
+                            <Printer size={15} />
                           </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+
+                          {!isCancelled && !isPaymentNotApplicable && (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(inv.id, inv.status, nextTarget)}
+                              className={`action-icon-btn ${isPaid ? 'action-unpaid' : 'action-paid'}`}
+                              title={`Mark as ${nextTarget}`}
+                            >
+                              {isPaid ? <Clock size={15} /> : <CheckCircle2 size={15} />}
+                            </button>
+                          )}
+
+                          {!isCancelled && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteInvoice(inv.id)}
+                              className="action-icon-btn action-delete"
+                              title="Cancel / Void Invoice"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Table Footer with Pagination */}
+        {filteredInvoices.length > 0 && (
+          <div className="invoices-pagination-container">
+            <Pagination
+              page={currentPage}
+              count={filteredInvoices.length}
+              itemsPerPage={pageSize}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
       </div>

@@ -12,10 +12,20 @@ import {
   Calendar,
   User,
   ShoppingBag,
-  HelpCircle
+  HelpCircle,
+  RefreshCw,
+  Filter,
+  RotateCcw,
+  MessageSquare,
+  FileText,
+  ShieldAlert,
+  ChevronRight,
+  Sparkles
 } from 'lucide-react';
 import { getTickets, updateTicket } from '../api/tickets';
 import { getOrders } from '../api/orders';
+import { Pagination } from '../components/ActionButtons';
+import { Toast } from '../components/Toast';
 import './TicketsScreen.css';
 
 const formatCurrency = (amount) => `INR ${Number(amount || 0).toLocaleString('en-IN')}`;
@@ -77,10 +87,11 @@ const TicketsScreen = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [toast, setToast] = useState(null);
   
   // Filtering & Search
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState('All'); // All, order_related, chatbot
+  const [typeFilter, setTypeFilter] = useState('All'); // All, order_related, chatbot, general
   const [statusFilter, setStatusFilter] = useState('All'); // All, Open, In Progress, Resolved, Closed
   const [priorityFilter, setPriorityFilter] = useState('All'); // All, Critical, High, Medium, Low
   
@@ -103,35 +114,37 @@ const TicketsScreen = () => {
   const [editNotes, setEditNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Showing all tickets directly in list view
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const [ticketsList, ordersList] = await Promise.all([getTickets(), getOrders()]);
+      const processedTickets = (ticketsList || []).map(ticket => {
+        let updated = { ...ticket };
+        if ((updated.status === 'Open' || updated.status === 'In Progress') && (!updated.assignedTo || updated.assignedTo === 'Unassigned')) {
+          updated.assignedTo = 'Support Team';
+        }
+        if ((updated.status === 'Resolved' || updated.status === 'Closed') && updated.priority !== 'Low') {
+          updated.priority = 'Low';
+        }
+        return updated;
+      });
+      setTickets(processedTickets);
+      setOrders(ordersList || []);
+    } catch (err) {
+      console.error("Failed to load support console data:", err);
+      setError("Could not retrieve tickets data from server.");
+      showToast("Failed to load tickets data from server.", "error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const [ticketsList, ordersList] = await Promise.all([getTickets(), getOrders()]);
-        // Bug 4 fix: Post-process tickets to auto-assign agents and enforce priority rules
-        const processedTickets = ticketsList.map(ticket => {
-          let updated = { ...ticket };
-          // Auto-assign 'Support Team' for Open/In Progress tickets with no agent
-          if ((updated.status === 'Open' || updated.status === 'In Progress') && (!updated.assignedTo || updated.assignedTo === 'Unassigned')) {
-            updated.assignedTo = 'Support Team';
-          }
-          // Bug 3 fix: Enforce priority downgrade for Resolved/Closed tickets
-          if ((updated.status === 'Resolved' || updated.status === 'Closed') && updated.priority !== 'Low') {
-            updated.priority = 'Low';
-          }
-          return updated;
-        });
-        setTickets(processedTickets);
-        setOrders(ordersList);
-      } catch (err) {
-        console.error("Failed to load support console data:", err);
-        setError("Could not retrieve tickets data.");
-      } finally {
-        setLoading(false);
-      }
-    };
     loadData();
   }, []);
 
@@ -141,19 +154,31 @@ const TicketsScreen = () => {
       total: tickets.length,
       open: tickets.filter(t => t.status === 'Open').length,
       inProgress: tickets.filter(t => t.status === 'In Progress').length,
-      resolved: tickets.filter(t => t.status === 'Resolved').length
+      resolved: tickets.filter(t => t.status === 'Resolved').length,
+      closed: tickets.filter(t => t.status === 'Closed').length
     };
   }, [tickets]);
+
+  const hasActiveFilters = searchTerm || typeFilter !== 'All' || statusFilter !== 'All' || priorityFilter !== 'All';
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setTypeFilter('All');
+    setStatusFilter('All');
+    setPriorityFilter('All');
+  };
 
   // Filtered tickets
   const filteredTickets = useMemo(() => {
     return tickets
       .filter(ticket => {
         const matchesSearch = 
-          ticket.ticketNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ticket.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (ticket.ticketNo || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (ticket.customer || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (ticket.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
           (ticket.orderId && ticket.orderId.toLowerCase().includes(searchTerm.toLowerCase())) ||
-          ticket.issue.toLowerCase().includes(searchTerm.toLowerCase());
+          (ticket.issue || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (ticket.notes || '').toLowerCase().includes(searchTerm.toLowerCase());
 
         const matchesType = typeFilter === 'All' || ticket.type === typeFilter;
         const matchesStatus = statusFilter === 'All' || ticket.status === statusFilter;
@@ -164,20 +189,33 @@ const TicketsScreen = () => {
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [tickets, searchTerm, typeFilter, statusFilter, priorityFilter]);
 
+  const totalPages = Math.ceil(filteredTickets.length / pageSize) || 1;
+
   // List of all tickets
   const paginatedTickets = useMemo(() => {
     const startIndex = (currentPage - 1) * pageSize;
     return filteredTickets.slice(startIndex, startIndex + pageSize);
-  }, [filteredTickets, currentPage]);
+  }, [filteredTickets, currentPage, pageSize]);
 
   // Open Details Modal
   const handleOpenDetails = (ticket) => {
     setSelectedTicket(ticket);
     setEditStatus(ticket.status || 'Open');
     setEditPriority(ticket.priority || 'Medium');
-    setEditAssignedTo(ticket.assignedTo || 'Unassigned');
+    setEditAssignedTo(ticket.assignedTo || 'Support Team');
     setEditNotes(ticket.notes || '');
   };
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && selectedTicket && !saving) {
+        setSelectedTicket(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedTicket, saving]);
 
   // Save changes
   const handleSaveChanges = async (e) => {
@@ -187,7 +225,7 @@ const TicketsScreen = () => {
     // Check if status changed and require a note
     const statusChanged = editStatus !== selectedTicket.status;
     if (statusChanged && !editNotes.trim()) {
-      alert(`Please write an internal audit note to explain why you are changing the status to "${editStatus}".`);
+      showToast(`Please write an internal audit note to explain why you are changing the status to "${editStatus}".`, 'error');
       return;
     }
 
@@ -195,7 +233,6 @@ const TicketsScreen = () => {
       setSaving(true);
       const updated = await updateTicket(selectedTicket.id, {
         status: editStatus,
-        // Bug 3 fix: Auto-downgrade priority for Resolved and Closed
         priority: (editStatus === 'Closed' || editStatus === 'Resolved') ? 'Low' : editPriority,
         assignedTo: editAssignedTo,
         notes: editNotes
@@ -203,10 +240,10 @@ const TicketsScreen = () => {
       // Refresh tickets list
       setTickets(prev => prev.map(t => t.id === updated.id ? updated : t));
       setSelectedTicket(updated);
-      alert("Ticket updated successfully!");
+      showToast(`Ticket ${updated.ticketNo} updated successfully!`);
     } catch (err) {
       console.error(err);
-      alert("Failed to save changes.");
+      showToast("Failed to save changes. Please check server logs.", "error");
     } finally {
       setSaving(false);
     }
@@ -220,223 +257,402 @@ const TicketsScreen = () => {
 
   return (
     <div className="tickets-mgmt-container">
-      {/* Page Header */}
-      <div className="tickets-mgmt-header">
-        <div className="tickets-mgmt-title">
-          <h1>Customer Support Tickets</h1>
-          <p>Manage order disputes, chatbot requests, and customer enquiries</p>
+      {/* Toast Notification */}
+      {toast && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast(null)} 
+        />
+      )}
+
+      {/* Top Header Card (Single clean horizontal bar with title & actions) */}
+      <section className="tickets-header-card">
+        <div className="tickets-title-wrap">
+          <span className="tickets-kicker">CUSTOMER SUPPORT &amp; DISPUTES</span>
+          <h1>Support Tickets Management</h1>
+          <p>Review customer inquiries, order disputes, chatbot escalations, and track SLA resolution statuses in real-time.</p>
         </div>
-      </div>
 
-      {error && <div className="tickets-error-banner">{error}</div>}
+        <div className="tickets-header-actions">
+          {hasActiveFilters && (
+            <button 
+              type="button" 
+              className="btn-tickets-secondary" 
+              onClick={handleResetFilters}
+              title="Reset all active filters"
+            >
+              <RotateCcw size={14} />
+              <span>Reset Filters</span>
+            </button>
+          )}
 
-      {/* Stats Cards */}
+          <button 
+            type="button" 
+            className="btn-tickets-secondary" 
+            onClick={loadData} 
+            disabled={loading} 
+            title="Refresh Tickets Data"
+          >
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
+        </div>
+      </section>
+
+      {error && (
+        <div className="tickets-error-banner">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Interactive Stats Cards Grid (Clickable status quick-filters) */}
       <div className="tickets-stats-grid">
-        <div className="tickets-stat-card">
+        {/* Total Tickets */}
+        <div 
+          className={`tickets-stat-card ${statusFilter === 'All' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter('All')}
+          title="Click to show all tickets"
+        >
           <div className="stat-card-icon total">
-            <Ticket size={24} />
+            <Ticket size={22} />
           </div>
           <div className="stat-card-info">
-            <span>Total Tickets</span>
-            <strong>{stats.total}</strong>
+            <span className="stat-label">Total Tickets</span>
+            <strong className="stat-val">{stats.total}</strong>
           </div>
+          {statusFilter === 'All' && <span className="stat-active-badge">Active View</span>}
         </div>
-        <div className="tickets-stat-card">
+
+        {/* Open Tickets */}
+        <div 
+          className={`tickets-stat-card ${statusFilter === 'Open' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Open' ? 'All' : 'Open')}
+          title="Click to filter by Open tickets"
+        >
           <div className="stat-card-icon open">
-            <AlertCircle size={24} />
+            <AlertCircle size={22} />
           </div>
           <div className="stat-card-info">
-            <span>Open Tickets</span>
-            <strong>{stats.open}</strong>
+            <span className="stat-label">Open Tickets</span>
+            <strong className="stat-val">{stats.open}</strong>
           </div>
+          {statusFilter === 'Open' && <span className="stat-active-badge">Filtered</span>}
         </div>
-        <div className="tickets-stat-card">
+
+        {/* In Progress */}
+        <div 
+          className={`tickets-stat-card ${statusFilter === 'In Progress' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'In Progress' ? 'All' : 'In Progress')}
+          title="Click to filter by In Progress tickets"
+        >
           <div className="stat-card-icon progress">
-            <Clock3 size={24} />
+            <Clock3 size={22} />
           </div>
           <div className="stat-card-info">
-            <span>In Progress</span>
-            <strong>{stats.inProgress}</strong>
+            <span className="stat-label">In Progress</span>
+            <strong className="stat-val">{stats.inProgress}</strong>
           </div>
+          {statusFilter === 'In Progress' && <span className="stat-active-badge">Filtered</span>}
         </div>
-        <div className="tickets-stat-card">
+
+        {/* Resolved */}
+        <div 
+          className={`tickets-stat-card ${statusFilter === 'Resolved' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Resolved' ? 'All' : 'Resolved')}
+          title="Click to filter by Resolved tickets"
+        >
           <div className="stat-card-icon resolved">
-            <CheckCircle2 size={24} />
+            <CheckCircle2 size={22} />
           </div>
           <div className="stat-card-info">
-            <span>Resolved</span>
-            <strong>{stats.resolved}</strong>
+            <span className="stat-label">Resolved</span>
+            <strong className="stat-val">{stats.resolved}</strong>
           </div>
+          {statusFilter === 'Resolved' && <span className="stat-active-badge">Filtered</span>}
         </div>
       </div>
 
-      {/* Filters Toolbar */}
-      <div className="tickets-toolbar">
-        <div className="tickets-search-wrapper">
-          <Search size={18} className="tickets-search-icon" />
-          <input
-            type="text"
-            className="tickets-search-input"
-            placeholder="Search Ticket ID, Customer, Order..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="tickets-filters-wrapper">
-          <div className="filter-select-group">
-            <label>Status</label>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="All">All Statuses</option>
-              <option value="Open">Open</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Resolved">Resolved</option>
-              <option value="Closed">Closed</option>
-            </select>
+      {/* Main Table Card */}
+      <section className="tickets-card">
+        {/* Toolbar Filter Bar (Above Table) */}
+        <div className="tickets-filterbar">
+          <div className="tickets-search-wrap">
+            <Search size={16} className="tickets-search-icon" />
+            <input
+              type="text"
+              className="tickets-search-input"
+              placeholder="Search by ticket #, customer name, email, order ID, or issue..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button 
+                type="button" 
+                onClick={() => setSearchTerm('')} 
+                className="tickets-search-clear"
+                title="Clear search"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
-          <div className="filter-select-group">
-            <label>Priority</label>
-            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-              <option value="All">All Priorities</option>
-              <option value="Critical">Critical</option>
-              <option value="High">High</option>
-              <option value="Medium">Medium</option>
-              <option value="Low">Low</option>
-            </select>
-          </div>
-        </div>
-      </div>
 
-      {/* Table Container */}
-      <div className="tickets-table-container">
-        {loading ? (
-          <div className="tickets-loading">Loading support tickets...</div>
-        ) : filteredTickets.length === 0 ? (
-          <div className="tickets-empty-state">
-            <Ticket size={48} className="empty-icon" />
-            <h3>No tickets found</h3>
-            <p>Try resetting your search query or filters.</p>
+          <div className="tickets-selects-wrap">
+            {/* Type Filter */}
+            <div className="tickets-select-group">
+              <label>Type:</label>
+              <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                <option value="All">All Types</option>
+                <option value="order_related">Order Related</option>
+                <option value="chatbot">Chatbot Handover</option>
+                <option value="general">General Enquiry</option>
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div className="tickets-select-group">
+              <label>Status:</label>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                <option value="All">All Statuses</option>
+                <option value="Open">Open</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Closed">Closed</option>
+              </select>
+            </div>
+
+            {/* Priority Filter */}
+            <div className="tickets-select-group">
+              <label>Priority:</label>
+              <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
+                <option value="All">All Priorities</option>
+                <option value="Critical">Critical</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+              </select>
+            </div>
+
+            <span className="tickets-count-badge">
+              {loading ? 'Loading...' : `Showing ${filteredTickets.length} of ${tickets.length} tickets`}
+            </span>
           </div>
-        ) : (
-          <>
-            <table className="tickets-table">
-              <thead>
+        </div>
+
+        {/* Table Wrapper with Clean Fixed Proportions (No Horizontal Scroll) */}
+        <div className="tickets-table-wrap">
+          <table className="tickets-table">
+            <thead>
+              <tr>
+                <th className="th-ticket">Ticket ID &amp; Date</th>
+                <th className="th-type">Type &amp; Channel</th>
+                <th className="th-customer">Customer Contact</th>
+                <th className="th-issue">Issue &amp; Audit Note</th>
+                <th className="th-priority">Priority</th>
+                <th className="th-status">Status</th>
+                <th className="th-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
                 <tr>
-                  <th>Ticket Details</th>
-                  <th>Customer Contact</th>
-                  <th>Priority</th>
-                  <th>Audit Note</th>
-                  <th>Assigned Agent</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '56px 20px', color: '#64748b' }}>
+                    <RefreshCw size={22} className="animate-spin" style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle', color: '#1268a5' }} />
+                    <span>Loading customer support tickets from database...</span>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {paginatedTickets.map((ticket) => {
+              ) : filteredTickets.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '56px 20px', color: '#64748b' }}>
+                    <div className="tickets-empty-content">
+                      <Ticket size={40} color="#cbd5e1" style={{ margin: '0 auto 12px' }} />
+                      <h3 style={{ margin: '0 0 6px 0', fontSize: '16px', color: '#0f172a' }}>No tickets found</h3>
+                      <p style={{ margin: 0, fontSize: '13px' }}>
+                        {hasActiveFilters 
+                          ? 'No tickets match the active search query or filter criteria.' 
+                          : 'There are currently no customer support tickets recorded in the system.'}
+                      </p>
+                      {hasActiveFilters && (
+                        <button 
+                          type="button" 
+                          className="btn-tickets-secondary" 
+                          onClick={handleResetFilters}
+                          style={{ marginTop: '14px' }}
+                        >
+                          <RotateCcw size={13} />
+                          <span>Clear All Filters</span>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                paginatedTickets.map((ticket) => {
                   const StatusIcon = statusMeta[ticket.status]?.icon || AlertCircle;
                   return (
-                    <tr key={ticket.id}>
+                    <tr key={ticket.id || ticket.ticketNo}>
+                      {/* Ticket Details */}
                       <td>
                         <div className="ticket-primary-info">
-                          <strong>{ticket.ticketNo}</strong>
+                          <span className="ticket-no-badge">{ticket.ticketNo}</span>
                           <span className="ticket-date">
-                            <Calendar size={12} style={{ marginRight: '4px' }} />
-                             {formatDateToDMY(ticket.createdAt)}
+                            <Calendar size={12} />
+                            <span>{formatDateToDMY(ticket.createdAt)}</span>
                           </span>
                         </div>
                       </td>
+
+                      {/* Type & Channel */}
+                      <td>
+                        <div className="ticket-type-wrap">
+                          {ticket.type === 'order_related' ? (
+                            <span className="ticket-type-pill order">
+                              <ShoppingBag size={12} />
+                              <span>Order Related</span>
+                            </span>
+                          ) : ticket.type === 'chatbot' ? (
+                            <span className="ticket-type-pill bot">
+                              <MessageSquare size={12} />
+                              <span>Chatbot</span>
+                            </span>
+                          ) : (
+                            <span className="ticket-type-pill general">
+                              <FileText size={12} />
+                              <span>General</span>
+                            </span>
+                          )}
+
+                          {ticket.type === 'order_related' && ticket.orderId && ticket.orderId !== 'N/A' && (
+                            <span className="ticket-order-ref" title={`Linked Order: ${formatOrderId(ticket.orderId)}`}>
+                              {formatOrderId(ticket.orderId)}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Customer Contact */}
                       <td>
                         <div className="ticket-cust-cell">
-                          <strong>{ticket.customer}</strong>
-                          {ticket.email && <span className="sub"><Mail size={10} /> {ticket.email}</span>}
-                          {ticket.phone && <span className="sub"><Phone size={10} /> {ticket.phone}</span>}
+                          <strong className="ticket-cust-name">{ticket.customer || 'Unknown Customer'}</strong>
+                          {ticket.email && (
+                            <span className="ticket-cust-sub" title={ticket.email}>
+                              <Mail size={11} />
+                              <span>{ticket.email}</span>
+                            </span>
+                          )}
+                          {ticket.phone && (
+                            <span className="ticket-cust-sub">
+                              <Phone size={11} />
+                              <span>{ticket.phone}</span>
+                            </span>
+                          )}
                         </div>
                       </td>
+
+                      {/* Issue & Audit Note */}
+                      <td>
+                        <div className="ticket-issue-cell">
+                          <div className="ticket-issue-title" title={ticket.issue}>
+                            {ticket.issue || 'No description provided'}
+                          </div>
+                          {ticket.notes && (
+                            <div className="ticket-note-preview" title={`Audit Note: ${ticket.notes}`}>
+                              <span className="note-dot" />
+                              <span className="note-text">{ticket.notes}</span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Priority */}
                       <td>
                         {ticket.status === 'Closed' ? (
-                          <span className="priority-badge closed" style={{ background: '#f1f5f9', color: '#64748b', borderColor: '#cbd5e1' }}>
-                            N/A (Closed)
-                          </span>
+                          <span className="priority-badge closed">Closed</span>
                         ) : (
                           <span className={priorityMeta[ticket.priority]?.className || 'priority-badge medium'}>
-                            {ticket.priority}
+                            {ticket.priority || 'Medium'}
                           </span>
                         )}
                       </td>
-                      <td>
-                        <div className="ticket-notes-cell" style={{ maxWidth: '180px', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={ticket.notes || 'No notes added'}>
-                          <span style={{ fontSize: '13px', color: ticket.notes ? '#334155' : '#94a3b8', fontStyle: ticket.notes ? 'normal' : 'italic' }}>
-                            {ticket.notes || 'No notes added'}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="assigned-agent-text">{ticket.assignedTo || 'Unassigned'}</span>
-                      </td>
+
+                      {/* Status */}
                       <td>
                         <span className={statusMeta[ticket.status]?.className || 'status-pill open'}>
-                          <StatusIcon size={12} style={{ marginRight: '4px' }} />
-                          {ticket.status}
+                          <StatusIcon size={12} />
+                          <span>{ticket.status}</span>
                         </span>
+                        {ticket.assignedTo && ticket.assignedTo !== 'Unassigned' && (
+                          <span className="ticket-assigned-sub" title={`Assigned to: ${ticket.assignedTo}`}>
+                            {ticket.assignedTo}
+                          </span>
+                        )}
                       </td>
-                      <td>
+
+                      {/* Actions */}
+                      <td style={{ textAlign: 'center' }}>
                         <button
-                          className="ticket-view-btn"
+                          type="button"
+                          className="btn-ticket-view"
                           onClick={() => handleOpenDetails(ticket)}
-                          title="View & Edit Ticket"
+                          title="View Ticket Details &amp; Configure"
                         >
-                          <Eye size={16} /> View Details
+                          <Eye size={14} />
+                          <span>Details</span>
                         </button>
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
-            {filteredTickets.length > pageSize && (
-              <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                <span style={{ color: '#64748b' }}>Showing {paginatedTickets.length} of {filteredTickets.length} tickets</span>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button 
-                    disabled={currentPage === 1} 
-                    onClick={() => setCurrentPage(p => p - 1)}
-                    style={{ padding: '6px 12px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #cbd5e1', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.5 : 1 }}
-                  >
-                    Previous
-                  </button>
-                  <button 
-                    disabled={currentPage * pageSize >= filteredTickets.length} 
-                    onClick={() => setCurrentPage(p => p + 1)}
-                    style={{ padding: '6px 12px', background: '#f8fafc', borderRadius: '4px', border: '1px solid #cbd5e1', cursor: currentPage * pageSize >= filteredTickets.length ? 'not-allowed' : 'pointer', opacity: currentPage * pageSize >= filteredTickets.length ? 0.5 : 1 }}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
+        {/* Pagination Bar */}
+        {filteredTickets.length > pageSize && (
+          <div style={{ borderTop: '1px solid #f1f5f9', padding: '6px 18px', background: '#ffffff' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredTickets.length}
+              itemsPerPage={pageSize}
+            />
+          </div>
         )}
-      </div>
+      </section>
 
       {/* Details Side-Drawer/Modal */}
       {selectedTicket && (
-        <div className="ticket-modal-backdrop" onClick={() => setSelectedTicket(null)}>
+        <div className="ticket-modal-backdrop" onClick={() => !saving && setSelectedTicket(null)}>
           <div className="ticket-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title-area">
-                <Ticket className="modal-header-icon" />
+                <div className="modal-header-icon-wrap">
+                  <Ticket size={22} color="#1268a5" />
+                </div>
                 <div>
-                  <h2>{selectedTicket.ticketNo} Details</h2>
-                  <span className="modal-subtitle">Raised on {formatDateTimeToDMY(selectedTicket.createdAt)}</span>
+                  <h2>Ticket {selectedTicket.ticketNo} Details</h2>
+                  <span className="modal-subtitle">
+                    Created on {formatDateTimeToDMY(selectedTicket.createdAt)}
+                  </span>
                 </div>
               </div>
-              <button className="modal-close-btn" onClick={() => setSelectedTicket(null)}>
-                <X size={20} />
+              <button 
+                type="button"
+                className="modal-close-btn" 
+                onClick={() => setSelectedTicket(null)}
+                disabled={saving}
+                title="Close Drawer (Esc)"
+              >
+                <X size={18} />
               </button>
             </div>
 
             <div className="modal-body">
-              {/* Row 1: Left (General Info & Query) and Right (Admin Actions) */}
+              {/* Modal Grid: Left (Customer & Issue & Order info) and Right (Admin Actions) */}
               <div className="modal-grid-layout">
                 <div className="modal-left-column">
                   {/* Customer Info Card */}
@@ -446,39 +662,24 @@ const TicketsScreen = () => {
                       <div className="info-item">
                         <User size={16} className="text-muted" />
                         <div>
-                          <span>Name</span>
-                          <strong>{selectedTicket.customer}</strong>
+                          <span>Customer Name</span>
+                          <strong>{selectedTicket.customer || 'Unknown'}</strong>
                         </div>
                       </div>
                       <div className="info-item">
                         <Mail size={16} className="text-muted" />
                         <div>
-                          <span>Email</span>
+                          <span>Email Address</span>
                           <strong>{selectedTicket.email || 'N/A'}</strong>
                         </div>
                       </div>
                       <div className="info-item">
                         <Phone size={16} className="text-muted" />
                         <div>
-                          <span>Phone</span>
+                          <span>Phone Number</span>
                           <strong>{selectedTicket.phone || 'N/A'}</strong>
-                          {/* Bug 6 fix: Phone validation warning */}
                           {selectedTicket.phone && !/^[6-9]\d{9}$/.test(selectedTicket.phone.replace(/[\s\-\+]/g, '').replace(/^91/, '')) && (
-                            <span style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              marginLeft: '8px',
-                              padding: '2px 8px',
-                              borderRadius: '4px',
-                              fontSize: '10px',
-                              fontWeight: 700,
-                              background: '#fef2f2',
-                              color: '#b91c1c',
-                              border: '1px solid #fecaca'
-                            }}>
-                              ⚠️ Invalid Format
-                            </span>
+                            <span className="phone-warning-tag">⚠️ Invalid Format</span>
                           )}
                         </div>
                       </div>
@@ -489,43 +690,37 @@ const TicketsScreen = () => {
                   <div className="detail-section-card">
                     <h3>Issue Description</h3>
 
-                    {/* Ticket Metadata Row */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px',
-                        background: selectedTicket.type === 'order_related' ? '#fef3c7' : selectedTicket.type === 'chatbot' ? '#e0e7ff' : '#f1f5f9',
-                        color: selectedTicket.type === 'order_related' ? '#92400e' : selectedTicket.type === 'chatbot' ? '#3730a3' : '#475569',
-                        border: `1px solid ${selectedTicket.type === 'order_related' ? '#fcd34d' : selectedTicket.type === 'chatbot' ? '#a5b4fc' : '#cbd5e1'}`
-                      }}>
+                    {/* Metadata Row */}
+                    <div className="ticket-meta-tags-row">
+                      <span className={`ticket-tag ${selectedTicket.type}`}>
                         {selectedTicket.type === 'order_related' ? '📦 Order Related' : selectedTicket.type === 'chatbot' ? '💬 Chatbot Raised' : '📋 General Enquiry'}
                       </span>
                       {selectedTicket.type === 'order_related' && selectedTicket.orderId && selectedTicket.orderId !== 'N/A' && (
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', background: '#f0fdf4', color: '#166534', border: '1px solid #86efac' }}>
+                        <span className="ticket-tag order-link">
                           🔗 Order Ref: {formatOrderId(selectedTicket.orderId)}
                         </span>
                       )}
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '600', background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0' }}>
+                      <span className="ticket-tag timestamp">
                         🕒 Raised: {formatDateTimeToDMY(selectedTicket.createdAt)}
                       </span>
                     </div>
 
-                    {/* Issue Description Content */}
-                    <div className="issue-desc-box" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '14px 16px' }}>
-                      <p style={{ margin: 0, fontSize: '13.5px', lineHeight: '1.7', color: '#1e293b', fontWeight: '500' }}>
-                        {selectedTicket.issue}
-                      </p>
+                    {/* Issue Description Box */}
+                    <div className="issue-desc-box">
+                      <p>{selectedTicket.issue || 'No detailed issue description recorded.'}</p>
                     </div>
 
                     {/* Fallback note if issue is vague */}
                     {(selectedTicket.issue === 'No Description' || selectedTicket.issue === 'Order Dispute' || selectedTicket.issue === 'Chatbot Handover Request' || (selectedTicket.issue && selectedTicket.issue.length < 20)) && (
-                      <div style={{ marginTop: '8px', padding: '8px 12px', background: '#fffbeb', border: '1px solid #fcd34d', borderRadius: '6px', fontSize: '11.5px', color: '#92400e', fontWeight: '500', display: 'flex', alignItems: 'flex-start', gap: '6px' }}>
+                      <div className="issue-alert-hint">
                         <span>⚠️</span>
                         <span>
-                          <strong>Note:</strong> The issue description appears brief. 
+                          <strong>Note:</strong> The issue description is brief. 
                           {selectedTicket.type === 'chatbot' && selectedTicket.chatHistory?.length > 0
-                            ? ' Review the Chatbot Transcript Logs below for the full conversation context.'
+                            ? ' Review the Chatbot Transcript Logs below for full context.'
                             : selectedTicket.type === 'order_related' && selectedTicket.orderId !== 'N/A'
-                              ? ` Check the Linked Order ${formatOrderId(selectedTicket.orderId)} details below for more context.`
-                              : ' Consider contacting the customer for clarification and updating the Internal Audit Notes.'
+                              ? ` Check the Linked Order ${formatOrderId(selectedTicket.orderId)} details below.`
+                              : ' Consider contacting the customer for further clarification.'
                           }
                         </span>
                       </div>
@@ -545,7 +740,7 @@ const TicketsScreen = () => {
                             </div>
                             <div>
                               <span>Order Status</span>
-                              <strong className={`status-badge-inline ${linkedOrder.status?.toLowerCase()}`}>
+                              <strong className={`status-badge-inline ${String(linkedOrder.status || '').toLowerCase()}`}>
                                 {linkedOrder.status}
                               </strong>
                             </div>
@@ -560,7 +755,7 @@ const TicketsScreen = () => {
                             <ul>
                               {Array.isArray(linkedOrder.items) && linkedOrder.items.map((item, idx) => (
                                 <li key={idx} className="item-row">
-                                  <ShoppingBag size={14} style={{ marginRight: '6px' }} />
+                                  <ShoppingBag size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
                                   <span>{item.name || item.productName} (x{item.quantity || item.qty})</span>
                                   <strong>{formatCurrency(item.unitPrice || item.price)}</strong>
                                 </li>
@@ -573,7 +768,7 @@ const TicketsScreen = () => {
                           <ShoppingBag size={20} className="warning-icon" />
                           <div>
                             <strong>Order {formatOrderId(selectedTicket.orderId)} not found in Admin Ledger</strong>
-                            <span>Please verify if this is a custom order or manual transaction.</span>
+                            <span>Please verify if this is a custom order or legacy transaction.</span>
                           </div>
                         </div>
                       )}
@@ -602,7 +797,7 @@ const TicketsScreen = () => {
                           <HelpCircle size={20} className="warning-icon" />
                           <div>
                             <strong>No chat logs recorded</strong>
-                            <span>Ticket raised via quick command.</span>
+                            <span>Ticket was raised via quick prompt.</span>
                           </div>
                         </div>
                       )}
@@ -613,22 +808,22 @@ const TicketsScreen = () => {
                 <div className="modal-right-column">
                   {/* Admin Configuration Actions */}
                   <form onSubmit={handleSaveChanges} className="admin-actions-card">
-                    <h3>Configure & Update</h3>
+                    <h3>Configure &amp; Update Ticket</h3>
                     
                     <div className="form-group">
-                      <label>Assigned Agent</label>
+                      <label>Assigned Support Agent</label>
                       <input
                         type="text"
                         value={editAssignedTo}
                         onChange={(e) => setEditAssignedTo(e.target.value)}
-                        placeholder="Enter agent name"
+                        placeholder="e.g. Support Team, Senior Agent"
                       />
                     </div>
 
                     <div className="form-group">
                       <label>Update Priority</label>
                       {editStatus === 'Closed' ? (
-                        <div style={{ padding: '8px 12px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', color: '#64748b', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="priority-locked-notice">
                           <span>🔒</span> N/A — Closed Ticket (No Active Priority)
                         </div>
                       ) : (
@@ -642,7 +837,7 @@ const TicketsScreen = () => {
                     </div>
 
                     <div className="form-group">
-                      <label>Update Ticket Status</label>
+                      <label>Ticket Status</label>
                       <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
                         <option value="Open">Open</option>
                         <option value="In Progress">In Progress</option>
@@ -655,26 +850,34 @@ const TicketsScreen = () => {
                       <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>Internal Audit Notes</span>
                         {editStatus !== selectedTicket.status && (
-                          <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>* Note Required for Status Change</span>
+                          <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>* Note Required</span>
                         )}
                       </label>
                       <textarea
                         value={editNotes}
                         onChange={(e) => setEditNotes(e.target.value)}
-                        placeholder="Provide details/reason for status change..."
+                        placeholder="Provide details or reasons for status change..."
+                        rows={4}
                         style={{
                           border: (editStatus !== selectedTicket.status && !editNotes.trim()) ? '1px solid #ef4444' : '1px solid #cbd5e1'
                         }}
                       />
                       {editStatus !== selectedTicket.status && !editNotes.trim() && (
                         <span style={{ color: '#b91c1c', fontSize: '11px', marginTop: '2px', fontWeight: '500' }}>
-                          ⚠️ Please write a note explaining why the status is being updated.
+                          ⚠️ Please write an audit note explaining the status change.
                         </span>
                       )}
                     </div>
 
                     <button type="submit" className="save-action-btn" disabled={saving}>
-                      {saving ? 'Updating changes...' : 'Update Ticket Config'}
+                      {saving ? (
+                        <>
+                          <RefreshCw size={15} className="animate-spin" />
+                          <span>Saving Changes...</span>
+                        </>
+                      ) : (
+                        <span>Update Ticket Configuration</span>
+                      )}
                     </button>
                   </form>
                 </div>

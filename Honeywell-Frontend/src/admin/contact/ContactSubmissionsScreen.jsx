@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, Eye, Edit3, Trash2, Plus, X, 
-  Mail, Clock, CheckCircle, RefreshCw, Phone, Building, Calendar, MessageSquare
+  Mail, Clock, CheckCircle, RefreshCw, Phone, 
+  Building, Calendar, MessageSquare, Filter, RotateCcw,
+  Sparkles, CheckCircle2, AlertCircle, ShieldAlert, FileText, Send
 } from 'lucide-react';
 import { 
   getContactSubmissions, 
@@ -10,6 +13,8 @@ import {
   updateContactSubmissionStatus, 
   deleteContactSubmission 
 } from '../api/contact';
+import { Pagination } from '../components/ActionButtons';
+import { Toast } from '../components/Toast';
 import './ContactSubmissionsScreen.css';
 
 const statusConfig = {
@@ -19,15 +24,66 @@ const statusConfig = {
   Closed: { label: 'Closed', class: 'closed', icon: X }
 };
 
+const typeBadgeConfig = {
+  'General Enquiry': { label: 'General', class: 'type-general' },
+  'Product Enquiry': { label: 'Product', class: 'type-product' },
+  'Sales Enquiry': { label: 'Sales', class: 'type-sales' },
+  'Dealer Enquiry': { label: 'Dealer', class: 'type-dealer' },
+  'Distributor Enquiry': { label: 'Distributor', class: 'type-distributor' },
+  'Support Enquiry': { label: 'Support', class: 'type-support' }
+};
+
+const formatDateToDMY = (dateInput) => {
+  if (!dateInput) return '-';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return String(dateInput);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-IN', { month: 'short' });
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
+const formatDateTimeToDMY = (dateInput) => {
+  if (!dateInput) return '-';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return String(dateInput);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-IN', { month: 'short' });
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${day} ${month} ${year}, ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+};
+
+const getInitials = (name) => {
+  if (!name) return 'CU';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export default function ContactSubmissionsScreen() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset pagination on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter]);
 
   // Modals
   const [selectedSubmission, setSelectedSubmission] = useState(null);
@@ -35,6 +91,7 @@ export default function ContactSubmissionsScreen() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -47,16 +104,23 @@ export default function ContactSubmissionsScreen() {
     status: 'Pending'
   });
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
   // Load submissions from live API
   const loadSubmissions = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     setError(null);
     try {
       const data = await getContactSubmissions();
-      setSubmissions(data);
+      setSubmissions(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load contact submissions:', err);
-      if (!isBackground) setError('Could not connect to live contact submissions endpoint. Please try again.');
+      if (!isBackground) {
+        setError('Could not connect to live contact submissions endpoint. Please check network connection.');
+        showToast('Failed to load contact submissions.', 'error');
+      }
     } finally {
       if (!isBackground) setLoading(false);
     }
@@ -70,7 +134,7 @@ export default function ContactSubmissionsScreen() {
     window.addEventListener('focus', handleUpdate);
     window.addEventListener('sat_contacts_updated', handleUpdate);
 
-    const interval = setInterval(() => loadSubmissions(true), 5000);
+    const interval = setInterval(() => loadSubmissions(true), 8000);
 
     return () => {
       window.removeEventListener('storage', handleUpdate);
@@ -83,14 +147,21 @@ export default function ContactSubmissionsScreen() {
   // Filtered Submissions
   const filteredSubmissions = useMemo(() => {
     return submissions.filter((item) => {
-      const matchesSearch = 
-        (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.mobile || '').includes(searchTerm) ||
-        (item.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.message || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchesSearch = !searchLower || (
+        (item.name || '').toLowerCase().includes(searchLower) ||
+        (item.email || '').toLowerCase().includes(searchLower) ||
+        (item.mobile || '').includes(searchLower) ||
+        (item.company || '').toLowerCase().includes(searchLower) ||
+        (item.message || '').toLowerCase().includes(searchLower)
+      );
 
-      const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
+      const matchesStatus = statusFilter === 'All' 
+        ? true 
+        : statusFilter === 'Resolved' 
+          ? (item.status === 'Resolved' || item.status === 'Closed')
+          : item.status === statusFilter;
+
       const matchesType = typeFilter === 'All' || item.enquiryType === typeFilter;
 
       return matchesSearch && matchesStatus && matchesType;
@@ -104,6 +175,15 @@ export default function ContactSubmissionsScreen() {
     inProgress: submissions.filter(s => s.status === 'In Progress').length,
     resolved: submissions.filter(s => s.status === 'Resolved' || s.status === 'Closed').length
   }), [submissions]);
+
+  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'All' || typeFilter !== 'All';
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setTypeFilter('All');
+    setCurrentPage(1);
+  };
 
   // Handlers
   const handleView = async (id) => {
@@ -135,17 +215,22 @@ export default function ContactSubmissionsScreen() {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!selectedSubmission) return;
+    setIsSubmitting(true);
     try {
       await updateContactSubmissionStatus(selectedSubmission.id, formData);
       setIsEditOpen(false);
-      loadSubmissions();
+      showToast('Contact submission updated successfully.', 'success');
+      loadSubmissions(true);
     } catch (err) {
-      alert(`Failed to update contact submission: ${err.message}`);
+      showToast(`Failed to update submission: ${err.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await createContactSubmission(formData);
       setIsCreateOpen(false);
@@ -153,265 +238,553 @@ export default function ContactSubmissionsScreen() {
         name: '', email: '', mobile: '', company: '',
         enquiryType: 'General Enquiry', message: '', status: 'Pending'
       });
-      loadSubmissions();
+      showToast('New contact submission recorded successfully.', 'success');
+      loadSubmissions(true);
     } catch (err) {
-      alert(`Failed to create contact submission: ${err.message}`);
+      showToast(`Failed to record submission: ${err.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTargetId) return;
+    setIsSubmitting(true);
     try {
       await deleteContactSubmission(deleteTargetId);
       setDeleteTargetId(null);
-      loadSubmissions();
+      showToast('Contact submission deleted successfully.', 'success');
+      loadSubmissions(true);
     } catch (err) {
-      alert(`Failed to delete contact submission: ${err.message}`);
+      showToast(`Failed to delete submission: ${err.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Paginated records
+  const paginatedSubmissions = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredSubmissions.slice(startIndex, startIndex + pageSize);
+  }, [filteredSubmissions, currentPage, pageSize]);
+
   return (
-    <div className="contact-submissions-container">
-      {/* Header */}
-      <div className="contact-submissions-header">
-        <div className="contact-submissions-title">
-          <h1>Contact Submissions Console</h1>
-          <p>Live REST API integration for Contact Us form entries (`/api/contact`)</p>
+    <div className="contact-mgmt-container">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Header Card */}
+      <div className="contact-header-card">
+        <div className="contact-title-wrap">
+          <div className="contact-kicker">COMMUNICATIONS &amp; FEEDBACK</div>
+          <h1>Contact Form Submissions</h1>
+          <p>Review, manage, and respond to incoming user messages received via the Contact Us portal</p>
         </div>
-        <div className="contact-submissions-actions">
-          <button className="btn-secondary" onClick={loadSubmissions} title="Refresh Data">
-            <RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh
+        <div className="contact-header-actions">
+          <button 
+            type="button" 
+            className="btn-contact-secondary" 
+            onClick={() => loadSubmissions(false)} 
+            disabled={loading}
+            title="Refresh list"
+          >
+            <RefreshCw size={15} className={loading ? 'spin-icon' : ''} />
+            <span>Refresh</span>
           </button>
-          <button className="btn-primary" onClick={() => {
-            setFormData({
-              name: '', email: '', mobile: '', company: '',
-              enquiryType: 'General Enquiry', message: '', status: 'Pending'
-            });
-            setIsCreateOpen(true);
-          }}>
-            <Plus size={18} /> New Submission
+          <button 
+            type="button" 
+            className="btn-contact-primary" 
+            onClick={() => {
+              setFormData({
+                name: '', email: '', mobile: '', company: '',
+                enquiryType: 'General Enquiry', message: '', status: 'Pending'
+              });
+              setIsCreateOpen(true);
+            }}
+          >
+            <Plus size={16} />
+            <span>New Submission</span>
           </button>
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="contact-stats-grid">
-        <div className="contact-stat-card">
-          <div className="contact-stat-info">
-            <div className="stat-label">Total Submissions</div>
-            <div className="stat-value">{stats.total}</div>
-          </div>
-          <div className="contact-stat-icon total"><Mail size={22} /></div>
-        </div>
-        <div className="contact-stat-card">
-          <div className="contact-stat-info">
-            <div className="stat-label">Pending Review</div>
-            <div className="stat-value">{stats.pending}</div>
-          </div>
-          <div className="contact-stat-icon pending"><Clock size={22} /></div>
-        </div>
-        <div className="contact-stat-card">
-          <div className="contact-stat-info">
-            <div className="stat-label">In Progress</div>
-            <div className="stat-value">{stats.inProgress}</div>
-          </div>
-          <div className="contact-stat-icon progress"><RefreshCw size={22} /></div>
-        </div>
-        <div className="contact-stat-card">
-          <div className="contact-stat-info">
-            <div className="stat-label">Resolved / Closed</div>
-            <div className="stat-value">{stats.resolved}</div>
-          </div>
-          <div className="contact-stat-icon resolved"><CheckCircle size={22} /></div>
-        </div>
-      </div>
-
-      {/* Filter & Search Bar */}
-      <div className="contact-filter-bar">
-        <div className="search-input-wrap">
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Search by customer name, mobile, email, message..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="filter-selects">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="All">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Resolved">Resolved</option>
-            <option value="Closed">Closed</option>
-          </select>
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-            <option value="All">All Types</option>
-            <option value="General Enquiry">General Enquiry</option>
-            <option value="Product Enquiry">Product Enquiry</option>
-            <option value="Sales Enquiry">Sales Enquiry</option>
-            <option value="Dealer Enquiry">Dealer Enquiry</option>
-            <option value="Distributor Enquiry">Distributor Enquiry</option>
-            <option value="Support Enquiry">Support Enquiry</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Main Table */}
-      <div className="contact-table-card">
-        {loading ? (
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p>Connecting to `/api/contact` live endpoint...</p>
-          </div>
-        ) : error ? (
-          <div className="empty-state">
-            <p style={{ color: '#dc2626', fontWeight: 600 }}>{error}</p>
-            <button className="btn-secondary" onClick={loadSubmissions} style={{ marginTop: 12 }}>
-              Try Again
-            </button>
-          </div>
-        ) : filteredSubmissions.length === 0 ? (
-          <div className="empty-state">
-            <MessageSquare size={36} style={{ marginBottom: 12, color: '#94a3b8' }} />
-            <h3>No contact submissions found</h3>
-            <p>There are no contact form entries matching your search filters.</p>
-          </div>
-        ) : (
-          <table className="contact-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Contact</th>
-                <th>Enquiry Type</th>
-                <th>Message</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSubmissions.map((item) => {
-                const conf = statusConfig[item.status] || statusConfig.Pending;
-                const StatusIcon = conf.icon;
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <strong style={{ display: 'block', color: '#0f172a' }}>{item.name || 'Customer'}</strong>
-                      {item.company && <span style={{ fontSize: '12px', color: '#64748b' }}>{item.company}</span>}
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '13px' }}>{item.mobile}</div>
-                      {item.email && <div style={{ fontSize: '12px', color: '#64748b' }}>{item.email}</div>}
-                    </td>
-                    <td>
-                      <span className="type-pill">{item.enquiryType}</span>
-                    </td>
-                    <td>
-                      <span>{item.message.slice(0, 45) + (item.message.length > 45 ? '...' : '')}</span>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${conf.class}`}>
-                        <StatusIcon size={12} /> {conf.label}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '13px', color: '#64748b' }}>
-                      {new Date(item.createdAt).toLocaleDateString('en-IN', {
-                        day: '2-digit', month: 'short', year: 'numeric'
-                      })}
-                    </td>
-                    <td>
-                      <div className="action-btn-group">
-                        <button className="btn-icon" onClick={() => handleView(item.id)} title="View Details (GET /api/contact/{id})">
-                          <Eye size={16} />
-                        </button>
-                        <button className="btn-icon" onClick={() => handleEditOpen(item)} title="Update Status (PUT /api/contact/{id})">
-                          <Edit3 size={16} />
-                        </button>
-                        <button className="btn-icon delete" onClick={() => setDeleteTargetId(item.id)} title="Delete (DELETE /api/contact/{id})">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* DETAIL MODAL (GET by ID) */}
-      {isDetailOpen && selectedSubmission && (
-        <div className="modal-backdrop" onClick={() => setIsDetailOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Contact Submission Details (ID: {selectedSubmission.id})</h2>
-              <button className="modal-close-btn" onClick={() => setIsDetailOpen(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="detail-grid">
-                <div className="detail-item">
-                  <label><Mail size={12} /> Name</label>
-                  <p>{selectedSubmission.name}</p>
-                </div>
-                <div className="detail-item">
-                  <label><Phone size={12} /> Mobile</label>
-                  <p>{selectedSubmission.mobile}</p>
-                </div>
-                <div className="detail-item">
-                  <label>Email</label>
-                  <p>{selectedSubmission.email || 'N/A'}</p>
-                </div>
-                <div className="detail-item">
-                  <label><Building size={12} /> Company</label>
-                  <p>{selectedSubmission.company || 'N/A'}</p>
-                </div>
-                <div className="detail-item">
-                  <label>Type</label>
-                  <p>{selectedSubmission.enquiryType}</p>
-                </div>
-                <div className="detail-item">
-                  <label>Status</label>
-                  <p>{selectedSubmission.status}</p>
-                </div>
-                <div className="detail-item full">
-                  <label>Message Content</label>
-                  <p style={{ background: '#f8fafc', padding: 12, borderRadius: 8, marginTop: 4, whiteSpace: 'pre-wrap' }}>
-                    {selectedSubmission.message || 'No additional message provided.'}
-                  </p>
-                </div>
-                <div className="detail-item">
-                  <label><Calendar size={12} /> Date Submitted</label>
-                  <p>{new Date(selectedSubmission.createdAt).toLocaleString('en-IN')}</p>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setIsDetailOpen(false)}>Close</button>
-              <button className="btn-primary" onClick={() => { setIsDetailOpen(false); handleEditOpen(selectedSubmission); }}>
-                Update Status
-              </button>
-            </div>
-          </div>
+      {/* Error Alert */}
+      {error && (
+        <div className="contact-error-banner">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+          <button type="button" onClick={() => loadSubmissions(false)} className="btn-retry">
+            Retry
+          </button>
         </div>
       )}
 
-      {/* EDIT MODAL (PUT by ID) */}
-      {isEditOpen && selectedSubmission && (
-        <div className="modal-backdrop" onClick={() => setIsEditOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <form onSubmit={handleUpdate}>
-              <div className="modal-header">
-                <h2>Update Submission (PUT /api/contact/{selectedSubmission.id})</h2>
-                <button type="button" className="modal-close-btn" onClick={() => setIsEditOpen(false)}><X size={20} /></button>
+      {/* Interactive Metric Cards */}
+      <div className="contact-stats-grid">
+        <div 
+          className={`contact-stat-card ${statusFilter === 'All' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter('All')}
+          title="Click to view all submissions"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Total Submissions</span>
+              <span className="stat-card-value">{stats.total}</span>
+            </div>
+            <div className="stat-card-icon icon-total">
+              <Mail size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge">All records</span>
+          </div>
+        </div>
+
+        <div 
+          className={`contact-stat-card ${statusFilter === 'Pending' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Pending' ? 'All' : 'Pending')}
+          title="Click to filter pending submissions"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Pending Review</span>
+              <span className="stat-card-value">{stats.pending}</span>
+            </div>
+            <div className="stat-card-icon icon-pending">
+              <Clock size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-pending">Needs action</span>
+          </div>
+        </div>
+
+        <div 
+          className={`contact-stat-card ${statusFilter === 'In Progress' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'In Progress' ? 'All' : 'In Progress')}
+          title="Click to filter in-progress submissions"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">In Progress</span>
+              <span className="stat-card-value">{stats.inProgress}</span>
+            </div>
+            <div className="stat-card-icon icon-progress">
+              <RefreshCw size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-progress">Under review</span>
+          </div>
+        </div>
+
+        <div 
+          className={`contact-stat-card ${statusFilter === 'Resolved' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Resolved' ? 'All' : 'Resolved')}
+          title="Click to filter resolved & closed submissions"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Resolved / Closed</span>
+              <span className="stat-card-value">{stats.resolved}</span>
+            </div>
+            <div className="stat-card-icon icon-resolved">
+              <CheckCircle size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-resolved">Completed</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Toolbar Card */}
+      <div className="contact-toolbar-card">
+        <div className="contact-search-box">
+          <Search size={16} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Search by customer name, mobile, email, company, message..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {searchTerm && (
+            <button 
+              type="button" 
+              className="clear-search-btn" 
+              onClick={() => setSearchTerm('')}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="contact-filter-group">
+          <div className="select-wrapper">
+            <Filter size={14} className="select-icon" />
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="contact-select"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved / Closed</option>
+            </select>
+          </div>
+
+          <div className="select-wrapper">
+            <FileText size={14} className="select-icon" />
+            <select 
+              value={typeFilter} 
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="contact-select"
+            >
+              <option value="All">All Types</option>
+              <option value="General Enquiry">General Enquiry</option>
+              <option value="Product Enquiry">Product Enquiry</option>
+              <option value="Sales Enquiry">Sales Enquiry</option>
+              <option value="Dealer Enquiry">Dealer Enquiry</option>
+              <option value="Distributor Enquiry">Distributor Enquiry</option>
+              <option value="Support Enquiry">Support Enquiry</option>
+            </select>
+          </div>
+
+          {hasActiveFilters && (
+            <button 
+              type="button" 
+              className="btn-reset-filters" 
+              onClick={handleResetFilters}
+              title="Reset all active filters"
+            >
+              <RotateCcw size={13} />
+              <span>Reset</span>
+            </button>
+          )}
+
+          <div className="contact-count-tag">
+            <span>{filteredSubmissions.length} {filteredSubmissions.length === 1 ? 'submission' : 'submissions'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Table Card */}
+      <div className="contact-table-card">
+        {loading && submissions.length === 0 ? (
+          <div className="contact-loading-state">
+            <div className="loading-spinner"></div>
+            <p>Loading contact form entries...</p>
+          </div>
+        ) : filteredSubmissions.length === 0 ? (
+          <div className="contact-empty-state">
+            <div className="empty-icon-wrap">
+              <MessageSquare size={36} />
+            </div>
+            <h3>No submissions found</h3>
+            <p>
+              {hasActiveFilters 
+                ? "No contact submissions matched your current search filters." 
+                : "No contact messages have been received yet."}
+            </p>
+            {hasActiveFilters && (
+              <button type="button" className="btn-contact-secondary" onClick={handleResetFilters}>
+                <RotateCcw size={14} /> Clear Search Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="contact-table-wrapper">
+            <table className="contact-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '22%' }}>CUSTOMER / SENDER</th>
+                  <th style={{ width: '20%' }}>CONTACT DETAILS</th>
+                  <th style={{ width: '15%' }}>ENQUIRY TYPE</th>
+                  <th style={{ width: '20%' }}>MESSAGE PREVIEW</th>
+                  <th style={{ width: '11%' }}>STATUS</th>
+                  <th style={{ width: '13%' }}>DATE</th>
+                  <th style={{ width: '9%', textAlign: 'center' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedSubmissions.map((item) => {
+                  const conf = statusConfig[item.status] || statusConfig.Pending;
+                  const typeMeta = typeBadgeConfig[item.enquiryType] || { label: item.enquiryType || 'General', class: 'type-general' };
+                  const StatusIcon = conf.icon;
+                  const initials = getInitials(item.name);
+
+                  return (
+                    <tr key={item.id} className="contact-table-row">
+                      {/* Customer / Sender */}
+                      <td>
+                        <div className="customer-cell">
+                          <div className="customer-avatar" title={item.name || 'Sender'}>
+                            {initials}
+                          </div>
+                          <div className="customer-meta">
+                            <span className="customer-name">{item.name || 'Sender'}</span>
+                            {item.company ? (
+                              <span className="customer-company" title={item.company}>
+                                <Building size={11} /> {item.company}
+                              </span>
+                            ) : (
+                              <span className="customer-company individual">Individual</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Contact Details */}
+                      <td>
+                        <div className="contact-cell">
+                          {item.mobile && (
+                            <a href={`tel:${item.mobile}`} className="contact-link" title="Call sender">
+                              <Phone size={12} className="contact-icon" />
+                              <span>{item.mobile}</span>
+                            </a>
+                          )}
+                          {item.email && (
+                            <a href={`mailto:${item.email}`} className="contact-link email" title="Email sender">
+                              <Mail size={12} className="contact-icon" />
+                              <span>{item.email}</span>
+                            </a>
+                          )}
+                          {!item.mobile && !item.email && <span className="text-muted">No contact info</span>}
+                        </div>
+                      </td>
+
+                      {/* Enquiry Type */}
+                      <td>
+                        <span className={`type-badge ${typeMeta.class}`}>
+                          {item.enquiryType || 'General Enquiry'}
+                        </span>
+                      </td>
+
+                      {/* Message Preview */}
+                      <td>
+                        <div className="topic-cell">
+                          {item.message ? (
+                            <p className="message-snippet" title={item.message}>
+                              {item.message}
+                            </p>
+                          ) : (
+                            <span className="text-muted italic">No message text</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td>
+                        <span className={`status-pill status-${conf.class}`}>
+                          <StatusIcon size={12} />
+                          <span>{conf.label}</span>
+                        </span>
+                      </td>
+
+                      {/* Date */}
+                      <td>
+                        <div className="date-cell">
+                          <span className="date-main">{formatDateToDMY(item.createdAt)}</span>
+                          <span className="date-sub">
+                            {item.createdAt ? new Date(item.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td>
+                        <div className="table-actions-group">
+                          <button 
+                            type="button" 
+                            className="action-icon-btn action-view" 
+                            onClick={() => handleView(item.id)} 
+                            title="View Message Details"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-icon-btn action-edit" 
+                            onClick={() => handleEditOpen(item)} 
+                            title="Update Status"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-icon-btn action-delete" 
+                            onClick={() => setDeleteTargetId(item.id)} 
+                            title="Delete Submission"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Table Footer with Pagination */}
+        {filteredSubmissions.length > 0 && (
+          <div className="contact-pagination-container">
+            <Pagination
+              page={currentPage}
+              count={filteredSubmissions.length}
+              itemsPerPage={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================
+          MODALS — Rendered with createPortal to escape admin layout containers
+          ======================================================================== */}
+
+      {/* 1. DETAIL MODAL */}
+      {isDetailOpen && selectedSubmission && createPortal(
+        <div className="contact-modal-overlay" onClick={() => setIsDetailOpen(false)}>
+          <div className="contact-modal-card contact-modal-medium" onClick={(e) => e.stopPropagation()}>
+            <div className="contact-modal-header">
+              <div className="modal-header-info">
+                <div className="modal-kicker">CONTACT SUBMISSION</div>
+                <h2>Submission #{selectedSubmission.id}</h2>
+                <span className="modal-subtitle">Received on {formatDateTimeToDMY(selectedSubmission.createdAt)}</span>
               </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Status *</label>
+              <button 
+                type="button" 
+                className="contact-modal-close" 
+                onClick={() => setIsDetailOpen(false)}
+                title="Close dialog"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="contact-modal-body">
+              {/* Top Banner with Status & Type */}
+              <div className="contact-detail-banner">
+                <div className="detail-banner-item">
+                  <span className="banner-label">Current Status</span>
+                  <span className={`status-pill status-${(selectedSubmission.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                    {selectedSubmission.status || 'Pending'}
+                  </span>
+                </div>
+                <div className="detail-banner-item">
+                  <span className="banner-label">Enquiry Category</span>
+                  <span className="type-badge type-general">
+                    {selectedSubmission.enquiryType || 'General Enquiry'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Customer Info Card */}
+              <div className="detail-section-card">
+                <h4 className="section-title">Sender Information</h4>
+                <div className="detail-info-grid">
+                  <div className="info-item">
+                    <span className="info-label">Sender Name</span>
+                    <span className="info-value"><strong>{selectedSubmission.name || 'N/A'}</strong></span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Mobile Number</span>
+                    <span className="info-value">
+                      {selectedSubmission.mobile ? (
+                        <a href={`tel:${selectedSubmission.mobile}`} className="contact-link">
+                          <Phone size={13} /> {selectedSubmission.mobile}
+                        </a>
+                      ) : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Email Address</span>
+                    <span className="info-value">
+                      {selectedSubmission.email ? (
+                        <a href={`mailto:${selectedSubmission.email}`} className="contact-link email">
+                          <Mail size={13} /> {selectedSubmission.email}
+                        </a>
+                      ) : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Company / Business</span>
+                    <span className="info-value">{selectedSubmission.company || 'Individual User'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Message Details */}
+              <div className="detail-section-card">
+                <h4 className="section-title">Full Message Content</h4>
+                <div className="message-content-box">
+                  {selectedSubmission.message || 'No message content provided.'}
+                </div>
+              </div>
+            </div>
+
+            <div className="contact-modal-footer">
+              <button 
+                type="button" 
+                className="btn-contact-secondary" 
+                onClick={() => setIsDetailOpen(false)}
+              >
+                Close
+              </button>
+              <button 
+                type="button" 
+                className="btn-contact-primary" 
+                onClick={() => {
+                  setIsDetailOpen(false);
+                  handleEditOpen(selectedSubmission);
+                }}
+              >
+                <Edit3 size={15} /> Update Status
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 2. EDIT / UPDATE STATUS MODAL */}
+      {isEditOpen && selectedSubmission && createPortal(
+        <div className="contact-modal-overlay" onClick={() => setIsEditOpen(false)}>
+          <div className="contact-modal-card" onClick={(e) => e.stopPropagation()}>
+            <form onSubmit={handleUpdate}>
+              <div className="contact-modal-header">
+                <div className="modal-header-info">
+                  <div className="modal-kicker">UPDATE STATUS</div>
+                  <h2>Update Submission #{selectedSubmission.id}</h2>
+                </div>
+                <button 
+                  type="button" 
+                  className="contact-modal-close" 
+                  onClick={() => setIsEditOpen(false)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="contact-modal-body">
+                <div className="form-group-field">
+                  <label htmlFor="edit-status">Submission Status *</label>
                   <select
+                    id="edit-status"
+                    className="contact-form-input"
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    required
                   >
                     <option value="Pending">Pending</option>
                     <option value="In Progress">In Progress</option>
@@ -419,17 +792,23 @@ export default function ContactSubmissionsScreen() {
                     <option value="Closed">Closed</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Customer Name</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="edit-name">Sender Name</label>
                   <input
+                    id="edit-name"
                     type="text"
+                    className="contact-form-input"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label>Enquiry Type</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="edit-type">Enquiry Category</label>
                   <select
+                    id="edit-type"
+                    className="contact-form-input"
                     value={formData.enquiryType}
                     onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
                   >
@@ -441,73 +820,122 @@ export default function ContactSubmissionsScreen() {
                     <option value="Support Enquiry">Support Enquiry</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Message Content</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="edit-message">Notes &amp; Response History</label>
                   <textarea
+                    id="edit-message"
                     rows={4}
+                    className="contact-form-textarea"
+                    placeholder="Enter internal resolution notes, customer follow-up actions..."
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   />
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setIsEditOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Changes</button>
+
+              <div className="contact-modal-footer">
+                <button 
+                  type="button" 
+                  className="btn-contact-secondary" 
+                  onClick={() => setIsEditOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-contact-primary" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* CREATE MODAL (POST) */}
-      {isCreateOpen && (
-        <div className="modal-backdrop" onClick={() => setIsCreateOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      {/* 3. CREATE NEW CONTACT SUBMISSION MODAL */}
+      {isCreateOpen && createPortal(
+        <div className="contact-modal-overlay" onClick={() => setIsCreateOpen(false)}>
+          <div className="contact-modal-card" onClick={(e) => e.stopPropagation()}>
             <form onSubmit={handleCreateSubmit}>
-              <div className="modal-header">
-                <h2>New Contact Entry (POST /api/contact)</h2>
-                <button type="button" className="modal-close-btn" onClick={() => setIsCreateOpen(false)}><X size={20} /></button>
+              <div className="contact-modal-header">
+                <div className="modal-header-info">
+                  <div className="modal-kicker">MANUAL ENTRY</div>
+                  <h2>New Contact Submission</h2>
+                  <span className="modal-subtitle">Record a customer message or offline inquiry</span>
+                </div>
+                <button 
+                  type="button" 
+                  className="contact-modal-close" 
+                  onClick={() => setIsCreateOpen(false)}
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Customer Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
+
+              <div className="contact-modal-body">
+                <div className="form-grid-two">
+                  <div className="form-group-field">
+                    <label htmlFor="new-name">Sender Name *</label>
+                    <input
+                      id="new-name"
+                      type="text"
+                      required
+                      placeholder="e.g. Priya Sharma"
+                      className="contact-form-input"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-field">
+                    <label htmlFor="new-mobile">Mobile Number *</label>
+                    <input
+                      id="new-mobile"
+                      type="tel"
+                      required
+                      maxLength={10}
+                      placeholder="10-digit mobile"
+                      className="contact-form-input"
+                      value={formData.mobile}
+                      onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '') })}
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Mobile Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    value={formData.mobile}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                  />
+
+                <div className="form-grid-two">
+                  <div className="form-group-field">
+                    <label htmlFor="new-email">Email Address *</label>
+                    <input
+                      id="new-email"
+                      type="email"
+                      required
+                      placeholder="customer@example.com"
+                      className="contact-form-input"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-field">
+                    <label htmlFor="new-company">Company (Optional)</label>
+                    <input
+                      id="new-company"
+                      type="text"
+                      placeholder="Optional company name"
+                      className="contact-form-input"
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Email *</label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Company (Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.company}
-                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Enquiry Type</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="new-type">Enquiry Category *</label>
                   <select
+                    id="new-type"
+                    className="contact-form-input"
                     value={formData.enquiryType}
                     onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
                   >
@@ -519,44 +947,88 @@ export default function ContactSubmissionsScreen() {
                     <option value="Support Enquiry">Support Enquiry</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Message Content *</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="new-message">Message Content *</label>
                   <textarea
+                    id="new-message"
                     rows={3}
                     required
+                    placeholder="Enter customer message / feedback..."
+                    className="contact-form-textarea"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   />
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setIsCreateOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Submit Entry</button>
+
+              <div className="contact-modal-footer">
+                <button 
+                  type="button" 
+                  className="btn-contact-secondary" 
+                  onClick={() => setIsCreateOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-contact-primary" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Submitting...' : 'Submit Entry'}
+                </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* DELETE CONFIRMATION MODAL (DELETE by ID) */}
-      {deleteTargetId && (
-        <div className="modal-backdrop" onClick={() => setDeleteTargetId(null)}>
-          <div className="modal-card" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Confirm Deletion</h2>
-              <button className="modal-close-btn" onClick={() => setDeleteTargetId(null)}><X size={20} /></button>
+      {/* 4. DELETE CONFIRMATION MODAL */}
+      {deleteTargetId && createPortal(
+        <div className="contact-modal-overlay" onClick={() => setDeleteTargetId(null)}>
+          <div className="contact-modal-card contact-modal-small" onClick={(e) => e.stopPropagation()}>
+            <div className="contact-modal-header">
+              <div className="modal-header-info">
+                <div className="modal-kicker text-red">CONFIRM ACTION</div>
+                <h2>Delete Submission #{deleteTargetId}</h2>
+              </div>
+              <button 
+                type="button" 
+                className="contact-modal-close" 
+                onClick={() => setDeleteTargetId(null)}
+              >
+                <X size={18} />
+              </button>
             </div>
-            <div className="modal-body">
-              <p>Are you sure you want to delete submission #{deleteTargetId}? This operation calls `DELETE /api/contact/{deleteTargetId}`.</p>
+
+            <div className="contact-modal-body">
+              <div className="delete-warning-box">
+                <ShieldAlert size={28} className="delete-warning-icon" />
+                <p>Are you sure you want to delete this contact submission? This action cannot be undone.</p>
+              </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setDeleteTargetId(null)}>Cancel</button>
-              <button className="btn-primary" style={{ background: '#dc2626' }} onClick={handleDeleteConfirm}>
-                Delete
+
+            <div className="contact-modal-footer">
+              <button 
+                type="button" 
+                className="btn-contact-secondary" 
+                onClick={() => setDeleteTargetId(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn-contact-danger" 
+                disabled={isSubmitting}
+                onClick={handleDeleteConfirm}
+              >
+                {isSubmitting ? 'Deleting...' : 'Delete Submission'}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

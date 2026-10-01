@@ -216,7 +216,7 @@ export default function CustomerOrders() {
                             {item.name || item.productName || 'Honeywell Security Product'}
                           </div>
                           <div className="text-slate-600 font-medium">
-                            Qty: {item.quantity || 1} &bull; ${Number(item.price || item.unitPrice || 0).toFixed(2)}
+                            Qty: {item.quantity || 1} &bull; ₹{Number(item.price || item.unitPrice || 0).toLocaleString('en-IN')}
                           </div>
                         </div>
                       ))}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   Bar,
@@ -12,8 +13,7 @@ import {
   XAxis,
   YAxis,
   AreaChart,
-  Area,
-  Legend
+  Area
 } from 'recharts';
 import {
   TrendingUp,
@@ -24,26 +24,31 @@ import {
   AlertTriangle,
   RefreshCw,
   SlidersHorizontal,
-  FolderTree,
   Boxes,
-  ExternalLink,
   X,
   Search,
-  ArrowUpRight,
   Settings,
-  Trash2
+  Trash2,
+  FileText,
+  Download,
+  Truck,
+  RotateCcw,
+  ShieldCheck,
+  CheckCircle,
+  CreditCard
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 import { getOrders } from '../api/orders';
 import { fetchProducts, fetchCategories } from '../catalog/productsApi';
 import {
   getReportsOrders,
   getReportsProcurement,
   getReportsCatalog,
-  exportReport,
   updateReportSettings,
   clearReportCache
 } from '../api/reports';
 import { fetchPurchaseIndents, fetchPurchaseOrders } from '../api/purchase';
+import { getAdminReturns } from '../api/returns';
 import { Pagination } from '../components/ActionButtons';
 import './ReportsScreen.css';
 
@@ -64,30 +69,59 @@ const formatOrderId = (rawId) => {
 const REPORTS_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#f43f5e'];
 
 const STATUS_COLORS = {
-  Completed: '#16a34a',   // Green
-  Cancelled: '#dc2626',   // Red
-  Canceled: '#dc2626',    // Red (fallback)
-  Dispatched: '#f97316',  // Orange
-  Processing: '#2563eb',  // Blue
-  Pending: '#eab308',     // Yellow
-  Placed: '#9333ea',      // Purple
-  Packed: '#db2777',      // Pink
-  Shipped: '#06b6d4',     // Cyan
-  'On Hold': '#4b5563'    // Gray
+  Completed: '#16a34a',
+  Cancelled: '#dc2626',
+  Canceled: '#dc2626',
+  Dispatched: '#f97316',
+  Processing: '#2563eb',
+  Pending: '#eab308',
+  Placed: '#9333ea',
+  Packed: '#db2777',
+  Shipped: '#06b6d4',
+  'On Hold': '#4b5563',
+  Approved: '#16a34a',
+  Rejected: '#dc2626',
+  'In Review': '#f59e0b',
+  'Pending Inspection': '#eab308',
+  'Pickup Scheduled': '#0284c7',
+  Refunded: '#059669',
+  Replaced: '#4f46e5'
+};
+
+const isWithinDatePreset = (dateValue, preset) => {
+  if (preset === 'All' || !dateValue) return true;
+  const itemDate = new Date(dateValue);
+  if (isNaN(itemDate.getTime())) return true;
+  const now = new Date();
+
+  if (preset === '7days') {
+    const diffDays = (now - itemDate) / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 7;
+  }
+  if (preset === '30days') {
+    const diffDays = (now - itemDate) / (1000 * 60 * 60 * 24);
+    return diffDays >= 0 && diffDays <= 30;
+  }
+  if (preset === 'year') {
+    return itemDate.getFullYear() === now.getFullYear();
+  }
+  return true;
 };
 
 const ReportsScreen = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'catalog'
+  // 4 Main Screens: 'sales', 'procurement', 'catalog', 'returns'
+  const [activeTab, setActiveTab] = useState('sales');
   const [datePreset, setDatePreset] = useState('All'); // 'All', '7days', '30days', 'year'
   const [loading, setLoading] = useState(true);
-  
+
   // Data States
   const [orders, setOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [purchaseIndents, setPurchaseIndents] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [returnsList, setReturnsList] = useState([]);
 
   // Reports API custom states
   const [ordersReport, setOrdersReport] = useState(null);
@@ -99,20 +133,28 @@ const ReportsScreen = () => {
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [notification, setNotification] = useState(null);
 
+  // Search & Pagination states
+  const [ordersSearch, setOrdersSearch] = useState('');
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [returnsSearch, setReturnsSearch] = useState('');
+
+  const [ordersPage, setOrdersPage] = useState(1);
+  const [indentsPage, setIndentsPage] = useState(1);
+  const [posPage, setPosPage] = useState(1);
+  const [catalogPage, setCatalogPage] = useState(1);
+  const [returnsPage, setReturnsPage] = useState(1);
+  const [drillPage, setDrillPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Drill-down Modal State
   const [drillDownModal, setDrillDownModal] = useState({
     isOpen: false,
     title: '',
-    type: '', // 'orders' or 'products'
+    type: '',
     data: [],
     filterType: ''
   });
   const [drillDownSearch, setDrillDownSearch] = useState('');
-
-  // Pagination states (10 items per page limit)
-  const [catalogPage, setCatalogPage] = useState(1);
-  const [drillPage, setDrillPage] = useState(1);
-  const itemsPerPage = 10;
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
@@ -122,7 +164,14 @@ const ReportsScreen = () => {
   const loadReportData = async () => {
     setLoading(true);
     try {
-      const [reportsOrdersData, reportsProcurementData, reportsCatalogData, indentsData, posData] = await Promise.all([
+      const [
+        reportsOrdersData,
+        reportsProcurementData,
+        reportsCatalogData,
+        indentsData,
+        posData,
+        adminReturnsData
+      ] = await Promise.all([
         getReportsOrders().catch((err) => {
           console.warn("Failed to load Reports Orders API, falling back:", err);
           return null;
@@ -136,7 +185,8 @@ const ReportsScreen = () => {
           return null;
         }),
         fetchPurchaseIndents().catch(() => []),
-        fetchPurchaseOrders().catch(() => [])
+        fetchPurchaseOrders().catch(() => []),
+        getAdminReturns({ pageSize: 100 }).catch(() => ({ returns: [] }))
       ]);
 
       if (reportsProcurementData) {
@@ -145,6 +195,7 @@ const ReportsScreen = () => {
 
       setPurchaseIndents(indentsData || []);
       setPurchaseOrders(posData || []);
+      setReturnsList(adminReturnsData?.returns || adminReturnsData?.items || []);
 
       const mapStatusLocal = (status, paymentStatus) => {
         if (!status) return 'Pending';
@@ -240,32 +291,22 @@ const ReportsScreen = () => {
   useEffect(() => {
     loadReportData();
     initializeSettings();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --- Orders Report Calculations ---
-  // Date filtering logic
-  const filteredOrders = useMemo(() => {
-    const now = new Date();
-    const dateFiltered = orders.filter(order => {
-      const orderDate = new Date(order.orderDate || order.date);
-      if (datePreset === '7days') {
-        const diffTime = Math.abs(now - orderDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays <= 7;
-      }
-      if (datePreset === '30days') {
-        const diffTime = Math.abs(now - orderDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays <= 30;
-      }
-      if (datePreset === 'year') {
-        return orderDate.getFullYear() === now.getFullYear();
-      }
-      return true; // All
-    });
+  // Reset pagination pages on filter or tab change
+  useEffect(() => {
+    setOrdersPage(1);
+    setIndentsPage(1);
+    setPosPage(1);
+    setCatalogPage(1);
+    setReturnsPage(1);
+  }, [datePreset, activeTab]);
 
-    // Deduplicate by Order ID
+  // =========================================================================
+  // 1. SALES & ORDERS DYNAMIC FILTERING & STATS
+  // =========================================================================
+  const filteredOrders = useMemo(() => {
+    const dateFiltered = orders.filter(o => isWithinDatePreset(o.orderDate || o.date, datePreset));
     const seenOrderIds = new Set();
     return dateFiltered.filter(o => {
       const key = String(o.id || o.orderId || '').toLowerCase();
@@ -275,15 +316,21 @@ const ReportsScreen = () => {
     });
   }, [orders, datePreset]);
 
-  const orderStats = useMemo(() => {
-    // Exclude Cancelled orders to match backend ReportsController logic (line 64)
-    const activeOrders = filteredOrders.filter(o => {
-      const st = (o.status || '').toLowerCase();
-      return st !== 'cancelled';
-    });
+  const searchedOrders = useMemo(() => {
+    const q = ordersSearch.toLowerCase().trim();
+    if (!q) return filteredOrders;
+    return filteredOrders.filter(o => 
+      String(o.orderId || o.id || '').toLowerCase().includes(q) ||
+      String(o.customerName || o.customer || '').toLowerCase().includes(q) ||
+      String(o.paymentStatus || '').toLowerCase().includes(q) ||
+      String(o.status || '').toLowerCase().includes(q)
+    );
+  }, [filteredOrders, ordersSearch]);
+
+  const salesStats = useMemo(() => {
+    const activeOrders = filteredOrders.filter(o => (o.status || '').toLowerCase() !== 'cancelled');
     const total = activeOrders.length;
     const revenue = activeOrders.reduce((sum, o) => sum + (Number(o.totalAmount || o.total || o.finalAmount || 0)), 0);
-    // Use 2-decimal rounding to match backend Math.Round(totalSalesRevenue / ordersVolume, 2)
     const aov = total > 0 ? Math.round((revenue / total) * 100) / 100 : 0;
     const pendingPayment = activeOrders.filter(o => {
       const ps = (o.paymentStatus || '').toLowerCase();
@@ -295,44 +342,153 @@ const ReportsScreen = () => {
     return { total, revenue, aov, pendingPayment };
   }, [filteredOrders]);
 
-  const displayStats = useMemo(() => {
-    if (datePreset === 'All' && ordersReport) {
-      return {
-        revenue: ordersReport.totalSalesRevenue,
-        total: ordersReport.ordersVolume,
-        aov: ordersReport.averageOrderValue,
-        pendingPayment: ordersReport.unconfirmedPayments
-      };
-    }
-    return {
-      revenue: formatCurrency(orderStats.revenue),
-      total: `${orderStats.total} Orders`,
-      aov: formatCurrency(orderStats.aov),
-      pendingPayment: `${orderStats.pendingPayment} Pending`
-    };
-  }, [datePreset, ordersReport, orderStats]);
-
-  // Drill-down openers
-  const openUnconfirmedPaymentsDrillDown = () => {
-    const unconfirmed = filteredOrders.filter(o => {
-      const ps = (o.paymentStatus || '').toLowerCase();
-      const st = (o.status || '').toLowerCase();
-      const isPendingStatus = ps.includes('pending') || ps.includes('unconfirmed') || ps.includes('verification');
-      const isSettledOrder = st === 'completed' || st === 'delivered' || st === 'cancelled';
-      return isPendingStatus && !isSettledOrder;
+  const salesTrendData = useMemo(() => {
+    const map = {};
+    filteredOrders.forEach(o => {
+      const dateStr = new Date(o.orderDate || o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+      map[dateStr] = (map[dateStr] || 0) + Number(o.totalAmount || o.total || 0);
     });
-    setDrillDownSearch('');
-    setDrillDownModal({
-      isOpen: true,
-      title: 'Unconfirmed & Pending Payments Drill-Down',
-      type: 'orders',
-      data: unconfirmed,
-      filterType: 'unconfirmed'
-    });
-  };
+    const result = Object.keys(map).map(date => ({ date, Sales: map[date] }));
+    return result.length > 0 ? result.slice(-10) : [{ date: 'Today', Sales: 0 }];
+  }, [filteredOrders]);
 
+  const statusPieData = useMemo(() => {
+    const map = {};
+    filteredOrders.forEach(o => {
+      const status = o.status || 'Processing';
+      map[status] = (map[status] || 0) + 1;
+    });
+    return Object.keys(map).map(name => ({ name, value: map[name] }));
+  }, [filteredOrders]);
+
+  const paymentBarData = useMemo(() => {
+    const map = {};
+    filteredOrders.forEach(o => {
+      const method = o.paymentMethod || o.payMethod || 'UPI / Bank Transfer';
+      map[method] = (map[method] || 0) + 1;
+    });
+    return Object.keys(map).map(name => ({
+      name: name.split('/')[0].trim(),
+      Orders: map[name]
+    }));
+  }, [filteredOrders]);
+
+  // =========================================================================
+  // 2. PROCUREMENT & PURCHASE DYNAMIC FILTERING & STATS
+  // =========================================================================
+  const filteredIndents = useMemo(() => {
+    return purchaseIndents.filter(i => isWithinDatePreset(i.date || i.createdAt, datePreset));
+  }, [purchaseIndents, datePreset]);
+
+  const filteredPurchaseOrders = useMemo(() => {
+    return purchaseOrders.filter(p => isWithinDatePreset(p.date || p.createdAt, datePreset));
+  }, [purchaseOrders, datePreset]);
+
+  const procurementStats = useMemo(() => {
+    const totalIndents = filteredIndents.length;
+    const totalPOs = filteredPurchaseOrders.length;
+    const totalSpend = filteredPurchaseOrders.reduce((sum, p) => sum + Number(p.totalAmount || 0), 0);
+    const pendingApprovals = filteredIndents.filter(i => (i.status || '').toLowerCase().includes('pending')).length;
+    return { totalIndents, totalPOs, totalSpend, pendingApprovals };
+  }, [filteredIndents, filteredPurchaseOrders]);
+
+  // =========================================================================
+  // 3. CATALOG & STOCK DYNAMIC STATS & CHARTS
+  // =========================================================================
+  const catalogStats = useMemo(() => {
+    const totalProducts = products.length;
+    const limit = settings.lowStockAlertLimit || 5;
+    const lowStock = products.filter(p => Number(p.stock) > 0 && Number(p.stock) <= limit).length;
+    const outOfStock = products.filter(p => Number(p.stock) === 0).length;
+    const totalCategories = categories.length || 6;
+    const totalValuation = products.reduce((sum, p) => sum + (Number(p.price || 0) * Number(p.stock || 0)), 0);
+    return { totalProducts, lowStock, outOfStock, totalCategories, totalValuation };
+  }, [products, categories, settings.lowStockAlertLimit]);
+
+  const searchedProducts = useMemo(() => {
+    const q = catalogSearch.toLowerCase().trim();
+    if (!q) return products;
+    return products.filter(p => 
+      String(p.sku || '').toLowerCase().includes(q) ||
+      String(p.name || '').toLowerCase().includes(q) ||
+      String(p.categoryId || '').toLowerCase().includes(q) ||
+      String(p.brand || '').toLowerCase().includes(q)
+    );
+  }, [products, catalogSearch]);
+
+  const categoryPieData = useMemo(() => {
+    const categoryNameMap = {};
+    categories.forEach(c => { categoryNameMap[c.id] = c.name; });
+    const map = {};
+    products.forEach(p => {
+      const catName = categoryNameMap[p.categoryId] || p.categoryId || 'General';
+      map[catName] = (map[catName] || 0) + 1;
+    });
+    return Object.keys(map).map(name => ({ name, value: map[name] }));
+  }, [products, categories]);
+
+  const lowestStockAlertData = useMemo(() => {
+    return products
+      .map(p => ({
+        name: (p.name || '').length > 18 ? (p.name || '').slice(0, 15) + '...' : (p.name || 'Product'),
+        Stock: Number(p.stock || 0)
+      }))
+      .sort((a, b) => a.Stock - b.Stock)
+      .slice(0, 8);
+  }, [products]);
+
+  // =========================================================================
+  // 4. RETURNS & WARRANTY DYNAMIC FILTERING & STATS
+  // =========================================================================
+  const filteredReturns = useMemo(() => {
+    return returnsList.filter(r => isWithinDatePreset(r.createdAt || r.date || r.requestedAt, datePreset));
+  }, [returnsList, datePreset]);
+
+  const searchedReturns = useMemo(() => {
+    const q = returnsSearch.toLowerCase().trim();
+    if (!q) return filteredReturns;
+    return filteredReturns.filter(r =>
+      String(r.id || r.returnId || '').toLowerCase().includes(q) ||
+      String(r.orderNumber || r.orderReference || '').toLowerCase().includes(q) ||
+      String(r.customerName || r.name || '').toLowerCase().includes(q) ||
+      String(r.status || '').toLowerCase().includes(q) ||
+      String(r.type || r.requestType || '').toLowerCase().includes(q)
+    );
+  }, [filteredReturns, returnsSearch]);
+
+  const returnsStats = useMemo(() => {
+    const total = filteredReturns.length;
+    const approved = filteredReturns.filter(r => (r.status || '').toLowerCase() === 'approved' || (r.status || '').toLowerCase() === 'refunded').length;
+    const pending = filteredReturns.filter(r => (r.status || '').toLowerCase().includes('pending') || (r.status || '').toLowerCase().includes('review')).length;
+    const refunded = filteredReturns.filter(r => (r.status || '').toLowerCase() === 'refunded').length;
+    return { total, approved, pending, refunded };
+  }, [filteredReturns]);
+
+  const returnStatusPieData = useMemo(() => {
+    const map = {};
+    filteredReturns.forEach(r => {
+      const st = r.status || 'Pending Review';
+      map[st] = (map[st] || 0) + 1;
+    });
+    return Object.keys(map).map(name => ({ name, value: map[name] }));
+  }, [filteredReturns]);
+
+  const returnReasonsBarData = useMemo(() => {
+    const map = {};
+    filteredReturns.forEach(r => {
+      const reason = r.reason || r.reasonCode || 'Defective Item';
+      const cleanReason = String(reason).replace(/_/g, ' ').slice(0, 18);
+      map[cleanReason] = (map[cleanReason] || 0) + 1;
+    });
+    return Object.keys(map).map(name => ({ name, Count: map[name] }));
+  }, [filteredReturns]);
+
+  // =========================================================================
+  // DRILL DOWN MODAL OPENERS (FOR ALL 4 SECTORS)
+  // =========================================================================
   const openOrdersVolumeDrillDown = () => {
     setDrillDownSearch('');
+    setDrillPage(1);
     setDrillDownModal({
       isOpen: true,
       title: 'Total Orders Volume Ledger Drill-Down',
@@ -342,9 +498,29 @@ const ReportsScreen = () => {
     });
   };
 
+  const openUnconfirmedPaymentsDrillDown = () => {
+    const unconfirmed = filteredOrders.filter(o => {
+      const ps = (o.paymentStatus || '').toLowerCase();
+      const st = (o.status || '').toLowerCase();
+      const isPendingStatus = ps.includes('pending') || ps.includes('unconfirmed') || ps.includes('verification');
+      const isSettledOrder = st === 'completed' || st === 'delivered' || st === 'cancelled';
+      return isPendingStatus && !isSettledOrder;
+    });
+    setDrillDownSearch('');
+    setDrillPage(1);
+    setDrillDownModal({
+      isOpen: true,
+      title: 'Unconfirmed & Pending Payments Drill-Down',
+      type: 'orders',
+      data: unconfirmed,
+      filterType: 'unconfirmed'
+    });
+  };
+
   const openOutOfStockDrillDown = () => {
     const outOfStock = products.filter(p => Number(p.stock || 0) === 0);
     setDrillDownSearch('');
+    setDrillPage(1);
     setDrillDownModal({
       isOpen: true,
       title: 'Critical Out-of-Stock Products Drill-Down',
@@ -358,12 +534,87 @@ const ReportsScreen = () => {
     const limit = settings.lowStockAlertLimit || 5;
     const lowStock = products.filter(p => Number(p.stock || 0) > 0 && Number(p.stock || 0) <= limit);
     setDrillDownSearch('');
+    setDrillPage(1);
     setDrillDownModal({
       isOpen: true,
       title: 'Low Stock Warning Products Drill-Down',
       type: 'products',
       data: lowStock,
       filterType: 'low_stock'
+    });
+  };
+
+  const openCatalogProductsDrillDown = () => {
+    setDrillDownSearch('');
+    setDrillPage(1);
+    setDrillDownModal({
+      isOpen: true,
+      title: 'Complete Catalog Inventory Ledger Drill-Down',
+      type: 'products',
+      data: products,
+      filterType: 'all_products'
+    });
+  };
+
+  const openIndentsDrillDown = () => {
+    setDrillDownSearch('');
+    setDrillPage(1);
+    setDrillDownModal({
+      isOpen: true,
+      title: 'Material Purchase Indents Drill-Down',
+      type: 'indents',
+      data: filteredIndents,
+      filterType: 'all_indents'
+    });
+  };
+
+  const openPendingIndentsDrillDown = () => {
+    const pending = filteredIndents.filter(i => (i.status || '').toLowerCase().includes('pending'));
+    setDrillDownSearch('');
+    setDrillPage(1);
+    setDrillDownModal({
+      isOpen: true,
+      title: 'Pending Indent Approvals Drill-Down',
+      type: 'indents',
+      data: pending,
+      filterType: 'pending_indents'
+    });
+  };
+
+  const openPOsDrillDown = () => {
+    setDrillDownSearch('');
+    setDrillPage(1);
+    setDrillDownModal({
+      isOpen: true,
+      title: 'Issued Purchase Orders Drill-Down',
+      type: 'pos',
+      data: filteredPOs,
+      filterType: 'all_pos'
+    });
+  };
+
+  const openReturnsDrillDown = () => {
+    setDrillDownSearch('');
+    setDrillPage(1);
+    setDrillDownModal({
+      isOpen: true,
+      title: 'Return & Warranty Claims Drill-Down',
+      type: 'returns',
+      data: filteredReturns,
+      filterType: 'all_returns'
+    });
+  };
+
+  const openPendingReturnsDrillDown = () => {
+    const pending = filteredReturns.filter(r => (r.status || '').toLowerCase().includes('pending') || (r.status || '').toLowerCase().includes('review'));
+    setDrillDownSearch('');
+    setDrillPage(1);
+    setDrillDownModal({
+      isOpen: true,
+      title: 'Pending Return Claims in Review Drill-Down',
+      type: 'returns',
+      data: pending,
+      filterType: 'pending_returns'
     });
   };
 
@@ -379,162 +630,41 @@ const ReportsScreen = () => {
         String(o.paymentStatus || '').toLowerCase().includes(query) ||
         String(o.status || '').toLowerCase().includes(query)
       );
-    } else {
+    } else if (drillDownModal.type === 'products') {
       return drillDownModal.data.filter(p =>
         String(p.sku || '').toLowerCase().includes(query) ||
         String(p.name || '').toLowerCase().includes(query) ||
         String(p.categoryId || '').toLowerCase().includes(query) ||
         String(p.brand || '').toLowerCase().includes(query)
       );
+    } else if (drillDownModal.type === 'indents') {
+      return drillDownModal.data.filter(i =>
+        String(i.indentNo || i.id || '').toLowerCase().includes(query) ||
+        String(i.requester || i.requestedBy || '').toLowerCase().includes(query) ||
+        String(i.department || '').toLowerCase().includes(query) ||
+        String(i.status || '').toLowerCase().includes(query)
+      );
+    } else if (drillDownModal.type === 'pos') {
+      return drillDownModal.data.filter(po =>
+        String(po.poNumber || po.id || '').toLowerCase().includes(query) ||
+        String(po.supplierName || po.supplier || '').toLowerCase().includes(query) ||
+        String(po.status || '').toLowerCase().includes(query)
+      );
+    } else if (drillDownModal.type === 'returns') {
+      return drillDownModal.data.filter(r =>
+        String(r.returnNo || r.id || '').toLowerCase().includes(query) ||
+        String(r.customerName || r.customer || '').toLowerCase().includes(query) ||
+        String(r.orderId || '').toLowerCase().includes(query) ||
+        String(r.reason || '').toLowerCase().includes(query) ||
+        String(r.status || '').toLowerCase().includes(query)
+      );
     }
+    return drillDownModal.data;
   }, [drillDownModal, drillDownSearch]);
 
-  // Sales Trend chart data (Grouped by Date)
-  const salesTrendData = useMemo(() => {
-    if (datePreset === 'All' && ordersReport?.revenuePerformanceTrend) {
-      return ordersReport.revenuePerformanceTrend.map(item => ({
-        date: item.date,
-        Sales: Number(item.revenue || 0)
-      }));
-    }
-    const map = {};
-    filteredOrders.forEach(o => {
-      const dateStr = new Date(o.orderDate || o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-      map[dateStr] = (map[dateStr] || 0) + Number(o.totalAmount || o.total || 0);
-    });
-    // Convert to sorted array
-    return Object.keys(map).map(date => ({
-      date,
-      Sales: map[date]
-    })).slice(-10); // show last 10 days
-  }, [filteredOrders, datePreset, ordersReport]);
-
-  // Status Distribution data
-  const statusPieData = useMemo(() => {
-    if (datePreset === 'All' && ordersReport?.orderFulfillmentStates) {
-      return ordersReport.orderFulfillmentStates.map(item => ({
-        name: item.state,
-        value: item.count
-      }));
-    }
-    const map = {};
-    filteredOrders.forEach(o => {
-      const status = o.status || 'Processing';
-      map[status] = (map[status] || 0) + 1;
-    });
-    return Object.keys(map).map(name => ({
-      name,
-      value: map[name]
-    }));
-  }, [filteredOrders, datePreset, ordersReport]);
-
-  // Payment Methods distribution
-  const paymentBarData = useMemo(() => {
-    if (datePreset === 'All' && ordersReport?.paymentMethodsDistribution) {
-      return ordersReport.paymentMethodsDistribution.map(item => ({
-        name: item.method,
-        Orders: item.count
-      }));
-    }
-    const map = {};
-    filteredOrders.forEach(o => {
-      const method = o.paymentMethod || o.payMethod || 'UPI / Bank Transfer';
-      map[method] = (map[method] || 0) + 1;
-    });
-    return Object.keys(map).map(name => ({
-      name: name.split('/')[0].trim(), // shorten label
-      Orders: map[name]
-    }));
-  }, [filteredOrders, datePreset, ordersReport]);
-
-
-  // --- Catalog Report Calculations ---
-  const catalogStats = useMemo(() => {
-    if (catalogReport) {
-      return {
-        totalProducts: catalogReport.totalCatalogProducts,
-        totalCategories: catalogReport.categoriesCount,
-        outOfStock: catalogReport.criticalOutOfStock,
-        lowStock: catalogReport.lowStockWarning
-      };
-    }
-    const totalProducts = products.length;
-    const lowStock = products.filter(p => Number(p.stock) > 0 && Number(p.stock) <= 5).length;
-    const outOfStock = products.filter(p => Number(p.stock) === 0).length;
-    const totalCategories = categories.length;
-    return { totalProducts, lowStock, outOfStock, totalCategories };
-  }, [products, categories, catalogReport]);
-
-  // Category Distribution Pie Chart data
-  const categoryPieData = useMemo(() => {
-    if (catalogReport?.categoryAllocationShare) {
-      return catalogReport.categoryAllocationShare.map(item => ({
-        name: item.categoryName,
-        value: item.productCount
-      }));
-    }
-    const categoryNameMap = {};
-    categories.forEach(c => {
-      categoryNameMap[c.id] = c.name;
-    });
-
-    const map = {};
-    products.forEach(p => {
-      const catName = categoryNameMap[p.categoryId] || 'Unassigned';
-      map[catName] = (map[catName] || 0) + 1;
-    });
-    return Object.keys(map).map(name => ({
-      name,
-      value: map[name]
-    }));
-  }, [products, categories, catalogReport]);
-
-  // Out of Stock & Low Stock Items
-  const stockAlertData = useMemo(() => {
-    if (catalogReport?.lowestStockLevelsAlert) {
-      return catalogReport.lowestStockLevelsAlert.map(item => ({
-        name: item.productName.length > 18 ? item.productName.slice(0, 15) + '...' : item.productName,
-        Stock: Number(item.stock || 0)
-      }));
-    }
-    return products
-      .map(p => ({
-        name: p.name.length > 18 ? p.name.slice(0, 15) + '...' : p.name,
-        Stock: Number(p.stock)
-      }))
-      .sort((a, b) => a.Stock - b.Stock)
-      .slice(0, 8); // top 8 lowest stock
-  }, [products, catalogReport]);
-
-  // Top Products by Sales/Revenue
-  const topProductsRevenue = useMemo(() => {
-    if (catalogReport?.catalogPerformanceIndex) {
-      return catalogReport.catalogPerformanceIndex.map(item => ({
-        name: item.productName.length > 18 ? item.productName.slice(0, 15) + '...' : item.productName,
-        Value: Number(item.averageRating || 0),
-        Reviews: Number(item.totalReviews || 0),
-        isRating: true
-      }));
-    }
-    // Calculate product revenue based on price
-    return products
-      .map(p => ({
-        name: p.name.length > 18 ? p.name.slice(0, 15) + '...' : p.name,
-        Value: Number(p.price || 0) * (Number(p.id) % 3 + 1) * 4,
-        isRating: false
-      }))
-      .sort((a, b) => b.Value - a.Value)
-      .slice(0, 6);
-  }, [products, catalogReport]);
-
-  const formatPerformanceTooltip = (value, name, props) => {
-    if (props.payload?.isRating) {
-      return [`${value} Stars (Based on ${props.payload.Reviews || 0} reviews)`, 'Rating'];
-    }
-    return [formatCurrency(value), 'Revenue'];
-  };
-
-
+  // =========================================================================
+  // ACTIONS: CACHE, SETTINGS, EXPORT PDF
+  // =========================================================================
   const handleClearCache = async () => {
     setIsClearingCache(true);
     try {
@@ -563,7 +693,7 @@ const ReportsScreen = () => {
       if (response && response.settings) {
         setSettings(response.settings);
       }
-      showNotification(response?.message || "Settings updated successfully!", "success");
+      showNotification("Settings updated successfully!", "success");
       setShowSettingsModal(false);
       await loadReportData();
     } catch (e) {
@@ -575,92 +705,244 @@ const ReportsScreen = () => {
     }
   };
 
-  const generateClientCSV = () => {
-    let headers = [];
-    let rows = [];
-    let fileName = '';
-
-    if (activeTab === 'orders') {
-      fileName = `orders_report_${datePreset}.csv`;
-      headers = ['Order Date', 'Order ID', 'Customer Name', 'Items Count', 'Total Amount', 'Payment Status', 'Fulfillment Status'];
-      rows = filteredOrders.map(o => [
-        new Date(o.orderDate || o.date).toLocaleDateString('en-IN'),
-        o.id || o.orderId,
-        o.customerName || o.customer || 'Unknown',
-        o.items?.length || 0,
-        o.totalAmount || o.total || 0,
-        o.paymentStatus || 'Pending',
-        o.status || 'Processing'
-      ]);
-    } else {
-      fileName = 'catalog_inventory_report.csv';
-      headers = ['SKU', 'Product Name', 'Category ID', 'Brand', 'Price (INR)', 'Stock Level', 'Status'];
-      rows = products.map(p => [
-        p.sku,
-        p.name,
-        p.categoryId,
-        p.brand,
-        p.price,
-        p.stock,
-        Number(p.stock) === 0 ? 'Out of Stock' : Number(p.stock) <= 5 ? 'Low Stock' : 'In Stock'
-      ]);
-    }
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", fileName);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showNotification("Report generated locally and downloaded!", "success");
-  };
-
-  // --- CSV Export Handler ---
-  const handleExportCSV = async () => {
+  // =========================================================================
+  // PDF REPORT GENERATOR (Replaces CSV Export)
+  // =========================================================================
+  const handleExportPDF = () => {
     try {
-      const reportType = activeTab === 'procurement' || activeTab === 'purchase' 
-        ? 'procurement' 
-        : activeTab === 'catalog' 
-          ? 'catalog' 
-          : 'orders';
-      showNotification(`Initiating ${reportType} report export on backend...`, "success");
-      const data = await exportReport(reportType);
-      
-      if (data && data.exportUrl) {
-        let downloadUrl = data.exportUrl;
+      showNotification("Generating professional PDF report...", "success");
 
-        const checkResponse = await fetch(downloadUrl, {
-          method: 'GET',
-          headers: { 'ngrok-skip-browser-warning': 'true' }
-        }).catch(() => null);
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
 
-        if (checkResponse && checkResponse.ok) {
-          const blob = await checkResponse.blob();
-          const blobUrl = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = blobUrl;
-          link.download = downloadUrl.split('/').pop() || `${reportType}_report.csv`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(blobUrl);
-          showNotification(`${reportType.charAt(0).toUpperCase() + reportType.slice(1)} report exported from server successfully!`, "success");
-          return;
-        }
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+      let y = margin;
+
+      const screenTitles = {
+        sales: 'Sales & Orders Analytics Report',
+        procurement: 'Procurement & Purchase Analytics Report',
+        catalog: 'Catalog & Stock Inventory Report',
+        returns: 'Returns & Hardware Warranty Report'
+      };
+
+      const presetLabels = {
+        All: 'All Time',
+        '7days': 'Last 7 Days',
+        '30days': 'Last 30 Days',
+        year: 'This Fiscal Year'
+      };
+
+      const title = screenTitles[activeTab] || 'Analytics Report';
+      const durationLabel = presetLabels[datePreset] || 'All Time';
+
+      // ── Header Banner ──
+      doc.setFillColor(18, 104, 165);
+      doc.roundedRect(margin, y, pageWidth - margin * 2, 22, 2, 2, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('HONEYWELL ENTERPRISE ANALYTICS', margin + 6, y + 8);
+
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(title.toUpperCase(), margin + 6, y + 14);
+
+      doc.setFontSize(8);
+      doc.text(`Duration Scope: ${durationLabel}  |  Generated: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`, margin + 6, y + 19);
+
+      y += 28;
+
+      // ── KPI Summary Metric Grid (4 Boxes) ──
+      let kpis = [];
+      if (activeTab === 'sales') {
+        kpis = [
+          { label: 'TOTAL REVENUE', value: formatCurrency(salesStats.revenue) },
+          { label: 'ORDERS VOLUME', value: `${salesStats.total} Orders` },
+          { label: 'AVG ORDER VALUE', value: formatCurrency(salesStats.aov) },
+          { label: 'UNCONFIRMED PAYMENTS', value: `${salesStats.pendingPayment} Pending` }
+        ];
+      } else if (activeTab === 'procurement') {
+        kpis = [
+          { label: 'PURCHASE INDENTS', value: `${procurementStats.totalIndents} Indents` },
+          { label: 'ISSUED POs', value: `${procurementStats.totalPOs} Orders` },
+          { label: 'TOTAL SPEND', value: formatCurrency(procurementStats.totalSpend) },
+          { label: 'PENDING APPROVALS', value: `${procurementStats.pendingApprovals} Pending` }
+        ];
+      } else if (activeTab === 'catalog') {
+        kpis = [
+          { label: 'CATALOG PRODUCTS', value: `${catalogStats.totalProducts} Items` },
+          { label: 'LOW STOCK WARNING', value: `${catalogStats.lowStock} Products` },
+          { label: 'OUT OF STOCK', value: `${catalogStats.outOfStock} Products` },
+          { label: 'TOTAL VALUATION', value: formatCurrency(catalogStats.totalValuation) }
+        ];
+      } else {
+        kpis = [
+          { label: 'TOTAL CLAIMS', value: `${returnsStats.total} Requests` },
+          { label: 'APPROVED CLAIMS', value: `${returnsStats.approved} Approved` },
+          { label: 'IN INSPECTION', value: `${returnsStats.pending} Pending` },
+          { label: 'SETTLED REFUNDS', value: `${returnsStats.refunded} Settled` }
+        ];
       }
-    } catch (e) {
-      console.warn("Backend export failed, falling back to client-side CSV generation:", e);
-    }
 
-    generateClientCSV();
+      const boxWidth = (pageWidth - margin * 2 - 9) / 4;
+      kpis.forEach((kpi, idx) => {
+        const bx = margin + idx * (boxWidth + 3);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(bx, y, boxWidth, 16, 2, 2, 'FD');
+
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(100, 116, 139);
+        doc.text(kpi.label, bx + 4, y + 5.5);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(String(kpi.value), bx + 4, y + 12);
+      });
+
+      y += 22;
+
+      // ── Structured Data Table ──
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Detailed Analytical Records Ledger', margin, y);
+      y += 5;
+
+      let headers = [];
+      let rows = [];
+      let colWidths = [];
+
+      if (activeTab === 'sales') {
+        headers = ['Date', 'Order ID', 'Customer', 'Items', 'Amount', 'Payment Status', 'Status'];
+        colWidths = [22, 28, 42, 16, 26, 26, 22];
+        rows = filteredOrders.map(o => [
+          new Date(o.orderDate || o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+          formatOrderId(o.orderId || o.id),
+          (o.customerName || o.customer || 'Customer').slice(0, 22),
+          `${o.items?.length || 1} item${o.items?.length === 1 ? '' : 's'}`,
+          formatCurrency(o.totalAmount || o.total),
+          o.paymentStatus || 'Pending',
+          o.status || 'Processing'
+        ]);
+      } else if (activeTab === 'procurement') {
+        headers = ['PO / Indent Ref', 'Date', 'Supplier / Requested By', 'Warehouse', 'Total Value', 'Status'];
+        colWidths = [32, 22, 48, 32, 26, 22];
+        rows = filteredPurchaseOrders.map(po => [
+          po.poNumber || `PO-${po.id}`,
+          po.date || 'N/A',
+          (po.supplierName || 'Supplier').slice(0, 24),
+          (po.warehouse || 'Main WH').slice(0, 16),
+          formatCurrency(po.totalAmount),
+          po.status || 'Issued'
+        ]);
+      } else if (activeTab === 'catalog') {
+        headers = ['SKU', 'Product Name', 'Category', 'Brand', 'Price', 'Stock', 'Status'];
+        colWidths = [26, 50, 30, 24, 22, 16, 16];
+        rows = products.map(p => {
+          const s = Number(p.stock || 0);
+          return [
+            p.sku || 'SKU-00',
+            (p.name || 'Product').slice(0, 28),
+            (p.categoryId || 'General').slice(0, 16),
+            (p.brand || 'Honeywell').slice(0, 14),
+            formatCurrency(p.price),
+            `${s} units`,
+            s === 0 ? 'Out' : s <= 5 ? 'Low' : 'In Stock'
+          ];
+        });
+      } else {
+        headers = ['Return ID', 'Order Ref', 'Customer Name', 'Claim Type', 'Reason', 'Status'];
+        colWidths = [26, 28, 42, 32, 32, 24];
+        rows = filteredReturns.map(r => [
+          `#RET-${String(r.id || '001').slice(0, 8)}`,
+          r.orderNumber || r.orderReference || 'ORD-000',
+          (r.customerName || r.name || 'Customer').slice(0, 22),
+          (r.type || r.requestType || 'Return & Refund').slice(0, 18),
+          (r.reason || 'Defective').slice(0, 18),
+          r.status || 'In Review'
+        ]);
+      }
+
+      // Draw table header
+      const drawTableHeader = () => {
+        doc.setFillColor(241, 245, 249);
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(margin, y, pageWidth - margin * 2, 7, 'FD');
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(51, 65, 85);
+
+        let curX = margin + 2;
+        headers.forEach((h, idx) => {
+          doc.text(h, curX, y + 4.8);
+          curX += colWidths[idx] || 25;
+        });
+        y += 7;
+      };
+
+      drawTableHeader();
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+
+      if (rows.length === 0) {
+        doc.setTextColor(148, 163, 184);
+        doc.text('No matching records found for the selected duration scope.', margin + 4, y + 6);
+      } else {
+        rows.forEach((row, rowIdx) => {
+          if (y + 6 > pageHeight - margin - 10) {
+            doc.addPage();
+            y = margin + 6;
+            drawTableHeader();
+          }
+
+          if (rowIdx % 2 === 1) {
+            doc.setFillColor(248, 250, 252);
+            doc.rect(margin, y, pageWidth - margin * 2, 6, 'F');
+          }
+
+          doc.setTextColor(30, 41, 59);
+          let curX = margin + 2;
+          row.forEach((cell, idx) => {
+            doc.text(String(cell || ''), curX, y + 4.2);
+            curX += colWidths[idx] || 25;
+          });
+
+          y += 6;
+        });
+      }
+
+      // ── Footer Page Numbers ──
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          `Honeywell Products Analytics Report • Confidential • Page ${i} of ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 8,
+          { align: 'center' }
+        );
+      }
+
+      const fileName = `Honeywell_${activeTab}_report_${datePreset}_${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(fileName);
+      showNotification("PDF Report generated & downloaded successfully!", "success");
+    } catch (err) {
+      console.error("Failed to generate PDF report:", err);
+      showNotification("Failed to generate PDF report", "error");
+    }
   };
 
   return (
@@ -675,124 +957,165 @@ const ReportsScreen = () => {
       {/* Page Header */}
       <div className="reports-mgmt-header">
         <div className="reports-mgmt-title">
-          <h1>Analytics & Reports</h1>
-          <p>Gain actionable insights from orders sales ledger and catalog inventory levels</p>
+          <div className="reports-header-badge">ENTERPRISE INTELLIGENCE</div>
+          <h1>Analytics &amp; Reports</h1>
+          <p>Gain actionable insights across sales orders, procurement pipeline, stock inventory, and warranty claims.</p>
         </div>
         <div className="reports-actions">
           <button className="reports-btn secondary" onClick={handleClearCache} title="Clear Cache" disabled={isClearingCache}>
-            <Trash2 size={15} /> {isClearingCache ? 'Clearing...' : 'Clear Cache'}
+            <Trash2 size={15} />
+            <span>{isClearingCache ? 'Clearing...' : 'Clear Cache'}</span>
           </button>
           <button className="reports-btn secondary" onClick={() => setShowSettingsModal(true)} title="Settings">
-            <Settings size={15} /> Settings
+            <Settings size={15} />
+            <span>Settings</span>
           </button>
-          <button className="reports-btn secondary" onClick={loadReportData} title="Refresh Live Data">
-            <RefreshCw size={15} /> Refresh
+          <button className="reports-btn secondary" onClick={loadReportData} title="Refresh Live Data" disabled={loading}>
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
           </button>
-          <button className="reports-btn primary" onClick={handleExportCSV} title="Export Active Data to CSV">
-            <FileSpreadsheet size={15} /> Export CSV
+          <button className="reports-btn primary" onClick={handleExportPDF} title="Download Professional PDF Report">
+            <Download size={15} />
+            <span>Export PDF</span>
           </button>
         </div>
       </div>
 
-      {/* Navigation Tabs and Date Range Filter */}
+      {/* Navigation Tabs and Permanent Date Range Filter Bar */}
       <div className="reports-controls-bar">
+        {/* 4 Main Module Tabs */}
         <div className="reports-tabs-wrapper">
           <button
+            type="button"
             className={`reports-tab-btn ${activeTab === 'sales' ? 'active' : ''}`}
             onClick={() => setActiveTab('sales')}
           >
-            <ShoppingBag size={16} /> Sales &amp; Orders Analytics
+            <ShoppingBag size={15} />
+            <span>Sales &amp; Orders Analytics</span>
           </button>
           <button
-            className={`reports-tab-btn ${activeTab === 'purchase' || activeTab === 'procurement' ? 'active' : ''}`}
-            onClick={() => setActiveTab('purchase')}
+            type="button"
+            className={`reports-tab-btn ${activeTab === 'procurement' ? 'active' : ''}`}
+            onClick={() => setActiveTab('procurement')}
           >
-            <FileSpreadsheet size={16} /> Procurement &amp; Purchase Analytics
+            <FileSpreadsheet size={15} />
+            <span>Procurement &amp; Purchase Analytics</span>
           </button>
           <button
+            type="button"
             className={`reports-tab-btn ${activeTab === 'catalog' ? 'active' : ''}`}
             onClick={() => setActiveTab('catalog')}
           >
-            <Boxes size={16} /> Catalog &amp; Stock
+            <Boxes size={15} />
+            <span>Catalog &amp; Stock</span>
           </button>
           <button
+            type="button"
             className={`reports-tab-btn ${activeTab === 'returns' ? 'active' : ''}`}
             onClick={() => setActiveTab('returns')}
           >
-            <TrendingUp size={16} /> Returns &amp; Warranty
+            <RotateCcw size={15} />
+            <span>Returns &amp; Warranty</span>
           </button>
         </div>
 
-        {activeTab === 'orders' && (
-          <div className="reports-date-preset">
-            <SlidersHorizontal size={14} className="filter-icon" />
-            <button className={`preset-btn ${datePreset === 'All' ? 'active' : ''}`} onClick={() => setDatePreset('All')}>All Time</button>
-            <button className={`preset-btn ${datePreset === '7days' ? 'active' : ''}`} onClick={() => setDatePreset('7days')}>Last 7 Days</button>
-            <button className={`preset-btn ${datePreset === '30days' ? 'active' : ''}`} onClick={() => setDatePreset('30days')}>Last 30 Days</button>
-            <button className={`preset-btn ${datePreset === 'year' ? 'active' : ''}`} onClick={() => setDatePreset('year')}>This Year</button>
-          </div>
-        )}
+        {/* Duration Scope Filter (Permanently shown for all screens) */}
+        <div className="reports-date-preset">
+          <SlidersHorizontal size={14} className="filter-icon" />
+          <button
+            type="button"
+            className={`preset-btn ${datePreset === 'All' ? 'active' : ''}`}
+            onClick={() => setDatePreset('All')}
+          >
+            All Time
+          </button>
+          <button
+            type="button"
+            className={`preset-btn ${datePreset === '7days' ? 'active' : ''}`}
+            onClick={() => setDatePreset('7days')}
+          >
+            Last 7 Days
+          </button>
+          <button
+            type="button"
+            className={`preset-btn ${datePreset === '30days' ? 'active' : ''}`}
+            onClick={() => setDatePreset('30days')}
+          >
+            Last 30 Days
+          </button>
+          <button
+            type="button"
+            className={`preset-btn ${datePreset === 'year' ? 'active' : ''}`}
+            onClick={() => setDatePreset('year')}
+          >
+            This Year
+          </button>
+        </div>
       </div>
 
       {loading ? (
         <div className="reports-loading-view">
-          <RefreshCw className="spinner" size={40} />
-          <p>Analyzing datasets and building visual graphs...</p>
+          <RefreshCw className="spinner animate-spin" size={36} />
+          <p>Analyzing datasets across all sectors and building visual models...</p>
         </div>
       ) : (
-        <>
-          {activeTab === 'orders' ? (
-            /* ==================== ORDERS REPORT ==================== */
+        <div className="reports-content-area">
+          {/* =========================================================================
+              TAB 1: SALES & ORDERS ANALYTICS
+             ========================================================================= */}
+          {activeTab === 'sales' && (
             <div className="reports-view-fadein">
-              {/* Stats Cards */}
+              {/* Stat Cards */}
               <div className="reports-stats-grid">
-                <div className="reports-stat-card reports-stat-card-clickable" onClick={openOrdersVolumeDrillDown} title="Click to view all revenue orders ledger">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openOrdersVolumeDrillDown} title="View all revenue orders in drill-down">
                   <div className="stat-icon revenue"><DollarSign size={20} /></div>
-                  <div className="stat-details" style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Total Revenue</span>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Total Revenue</span>
                       <span className="stat-drilldown-badge">Drill Down ↗</span>
                     </div>
-                    <strong>{displayStats.revenue}</strong>
+                    <strong>{formatCurrency(salesStats.revenue)}</strong>
                   </div>
                 </div>
 
-                <div className="reports-stat-card reports-stat-card-clickable" onClick={openOrdersVolumeDrillDown} title="Click to view all orders volume">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openOrdersVolumeDrillDown} title="View orders volume in drill-down">
                   <div className="stat-icon orders"><ShoppingBag size={20} /></div>
-                  <div className="stat-details" style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Orders Volume</span>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Orders Volume</span>
                       <span className="stat-drilldown-badge">Drill Down ↗</span>
                     </div>
-                    <strong>{displayStats.total}</strong>
+                    <strong>{salesStats.total} Orders</strong>
                   </div>
                 </div>
 
                 <div className="reports-stat-card">
                   <div className="stat-icon aov"><TrendingUp size={20} /></div>
                   <div className="stat-details">
-                    <span>Average Order Value</span>
-                    <strong>{displayStats.aov}</strong>
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Average Order Value</span>
+                    </div>
+                    <strong>{formatCurrency(salesStats.aov)}</strong>
                   </div>
                 </div>
 
-                <div className="reports-stat-card reports-stat-card-clickable" onClick={openUnconfirmedPaymentsDrillDown} title="Click to view detailed list of unconfirmed & pending payment orders">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openUnconfirmedPaymentsDrillDown} title="View unconfirmed payments in drill-down">
                   <div className="stat-icon pending"><AlertTriangle size={20} /></div>
-                  <div className="stat-details" style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Unconfirmed Payments</span>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Unconfirmed Payments</span>
                       <span className="stat-drilldown-badge highlight">Drill Down ↗</span>
                     </div>
-                    <strong style={{ color: '#d97706' }}>{displayStats.pendingPayment}</strong>
+                    <strong style={{ color: '#d97706' }}>{salesStats.pendingPayment} Pending</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Charts Sections */}
+              {/* Charts Section */}
               <div className="reports-charts-grid">
                 {/* Sales Performance Area Graph */}
                 <div className="chart-card-widget span-two">
-                  <h3>Revenue Performance Trend</h3>
+                  <h3>Revenue Performance Trend ({datePreset === 'All' ? 'Recent' : datePreset})</h3>
                   <div className="chart-container-inner">
                     <ResponsiveContainer width="100%" height={260}>
                       <AreaChart data={salesTrendData}>
@@ -807,12 +1130,8 @@ const ReportsScreen = () => {
                         <YAxis 
                           stroke="#64748b" 
                           fontSize={11} 
-                          tickFormatter={(value) => {
-                            if (value >= 1000000) return `₹${(value / 1000000).toFixed(1).replace(/\.0$/, '')}m`;
-                            if (value >= 1000) return `₹${(value / 1000).toFixed(1).replace(/\.0$/, '')}k`;
-                            return `₹${value}`;
-                          }} 
-                          width={60} 
+                          tickFormatter={(val) => val >= 100000 ? `₹${(val / 100000).toFixed(1)}L` : val >= 1000 ? `₹${(val / 1000).toFixed(0)}k` : `₹${val}`}
+                          width={55} 
                         />
                         <Tooltip formatter={(value) => formatCurrency(value)} />
                         <Area type="monotone" dataKey="Sales" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorSales)" />
@@ -821,10 +1140,10 @@ const ReportsScreen = () => {
                   </div>
                 </div>
 
-                {/* Pie Chart: Fulfillment breakdown */}
+                {/* Pie Chart: Fulfillment Breakdown */}
                 <div className="chart-card-widget">
-                  <h3>Order fulfillment States</h3>
-                  <div className="chart-container-inner" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <h3>Order Fulfillment States</h3>
+                  <div className="chart-container-inner">
                     <ResponsiveContainer width="100%" height={210}>
                       <PieChart>
                         <Pie
@@ -832,72 +1151,25 @@ const ReportsScreen = () => {
                           cx="50%"
                           cy="50%"
                           innerRadius={45}
-                          outerRadius={80}
+                          outerRadius={75}
                           paddingAngle={2}
                           dataKey="value"
-                          labelLine={false}
-                          label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }) => {
-                            if (percent < 0.04) return null; // Hide labels for very small slices to prevent overlap
-                            const RADIAN = Math.PI / 180;
-                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                            return (
-                              <text x={x} y={y} fill="#ffffff" fontSize={11} fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                {value}
-                              </text>
-                            );
-                          }}
                         >
                           {statusPieData.map((entry, index) => {
                             const color = STATUS_COLORS[entry.name] || REPORTS_COLORS[index % REPORTS_COLORS.length];
                             return <Cell key={`cell-${index}`} fill={color} />;
                           })}
                         </Pie>
-                        <Tooltip
-                          formatter={(val, name) => {
-                            const total = statusPieData.reduce((s, i) => s + (Number(i.value) || 0), 0);
-                            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                            return [`${val} orders (${pct}%)`, name];
-                          }}
-                        />
+                        <Tooltip formatter={(val, name) => [`${val} orders`, name]} />
                       </PieChart>
                     </ResponsiveContainer>
-
-                    {/* Custom Non-overlapping Legend */}
-                    <div style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '8px 12px',
-                      justifyContent: 'center',
-                      marginTop: '16px',
-                      padding: '0 8px',
-                      width: '100%'
-                    }}>
-                      {statusPieData.map((entry, index) => {
-                        const color = STATUS_COLORS[entry.name] || REPORTS_COLORS[index % REPORTS_COLORS.length];
-                        const val = entry.value;
-                        const total = statusPieData.reduce((s, i) => s + (Number(i.value) || 0), 0);
-                        const pct = total > 0 ? ((val / total) * 100).toFixed(0) : 0;
+                    <div className="reports-chart-legend">
+                      {statusPieData.map((entry, idx) => {
+                        const color = STATUS_COLORS[entry.name] || REPORTS_COLORS[idx % REPORTS_COLORS.length];
                         return (
-                          <div key={index} style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            color: '#334155',
-                            whiteSpace: 'nowrap'
-                          }}>
-                            <span style={{
-                              display: 'inline-block',
-                              width: '8px',
-                              height: '8px',
-                              borderRadius: '50%',
-                              backgroundColor: color,
-                              flexShrink: 0
-                            }} />
-                            <span>{entry.name}: {val} ({pct}%)</span>
+                          <div key={idx} className="legend-item">
+                            <span className="legend-dot" style={{ backgroundColor: color }} />
+                            <span>{entry.name}: {entry.value}</span>
                           </div>
                         );
                       })}
@@ -907,13 +1179,13 @@ const ReportsScreen = () => {
 
                 {/* Bar Chart: Payment Methods */}
                 <div className="chart-card-widget">
-                  <h3>Payment methods distribution</h3>
+                  <h3>Payment Methods Distribution</h3>
                   <div className="chart-container-inner">
                     <ResponsiveContainer width="100%" height={240}>
                       <BarChart data={paymentBarData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="name" stroke="#64748b" fontSize={10} />
-                        <YAxis stroke="#64748b" fontSize={10} />
+                        <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
+                        <YAxis stroke="#64748b" fontSize={11} />
                         <Tooltip />
                         <Bar dataKey="Orders" fill="#6366f1" radius={[4, 4, 0, 0]}>
                           {paymentBarData.map((entry, index) => (
@@ -926,9 +1198,25 @@ const ReportsScreen = () => {
                 </div>
               </div>
 
-              {/* Detailed Orders table */}
+              {/* Detailed Orders Ledger Table */}
               <div className="reports-table-card">
-                <h3>Detailed Orders Ledger summary</h3>
+                <div className="reports-table-header-wrap">
+                  <div>
+                    <h3>Detailed Orders Ledger Summary</h3>
+                    <p className="table-subtitle">Showing orders recorded for <strong>{datePreset === 'All' ? 'All Time' : datePreset}</strong></p>
+                  </div>
+                  <div className="reports-search-box">
+                    <Search size={14} className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search orders, customers, status..."
+                      value={ordersSearch}
+                      onChange={(e) => { setOrdersSearch(e.target.value); setOrdersPage(1); }}
+                    />
+                    {ordersSearch && <button onClick={() => setOrdersSearch('')}><X size={13} /></button>}
+                  </div>
+                </div>
+
                 <div className="table-wrapper">
                   <table className="reports-data-table">
                     <thead>
@@ -943,73 +1231,110 @@ const ReportsScreen = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredOrders.map(o => (
-                        <tr key={o.id || o.orderId}>
-                          <td>{new Date(o.orderDate || o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
-                          <td><strong>{formatOrderId(o.orderId || o.id)}</strong></td>
-                          <td>{o.customerName || o.customer || 'Unknown'}</td>
-                          <td>{o.items?.length || 0} {(o.items?.length === 1) ? 'item' : 'items'}</td>
-                          <td><strong>{formatCurrency(o.totalAmount || o.total)}</strong></td>
-                          <td>
-                            <span className={`mini-badge payment-${(o.paymentStatus || 'Pending').toLowerCase().replace(' ', '-')}`}>
-                              {o.paymentStatus || 'Pending'}
-                            </span>
-                          </td>
-                          <td>
-                            <span className={`mini-badge order-${(o.status || 'Processing').toLowerCase()}`}>
-                              {o.status || 'Processing'}
-                            </span>
-                          </td>
+                      {searchedOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="empty-table-row">No orders found for the selected duration and search criteria.</td>
                         </tr>
-                      ))}
+                      ) : (
+                        searchedOrders.slice((ordersPage - 1) * itemsPerPage, ordersPage * itemsPerPage).map(o => (
+                          <tr key={o.id || o.orderId}>
+                            <td>{new Date(o.orderDate || o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                            <td><strong className="order-id-text">{formatOrderId(o.orderId || o.id)}</strong></td>
+                            <td>{o.customerName || o.customer || 'Unknown'}</td>
+                            <td>{o.items?.length || 1} {o.items?.length === 1 ? 'item' : 'items'}</td>
+                            <td><strong>{formatCurrency(o.totalAmount || o.total)}</strong></td>
+                            <td>
+                              <span className={`mini-badge payment-${(o.paymentStatus || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                                {o.paymentStatus || 'Pending'}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={`mini-badge order-${(o.status || 'Processing').toLowerCase()}`}>
+                                {o.status || 'Processing'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
+
+                {searchedOrders.length > 0 && (
+                  <div className="reports-pagination-wrap">
+                    <Pagination
+                      currentPage={ordersPage}
+                      totalPages={Math.ceil(searchedOrders.length / itemsPerPage)}
+                      onPageChange={setOrdersPage}
+                      totalItems={searchedOrders.length}
+                      itemsPerPage={itemsPerPage}
+                    />
+                  </div>
+                )}
               </div>
             </div>
-          ) : activeTab === 'procurement' ? (
-            /* ==================== PROCUREMENT & PURCHASE REPORT ==================== */
+          )}
+
+          {/* =========================================================================
+              TAB 2: PROCUREMENT & PURCHASE ANALYTICS
+             ========================================================================= */}
+          {activeTab === 'procurement' && (
             <div className="reports-view-fadein space-y-6">
               {/* Stat Cards */}
               <div className="reports-stats-grid">
-                <div className="reports-stat-card">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openIndentsDrillDown} title="View all purchase indents in drill-down">
                   <div className="stat-icon revenue"><FileSpreadsheet size={20} /></div>
                   <div className="stat-details">
-                    <span>Total Purchase Indents</span>
-                    <strong>{purchaseIndents.length} Indents</strong>
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Total Purchase Indents</span>
+                      <span className="stat-drilldown-badge">Drill Down ↗</span>
+                    </div>
+                    <strong>{procurementStats.totalIndents} Indents</strong>
                   </div>
                 </div>
 
-                <div className="reports-stat-card">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openPOsDrillDown} title="View issued purchase orders in drill-down">
                   <div className="stat-icon orders"><ShoppingBag size={20} /></div>
                   <div className="stat-details">
-                    <span>Issued Purchase Orders</span>
-                    <strong>{purchaseOrders.length} Orders</strong>
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Issued Purchase Orders</span>
+                      <span className="stat-drilldown-badge">Drill Down ↗</span>
+                    </div>
+                    <strong>{procurementStats.totalPOs} Orders</strong>
                   </div>
                 </div>
 
-                <div className="reports-stat-card">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openPOsDrillDown} title="View procurement spend in drill-down">
                   <div className="stat-icon aov"><DollarSign size={20} /></div>
                   <div className="stat-details">
-                    <span>Total Procurement Spend</span>
-                    <strong>{formatCurrency(purchaseOrders.reduce((sum, p) => sum + Number(p.totalAmount || 0), 0))}</strong>
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Total Procurement Spend</span>
+                    </div>
+                    <strong>{formatCurrency(procurementStats.totalSpend)}</strong>
                   </div>
                 </div>
 
-                <div className="reports-stat-card">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openPendingIndentsDrillDown} title="View pending indent approvals in drill-down">
                   <div className="stat-icon pending"><AlertTriangle size={20} /></div>
                   <div className="stat-details">
-                    <span>Pending Indent Approvals</span>
-                    <strong style={{ color: '#d97706' }}>
-                      {purchaseIndents.filter(i => i.status === 'Pending Approval').length} Pending
-                    </strong>
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Pending Indent Approvals</span>
+                      <span className="stat-drilldown-badge highlight">Drill Down ↗</span>
+                    </div>
+                    <strong style={{ color: '#d97706' }}>{procurementStats.pendingApprovals} Pending</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Purchase Indents Summary */}
+              {/* Purchase Indents Summary Table */}
               <div className="reports-table-card">
-                <h3>Purchase Indents Report Summary</h3>
+                <div className="reports-table-header-wrap">
+                  <div>
+                    <h3>Purchase Indents Summary</h3>
+                    <p className="table-subtitle">Material indent requests filtered by <strong>{datePreset === 'All' ? 'All Time' : datePreset}</strong></p>
+                  </div>
+                </div>
+
                 <div className="table-wrapper">
                   <table className="reports-data-table">
                     <thead>
@@ -1024,31 +1349,51 @@ const ReportsScreen = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {purchaseIndents.length === 0 ? (
+                      {filteredIndents.length === 0 ? (
                         <tr>
-                          <td colSpan="7" className="text-center py-6 text-slate-400">No purchase indents recorded yet.</td>
+                          <td colSpan="7" className="empty-table-row">No purchase indents found for the selected duration.</td>
                         </tr>
                       ) : (
-                        purchaseIndents.map((indent) => (
+                        filteredIndents.slice((indentsPage - 1) * itemsPerPage, indentsPage * itemsPerPage).map((indent) => (
                           <tr key={indent.id}>
                             <td className="font-bold text-[#1268a5]">{indent.indentNumber || `IND-${indent.id}`}</td>
                             <td>{indent.date}</td>
                             <td>{indent.requestedBy}</td>
                             <td>{indent.warehouse || 'Central WH'}</td>
-                            <td>{indent.items?.length || 0}</td>
-                            <td className="font-bold">{formatCurrency(indent.totalEstimatedCost)}</td>
-                            <td><span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-semibold">{indent.status}</span></td>
+                            <td>{indent.items?.length || 1} items</td>
+                            <td><strong>{formatCurrency(indent.totalEstimatedCost)}</strong></td>
+                            <td>
+                              <span className="mini-badge order-processing">{indent.status}</span>
+                            </td>
                           </tr>
                         ))
                       )}
                     </tbody>
                   </table>
                 </div>
+
+                {filteredIndents.length > 0 && (
+                  <div className="reports-pagination-wrap">
+                    <Pagination
+                      currentPage={indentsPage}
+                      totalPages={Math.ceil(filteredIndents.length / itemsPerPage)}
+                      onPageChange={setIndentsPage}
+                      totalItems={filteredIndents.length}
+                      itemsPerPage={itemsPerPage}
+                    />
+                  </div>
+                )}
               </div>
 
-              {/* Purchase Orders Summary */}
+              {/* Purchase Orders Summary Table */}
               <div className="reports-table-card">
-                <h3>Purchase Orders Procurement Summary</h3>
+                <div className="reports-table-header-wrap">
+                  <div>
+                    <h3>Purchase Orders (PO) Procurement Summary</h3>
+                    <p className="table-subtitle">Issued vendor purchase orders for <strong>{datePreset === 'All' ? 'All Time' : datePreset}</strong></p>
+                  </div>
+                </div>
+
                 <div className="table-wrapper">
                   <table className="reports-data-table">
                     <thead>
@@ -1063,181 +1408,173 @@ const ReportsScreen = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {purchaseOrders.length === 0 ? (
+                      {filteredPurchaseOrders.length === 0 ? (
                         <tr>
-                          <td colSpan="7" className="text-center py-6 text-slate-400">No purchase orders issued yet.</td>
+                          <td colSpan="7" className="empty-table-row">No purchase orders found for the selected duration.</td>
                         </tr>
                       ) : (
-                        purchaseOrders.map((po) => (
+                        filteredPurchaseOrders.slice((posPage - 1) * itemsPerPage, posPage * itemsPerPage).map((po) => (
                           <tr key={po.id}>
                             <td className="font-bold text-[#1268a5]">{po.poNumber || `PO-${po.id}`}</td>
                             <td>{po.date}</td>
-                            <td className="font-semibold">{po.supplierName}</td>
-                            <td className="font-mono text-xs">{po.indentId ? `IND-${po.indentId}` : 'Direct PO'}</td>
+                            <td><strong>{po.supplierName}</strong></td>
+                            <td><code>{po.indentId ? `IND-${po.indentId}` : 'Direct PO'}</code></td>
                             <td>{po.warehouse || 'Main WH'}</td>
-                            <td className="font-bold">{formatCurrency(po.totalAmount)}</td>
-                            <td><span className="px-2 py-0.5 bg-[#1268a5]/10 text-[#1268a5] rounded text-xs font-semibold">{po.status}</span></td>
+                            <td><strong>{formatCurrency(po.totalAmount)}</strong></td>
+                            <td>
+                              <span className="mini-badge order-completed">{po.status}</span>
+                            </td>
                           </tr>
                         ))
                       )}
                     </tbody>
                   </table>
                 </div>
+
+                {filteredPurchaseOrders.length > 0 && (
+                  <div className="reports-pagination-wrap">
+                    <Pagination
+                      currentPage={posPage}
+                      totalPages={Math.ceil(filteredPurchaseOrders.length / itemsPerPage)}
+                      onPageChange={setPosPage}
+                      totalItems={filteredPurchaseOrders.length}
+                      itemsPerPage={itemsPerPage}
+                    />
+                  </div>
+                )}
               </div>
             </div>
-          ) : (
-            /* ==================== CATALOG REPORT ==================== */
+          )}
+
+          {/* =========================================================================
+              TAB 3: CATALOG & STOCK
+             ========================================================================= */}
+          {activeTab === 'catalog' && (
             <div className="reports-view-fadein">
-              {/* Stats Cards */}
+              {/* Stat Cards */}
               <div className="reports-stats-grid">
-                <div className="reports-stat-card">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openCatalogProductsDrillDown} title="View all catalog items in drill-down">
                   <div className="stat-icon catalog"><Package size={20} /></div>
                   <div className="stat-details">
-                    <span>Total catalog Products</span>
-                    <strong>{catalogReport ? catalogStats.totalProducts : `${catalogStats.totalProducts} Items`}</strong>
-                  </div>
-                </div>
-
-                <div className="reports-stat-card">
-                  <div className="stat-icon categories"><FolderTree size={20} /></div>
-                  <div className="stat-details">
-                    <span>Categories count</span>
-                    <strong>{catalogReport ? catalogStats.totalCategories : `${catalogStats.totalCategories} Classes`}</strong>
-                  </div>
-                </div>
-
-                <div className="reports-stat-card reports-stat-card-clickable" onClick={openOutOfStockDrillDown} title="Click to view out-of-stock products list">
-                  <div className="stat-icon critical"><AlertTriangle size={20} /></div>
-                  <div className="stat-details" style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Critical Out-of-Stock</span>
-                      <span className="stat-drilldown-badge highlight-red">Drill Down ↗</span>
-                    </div>
-                    <strong style={{ color: '#ef4444' }}>
-                      {catalogReport ? catalogStats.outOfStock : `${catalogStats.outOfStock} items`}
-                    </strong>
-                  </div>
-                </div>
-
-                <div className="reports-stat-card reports-stat-card-clickable" onClick={openLowStockDrillDown} title="Click to view low-stock warning products list">
-                  <div className="stat-icon warning"><SlidersHorizontal size={20} /></div>
-                  <div className="stat-details" style={{ width: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>Low Stock Warning</span>
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Total Catalog Products</span>
                       <span className="stat-drilldown-badge">Drill Down ↗</span>
                     </div>
-                    <strong>{catalogReport ? catalogStats.lowStock : `${catalogStats.lowStock} Items`}</strong>
+                    <strong>{catalogStats.totalProducts} Items</strong>
+                  </div>
+                </div>
+
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openLowStockDrillDown} title="Click to view low stock warning items in drill-down">
+                  <div className="stat-icon warning"><AlertTriangle size={20} /></div>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Low Stock Warning</span>
+                      <span className="stat-drilldown-badge highlight">Drill Down ↗</span>
+                    </div>
+                    <strong style={{ color: '#d97706' }}>{catalogStats.lowStock} Products</strong>
+                  </div>
+                </div>
+
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openOutOfStockDrillDown} title="Click to view out-of-stock items in drill-down">
+                  <div className="stat-icon danger"><AlertTriangle size={20} /></div>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Critical Out-of-Stock</span>
+                      <span className="stat-drilldown-badge highlight-red">Drill Down ↗</span>
+                    </div>
+                    <strong style={{ color: '#ef4444' }}>{catalogStats.outOfStock} Products</strong>
+                  </div>
+                </div>
+
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openCatalogProductsDrillDown} title="View inventory valuation in drill-down">
+                  <div className="stat-icon revenue"><DollarSign size={20} /></div>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Total Inventory Valuation</span>
+                    </div>
+                    <strong>{formatCurrency(catalogStats.totalValuation)}</strong>
                   </div>
                 </div>
               </div>
 
-              {/* Charts grid */}
+              {/* Charts Section */}
               <div className="reports-charts-grid">
-                {/* Pie Chart Category allocation */}
+                {/* Category Share Donut Chart */}
                 <div className="chart-card-widget">
-                  <h3>Category allocation Share</h3>
+                  <h3>Category Allocation Share</h3>
                   <div className="chart-container-inner">
-                    <ResponsiveContainer width="100%" height={280}>
+                    <ResponsiveContainer width="100%" height={210}>
                       <PieChart>
                         <Pie
                           data={categoryPieData}
                           cx="50%"
-                          cy="45%"
-                          innerRadius={40}
-                          outerRadius={80}
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={75}
                           paddingAngle={2}
                           dataKey="value"
-                          labelLine={false}
-                          label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }) => {
-                            if (percent < 0.04) return null;
-                            const RADIAN = Math.PI / 180;
-                            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                            const x = cx + radius * Math.cos(-midAngle * RADIAN);
-                            const y = cy + radius * Math.sin(-midAngle * RADIAN);
-                            return (
-                              <text x={x} y={y} fill="#ffffff" fontSize={11} fontWeight="bold" textAnchor="middle" dominantBaseline="central">
-                                {value}
-                              </text>
-                            );
-                          }}
                         >
                           {categoryPieData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={REPORTS_COLORS[index % REPORTS_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip
-                          formatter={(val, name) => {
-                            const total = categoryPieData.reduce((s, i) => s + (Number(i.value) || 0), 0);
-                            const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                            return [`${val} products (${pct}%)`, name];
-                          }}
-                        />
-                        <Legend
-                          verticalAlign="bottom"
-                          height={48}
-                          iconType="circle"
-                          formatter={(value, entry) => {
-                            const val = entry.payload?.value ?? 0;
-                            const total = categoryPieData.reduce((s, i) => s + (Number(i.value) || 0), 0);
-                            const pct = total > 0 ? ((val / total) * 100).toFixed(0) : 0;
-                            return `${value}: ${val} (${pct}%)`;
-                          }}
-                          wrapperStyle={{ fontSize: '11px', fontWeight: '600', color: '#334155' }}
-                        />
+                        <Tooltip formatter={(val, name) => [`${val} products`, name]} />
                       </PieChart>
                     </ResponsiveContainer>
+                    <div className="reports-chart-legend">
+                      {categoryPieData.map((entry, idx) => (
+                        <div key={idx} className="legend-item">
+                          <span className="legend-dot" style={{ backgroundColor: REPORTS_COLORS[idx % REPORTS_COLORS.length] }} />
+                          <span>{entry.name}: {entry.value}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
-                {/* Stock Level Bar Chart */}
-                <div className="chart-card-widget">
-                  <h3>Lowest stock Levels alert</h3>
+                {/* Lowest Stock Levels Bar Chart */}
+                <div className="chart-card-widget span-two">
+                  <h3>Lowest Stock Levels Warning Alert</h3>
                   <div className="chart-container-inner">
-                    <ResponsiveContainer width="100%" height={240}>
-                      <BarChart data={stockAlertData}>
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={lowestStockAlertData}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="name" stroke="#64748b" fontSize={9} />
-                        <YAxis stroke="#64748b" fontSize={10} />
-                        <Tooltip />
-                        <Bar dataKey="Stock" fill="#f59e0b" radius={[4, 4, 0, 0]}>
-                          {stockAlertData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.Stock === 0 ? '#ef4444' : '#f59e0b'} />
+                        <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
+                        <YAxis stroke="#64748b" fontSize={11} />
+                        <Tooltip formatter={(val) => [`${val} units in stock`, 'Stock Level']} />
+                        <Bar dataKey="Stock" radius={[4, 4, 0, 0]}>
+                          {lowestStockAlertData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`} 
+                              fill={Number(entry.Stock) === 0 ? '#ef4444' : Number(entry.Stock) <= 5 ? '#f59e0b' : '#10b981'} 
+                            />
                           ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
-
-                {/* Horizontal Bar Chart for Product Performance */}
-                <div className="chart-card-widget">
-                  <h3>Catalog performance index</h3>
-                  <div className="chart-container-inner">
-                    <ResponsiveContainer width="100%" height={240}>
-                      <BarChart layout="vertical" data={topProductsRevenue}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis 
-                          type="number" 
-                          stroke="#64748b" 
-                          fontSize={10} 
-                          tickFormatter={(value) => {
-                            if (value >= 1000000) return `₹${(value / 1000000).toFixed(1).replace(/\.0$/, '')}m`;
-                            if (value >= 1000) return `₹${(value / 1000).toFixed(1).replace(/\.0$/, '')}k`;
-                            return `₹${value}`;
-                          }}
-                        />
-                        <YAxis type="category" dataKey="name" stroke="#64748b" fontSize={10} />
-                        <Tooltip formatter={formatPerformanceTooltip} />
-                        <Bar dataKey="Value" fill="#10b981" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
               </div>
 
-              {/* Detailed Catalog Table */}
+              {/* Complete Catalog Inventory Table */}
               <div className="reports-table-card">
-                <h3>Catalog Inventory Summary</h3>
+                <div className="reports-table-header-wrap">
+                  <div>
+                    <h3>Catalog Inventory Summary</h3>
+                    <p className="table-subtitle">Live hardware products stock levels and valuation</p>
+                  </div>
+                  <div className="reports-search-box">
+                    <Search size={14} className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search SKU, product name, brand..."
+                      value={catalogSearch}
+                      onChange={(e) => { setCatalogSearch(e.target.value); setCatalogPage(1); }}
+                    />
+                    {catalogSearch && <button onClick={() => setCatalogSearch('')}><X size={13} /></button>}
+                  </div>
+                </div>
+
                 <div className="table-wrapper">
                   <table className="reports-data-table">
                     <thead>
@@ -1247,134 +1584,317 @@ const ReportsScreen = () => {
                         <th>Category</th>
                         <th>Brand</th>
                         <th>Selling Price</th>
-                        <th>Stock Count</th>
-                        <th>Status</th>
+                        <th>Stock Level</th>
+                        <th>Stock Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {products.slice((catalogPage - 1) * itemsPerPage, catalogPage * itemsPerPage).map(p => {
-                        const stockVal = Number(p.stock || 0);
-                        const statusClass = stockVal === 0 ? 'out' : stockVal <= 5 ? 'low' : 'in';
-                        const statusText = stockVal === 0 ? 'Out of Stock' : stockVal <= 5 ? 'Low Stock' : 'In Stock';
-                        
-                        return (
-                          <tr key={p.id}>
-                            <td><code>{(p.sku || '').trim()}</code></td>
-                            <td><strong>{p.name}</strong></td>
-                            <td>{p.categoryId}</td>
-                            <td>{p.brand}</td>
-                            <td><strong>{formatCurrency(p.price)}</strong></td>
-                            <td>{stockVal} units</td>
-                            <td>
-                              <span className={`mini-badge stock-${statusClass}`}>
-                                {statusText}
-                              </span>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {searchedProducts.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="empty-table-row">No products found matching search query.</td>
+                        </tr>
+                      ) : (
+                        searchedProducts.slice((catalogPage - 1) * itemsPerPage, catalogPage * itemsPerPage).map((p) => {
+                          const stockNum = Number(p.stock || 0);
+                          const isOut = stockNum === 0;
+                          const isLow = stockNum > 0 && stockNum <= (settings.lowStockAlertLimit || 5);
+                          return (
+                            <tr key={p.id || p.sku}>
+                              <td><code>{p.sku || 'SKU-00'}</code></td>
+                              <td><strong>{p.name}</strong></td>
+                              <td>{p.categoryId || 'General'}</td>
+                              <td>{p.brand || 'Honeywell'}</td>
+                              <td><strong>{formatCurrency(p.price)}</strong></td>
+                              <td>
+                                <strong style={{ color: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#16a34a' }}>
+                                  {stockNum} units
+                                </strong>
+                              </td>
+                              <td>
+                                <span className={`mini-badge stock-${isOut ? 'out' : isLow ? 'low' : 'in'}`}>
+                                  {isOut ? 'Out of Stock' : isLow ? 'Low Stock' : 'In Stock'}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
-                <Pagination
-                  currentPage={catalogPage}
-                  totalPages={Math.ceil(products.length / itemsPerPage)}
-                  onPageChange={setCatalogPage}
-                  totalItems={products.length}
-                  itemsPerPage={itemsPerPage}
-                />
+
+                {searchedProducts.length > 0 && (
+                  <div className="reports-pagination-wrap">
+                    <Pagination
+                      currentPage={catalogPage}
+                      totalPages={Math.ceil(searchedProducts.length / itemsPerPage)}
+                      onPageChange={setCatalogPage}
+                      totalItems={searchedProducts.length}
+                      itemsPerPage={itemsPerPage}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
-        </>
+
+          {/* =========================================================================
+              TAB 4: RETURNS & WARRANTY
+             ========================================================================= */}
+          {activeTab === 'returns' && (
+            <div className="reports-view-fadein">
+              {/* Stat Cards */}
+              <div className="reports-stats-grid">
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openReturnsDrillDown} title="View all return claims in drill-down">
+                  <div className="stat-icon orders"><RotateCcw size={20} /></div>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Total Return Claims</span>
+                      <span className="stat-drilldown-badge">Drill Down ↗</span>
+                    </div>
+                    <strong>{returnsStats.total} Requests</strong>
+                  </div>
+                </div>
+
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openReturnsDrillDown} title="View approved hardware claims in drill-down">
+                  <div className="stat-icon revenue"><ShieldCheck size={20} /></div>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Approved Hardware Claims</span>
+                    </div>
+                    <strong>{returnsStats.approved} Approved</strong>
+                  </div>
+                </div>
+
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openPendingReturnsDrillDown} title="View pending review returns in drill-down">
+                  <div className="stat-icon pending"><AlertTriangle size={20} /></div>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Pending Review &amp; Inspection</span>
+                      <span className="stat-drilldown-badge highlight">Drill Down ↗</span>
+                    </div>
+                    <strong style={{ color: '#d97706' }}>{returnsStats.pending} In Review</strong>
+                  </div>
+                </div>
+
+                <div className="reports-stat-card reports-stat-card-clickable" onClick={openReturnsDrillDown} title="View settled returns in drill-down">
+                  <div className="stat-icon aov"><CheckCircle size={20} /></div>
+                  <div className="stat-details">
+                    <div className="stat-label-row">
+                      <span className="stat-label-text">Settled / Refunded</span>
+                    </div>
+                    <strong>{returnsStats.refunded} Settled</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Charts Section */}
+              <div className="reports-charts-grid">
+                {/* Status Breakdown Donut Chart */}
+                <div className="chart-card-widget">
+                  <h3>Return Claims Status Breakdown</h3>
+                  <div className="chart-container-inner">
+                    <ResponsiveContainer width="100%" height={210}>
+                      <PieChart>
+                        <Pie
+                          data={returnStatusPieData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={75}
+                          paddingAngle={2}
+                          dataKey="value"
+                        >
+                          {returnStatusPieData.map((entry, index) => {
+                            const color = STATUS_COLORS[entry.name] || REPORTS_COLORS[index % REPORTS_COLORS.length];
+                            return <Cell key={`cell-${index}`} fill={color} />;
+                          })}
+                        </Pie>
+                        <Tooltip formatter={(val, name) => [`${val} requests`, name]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="reports-chart-legend">
+                      {returnStatusPieData.map((entry, idx) => {
+                        const color = STATUS_COLORS[entry.name] || REPORTS_COLORS[idx % REPORTS_COLORS.length];
+                        return (
+                          <div key={idx} className="legend-item">
+                            <span className="legend-dot" style={{ backgroundColor: color }} />
+                            <span>{entry.name}: {entry.value}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Return Reasons Bar Chart */}
+                <div className="chart-card-widget span-two">
+                  <h3>Hardware Warranty Claim Reasons</h3>
+                  <div className="chart-container-inner">
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={returnReasonsBarData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="name" stroke="#64748b" fontSize={11} />
+                        <YAxis stroke="#64748b" fontSize={11} />
+                        <Tooltip formatter={(val) => [`${val} claims`, 'Total Requests']} />
+                        <Bar dataKey="Count" fill="#0284c7" radius={[4, 4, 0, 0]}>
+                          {returnReasonsBarData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={REPORTS_COLORS[(index + 3) % REPORTS_COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Returns Table */}
+              <div className="reports-table-card">
+                <div className="reports-table-header-wrap">
+                  <div>
+                    <h3>Returns &amp; Hardware Warranty Ledger</h3>
+                    <p className="table-subtitle">Showing claims filed for <strong>{datePreset === 'All' ? 'All Time' : datePreset}</strong></p>
+                  </div>
+                  <div className="reports-search-box">
+                    <Search size={14} className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search return ID, order number, customer..."
+                      value={returnsSearch}
+                      onChange={(e) => { setReturnsSearch(e.target.value); setReturnsPage(1); }}
+                    />
+                    {returnsSearch && <button onClick={() => setReturnsSearch('')}><X size={13} /></button>}
+                  </div>
+                </div>
+
+                <div className="table-wrapper">
+                  <table className="reports-data-table">
+                    <thead>
+                      <tr>
+                        <th>Claim Ref</th>
+                        <th>Order Number</th>
+                        <th>Customer</th>
+                        <th>Request Type</th>
+                        <th>Reason</th>
+                        <th>Date</th>
+                        <th>Claim Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchedReturns.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="empty-table-row">No return or warranty claims found for the selected duration.</td>
+                        </tr>
+                      ) : (
+                        searchedReturns.slice((returnsPage - 1) * itemsPerPage, returnsPage * itemsPerPage).map((r) => (
+                          <tr key={r.id || r.returnId}>
+                            <td><strong className="text-[#1268a5]">#RET-{String(r.id || '001').slice(0, 8)}</strong></td>
+                            <td><code>{r.orderNumber || r.orderReference || 'ORD-000'}</code></td>
+                            <td>{r.customerName || r.name || 'Customer'}</td>
+                            <td>{r.type || r.requestType || 'Return & Refund'}</td>
+                            <td><span className="text-slate-600">{r.reason || 'Hardware Defect'}</span></td>
+                            <td>{r.createdAt ? new Date(r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : (r.date || 'Recent')}</td>
+                            <td>
+                              <span className={`mini-badge order-${(r.status || 'pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                                {r.status || 'In Review'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {searchedReturns.length > 0 && (
+                  <div className="reports-pagination-wrap">
+                    <Pagination
+                      currentPage={returnsPage}
+                      totalPages={Math.ceil(searchedReturns.length / itemsPerPage)}
+                      onPageChange={setReturnsPage}
+                      totalItems={searchedReturns.length}
+                      itemsPerPage={itemsPerPage}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Interactive Drill-Down Modal */}
-      {drillDownModal.isOpen && (
+      {/* Drill-Down Modal */}
+      {drillDownModal.isOpen && createPortal(
         <div className="reports-modal-overlay" onClick={() => setDrillDownModal({ ...drillDownModal, isOpen: false })}>
-          <div className="reports-modal-content drilldown-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '900px', width: '95%' }}>
-            <div className="drilldown-modal-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '14px', marginBottom: '16px' }}>
+          <div className="reports-modal-content reports-modal-large" onClick={(e) => e.stopPropagation()}>
+            <div className="reports-modal-header">
               <div>
-                <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#1268a5', letterSpacing: '0.05em' }}>Analytics Drill-Down</span>
-                <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '2px 0 0 0' }}>{drillDownModal.title}</h2>
+                <h2>{drillDownModal.title}</h2>
+                <span className="reports-modal-subtitle">
+                  Showing {filteredDrillDownData.length} records matching current filter period ({datePreset === 'All' ? 'All Time' : datePreset})
+                </span>
               </div>
-              <button className="reports-icon-btn" onClick={() => setDrillDownModal({ ...drillDownModal, isOpen: false })} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', padding: '6px', cursor: 'pointer' }}>
+              <button 
+                type="button" 
+                className="reports-modal-close" 
+                onClick={() => setDrillDownModal({ ...drillDownModal, isOpen: false })}
+                title="Close (Esc)"
+              >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Filter / Actions Bar */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '16px', flexWrap: 'wrap' }}>
-              <div style={{ position: 'relative', flex: '1', minWidth: '220px' }}>
-                <Search size={15} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                <input
-                  type="text"
-                  placeholder={drillDownModal.type === 'orders' ? "Search by Order ID, Customer, Payment Status..." : "Search by SKU, Product Name, Brand..."}
-                  value={drillDownSearch}
-                  onChange={(e) => setDrillDownSearch(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px 8px 32px', fontSize: '13px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                {drillDownModal.type === 'orders' ? (
-                  <button
-                    className="reports-btn primary"
-                    onClick={() => {
-                      setDrillDownModal({ ...drillDownModal, isOpen: false });
-                      navigate('/admin/orders');
-                    }}
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
-                  >
-                    View in Orders Directory <ExternalLink size={14} />
-                  </button>
-                ) : (
-                  <button
-                    className="reports-btn primary"
-                    onClick={() => {
-                      setDrillDownModal({ ...drillDownModal, isOpen: false });
-                      navigate('/admin/products');
-                    }}
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
-                  >
-                    View in Products Catalog <ExternalLink size={14} />
-                  </button>
-                )}
-              </div>
+            <div className="reports-modal-search-wrap">
+              <Search size={15} className="reports-modal-search-icon" />
+              <input
+                type="text"
+                className="reports-modal-search-input"
+                placeholder={
+                  drillDownModal.type === 'orders' ? "Search by Order ID, Customer, Status, Payment..." :
+                  drillDownModal.type === 'products' ? "Search by SKU, Product Name, Category, Brand..." :
+                  drillDownModal.type === 'indents' ? "Search by Indent #, Department, Requester, Status..." :
+                  drillDownModal.type === 'pos' ? "Search by PO #, Supplier Name, Status..." :
+                  "Search by Return #, Customer, Reason, Status..."
+                }
+                value={drillDownSearch}
+                onChange={(e) => { setDrillDownSearch(e.target.value); setDrillPage(1); }}
+              />
+              {drillDownSearch && (
+                <button 
+                  type="button" 
+                  onClick={() => { setDrillDownSearch(''); setDrillPage(1); }} 
+                  className="reports-modal-search-clear"
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
 
-            {/* Drill-down Records Counter */}
-            <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '12px', fontWeight: 600 }}>
-              Showing {filteredDrillDownData.length} {drillDownModal.type === 'orders' ? 'Orders' : 'Products'}
-            </div>
-
-            {/* Drill-down Data Table */}
-            <div className="table-wrapper" style={{ maxHeight: '380px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+            <div className="reports-modal-table-wrap">
               {drillDownModal.type === 'orders' ? (
-                <table className="reports-data-table" style={{ width: '100%' }}>
+                /* Orders Table */
+                <table className="reports-data-table">
                   <thead>
                     <tr>
-                      <th>Order ID</th>
-                      <th>Date</th>
-                      <th>Customer</th>
-                      <th>Total Amount</th>
-                      <th>Payment Status</th>
-                      <th>Fulfillment</th>
-                      <th>Action</th>
+                      <th style={{ width: '15%' }}>Date</th>
+                      <th style={{ width: '18%' }}>Order ID</th>
+                      <th style={{ width: '22%' }}>Customer</th>
+                      <th style={{ width: '16%' }}>Total Amount</th>
+                      <th style={{ width: '15%' }}>Payment Status</th>
+                      <th style={{ width: '14%' }}>Fulfillment</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredDrillDownData.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
-                          No matching order records found for this drill-down.
-                        </td>
+                        <td colSpan="6" className="empty-table-row">No matching order records found.</td>
                       </tr>
                     ) : (
-                      filteredDrillDownData.map((o) => (
+                      filteredDrillDownData.slice((drillPage - 1) * itemsPerPage, drillPage * itemsPerPage).map((o) => (
                         <tr key={o.id || o.orderId}>
-                          <td><strong>{formatOrderId(o.orderId || o.id)}</strong></td>
                           <td>{new Date(o.orderDate || o.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                          <td><strong>{formatOrderId(o.orderId || o.id)}</strong></td>
                           <td>{o.customerName || o.customer || 'Unknown'}</td>
                           <td><strong>{formatCurrency(o.totalAmount || o.total)}</strong></td>
                           <td>
@@ -1387,47 +1907,34 @@ const ReportsScreen = () => {
                               {o.status || 'Processing'}
                             </span>
                           </td>
-                          <td>
-                            <button
-                              onClick={() => {
-                                setDrillDownModal({ ...drillDownModal, isOpen: false });
-                                navigate('/admin/orders');
-                              }}
-                              style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', padding: '4px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                            >
-                              Details <ArrowUpRight size={12} />
-                            </button>
-                          </td>
                         </tr>
                       ))
                     )}
                   </tbody>
                 </table>
-              ) : (
-                <table className="reports-data-table" style={{ width: '100%' }}>
+              ) : drillDownModal.type === 'products' ? (
+                /* Products Table */
+                <table className="reports-data-table">
                   <thead>
                     <tr>
-                      <th>SKU</th>
-                      <th>Product Name</th>
-                      <th>Category</th>
-                      <th>Brand</th>
-                      <th>Price</th>
-                      <th>Stock</th>
-                      <th>Status</th>
+                      <th style={{ width: '15%' }}>SKU</th>
+                      <th style={{ width: '27%' }}>Product Name</th>
+                      <th style={{ width: '16%' }}>Category</th>
+                      <th style={{ width: '14%' }}>Brand</th>
+                      <th style={{ width: '14%' }}>Price</th>
+                      <th style={{ width: '14%' }}>Stock</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredDrillDownData.length === 0 ? (
                       <tr>
-                        <td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#94a3b8' }}>
-                          No matching product records found for this drill-down.
-                        </td>
+                        <td colSpan="6" className="empty-table-row">No matching product records found.</td>
                       </tr>
                     ) : (
                       filteredDrillDownData.slice((drillPage - 1) * itemsPerPage, drillPage * itemsPerPage).map((p) => {
                         const stockVal = Number(p.stock || 0);
-                        const statusClass = stockVal === 0 ? 'out' : stockVal <= (settings.lowStockAlertLimit || 5) ? 'low' : 'in';
-                        const statusText = stockVal === 0 ? 'Out of Stock' : stockVal <= (settings.lowStockAlertLimit || 5) ? 'Low Stock' : 'In Stock';
+                        const isOut = stockVal === 0;
+                        const isLow = stockVal > 0 && stockVal <= (settings.lowStockAlertLimit || 5);
                         return (
                           <tr key={p.id || p.sku}>
                             <td><code>{(p.sku || '').trim()}</code></td>
@@ -1435,10 +1942,9 @@ const ReportsScreen = () => {
                             <td>{p.categoryId}</td>
                             <td>{p.brand}</td>
                             <td><strong>{formatCurrency(p.price)}</strong></td>
-                            <td><strong style={{ color: stockVal === 0 ? '#ef4444' : '#f59e0b' }}>{stockVal} units</strong></td>
                             <td>
-                              <span className={`mini-badge stock-${statusClass}`}>
-                                {statusText}
+                              <span className={`mini-badge stock-${isOut ? 'out' : isLow ? 'low' : 'in'}`}>
+                                {isOut ? 'Out of Stock (0)' : isLow ? `Low (${stockVal})` : `${stockVal} Units`}
                               </span>
                             </td>
                           </tr>
@@ -1447,34 +1953,160 @@ const ReportsScreen = () => {
                     )}
                   </tbody>
                 </table>
+              ) : drillDownModal.type === 'indents' ? (
+                /* Indents Table */
+                <table className="reports-data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '18%' }}>Indent Ref</th>
+                      <th style={{ width: '15%' }}>Date</th>
+                      <th style={{ width: '22%' }}>Department</th>
+                      <th style={{ width: '20%' }}>Requested By</th>
+                      <th style={{ width: '12%' }}>Priority</th>
+                      <th style={{ width: '13%' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDrillDownData.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="empty-table-row">No matching indent records found.</td>
+                      </tr>
+                    ) : (
+                      filteredDrillDownData.slice((drillPage - 1) * itemsPerPage, drillPage * itemsPerPage).map((i) => (
+                        <tr key={i.id || i.indentNo}>
+                          <td><strong>{i.indentNo || `IND-${i.id}`}</strong></td>
+                          <td>{new Date(i.indentDate || i.date || i.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                          <td>{i.department || 'General Operations'}</td>
+                          <td>{i.requester || i.requestedBy || 'Admin Staff'}</td>
+                          <td>
+                            <span className={`mini-badge priority-${(i.priority || 'Medium').toLowerCase()}`}>
+                              {i.priority || 'Medium'}
+                            </span>
+                          </td>
+                          <td>
+                            <span className={`mini-badge status-${(i.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                              {i.status || 'Pending'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              ) : drillDownModal.type === 'pos' ? (
+                /* Purchase Orders Table */
+                <table className="reports-data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '18%' }}>PO Number</th>
+                      <th style={{ width: '15%' }}>Issue Date</th>
+                      <th style={{ width: '25%' }}>Supplier</th>
+                      <th style={{ width: '16%' }}>Total Amount</th>
+                      <th style={{ width: '13%' }}>Payment Terms</th>
+                      <th style={{ width: '13%' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDrillDownData.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="empty-table-row">No matching purchase orders found.</td>
+                      </tr>
+                    ) : (
+                      filteredDrillDownData.slice((drillPage - 1) * itemsPerPage, drillPage * itemsPerPage).map((po) => (
+                        <tr key={po.id || po.poNumber}>
+                          <td><strong>{po.poNumber || `PO-${po.id}`}</strong></td>
+                          <td>{new Date(po.orderDate || po.date || po.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                          <td>{po.supplierName || po.supplier || 'Honeywell Certified'}</td>
+                          <td><strong>{formatCurrency(po.totalAmount || po.total)}</strong></td>
+                          <td>{po.paymentTerms || 'Net 30'}</td>
+                          <td>
+                            <span className={`mini-badge po-${(po.status || 'Issued').toLowerCase()}`}>
+                              {po.status || 'Issued'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              ) : (
+                /* Returns Table */
+                <table className="reports-data-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '16%' }}>Return Ref</th>
+                      <th style={{ width: '15%' }}>Date</th>
+                      <th style={{ width: '20%' }}>Customer</th>
+                      <th style={{ width: '16%' }}>Order ID</th>
+                      <th style={{ width: '20%' }}>Return Reason</th>
+                      <th style={{ width: '13%' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDrillDownData.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" className="empty-table-row">No matching return records found.</td>
+                      </tr>
+                    ) : (
+                      filteredDrillDownData.slice((drillPage - 1) * itemsPerPage, drillPage * itemsPerPage).map((r) => (
+                        <tr key={r.id || r.returnNo}>
+                          <td><strong>{r.returnNo || `RET-${r.id}`}</strong></td>
+                          <td>{new Date(r.requestDate || r.date || r.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                          <td>{r.customerName || r.customer || 'Unknown'}</td>
+                          <td><code>{formatOrderId(r.orderId)}</code></td>
+                          <td>{r.reason || 'Hardware Defect'}</td>
+                          <td>
+                            <span className={`mini-badge return-${(r.status || 'In Review').toLowerCase().replace(/\s+/g, '-')}`}>
+                              {r.status || 'In Review'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               )}
-              <Pagination
-                currentPage={drillPage}
-                totalPages={Math.ceil(filteredDrillDownData.length / itemsPerPage)}
-                onPageChange={setDrillPage}
-                totalItems={filteredDrillDownData.length}
-                itemsPerPage={itemsPerPage}
-              />
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-              <button className="reports-btn secondary" onClick={() => setDrillDownModal({ ...drillDownModal, isOpen: false })}>
+            <div className="reports-modal-footer">
+              <div style={{ flex: '1 1 auto' }}>
+                {filteredDrillDownData.length > itemsPerPage && (
+                  <Pagination
+                    currentPage={drillPage}
+                    totalPages={Math.ceil(filteredDrillDownData.length / itemsPerPage)}
+                    onPageChange={setDrillPage}
+                    totalItems={filteredDrillDownData.length}
+                    itemsPerPage={itemsPerPage}
+                  />
+                )}
+              </div>
+              <button 
+                type="button" 
+                className="btn-reports-secondary" 
+                onClick={() => setDrillDownModal({ ...drillDownModal, isOpen: false })}
+              >
                 Close
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Settings Modal */}
-      {showSettingsModal && (
+      {showSettingsModal && createPortal(
         <div className="reports-modal-overlay" onClick={() => setShowSettingsModal(false)}>
           <div className="reports-modal-content" onClick={(e) => e.stopPropagation()}>
-            <h2>Report Settings</h2>
-            <p>Customize thresholds and configurations for your analytical reports.</p>
+            <div className="reports-modal-header">
+              <h2>Report Settings &amp; Configuration</h2>
+              <button className="reports-modal-close" onClick={() => setShowSettingsModal(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <p className="modal-description">Customize threshold alerts and currency format for your analytics reports.</p>
             <form onSubmit={handleSaveSettings}>
               <div className="reports-form-group">
-                <label htmlFor="lowStockAlertLimit">Low Stock Alert Limit</label>
+                <label htmlFor="lowStockAlertLimit">Low Stock Warning Limit (Units)</label>
                 <input
                   id="lowStockAlertLimit"
                   type="number"
@@ -1486,7 +2118,7 @@ const ReportsScreen = () => {
                 />
               </div>
               <div className="reports-form-group">
-                <label htmlFor="defaultCurrency">Default Currency</label>
+                <label htmlFor="defaultCurrency">Default Currency Format</label>
                 <select
                   id="defaultCurrency"
                   value={settings.defaultCurrency || 'INR'}
@@ -1503,16 +2135,16 @@ const ReportsScreen = () => {
                   Cancel
                 </button>
                 <button type="submit" className="reports-btn primary" disabled={isSavingSettings}>
-                  {isSavingSettings ? 'Updating...' : 'Update Settings'}
+                  {isSavingSettings ? 'Updating...' : 'Save Settings'}
                 </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
 };
 
 export default ReportsScreen;
-

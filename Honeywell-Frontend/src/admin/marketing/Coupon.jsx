@@ -8,41 +8,48 @@ import {
   RotateCcw,
   Save,
   ShieldCheck,
-  Tag
+  Tag,
+  Sparkles,
+  ShoppingBag,
+  Layers,
+  ChevronRight
 } from 'lucide-react';
-import '../catalog/adminModule.css';
 import { createCoupon } from './api';
 import { formatDateDMY } from './CouponsList';
 import { Toast } from '../components/Toast';
+import './coupons.css';
 
 const initialCoupon = {
-  code: 'MONSOON20',
-  description: '20% off on all organic seeds and seedlings',
+  code: 'SUMMER20',
+  description: 'Special seasonal promotion across all product collections',
   discount: '20',
   type: 'Percentage',
   minSpend: '1500',
   maxDiscount: '500',
-  startDate: '2026-06-01',
-  endDate: '2026-08-31',
+  startDate: new Date().toISOString().split('T')[0],
+  endDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
   usageLimit: '500',
   perCustomerLimit: '1',
   status: 'Active',
   audience: 'All Customers'
 };
 
-const formatCurrency = (amount) => `INR ${Number(amount || 0).toLocaleString('en-IN')}`;
+const formatCurrency = (amount) => {
+  if (amount === undefined || amount === null || amount === '') return '₹0';
+  const num = Number(String(amount).replace(/[^0-9.-]+/g, '')) || 0;
+  return `₹${num.toLocaleString('en-IN')}`;
+};
 
 const Coupon = () => {
   const [formData, setFormData] = useState(initialCoupon);
   const [isSaving, setIsSaving] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('success');
+  const [toast, setToast] = useState(null);
   const navigate = useNavigate();
 
   const previewDiscount = React.useMemo(() => {
-    if (formData.type === 'Percentage') return `${formData.discount || 0}%`;
-    if (formData.type === 'Shipping') return 'Free Delivery';
-    return formatCurrency(formData.discount);
+    if (formData.type === 'Percentage') return `${formData.discount || 0}% OFF`;
+    if (formData.type === 'Shipping') return 'FREE SHIPPING';
+    return `${formatCurrency(formData.discount)} OFF`;
   }, [formData.discount, formData.type]);
 
   const handleInputChange = (event) => {
@@ -54,176 +61,413 @@ const Coupon = () => {
     setFormData(initialCoupon);
   };
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setIsSaving(true);
     try {
       await createCoupon(formData);
-      setToastMessage('Coupon campaign created successfully!');
-      setToastType('success');
+      showToast('Coupon campaign created successfully!', 'success');
       setTimeout(() => {
         navigate('/admin/marketing/coupons');
       }, 1000);
     } catch (err) {
-      setToastMessage('Failed to create coupon. Please check details.');
-      setToastType('error');
+      showToast('Failed to create coupon. Please check details.', 'error');
       setIsSaving(false);
     }
   };
 
   return (
-    <div className="coupons-page coupon-form-page" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      {toastMessage && (
-        <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
+    <div className="coupons-mgmt-container">
+      {toast && (
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
 
-      {/* Top Header Row with Actions in Top-Right */}
-      <section className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div className="flex items-center gap-3">
-          <Link className="p-2 hover:bg-slate-50 text-slate-600 rounded-lg transition-colors border border-slate-200" to="/admin/marketing/coupons">
+      {/* ── Top Header Card ── */}
+      <section className="coupons-header-card">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <Link
+            className="btn-coupons-secondary"
+            style={{ padding: '8px 12px' }}
+            to="/admin/marketing/coupons"
+            title="Back to coupons list"
+          >
             <ArrowLeft size={16} />
           </Link>
-          <div>
-            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', color: '#1268a5', fontWeight: 700 }}>Marketing Campaign</span>
-            <h1 style={{ fontSize: '18px', fontWeight: 800, color: '#1e293b', margin: 0 }}>Create Coupon</h1>
+          <div className="coupons-title-wrap">
+            <span className="coupons-kicker">
+              <Sparkles size={13} /> Marketing &amp; Campaigns
+            </span>
+            <h1>Create New Coupon</h1>
+            <p>Define voucher code, discount algorithms, cart constraints, and redemption limits.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button className="catalog-btn" type="button" onClick={handleReset} disabled={isSaving} style={{ fontSize: '11px', padding: '6px 12px' }}>
-            <RotateCcw size={14} style={{ marginRight: '4px' }} />
+        <div className="coupons-header-actions">
+          <button
+            className="btn-coupons-secondary"
+            type="button"
+            onClick={handleReset}
+            disabled={isSaving}
+          >
+            <RotateCcw size={14} />
             Reset
           </button>
-          <button className="catalog-btn catalog-btn--primary" onClick={handleSubmit} disabled={isSaving} style={{ fontSize: '11px', padding: '6px 12px' }}>
-            <Save size={14} style={{ marginRight: '4px' }} />
-            {isSaving ? 'Saving...' : 'Save Coupon'}
+          <button
+            className="btn-coupons-primary"
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSaving}
+          >
+            <Save size={15} />
+            {isSaving ? 'Creating...' : 'Save Campaign'}
           </button>
         </div>
       </section>
 
-      {/* Form and Preview Layout side-by-side */}
-      <form onSubmit={handleSubmit} className="coupon-form-layout" style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '16px', alignItems: 'start' }}>
-        <main className="catalog-stack" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Campaign Details */}
-          <section className="catalog-card" style={{ padding: '16px', margin: 0 }}>
-            <div className="catalog-card__header" style={{ marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#334155', margin: 0 }}>Campaign Details</h2>
-              <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>The customer-facing code, message, and discount type.</p>
+      {/* ── Form & Preview Layout ── */}
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1.6fr 1fr',
+          gap: '20px',
+          alignItems: 'start'
+        }}
+      >
+        {/* Left Column: Form Cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Card 1: Campaign Details */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              padding: '20px',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
+            }}
+          >
+            <div style={{ marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+              <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Campaign Details
+              </h2>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
+                Customer-facing promo code and primary discount method.
+              </p>
             </div>
-            <div className="catalog-form-grid" style={{ gap: '12px' }}>
-              <div className="catalog-field">
-                <label htmlFor="code">Coupon Code</label>
-                <input id="code" name="code" value={formData.code} onChange={handleInputChange} placeholder="MONSOON20" required style={{ padding: '6px 10px', fontSize: '12px' }} />
+
+            <div className="coupon-form-grid-2">
+              <div className="coupon-input-group">
+                <label htmlFor="code">Coupon Code *</label>
+                <input
+                  id="code"
+                  name="code"
+                  value={formData.code}
+                  onChange={handleInputChange}
+                  placeholder="e.g. MONSOON20"
+                  required
+                />
               </div>
-              <div className="catalog-field">
-                <label htmlFor="type">Discount Type</label>
-                <select id="type" name="type" value={formData.type} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }}>
-                  <option value="Percentage">Percentage</option>
-                  <option value="Flat Amount">Flat Amount</option>
+              <div className="coupon-input-group">
+                <label htmlFor="type">Discount Type *</label>
+                <select id="type" name="type" value={formData.type} onChange={handleInputChange}>
+                  <option value="Percentage">Percentage (% Discount)</option>
+                  <option value="Flat Amount">Flat Amount (Fixed ₹)</option>
                   <option value="Shipping">Free Delivery</option>
                 </select>
               </div>
-              <div className="catalog-field catalog-field--full">
-                <label htmlFor="description">Description</label>
-                <textarea id="description" name="description" rows={2} value={formData.description} onChange={handleInputChange} required style={{ padding: '6px 10px', fontSize: '12px', resize: 'none' }} />
-              </div>
             </div>
-          </section>
 
-          {/* Discount Rules */}
-          <section className="catalog-card" style={{ padding: '16px', margin: 0 }}>
-            <div className="catalog-card__header" style={{ marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#334155', margin: 0 }}>Discount Rules</h2>
-              <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>Control offer value, eligibility, caps, and usage limits.</p>
+            <div className="coupon-input-group" style={{ marginTop: '14px' }}>
+              <label htmlFor="description">Campaign Description *</label>
+              <textarea
+                id="description"
+                name="description"
+                rows={2}
+                value={formData.description}
+                onChange={handleInputChange}
+                required
+                placeholder="Explain the offer terms shown to users..."
+                style={{ resize: 'none' }}
+              />
             </div>
-            <div className="catalog-form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-              <div className="catalog-field">
-                <label htmlFor="discount">Discount Value</label>
-                <input id="discount" name="discount" type="number" value={formData.discount} onChange={handleInputChange} disabled={formData.type === 'Shipping'} required={formData.type !== 'Shipping'} style={{ padding: '6px 10px', fontSize: '12px' }} />
-              </div>
-              <div className="catalog-field">
-                <label htmlFor="maxDiscount">Max Discount Cap</label>
-                <input id="maxDiscount" name="maxDiscount" type="number" value={formData.maxDiscount} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }} />
-              </div>
-              <div className="catalog-field">
-                <label htmlFor="minSpend">Min Cart Value</label>
-                <input id="minSpend" name="minSpend" type="number" value={formData.minSpend} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }} />
-              </div>
-              <div className="catalog-field">
-                <label htmlFor="usageLimit">Usage Limit</label>
-                <input id="usageLimit" name="usageLimit" type="number" value={formData.usageLimit} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }} />
-              </div>
-              <div className="catalog-field">
-                <label htmlFor="perCustomerLimit">Customer Limit</label>
-                <input id="perCustomerLimit" name="perCustomerLimit" type="number" value={formData.perCustomerLimit} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }} />
-              </div>
-            </div>
-          </section>
+          </div>
 
-          {/* Validity & Audience */}
-          <section className="catalog-card" style={{ padding: '16px', margin: 0 }}>
-            <div className="catalog-card__header" style={{ marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#334155', margin: 0 }}>Validity &amp; Audience</h2>
-              <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>Set campaign dates and target audience.</p>
+          {/* Card 2: Discount Rules & Limits */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              padding: '20px',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
+            }}
+          >
+            <div style={{ marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+              <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Discount Rules &amp; Cart Thresholds
+              </h2>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
+                Configure minimum cart values, maximum caps, and usage limits.
+              </p>
             </div>
-            <div className="catalog-form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-              <div className="catalog-field">
+
+            <div className="coupon-form-grid-3">
+              <div className="coupon-input-group">
+                <label htmlFor="discount">
+                  {formData.type === 'Percentage' ? 'Discount % *' : 'Discount ₹ *'}
+                </label>
+                <input
+                  id="discount"
+                  name="discount"
+                  type="number"
+                  value={formData.discount}
+                  onChange={handleInputChange}
+                  disabled={formData.type === 'Shipping'}
+                  required={formData.type !== 'Shipping'}
+                  min="0"
+                />
+              </div>
+              <div className="coupon-input-group">
+                <label htmlFor="maxDiscount">Max Cap (₹)</label>
+                <input
+                  id="maxDiscount"
+                  name="maxDiscount"
+                  type="number"
+                  value={formData.maxDiscount}
+                  onChange={handleInputChange}
+                  placeholder="Optional"
+                  min="0"
+                />
+              </div>
+              <div className="coupon-input-group">
+                <label htmlFor="minSpend">Min Cart (₹)</label>
+                <input
+                  id="minSpend"
+                  name="minSpend"
+                  type="number"
+                  value={formData.minSpend}
+                  onChange={handleInputChange}
+                  placeholder="0"
+                  min="0"
+                />
+              </div>
+            </div>
+
+            <div className="coupon-form-grid-2" style={{ marginTop: '14px' }}>
+              <div className="coupon-input-group">
+                <label htmlFor="usageLimit">Total Global Usage Limit</label>
+                <input
+                  id="usageLimit"
+                  name="usageLimit"
+                  type="number"
+                  value={formData.usageLimit}
+                  onChange={handleInputChange}
+                  placeholder="0 for unlimited"
+                  min="0"
+                />
+              </div>
+              <div className="coupon-input-group">
+                <label htmlFor="perCustomerLimit">Limit Per Customer</label>
+                <input
+                  id="perCustomerLimit"
+                  name="perCustomerLimit"
+                  type="number"
+                  value={formData.perCustomerLimit}
+                  onChange={handleInputChange}
+                  placeholder="1"
+                  min="1"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Schedule & Audience */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              padding: '20px',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
+            }}
+          >
+            <div style={{ marginBottom: '16px', borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+              <h2 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Schedule &amp; Target Audience
+              </h2>
+              <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0 0' }}>
+                Set active date window and audience segmentation.
+              </p>
+            </div>
+
+            <div className="coupon-form-grid-2">
+              <div className="coupon-input-group">
                 <label htmlFor="startDate">Start Date</label>
-                <input id="startDate" name="startDate" type="date" value={formData.startDate} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }} />
+                <input
+                  id="startDate"
+                  name="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={handleInputChange}
+                />
               </div>
-              <div className="catalog-field">
+              <div className="coupon-input-group">
                 <label htmlFor="endDate">End Date</label>
-                <input id="endDate" name="endDate" type="date" value={formData.endDate} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }} />
+                <input
+                  id="endDate"
+                  name="endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={handleInputChange}
+                />
               </div>
-              <div className="catalog-field">
-                <label htmlFor="status">Status</label>
-                <select id="status" name="status" value={formData.status} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }}>
+            </div>
+
+            <div className="coupon-form-grid-2" style={{ marginTop: '14px' }}>
+              <div className="coupon-input-group">
+                <label htmlFor="status">Initial Status</label>
+                <select id="status" name="status" value={formData.status} onChange={handleInputChange}>
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                   <option value="Expired">Expired</option>
                 </select>
               </div>
-              <div className="catalog-field">
-                <label htmlFor="audience">Audience</label>
-                <select id="audience" name="audience" value={formData.audience} onChange={handleInputChange} style={{ padding: '6px 10px', fontSize: '12px' }}>
+              <div className="coupon-input-group">
+                <label htmlFor="audience">Target Audience</label>
+                <select id="audience" name="audience" value={formData.audience} onChange={handleInputChange}>
                   <option value="All Customers">All Customers</option>
-                  <option value="New Customers">New Customers</option>
+                  <option value="New Customers">New Customers Only</option>
                   <option value="Returning Customers">Returning Customers</option>
-                  <option value="High Value Customers">High Value Customers</option>
+                  <option value="High Value Customers">High Value Customers (VIP)</option>
                 </select>
               </div>
             </div>
-          </section>
-        </main>
+          </div>
+        </div>
 
-        <aside className="catalog-stack" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Live Preview */}
-          <section className="catalog-card" style={{ padding: '16px', margin: 0 }}>
-            <div className="catalog-card__header" style={{ marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#334155', margin: 0 }}>Live Preview</h2>
-              <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>How the campaign reads at checkout.</p>
+        {/* Right Column: Live Preview & Summary Checklist */}
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Live Preview Card */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              padding: '20px',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
+            }}
+          >
+            <div style={{ marginBottom: '14px' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Live Checkout Preview
+              </h2>
+              <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
+                How customers see this voucher during checkout.
+              </p>
             </div>
-            <div className="coupon-preview-card" style={{ padding: '16px', border: '2px dashed #1268a5', borderRadius: '12px', backgroundColor: '#eaf4fb', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', textAlign: 'center' }}>
-              <Tag size={28} style={{ color: '#1268a5' }} />
-              <span style={{ fontSize: '15px', fontWeight: 800, color: '#102735', letterSpacing: '0.05em' }}>{formData.code || 'COUPON'}</span>
-              <strong style={{ fontSize: '24px', fontWeight: 900, color: '#1268a5' }}>{previewDiscount}</strong>
-              <p style={{ fontSize: '11px', color: '#64748b', margin: 0 }}>{formData.description || 'Coupon description will appear here.'}</p>
-            </div>
-          </section>
 
-          {/* Rule Summary */}
-          <section className="catalog-card" style={{ padding: '16px', margin: 0 }}>
-            <div className="catalog-card__header" style={{ marginBottom: '12px' }}>
-              <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#334155', margin: 0 }}>Rule Summary</h2>
-              <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>Quick operational checklist.</p>
+            <div
+              style={{
+                padding: '20px',
+                border: '2px dashed #1268a5',
+                borderRadius: '12px',
+                backgroundColor: '#f0f7fc',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '10px',
+                textAlign: 'center'
+              }}
+            >
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 6px rgba(18, 104, 165, 0.15)'
+                }}
+              >
+                <Tag size={24} color="#1268a5" />
+              </div>
+              <span
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: '16px',
+                  fontWeight: 900,
+                  color: '#0f172a',
+                  letterSpacing: '0.08em',
+                  background: '#ffffff',
+                  padding: '4px 14px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1'
+                }}
+              >
+                {formData.code || 'CODE'}
+              </span>
+              <strong style={{ fontSize: '26px', fontWeight: 900, color: '#1268a5' }}>
+                {previewDiscount}
+              </strong>
+              <p style={{ fontSize: '12px', color: '#475569', margin: 0, lineHeight: 1.4 }}>
+                {formData.description || 'Coupon description preview.'}
+              </p>
             </div>
-            <div className="coupon-summary-list" style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '11px', color: '#475569' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Percent size={15} style={{ color: '#1268a5' }} /> <span>{previewDiscount} discount type: {formData.type}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ShieldCheck size={15} style={{ color: '#1268a5' }} /> <span>Min cart {formatCurrency(formData.minSpend)}, cap {formatCurrency(formData.maxDiscount)}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Calendar size={15} style={{ color: '#1268a5' }} /> <span>{formatDateDMY(formData.startDate)} to {formatDateDMY(formData.endDate)}</span></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><ClipboardList size={15} style={{ color: '#1268a5' }} /> <span>{formData.usageLimit} total uses, {formData.perCustomerLimit} per customer</span></div>
+          </div>
+
+          {/* Operational Checklist */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #e2e8f0',
+              padding: '20px',
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
+            }}
+          >
+            <div style={{ marginBottom: '14px' }}>
+              <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Rule Summary Checklist
+              </h2>
+              <p style={{ fontSize: '11.5px', color: '#64748b', margin: '2px 0 0 0' }}>
+                Operational policy overview.
+              </p>
             </div>
-          </section>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '12.5px', color: '#334155' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Percent size={16} color="#1268a5" />
+                <span>
+                  <strong>{previewDiscount}</strong> ({formData.type})
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldCheck size={16} color="#1268a5" />
+                <span>
+                  Min Cart: <strong>{formatCurrency(formData.minSpend)}</strong> · Cap:{' '}
+                  <strong>{formData.maxDiscount ? formatCurrency(formData.maxDiscount) : 'None'}</strong>
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Calendar size={16} color="#1268a5" />
+                <span>
+                  {formatDateDMY(formData.startDate)} → {formatDateDMY(formData.endDate)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ClipboardList size={16} color="#1268a5" />
+                <span>
+                  {formData.usageLimit || '∞'} total uses · {formData.perCustomerLimit} per user
+                </span>
+              </div>
+            </div>
+          </div>
         </aside>
       </form>
     </div>
@@ -231,4 +475,3 @@ const Coupon = () => {
 };
 
 export default Coupon;
-

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { 
@@ -13,9 +13,14 @@ import {
   UserPlus, 
   Users as UsersIcon, 
   ShieldCheck, 
-  Layers
+  Layers,
+  Phone,
+  Mail,
+  Filter,
+  CheckCircle2
 } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
+import { Pagination } from '../components/ActionButtons';
 import './Users.css';
 
 const API_BASE = `${getApiDomain()}/api/Auth`;
@@ -49,7 +54,12 @@ const Users = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [scopeFilter, setScopeFilter] = useState('all'); // 'all', 'full', 'custom'
   
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Permission management modal state
   const [selectedUser, setSelectedUser] = useState(null);
   const [userPerms, setUserPerms] = useState({});
@@ -89,8 +99,8 @@ const Users = () => {
           ...u,
           id: u.id || u.Id || u.email,
           email: userEmail || '',
-          name: u.name || u.Name || 'N/A',
-          phoneNumber: u.phoneNumber || u.Phone || u.mobile || 'N/A',
+          name: u.fullName || u.name || u.Name || 'N/A',
+          phoneNumber: u.mobileNumber || u.phoneNumber || u.Phone || u.mobile || 'N/A',
           permissions: Array.isArray(perms) && perms.length > 0 ? perms : DEFAULT_USER_PERMISSIONS
         };
       }));
@@ -107,7 +117,7 @@ const Users = () => {
   const deleteUser = async (user) => {
     const identifier = user.email || user.id;
     if (!identifier) return;
-    if (!window.confirm(`Are you sure you want to delete user ${user.name || identifier}?`)) return;
+    if (!window.confirm(`Are you sure you want to delete user "${user.name || identifier}"?`)) return;
     
     try {
       await axios.delete(`${API_BASE}/users/${encodeURIComponent(identifier)}`, {
@@ -182,9 +192,12 @@ const Users = () => {
     try {
       const payload = {
         name: newUser.name,
+        fullName: newUser.name,
         email: newUser.email,
         phoneNumber: newUser.phoneNumber,
+        mobileNumber: newUser.phoneNumber,
         password: newUser.password || 'User@123',
+        role: 'Admin',
         permissions: DEFAULT_USER_PERMISSIONS
       };
       await axios.post(`${API_BASE}/users`, payload, {
@@ -206,14 +219,36 @@ const Users = () => {
     fetchUsers();
   }, []);
 
-  const filteredUsers = users.filter(user => {
-    const query = searchTerm.toLowerCase();
-    const name = (user.name || '').toLowerCase();
-    const email = (user.email || '').toLowerCase();
-    const phone = (user.phoneNumber || '').toLowerCase();
-    const id = String(user.id || '').toLowerCase();
-    return name.includes(query) || email.includes(query) || phone.includes(query) || id.includes(query);
-  });
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const query = searchTerm.toLowerCase().trim();
+      const name = (user.name || '').toLowerCase();
+      const email = (user.email || '').toLowerCase();
+      const phone = (user.phoneNumber || '').toLowerCase();
+      const id = String(user.id || '').toLowerCase();
+      
+      const matchesSearch = !query || name.includes(query) || email.includes(query) || phone.includes(query) || id.includes(query);
+      if (!matchesSearch) return false;
+
+      const permCount = user.permissions ? user.permissions.length : ALL_PERMISSION_MODULES.length;
+      const isFullAccess = permCount === ALL_PERMISSION_MODULES.length;
+
+      if (scopeFilter === 'full') return isFullAccess;
+      if (scopeFilter === 'custom') return !isFullAccess;
+      return true;
+    });
+  }, [users, searchTerm, scopeFilter]);
+
+  // Pagination logic
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, scopeFilter]);
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage) || 1;
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredUsers.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredUsers, currentPage, itemsPerPage]);
 
   const fullAccessCount = users.filter(u => u.permissions && u.permissions.length === ALL_PERMISSION_MODULES.length).length;
 
@@ -222,31 +257,37 @@ const Users = () => {
       {/* Page Header */}
       <div className="users-header">
         <div className="users-title">
+          <div className="users-title-badge">ADMINISTRATION & CUSTOMERS</div>
           <h1>User Management</h1>
-          <p>View registered system users, register staff, and manage granular module access control.</p>
+          <p>View registered system users, register admin/staff members, and manage granular module access controls.</p>
         </div>
         <div className="users-header-actions">
-          <button 
-            onClick={() => setShowAddUserModal(true)}
-            className="btn-users-primary"
-          >
-            <UserPlus size={18} />
-            Add New User
-          </button>
           <button 
             onClick={fetchUsers} 
             className="btn-users-secondary"
             disabled={isLoading}
+            type="button"
+            title="Refresh users list"
           >
-            <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-            Refresh
+            <RefreshCw size={15} className={isLoading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
+          </button>
+          <button 
+            onClick={() => setShowAddUserModal(true)}
+            className="btn-users-primary"
+            type="button"
+            title="Add new admin or staff user"
+          >
+            <UserPlus size={16} />
+            <span>Add New User</span>
           </button>
         </div>
       </div>
 
       {error && (
-        <div style={{ padding: '14px 18px', background: '#fef2f2', color: '#dc2626', borderRadius: '12px', marginBottom: '24px', border: '1px solid #fee2e2', fontWeight: 600, fontSize: '14px' }}>
-          {error}
+        <div className="users-error-alert">
+          <span>{error}</span>
+          <button onClick={fetchUsers} className="btn-error-retry">Retry</button>
         </div>
       )}
 
@@ -254,7 +295,7 @@ const Users = () => {
       <div className="users-stats-grid">
         <div className="users-stat-card">
           <div className="users-stat-info">
-            <label>Total Registered Users</label>
+            <label>Total Users</label>
             <span>{users.length}</span>
           </div>
           <div className="users-stat-icon blue">
@@ -274,7 +315,7 @@ const Users = () => {
 
         <div className="users-stat-card">
           <div className="users-stat-info">
-            <label>Custom Module Scopes</label>
+            <label>Custom Scopes</label>
             <span>{users.length - fullAccessCount}</span>
           </div>
           <div className="users-stat-icon amber">
@@ -284,7 +325,7 @@ const Users = () => {
 
         <div className="users-stat-card">
           <div className="users-stat-info">
-            <label>Total Modules Scope</label>
+            <label>Total Modules</label>
             <span>{ALL_PERMISSION_MODULES.length}</span>
           </div>
           <div className="users-stat-icon purple">
@@ -295,101 +336,177 @@ const Users = () => {
 
       {/* Controls Bar */}
       <div className="users-controls">
-        <div className="users-search-wrap">
-          <Search size={18} className="users-search-icon" />
-          <input 
-            type="text"
-            placeholder="Search users by name, email, phone or ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="users-search-input"
-          />
+        <div className="users-controls-left">
+          <div className="users-search-wrap">
+            <Search size={18} className="users-search-icon" />
+            <input 
+              type="text"
+              placeholder="Search by name, email, phone or ID..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="users-search-input"
+            />
+            {searchTerm && (
+              <button 
+                type="button" 
+                onClick={() => setSearchTerm('')} 
+                className="users-search-clear"
+                title="Clear Search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="users-filter-dropdown-wrap">
+            <Filter size={15} className="users-filter-icon" />
+            <select
+              value={scopeFilter}
+              onChange={(e) => setScopeFilter(e.target.value)}
+              className="users-filter-select"
+            >
+              <option value="all">All Access Scopes</option>
+              <option value="full">Full Access Only</option>
+              <option value="custom">Custom Scopes Only</option>
+            </select>
+          </div>
         </div>
+
         <div className="users-filter-count">
-          Showing {filteredUsers.length} of {users.length} users
+          Showing <strong>{filteredUsers.length}</strong> of <strong>{users.length}</strong> users
         </div>
       </div>
 
-      {/* Users Table Card */}
+      {/* Users Table Card with Responsive Scroll Wrapper */}
       <div className="users-table-card">
-        <table className="users-table">
-          <thead>
-            <tr>
-              <th>User ID</th>
-              <th>User Details</th>
-              <th>Contact Info</th>
-              <th>Active Scope</th>
-              <th>Status</th>
-              <th style={{ textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.length > 0 ? (
-              filteredUsers.map((user) => {
-                const initial = (user.name && user.name !== 'N/A') ? user.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U');
-                const permCount = user.permissions ? user.permissions.length : ALL_PERMISSION_MODULES.length;
-                return (
-                  <tr key={user.id}>
-                    <td>
-                      <span className="user-id-badge">#{String(user.id).slice(0, 14)}</span>
-                    </td>
-                    <td>
-                      <div className="user-info-cell">
-                        <div className="user-avatar-circle">
-                          {initial}
-                        </div>
-                        <div>
-                          <span className="user-name-text">{user.name || 'User'}</span>
-                          <span className="user-contact-email">{user.email || 'No email attached'}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <div className="user-contact-phone">{user.phoneNumber || 'N/A'}</div>
-                    </td>
-                    <td>
-                      <span className="user-scope-badge">
-                        <Shield size={12} />
-                        {permCount} / {ALL_PERMISSION_MODULES.length} Granted
-                      </span>
-                    </td>
-                    <td>
-                      <span className="user-status-active">
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }}></span>
-                        Active
-                      </span>
-                    </td>
-                    <td>
-                      <div className="user-actions">
-                        <button 
-                          onClick={() => openPermissionModal(user)}
-                          className="btn-manage-perms"
-                          title="Configure Module Access Permissions"
-                        >
-                          <Shield size={14} />
-                          Manage Scope
-                        </button>
-                        <button 
-                          onClick={() => deleteUser(user)}
-                          className="btn-delete-user"
-                          title="Delete User Account"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
+        <div className="users-table-wrapper">
+          <table className="users-table">
+            <thead>
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '48px 24px', color: '#94a3b8' }}>
-                  {isLoading ? 'Loading registered users...' : (searchTerm ? 'No users matching search query.' : 'No registered users found.')}
-                </td>
+                <th className="th-id">User ID</th>
+                <th className="th-user">User Details</th>
+                <th className="th-contact">Contact Info</th>
+                <th className="th-scope">Active Scope</th>
+                <th className="th-status">Status</th>
+                <th className="th-actions">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {paginatedUsers.length > 0 ? (
+                paginatedUsers.map((user) => {
+                  const initial = (user.name && user.name !== 'N/A') ? user.name.charAt(0).toUpperCase() : (user.email ? user.email.charAt(0).toUpperCase() : 'U');
+                  const permCount = user.permissions ? user.permissions.length : ALL_PERMISSION_MODULES.length;
+                  const isFullAccess = permCount === ALL_PERMISSION_MODULES.length;
+                  const rawId = String(user.id || user.email || 'N/A');
+                  const displayId = rawId.length > 18 ? `${rawId.slice(0, 16)}…` : rawId;
+
+                  return (
+                    <tr key={user.id || user.email}>
+                      <td>
+                        <span className="user-id-badge" title={`Full ID: ${rawId}`}>
+                          #{displayId}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="user-info-cell">
+                          <div className="user-avatar-circle">
+                            {initial}
+                          </div>
+                          <div className="user-info-text">
+                            <span className="user-name-text" title={user.name || 'User'}>
+                              {user.name || 'User'}
+                            </span>
+                            <span className="user-contact-email" title={user.email || 'No email attached'}>
+                              <Mail size={12} className="user-inline-icon" />
+                              {user.email || 'No email attached'}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="user-contact-phone">
+                          <Phone size={13} className="user-inline-icon" />
+                          <span>{user.phoneNumber && user.phoneNumber !== 'N/A' ? user.phoneNumber : 'Not provided'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className={`user-scope-badge ${isFullAccess ? 'scope-full' : 'scope-custom'}`}>
+                          <Shield size={13} />
+                          {isFullAccess ? (
+                            `Full Access (${permCount}/${ALL_PERMISSION_MODULES.length})`
+                          ) : (
+                            `${permCount} of ${ALL_PERMISSION_MODULES.length} Granted`
+                          )}
+                        </span>
+                      </td>
+                      <td>
+                        <span className="user-status-active">
+                          <span className="user-status-dot"></span>
+                          Active
+                        </span>
+                      </td>
+                      <td>
+                        <div className="user-actions">
+                          <button 
+                            type="button"
+                            onClick={() => openPermissionModal(user)}
+                            className="btn-manage-perms"
+                            title="Configure Module Access Permissions"
+                          >
+                            <Shield size={14} />
+                            <span>Manage Scope</span>
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={() => deleteUser(user)}
+                            className="btn-delete-user"
+                            title="Delete User Account"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="6" className="users-empty-cell">
+                    {isLoading ? (
+                      <div className="users-loading-state">
+                        <RefreshCw size={24} className="animate-spin" />
+                        <span>Loading registered users...</span>
+                      </div>
+                    ) : (
+                      <div className="users-empty-state">
+                        <UsersIcon size={40} className="users-empty-icon" />
+                        <p className="users-empty-title">
+                          {searchTerm || scopeFilter !== 'all' ? 'No users matching your filters' : 'No registered users found'}
+                        </p>
+                        <p className="users-empty-sub">
+                          {searchTerm || scopeFilter !== 'all' ? 'Try adjusting your search term or access scope filter.' : 'Click "Add New User" to register a staff or administrator.'}
+                        </p>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination Controls */}
+        {filteredUsers.length > 0 && (
+          <div className="users-pagination-bar">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredUsers.length}
+              itemsPerPage={itemsPerPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Add User Modal */}

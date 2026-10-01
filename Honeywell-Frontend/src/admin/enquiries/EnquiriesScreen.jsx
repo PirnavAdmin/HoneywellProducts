@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, Eye, Edit3, Trash2, Plus, X, 
-  HelpCircle, Clock, CheckCircle, RefreshCw, Mail, Phone, Building, Calendar, Package
+  HelpCircle, Clock, CheckCircle, RefreshCw, Mail, Phone, 
+  Building, Calendar, Package, MessageSquare, Filter, RotateCcw,
+  Sparkles, CheckCircle2, AlertCircle, ShieldAlert, ArrowUpRight
 } from 'lucide-react';
 import { getEnquiries, getEnquiryById, createEnquiry, updateEnquiry, deleteEnquiry } from '../api/enquiries';
+import { Pagination } from '../components/ActionButtons';
+import { Toast } from '../components/Toast';
 import './EnquiriesScreen.css';
 
 const statusConfig = {
@@ -13,15 +18,65 @@ const statusConfig = {
   Closed: { label: 'Closed', class: 'closed', icon: X }
 };
 
+const typeBadgeConfig = {
+  'Product Enquiry': { label: 'Product', class: 'type-product' },
+  'Sales Enquiry': { label: 'Sales', class: 'type-sales' },
+  'Dealer Enquiry': { label: 'Dealer', class: 'type-dealer' },
+  'Distributor Enquiry': { label: 'Distributor', class: 'type-distributor' },
+  'Support Enquiry': { label: 'Support', class: 'type-support' }
+};
+
+const formatDateToDMY = (dateInput) => {
+  if (!dateInput) return '-';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return String(dateInput);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-IN', { month: 'short' });
+  const year = d.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
+const formatDateTimeToDMY = (dateInput) => {
+  if (!dateInput) return '-';
+  const d = new Date(dateInput);
+  if (isNaN(d.getTime())) return String(dateInput);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = d.toLocaleString('en-IN', { month: 'short' });
+  const year = d.getFullYear();
+  let hours = d.getHours();
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${day} ${month} ${year}, ${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+};
+
+const getInitials = (name) => {
+  if (!name) return 'CU';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 export default function EnquiriesScreen() {
   const [enquiries, setEnquiries] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [toast, setToast] = useState(null);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [typeFilter, setTypeFilter] = useState('All');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  // Reset pagination on filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, typeFilter]);
 
   // Modals
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
@@ -29,6 +84,7 @@ export default function EnquiriesScreen() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -42,16 +98,23 @@ export default function EnquiriesScreen() {
     status: 'Pending'
   });
 
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
   // Load enquiries from live API
   const loadEnquiries = async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     setError(null);
     try {
       const data = await getEnquiries();
-      setEnquiries(data);
+      setEnquiries(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load enquiries:', err);
-      if (!isBackground) setError('Could not connect to live enquiries endpoint. Please try again.');
+      if (!isBackground) {
+        setError('Could not connect to live enquiries endpoint. Please check network connection.');
+        showToast('Failed to load enquiries.', 'error');
+      }
     } finally {
       if (!isBackground) setLoading(false);
     }
@@ -65,7 +128,7 @@ export default function EnquiriesScreen() {
     window.addEventListener('focus', handleUpdate);
     window.addEventListener('sat_enquiries_updated', handleUpdate);
 
-    const interval = setInterval(() => loadEnquiries(true), 5000);
+    const interval = setInterval(() => loadEnquiries(true), 8000);
 
     return () => {
       window.removeEventListener('storage', handleUpdate);
@@ -78,15 +141,22 @@ export default function EnquiriesScreen() {
   // Filtered Enquiries
   const filteredEnquiries = useMemo(() => {
     return enquiries.filter((item) => {
-      const matchesSearch = 
-        (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.mobile || '').includes(searchTerm) ||
-        (item.company || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.productName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.message || '').toLowerCase().includes(searchTerm.toLowerCase());
+      const searchLower = searchTerm.toLowerCase().trim();
+      const matchesSearch = !searchLower || (
+        (item.name || '').toLowerCase().includes(searchLower) ||
+        (item.email || '').toLowerCase().includes(searchLower) ||
+        (item.mobile || '').includes(searchLower) ||
+        (item.company || '').toLowerCase().includes(searchLower) ||
+        (item.productName || '').toLowerCase().includes(searchLower) ||
+        (item.message || '').toLowerCase().includes(searchLower)
+      );
 
-      const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
+      const matchesStatus = statusFilter === 'All' 
+        ? true 
+        : statusFilter === 'Resolved' 
+          ? (item.status === 'Resolved' || item.status === 'Closed')
+          : item.status === statusFilter;
+
       const matchesType = typeFilter === 'All' || item.enquiryType === typeFilter;
 
       return matchesSearch && matchesStatus && matchesType;
@@ -101,6 +171,15 @@ export default function EnquiriesScreen() {
     resolved: enquiries.filter(e => e.status === 'Resolved' || e.status === 'Closed').length
   }), [enquiries]);
 
+  const hasActiveFilters = searchTerm !== '' || statusFilter !== 'All' || typeFilter !== 'All';
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setTypeFilter('All');
+    setCurrentPage(1);
+  };
+
   // Handlers
   const handleView = async (id) => {
     try {
@@ -108,7 +187,7 @@ export default function EnquiriesScreen() {
       setSelectedEnquiry(single || enquiries.find(e => e.id === id));
       setIsDetailOpen(true);
     } catch (err) {
-      console.error('Error fetching inquiry details:', err);
+      console.error('Error fetching enquiry details:', err);
       setSelectedEnquiry(enquiries.find(e => e.id === id));
       setIsDetailOpen(true);
     }
@@ -132,17 +211,22 @@ export default function EnquiriesScreen() {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!selectedEnquiry) return;
+    setIsSubmitting(true);
     try {
       await updateEnquiry(selectedEnquiry.id, formData);
       setIsEditOpen(false);
-      loadEnquiries();
+      showToast('Enquiry updated successfully.', 'success');
+      loadEnquiries(true);
     } catch (err) {
-      alert(`Failed to update inquiry: ${err.message}`);
+      showToast(`Failed to update enquiry: ${err.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
       await createEnquiry(formData);
       setIsCreateOpen(false);
@@ -150,270 +234,572 @@ export default function EnquiriesScreen() {
         name: '', email: '', mobile: '', company: '',
         enquiryType: 'Product Enquiry', message: '', productName: '', status: 'Pending'
       });
-      loadEnquiries();
+      showToast('New enquiry recorded successfully.', 'success');
+      loadEnquiries(true);
     } catch (err) {
-      alert(`Failed to create inquiry: ${err.message}`);
+      showToast(`Failed to create enquiry: ${err.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDeleteConfirm = async () => {
     if (!deleteTargetId) return;
+    setIsSubmitting(true);
     try {
       await deleteEnquiry(deleteTargetId);
       setDeleteTargetId(null);
-      loadEnquiries();
+      showToast('Enquiry removed successfully.', 'success');
+      loadEnquiries(true);
     } catch (err) {
-      alert(`Failed to delete inquiry: ${err.message}`);
+      showToast(`Failed to delete enquiry: ${err.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  // Paginated records
+  const paginatedEnquiries = useMemo(() => {
+    const startIndex = (currentPage - 1) * pageSize;
+    return filteredEnquiries.slice(startIndex, startIndex + pageSize);
+  }, [filteredEnquiries, currentPage, pageSize]);
+
   return (
-    <div className="enquiries-container">
-      {/* Header */}
-      <div className="enquiries-header">
-        <div className="enquiries-title">
-          <h1>Enquiries Console</h1>
-          <p>Live REST API integration for user product, solution, and business enquiries (`/api/enquiries`)</p>
+    <div className="enquiries-mgmt-container">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      )}
+
+      {/* Header Card */}
+      <div className="enquiries-header-card">
+        <div className="enquiries-title-wrap">
+          <div className="enquiries-kicker">CUSTOMER COMMUNICATIONS</div>
+          <h1>Enquiries Management</h1>
+          <p>Review, track, and respond to incoming customer product inquiries and business partnership requests</p>
         </div>
         <div className="enquiries-header-actions">
-          <button className="btn-secondary" onClick={loadEnquiries} title="Refresh Data">
-            <RefreshCw size={16} className={loading ? 'spin' : ''} /> Refresh
+          <button 
+            type="button" 
+            className="btn-enquiries-secondary" 
+            onClick={() => loadEnquiries(false)} 
+            disabled={loading}
+            title="Refresh list"
+          >
+            <RefreshCw size={15} className={loading ? 'spin-icon' : ''} />
+            <span>Refresh</span>
           </button>
-          <button className="btn-primary" onClick={() => {
-            setFormData({
-              name: '', email: '', mobile: '', company: '',
-              enquiryType: 'Product Enquiry', message: '', productName: '', status: 'Pending'
-            });
-            setIsCreateOpen(true);
-          }}>
-            <Plus size={18} /> New Enquiry
+          <button 
+            type="button" 
+            className="btn-enquiries-primary" 
+            onClick={() => {
+              setFormData({
+                name: '', email: '', mobile: '', company: '',
+                enquiryType: 'Product Enquiry', message: '', productName: '', status: 'Pending'
+              });
+              setIsCreateOpen(true);
+            }}
+          >
+            <Plus size={16} />
+            <span>New Enquiry</span>
           </button>
         </div>
       </div>
 
-      {/* Metric Cards */}
-      <div className="enquiries-stats-grid">
-        <div className="enquiry-stat-card">
-          <div className="enquiry-stat-info">
-            <div className="stat-label">Total Enquiries</div>
-            <div className="stat-value">{stats.total}</div>
-          </div>
-          <div className="enquiry-stat-icon total"><HelpCircle size={22} /></div>
-        </div>
-        <div className="enquiry-stat-card">
-          <div className="enquiry-stat-info">
-            <div className="stat-label">Pending Review</div>
-            <div className="stat-value">{stats.pending}</div>
-          </div>
-          <div className="enquiry-stat-icon pending"><Clock size={22} /></div>
-        </div>
-        <div className="enquiry-stat-card">
-          <div className="enquiry-stat-info">
-            <div className="stat-label">In Progress</div>
-            <div className="stat-value">{stats.inProgress}</div>
-          </div>
-          <div className="enquiry-stat-icon progress"><RefreshCw size={22} /></div>
-        </div>
-        <div className="enquiry-stat-card">
-          <div className="enquiry-stat-info">
-            <div className="stat-label">Resolved / Closed</div>
-            <div className="stat-value">{stats.resolved}</div>
-          </div>
-          <div className="enquiry-stat-icon resolved"><CheckCircle size={22} /></div>
-        </div>
-      </div>
-
-      {/* Filter & Search Bar */}
-      <div className="enquiries-filter-bar">
-        <div className="search-input-wrap">
-          <Search size={18} />
-          <input
-            type="text"
-            placeholder="Search by customer name, mobile, email, product..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <div className="filter-selects">
-          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="All">All Statuses</option>
-            <option value="Pending">Pending</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Resolved">Resolved</option>
-            <option value="Closed">Closed</option>
-          </select>
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-            <option value="All">All Types</option>
-            <option value="Product Enquiry">Product Enquiry</option>
-            <option value="Sales Enquiry">Sales Enquiry</option>
-            <option value="Dealer Enquiry">Dealer Enquiry</option>
-            <option value="Distributor Enquiry">Distributor Enquiry</option>
-            <option value="Support Enquiry">Support Enquiry</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Main Table */}
-      <div className="enquiries-table-card">
-        {loading ? (
-          <div className="loading-state">
-            <div className="loading-spinner"></div>
-            <p>Connecting to `/api/enquiries` live endpoint...</p>
-          </div>
-        ) : error ? (
-          <div className="empty-state">
-            <p style={{ color: '#dc2626', fontWeight: 600 }}>{error}</p>
-            <button className="btn-secondary" onClick={loadEnquiries} style={{ marginTop: 12 }}>
-              Try Again
-            </button>
-          </div>
-        ) : filteredEnquiries.length === 0 ? (
-          <div className="empty-state">
-            <HelpCircle size={36} style={{ marginBottom: 12, color: '#94a3b8' }} />
-            <h3>No enquiries found</h3>
-            <p>There are no user enquiries matching your search filters.</p>
-          </div>
-        ) : (
-          <table className="enquiries-table">
-            <thead>
-              <tr>
-                <th>Customer</th>
-                <th>Contact</th>
-                <th>Enquiry Type</th>
-                <th>Product / Topic</th>
-                <th>Status</th>
-                <th>Date</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEnquiries.map((item) => {
-                const conf = statusConfig[item.status] || statusConfig.Pending;
-                const StatusIcon = conf.icon;
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <strong style={{ display: 'block', color: '#0f172a' }}>{item.name || 'Customer'}</strong>
-                      {item.company && <span style={{ fontSize: '12px', color: '#64748b' }}>{item.company}</span>}
-                    </td>
-                    <td>
-                      <div style={{ fontSize: '13px' }}>{item.mobile}</div>
-                      {item.email && <div style={{ fontSize: '12px', color: '#64748b' }}>{item.email}</div>}
-                    </td>
-                    <td>
-                      <span className="type-pill">{item.enquiryType}</span>
-                    </td>
-                    <td>
-                      <span>{item.productName || item.message.slice(0, 35) + (item.message.length > 35 ? '...' : '')}</span>
-                    </td>
-                    <td>
-                      <span className={`status-badge ${conf.class}`}>
-                        <StatusIcon size={12} /> {conf.label}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '13px', color: '#64748b' }}>
-                      {new Date(item.createdAt).toLocaleDateString('en-IN', {
-                        day: '2-digit', month: 'short', year: 'numeric'
-                      })}
-                    </td>
-                    <td>
-                      <div className="action-btn-group">
-                        <button className="btn-icon" onClick={() => handleView(item.id)} title="View Details (GET /api/enquiries/{id})">
-                          <Eye size={16} />
-                        </button>
-                        <button className="btn-icon" onClick={() => handleEditOpen(item)} title="Update Status (PUT /api/enquiries/{id})">
-                          <Edit3 size={16} />
-                        </button>
-                        <button className="btn-icon delete" onClick={() => setDeleteTargetId(item.id)} title="Delete (DELETE /api/enquiries/{id})">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {/* DETAIL MODAL (GET by ID) */}
-      {isDetailOpen && selectedEnquiry && (
-        <div className="modal-backdrop" onClick={() => setIsDetailOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Enquiry Details (ID: {selectedEnquiry.id})</h2>
-              <button className="modal-close-btn" onClick={() => setIsDetailOpen(false)}><X size={20} /></button>
-            </div>
-            <div className="modal-body">
-              <div className="detail-grid">
-                <div className="detail-item">
-                  <label><Mail size={12} /> Name</label>
-                  <p>{selectedEnquiry.name}</p>
-                </div>
-                <div className="detail-item">
-                  <label><Phone size={12} /> Mobile</label>
-                  <p>{selectedEnquiry.mobile}</p>
-                </div>
-                <div className="detail-item">
-                  <label>Email</label>
-                  <p>{selectedEnquiry.email || 'N/A'}</p>
-                </div>
-                <div className="detail-item">
-                  <label><Building size={12} /> Company</label>
-                  <p>{selectedEnquiry.company || 'N/A'}</p>
-                </div>
-                <div className="detail-item">
-                  <label>Type</label>
-                  <p>{selectedEnquiry.enquiryType}</p>
-                </div>
-                <div className="detail-item">
-                  <label>Status</label>
-                  <p>{selectedEnquiry.status}</p>
-                </div>
-                {selectedEnquiry.productName && (
-                  <div className="detail-item full">
-                    <label><Package size={12} /> Associated Product</label>
-                    <p>{selectedEnquiry.productName}</p>
-                  </div>
-                )}
-                <div className="detail-item full">
-                  <label>Message / Details</label>
-                  <p style={{ background: '#f8fafc', padding: 12, borderRadius: 8, marginTop: 4, whiteSpace: 'pre-wrap' }}>
-                    {selectedEnquiry.message || 'No additional message provided.'}
-                  </p>
-                </div>
-                <div className="detail-item">
-                  <label><Calendar size={12} /> Date Submitted</label>
-                  <p>{new Date(selectedEnquiry.createdAt).toLocaleString('en-IN')}</p>
-                </div>
-              </div>
-            </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setIsDetailOpen(false)}>Close</button>
-              <button className="btn-primary" onClick={() => { setIsDetailOpen(false); handleEditOpen(selectedEnquiry); }}>
-                Update Status
-              </button>
-            </div>
-          </div>
+      {/* Error Alert */}
+      {error && (
+        <div className="enquiries-error-banner">
+          <AlertCircle size={18} />
+          <span>{error}</span>
+          <button type="button" onClick={() => loadEnquiries(false)} className="btn-retry">
+            Retry
+          </button>
         </div>
       )}
 
-      {/* EDIT MODAL (PUT by ID) */}
-      {isEditOpen && selectedEnquiry && (
-        <div className="modal-backdrop" onClick={() => setIsEditOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-            <form onSubmit={handleUpdate}>
-              <div className="modal-header">
-                <h2>Update Inquiry (PUT /api/enquiries/{selectedEnquiry.id})</h2>
-                <button type="button" className="modal-close-btn" onClick={() => setIsEditOpen(false)}><X size={20} /></button>
+      {/* Interactive Metric Cards */}
+      <div className="enquiries-stats-grid">
+        <div 
+          className={`enquiries-stat-card ${statusFilter === 'All' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter('All')}
+          title="Click to view all enquiries"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Total Enquiries</span>
+              <span className="stat-card-value">{stats.total}</span>
+            </div>
+            <div className="stat-card-icon icon-total">
+              <Mail size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge">All records</span>
+          </div>
+        </div>
+
+        <div 
+          className={`enquiries-stat-card ${statusFilter === 'Pending' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Pending' ? 'All' : 'Pending')}
+          title="Click to filter pending enquiries"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Pending Review</span>
+              <span className="stat-card-value">{stats.pending}</span>
+            </div>
+            <div className="stat-card-icon icon-pending">
+              <Clock size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-pending">Needs action</span>
+          </div>
+        </div>
+
+        <div 
+          className={`enquiries-stat-card ${statusFilter === 'In Progress' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'In Progress' ? 'All' : 'In Progress')}
+          title="Click to filter in-progress enquiries"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">In Progress</span>
+              <span className="stat-card-value">{stats.inProgress}</span>
+            </div>
+            <div className="stat-card-icon icon-progress">
+              <RefreshCw size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-progress">Under review</span>
+          </div>
+        </div>
+
+        <div 
+          className={`enquiries-stat-card ${statusFilter === 'Resolved' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Resolved' ? 'All' : 'Resolved')}
+          title="Click to filter resolved & closed enquiries"
+        >
+          <div className="stat-card-inner">
+            <div className="stat-card-text">
+              <span className="stat-card-label">Resolved / Closed</span>
+              <span className="stat-card-value">{stats.resolved}</span>
+            </div>
+            <div className="stat-card-icon icon-resolved">
+              <CheckCircle size={22} />
+            </div>
+          </div>
+          <div className="stat-card-footer">
+            <span className="stat-badge badge-resolved">Completed</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Toolbar Card */}
+      <div className="enquiries-toolbar-card">
+        <div className="enquiries-search-box">
+          <Search size={16} className="search-icon" />
+          <input
+            type="text"
+            placeholder="Search by customer, mobile, email, company, product..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+          {searchTerm && (
+            <button 
+              type="button" 
+              className="clear-search-btn" 
+              onClick={() => setSearchTerm('')}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <div className="enquiries-filter-group">
+          <div className="select-wrapper">
+            <Filter size={14} className="select-icon" />
+            <select 
+              value={statusFilter} 
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="enquiry-select"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved / Closed</option>
+            </select>
+          </div>
+
+          <div className="select-wrapper">
+            <Package size={14} className="select-icon" />
+            <select 
+              value={typeFilter} 
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="enquiry-select"
+            >
+              <option value="All">All Types</option>
+              <option value="Product Enquiry">Product Enquiry</option>
+              <option value="Sales Enquiry">Sales Enquiry</option>
+              <option value="Dealer Enquiry">Dealer Enquiry</option>
+              <option value="Distributor Enquiry">Distributor Enquiry</option>
+              <option value="Support Enquiry">Support Enquiry</option>
+            </select>
+          </div>
+
+          {hasActiveFilters && (
+            <button 
+              type="button" 
+              className="btn-reset-filters" 
+              onClick={handleResetFilters}
+              title="Reset all active filters"
+            >
+              <RotateCcw size={13} />
+              <span>Reset</span>
+            </button>
+          )}
+
+          <div className="enquiries-count-tag">
+            <span>{filteredEnquiries.length} {filteredEnquiries.length === 1 ? 'enquiry' : 'enquiries'}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Table Card */}
+      <div className="enquiries-table-card">
+        {loading && enquiries.length === 0 ? (
+          <div className="enquiries-loading-state">
+            <div className="loading-spinner"></div>
+            <p>Loading customer enquiries...</p>
+          </div>
+        ) : filteredEnquiries.length === 0 ? (
+          <div className="enquiries-empty-state">
+            <div className="empty-icon-wrap">
+              <HelpCircle size={36} />
+            </div>
+            <h3>No enquiries found</h3>
+            <p>
+              {hasActiveFilters 
+                ? "No customer inquiries matched your current search filters." 
+                : "No customer enquiries have been submitted yet."}
+            </p>
+            {hasActiveFilters && (
+              <button type="button" className="btn-enquiries-secondary" onClick={handleResetFilters}>
+                <RotateCcw size={14} /> Clear Search Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="enquiries-table-wrapper">
+            <table className="enquiries-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '22%' }}>CUSTOMER</th>
+                  <th style={{ width: '20%' }}>CONTACT INFO</th>
+                  <th style={{ width: '15%' }}>ENQUIRY TYPE</th>
+                  <th style={{ width: '18%' }}>PRODUCT / TOPIC</th>
+                  <th style={{ width: '11%' }}>STATUS</th>
+                  <th style={{ width: '14%' }}>DATE</th>
+                  <th style={{ width: '10%', textAlign: 'center' }}>ACTIONS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedEnquiries.map((item) => {
+                  const conf = statusConfig[item.status] || statusConfig.Pending;
+                  const typeMeta = typeBadgeConfig[item.enquiryType] || { label: item.enquiryType || 'General', class: 'type-general' };
+                  const StatusIcon = conf.icon;
+                  const initials = getInitials(item.name);
+
+                  return (
+                    <tr key={item.id} className="enquiry-table-row">
+                      {/* Customer */}
+                      <td>
+                        <div className="customer-cell">
+                          <div className="customer-avatar" title={item.name || 'Customer'}>
+                            {initials}
+                          </div>
+                          <div className="customer-meta">
+                            <span className="customer-name">{item.name || 'Customer'}</span>
+                            {item.company ? (
+                              <span className="customer-company" title={item.company}>
+                                <Building size={11} /> {item.company}
+                              </span>
+                            ) : (
+                              <span className="customer-company individual">Individual</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Contact Info */}
+                      <td>
+                        <div className="contact-cell">
+                          {item.mobile && (
+                            <a href={`tel:${item.mobile}`} className="contact-link" title="Call customer">
+                              <Phone size={12} className="contact-icon" />
+                              <span>{item.mobile}</span>
+                            </a>
+                          )}
+                          {item.email && (
+                            <a href={`mailto:${item.email}`} className="contact-link email" title="Email customer">
+                              <Mail size={12} className="contact-icon" />
+                              <span>{item.email}</span>
+                            </a>
+                          )}
+                          {!item.mobile && !item.email && <span className="text-muted">No contact info</span>}
+                        </div>
+                      </td>
+
+                      {/* Enquiry Type */}
+                      <td>
+                        <span className={`type-badge ${typeMeta.class}`}>
+                          {item.enquiryType || 'General Enquiry'}
+                        </span>
+                      </td>
+
+                      {/* Product / Topic */}
+                      <td>
+                        <div className="topic-cell">
+                          {item.productName ? (
+                            <div className="product-title" title={item.productName}>
+                              <Package size={13} className="topic-icon" />
+                              <span>{item.productName}</span>
+                            </div>
+                          ) : null}
+                          {item.message ? (
+                            <p className="message-snippet" title={item.message}>
+                              {item.message}
+                            </p>
+                          ) : (
+                            <span className="text-muted italic">No message provided</span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td>
+                        <span className={`status-pill status-${conf.class}`}>
+                          <StatusIcon size={12} />
+                          <span>{conf.label}</span>
+                        </span>
+                      </td>
+
+                      {/* Date */}
+                      <td>
+                        <div className="date-cell">
+                          <span className="date-main">{formatDateToDMY(item.createdAt)}</span>
+                          <span className="date-sub">
+                            {item.createdAt ? new Date(item.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Actions */}
+                      <td>
+                        <div className="table-actions-group">
+                          <button 
+                            type="button" 
+                            className="action-icon-btn action-view" 
+                            onClick={() => handleView(item.id)} 
+                            title="View Full Details"
+                          >
+                            <Eye size={15} />
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-icon-btn action-edit" 
+                            onClick={() => handleEditOpen(item)} 
+                            title="Update Status & Notes"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button 
+                            type="button" 
+                            className="action-icon-btn action-delete" 
+                            onClick={() => setDeleteTargetId(item.id)} 
+                            title="Delete Enquiry"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Table Footer with Pagination */}
+        {filteredEnquiries.length > 0 && (
+          <div className="enquiries-pagination-container">
+            <Pagination
+              page={currentPage}
+              count={filteredEnquiries.length}
+              itemsPerPage={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ========================================================================
+          MODALS — Rendered with createPortal to escape admin layout containers
+          ======================================================================== */}
+
+      {/* 1. DETAIL MODAL */}
+      {isDetailOpen && selectedEnquiry && createPortal(
+        <div className="enquiry-modal-overlay" onClick={() => setIsDetailOpen(false)}>
+          <div className="enquiry-modal-card enquiry-modal-medium" onClick={(e) => e.stopPropagation()}>
+            <div className="enquiry-modal-header">
+              <div className="modal-header-info">
+                <div className="modal-kicker">ENQUIRY DETAILS</div>
+                <h2>Enquiry #{selectedEnquiry.id}</h2>
+                <span className="modal-subtitle">Submitted on {formatDateTimeToDMY(selectedEnquiry.createdAt)}</span>
               </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Status *</label>
+              <button 
+                type="button" 
+                className="enquiry-modal-close" 
+                onClick={() => setIsDetailOpen(false)}
+                title="Close dialog"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="enquiry-modal-body">
+              {/* Top Banner with Status & Type */}
+              <div className="enquiry-detail-banner">
+                <div className="detail-banner-item">
+                  <span className="banner-label">Status</span>
+                  <span className={`status-pill status-${(selectedEnquiry.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                    {selectedEnquiry.status || 'Pending'}
+                  </span>
+                </div>
+                <div className="detail-banner-item">
+                  <span className="banner-label">Enquiry Type</span>
+                  <span className="type-badge type-product">
+                    {selectedEnquiry.enquiryType || 'General Enquiry'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Customer Info Card */}
+              <div className="detail-section-card">
+                <h4 className="section-title">Customer Information</h4>
+                <div className="detail-info-grid">
+                  <div className="info-item">
+                    <span className="info-label">Customer Name</span>
+                    <span className="info-value"><strong>{selectedEnquiry.name || 'N/A'}</strong></span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Mobile Number</span>
+                    <span className="info-value">
+                      {selectedEnquiry.mobile ? (
+                        <a href={`tel:${selectedEnquiry.mobile}`} className="contact-link">
+                          <Phone size={13} /> {selectedEnquiry.mobile}
+                        </a>
+                      ) : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Email Address</span>
+                    <span className="info-value">
+                      {selectedEnquiry.email ? (
+                        <a href={`mailto:${selectedEnquiry.email}`} className="contact-link email">
+                          <Mail size={13} /> {selectedEnquiry.email}
+                        </a>
+                      ) : 'N/A'}
+                    </span>
+                  </div>
+                  <div className="info-item">
+                    <span className="info-label">Company / Organization</span>
+                    <span className="info-value">{selectedEnquiry.company || 'Individual Customer'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Product Association */}
+              {selectedEnquiry.productName && (
+                <div className="detail-section-card">
+                  <h4 className="section-title">Associated Product</h4>
+                  <div className="product-attached-box">
+                    <Package size={18} className="text-primary" />
+                    <div>
+                      <strong>{selectedEnquiry.productName}</strong>
+                      <span className="text-muted block text-xs">Customer is requesting details for this product</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Message Details */}
+              <div className="detail-section-card">
+                <h4 className="section-title">Message / Request Content</h4>
+                <div className="message-content-box">
+                  {selectedEnquiry.message || 'No additional message was provided by customer.'}
+                </div>
+              </div>
+            </div>
+
+            <div className="enquiry-modal-footer">
+              <button 
+                type="button" 
+                className="btn-enquiries-secondary" 
+                onClick={() => setIsDetailOpen(false)}
+              >
+                Close
+              </button>
+              <button 
+                type="button" 
+                className="btn-enquiries-primary" 
+                onClick={() => {
+                  setIsDetailOpen(false);
+                  handleEditOpen(selectedEnquiry);
+                }}
+              >
+                <Edit3 size={15} /> Update Status
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 2. EDIT / UPDATE STATUS MODAL */}
+      {isEditOpen && selectedEnquiry && createPortal(
+        <div className="enquiry-modal-overlay" onClick={() => setIsEditOpen(false)}>
+          <div className="enquiry-modal-card" onClick={(e) => e.stopPropagation()}>
+            <form onSubmit={handleUpdate}>
+              <div className="enquiry-modal-header">
+                <div className="modal-header-info">
+                  <div className="modal-kicker">UPDATE RECORD</div>
+                  <h2>Update Enquiry #{selectedEnquiry.id}</h2>
+                </div>
+                <button 
+                  type="button" 
+                  className="enquiry-modal-close" 
+                  onClick={() => setIsEditOpen(false)}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="enquiry-modal-body">
+                <div className="form-group-field">
+                  <label htmlFor="edit-status">Enquiry Status *</label>
                   <select
+                    id="edit-status"
+                    className="enquiry-form-input"
                     value={formData.status}
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    required
                   >
                     <option value="Pending">Pending</option>
                     <option value="In Progress">In Progress</option>
@@ -421,17 +807,23 @@ export default function EnquiriesScreen() {
                     <option value="Closed">Closed</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Customer Name</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="edit-name">Customer Name</label>
                   <input
+                    id="edit-name"
                     type="text"
+                    className="enquiry-form-input"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   />
                 </div>
-                <div className="form-group">
-                  <label>Enquiry Type</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="edit-type">Enquiry Type</label>
                   <select
+                    id="edit-type"
+                    className="enquiry-form-input"
                     value={formData.enquiryType}
                     onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
                   >
@@ -442,119 +834,225 @@ export default function EnquiriesScreen() {
                     <option value="Support Enquiry">Support Enquiry</option>
                   </select>
                 </div>
-                <div className="form-group">
-                  <label>Notes / Message</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="edit-message">Notes &amp; Conversation History</label>
                   <textarea
+                    id="edit-message"
                     rows={4}
+                    className="enquiry-form-textarea"
+                    placeholder="Enter internal notes, follow-up comments, or resolution details..."
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   />
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setIsEditOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Changes</button>
+
+              <div className="enquiry-modal-footer">
+                <button 
+                  type="button" 
+                  className="btn-enquiries-secondary" 
+                  onClick={() => setIsEditOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-enquiries-primary" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
+                </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* CREATE MODAL (POST) */}
-      {isCreateOpen && (
-        <div className="modal-backdrop" onClick={() => setIsCreateOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+      {/* 3. CREATE NEW ENQUIRY MODAL */}
+      {isCreateOpen && createPortal(
+        <div className="enquiry-modal-overlay" onClick={() => setIsCreateOpen(false)}>
+          <div className="enquiry-modal-card" onClick={(e) => e.stopPropagation()}>
             <form onSubmit={handleCreateSubmit}>
-              <div className="modal-header">
-                <h2>New Enquiry (POST /api/enquiries)</h2>
-                <button type="button" className="modal-close-btn" onClick={() => setIsCreateOpen(false)}><X size={20} /></button>
+              <div className="enquiry-modal-header">
+                <div className="modal-header-info">
+                  <div className="modal-kicker">MANUAL ENTRY</div>
+                  <h2>Create New Enquiry</h2>
+                  <span className="modal-subtitle">Log an offline, telephonic, or walk-in customer enquiry</span>
+                </div>
+                <button 
+                  type="button" 
+                  className="enquiry-modal-close" 
+                  onClick={() => setIsCreateOpen(false)}
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label>Customer Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  />
+
+              <div className="enquiry-modal-body">
+                <div className="form-grid-two">
+                  <div className="form-group-field">
+                    <label htmlFor="new-name">Customer Name *</label>
+                    <input
+                      id="new-name"
+                      type="text"
+                      required
+                      placeholder="e.g. Ramesh Sharma"
+                      className="enquiry-form-input"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-field">
+                    <label htmlFor="new-mobile">Mobile Number *</label>
+                    <input
+                      id="new-mobile"
+                      type="tel"
+                      required
+                      maxLength={10}
+                      placeholder="10-digit mobile"
+                      className="enquiry-form-input"
+                      value={formData.mobile}
+                      onChange={(e) => setFormData({ ...formData, mobile: e.target.value.replace(/\D/g, '') })}
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Mobile Number *</label>
-                  <input
-                    type="tel"
-                    required
-                    maxLength={10}
-                    value={formData.mobile}
-                    onChange={(e) => setFormData({ ...formData, mobile: e.target.value })}
-                  />
+
+                <div className="form-grid-two">
+                  <div className="form-group-field">
+                    <label htmlFor="new-email">Email Address</label>
+                    <input
+                      id="new-email"
+                      type="email"
+                      placeholder="customer@example.com"
+                      className="enquiry-form-input"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="form-group-field">
+                    <label htmlFor="new-company">Company Name</label>
+                    <input
+                      id="new-company"
+                      type="text"
+                      placeholder="Optional company name"
+                      className="enquiry-form-input"
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
+
+                <div className="form-grid-two">
+                  <div className="form-group-field">
+                    <label htmlFor="new-type">Enquiry Type *</label>
+                    <select
+                      id="new-type"
+                      className="enquiry-form-input"
+                      value={formData.enquiryType}
+                      onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
+                    >
+                      <option value="Product Enquiry">Product Enquiry</option>
+                      <option value="Sales Enquiry">Sales Enquiry</option>
+                      <option value="Dealer Enquiry">Dealer Enquiry</option>
+                      <option value="Distributor Enquiry">Distributor Enquiry</option>
+                      <option value="Support Enquiry">Support Enquiry</option>
+                    </select>
+                  </div>
+                  <div className="form-group-field">
+                    <label htmlFor="new-product">Product Name (Optional)</label>
+                    <input
+                      id="new-product"
+                      type="text"
+                      placeholder="e.g. Honeywell Scanner"
+                      className="enquiry-form-input"
+                      value={formData.productName}
+                      onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                    />
+                  </div>
                 </div>
-                <div className="form-group">
-                  <label>Enquiry Type</label>
-                  <select
-                    value={formData.enquiryType}
-                    onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
-                  >
-                    <option value="Product Enquiry">Product Enquiry</option>
-                    <option value="Sales Enquiry">Sales Enquiry</option>
-                    <option value="Dealer Enquiry">Dealer Enquiry</option>
-                    <option value="Distributor Enquiry">Distributor Enquiry</option>
-                    <option value="Support Enquiry">Support Enquiry</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Product Name (Optional)</label>
-                  <input
-                    type="text"
-                    value={formData.productName}
-                    onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Message / Details</label>
+
+                <div className="form-group-field">
+                  <label htmlFor="new-message">Enquiry Message / Description</label>
                   <textarea
+                    id="new-message"
                     rows={3}
+                    placeholder="Enter customer requirement details..."
+                    className="enquiry-form-textarea"
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                   />
                 </div>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setIsCreateOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Submit Enquiry</button>
+
+              <div className="enquiry-modal-footer">
+                <button 
+                  type="button" 
+                  className="btn-enquiries-secondary" 
+                  onClick={() => setIsCreateOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="btn-enquiries-primary" 
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Creating...' : 'Submit Enquiry'}
+                </button>
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {/* DELETE CONFIRMATION MODAL (DELETE by ID) */}
-      {deleteTargetId && (
-        <div className="modal-backdrop" onClick={() => setDeleteTargetId(null)}>
-          <div className="modal-card" style={{ maxWidth: 420 }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Confirm Deletion</h2>
-              <button className="modal-close-btn" onClick={() => setDeleteTargetId(null)}><X size={20} /></button>
+      {/* 4. DELETE CONFIRMATION MODAL */}
+      {deleteTargetId && createPortal(
+        <div className="enquiry-modal-overlay" onClick={() => setDeleteTargetId(null)}>
+          <div className="enquiry-modal-card enquiry-modal-small" onClick={(e) => e.stopPropagation()}>
+            <div className="enquiry-modal-header">
+              <div className="modal-header-info">
+                <div className="modal-kicker text-red">CONFIRM ACTION</div>
+                <h2>Delete Enquiry #{deleteTargetId}</h2>
+              </div>
+              <button 
+                type="button" 
+                className="enquiry-modal-close" 
+                onClick={() => setDeleteTargetId(null)}
+              >
+                <X size={18} />
+              </button>
             </div>
-            <div className="modal-body">
-              <p>Are you sure you want to delete inquiry #{deleteTargetId}? This operation calls `DELETE /api/enquiries/{deleteTargetId}`.</p>
+
+            <div className="enquiry-modal-body">
+              <div className="delete-warning-box">
+                <ShieldAlert size={28} className="delete-warning-icon" />
+                <p>Are you sure you want to delete this customer enquiry? This action cannot be undone.</p>
+              </div>
             </div>
-            <div className="modal-footer">
-              <button className="btn-secondary" onClick={() => setDeleteTargetId(null)}>Cancel</button>
-              <button className="btn-primary" style={{ background: '#dc2626' }} onClick={handleDeleteConfirm}>
-                Delete
+
+            <div className="enquiry-modal-footer">
+              <button 
+                type="button" 
+                className="btn-enquiries-secondary" 
+                onClick={() => setDeleteTargetId(null)}
+              >
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="btn-enquiries-danger" 
+                disabled={isSubmitting}
+                onClick={handleDeleteConfirm}
+              >
+                {isSubmitting ? 'Deleting...' : 'Delete Enquiry'}
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

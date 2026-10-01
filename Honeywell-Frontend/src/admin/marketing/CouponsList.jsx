@@ -8,17 +8,34 @@ import {
   Plus,
   Search,
   Tag,
-  X
+  X,
+  RefreshCw,
+  RotateCcw,
+  Copy,
+  Check,
+  TrendingUp,
+  Clock,
+  AlertCircle,
+  ShoppingBag,
+  Sparkles,
+  Layers,
+  Edit2,
+  Trash2,
+  ChevronDown
 } from 'lucide-react';
-import '../catalog/adminModule.css';
 import { fetchCoupons as getCoupons, updateCoupon, deleteCoupon as apiDeleteCoupon } from './api';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
 import { Toast } from '../components/Toast';
+import './coupons.css';
 
-const formatCurrency = (amount) => `INR ${Number(amount || 0).toLocaleString('en-IN')}`;
+export const formatCurrency = (amount) => {
+  if (amount === undefined || amount === null || amount === '') return '₹0';
+  const num = Number(String(amount).replace(/[^0-9.-]+/g, '')) || 0;
+  return `₹${num.toLocaleString('en-IN')}`;
+};
 
 export const formatDateDMY = (dateStr) => {
-  if (!dateStr) return '';
+  if (!dateStr) return '-';
   const cleanStr = String(dateStr).trim();
 
   if (/^\d{2}-\d{2}-\d{4}$/.test(cleanStr)) {
@@ -28,6 +45,12 @@ export const formatDateDMY = (dateStr) => {
   const isoMatch = cleanStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (isoMatch) {
     const [, year, month, day] = isoMatch;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) {
+      const dayNum = String(d.getDate()).padStart(2, '0');
+      const monthStr = d.toLocaleString('en-IN', { month: 'short' });
+      return `${dayNum} ${monthStr} ${year}`;
+    }
     return `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
   }
 
@@ -35,148 +58,256 @@ export const formatDateDMY = (dateStr) => {
     const d = new Date(cleanStr);
     if (!isNaN(d.getTime())) {
       const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const monthStr = d.toLocaleString('en-IN', { month: 'short' });
       const year = d.getFullYear();
-      return `${day}-${month}-${year}`;
+      return `${day} ${monthStr} ${year}`;
     }
   } catch {}
 
   return cleanStr;
 };
 
-const formatDiscount = (coupon) => {
-  if (coupon.type === 'Percentage') return `${coupon.discount}%`;
-  if (coupon.type === 'Shipping') return 'Free Delivery';
-  return formatCurrency(coupon.discount);
+const formatDiscountDisplay = (coupon) => {
+  if (!coupon) return '-';
+  if (coupon.type === 'Percentage' || coupon.discountType === 'Percentage') {
+    return `${coupon.discount || coupon.discountValue || 0}% OFF`;
+  }
+  if (coupon.type === 'Shipping' || coupon.discountType === 'Shipping') {
+    return 'Free Shipping';
+  }
+  return `${formatCurrency(coupon.discount || coupon.discountValue || 0)} FLAT`;
 };
 
-const CouponStatusBadge = ({ status }) => (
-  <span className={`coupon-status coupon-status--${status.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10px', padding: '2px 8px', borderRadius: '999px', fontWeight: 600 }}>
-    {status === 'Active' ? <CheckCircle2 size={10} /> : <Tag size={10} />}
-    {status}
-  </span>
-);
+const CouponStatusBadge = ({ status }) => {
+  const normStatus = (status || 'Active').toLowerCase();
+  let statusClass = 'status-active';
+  if (normStatus === 'inactive') statusClass = 'status-inactive';
+  if (normStatus === 'expired') statusClass = 'status-expired';
+
+  return (
+    <span className={`coupon-status-pill ${statusClass}`}>
+      <span className="status-dot"></span>
+      {status || 'Active'}
+    </span>
+  );
+};
 
 const CouponEditModal = ({ coupon, onClose, onSave }) => {
-  const [formData, setFormData] = useState(coupon);
+  const [formData, setFormData] = useState({
+    id: coupon.id,
+    code: coupon.code || '',
+    description: coupon.description || '',
+    type: coupon.type || 'Percentage',
+    discount: coupon.discount || 0,
+    maxDiscount: coupon.maxDiscount || '',
+    minSpend: coupon.minSpend || 0,
+    usageLimit: coupon.usageLimit || 0,
+    perCustomerLimit: coupon.perCustomerLimit || 1,
+    startDate: coupon.startDate || '',
+    endDate: coupon.endDate || '',
+    status: coupon.status || 'Active',
+    isActive: coupon.isActive !== undefined ? coupon.isActive : true
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : (name === 'code' ? value.toUpperCase() : value)
+    }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    onSave(formData);
+    setIsSubmitting(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="coupon-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-coupon-title" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-      <div className="coupon-modal" style={{ backgroundColor: 'white', borderRadius: '12px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
-        <div className="coupon-modal__header" style={{ padding: '16px 20px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <span className="catalog-kicker" style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1268a5', fontWeight: 700 }}>Campaign Editor</span>
-            <h2 id="edit-coupon-title" style={{ fontSize: '16px', fontWeight: 700, margin: '2px 0 0 0' }}>Edit Coupon: {coupon.code}</h2>
+    <div className="coupon-modal-backdrop" role="dialog" aria-modal="true">
+      <div className="coupon-modal">
+        <div className="coupon-modal-header">
+          <div className="coupon-modal-title">
+            <span>PROMOTIONAL CAMPAIGN</span>
+            <h2>Edit Coupon: {coupon.code}</h2>
           </div>
-          <button className="catalog-btn catalog-btn--icon close-modal-btn" type="button" onClick={onClose} title="Close edit coupon popup" style={{ padding: '4px' }}>
-            <X size={16} />
+          <button className="coupon-modal-close" type="button" onClick={onClose} title="Close Modal">
+            <X size={18} />
           </button>
         </div>
-        <div className="coupon-modal__summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', padding: '12px 20px', backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11px' }}>
-          <div>
-            <span style={{ color: '#64748b', display: 'block' }}>Offer</span>
-            <strong style={{ color: '#1e293b' }}>{formatDiscount(formData)}</strong>
+
+        <div className="coupon-modal-summary">
+          <div className="coupon-modal-summary-item">
+            <span>DISCOUNT</span>
+            <strong>{formatDiscountDisplay(formData)}</strong>
           </div>
-          <div>
-            <span style={{ color: '#64748b', display: 'block' }}>Min Cart</span>
-            <strong style={{ color: '#1e293b' }}>{formatCurrency(formData.minSpend)}</strong>
+          <div className="coupon-modal-summary-item">
+            <span>MIN SPEND</span>
+            <strong>{formatCurrency(formData.minSpend)}</strong>
           </div>
-          <div>
-            <span style={{ color: '#64748b', display: 'block' }}>Valid</span>
-            <strong style={{ color: '#1e293b' }}>{formatDateDMY(formData.endDate)}</strong>
+          <div className="coupon-modal-summary-item">
+            <span>EXPIRY</span>
+            <strong>{formatDateDMY(formData.endDate)}</strong>
           </div>
-          <div>
-            <span style={{ color: '#64748b', display: 'block' }}>Status</span>
+          <div className="coupon-modal-summary-item">
+            <span>STATUS</span>
             <CouponStatusBadge status={formData.status} />
           </div>
         </div>
 
-        <form className="catalog-form coupon-edit-form" onSubmit={handleSubmit} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: 'calc(80vh - 120px)', overflowY: 'auto' }}>
-          {/* General Information */}
-          <div className="coupon-modal__form-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <h3 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#475569', margin: 0 }}>General Info</h3>
-            <div className="coupon-modal__grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div className="catalog-field">
-                <label htmlFor="edit-code">Coupon Code</label>
-                <input id="edit-code" name="code" value={formData.code} onChange={handleChange} required />
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+          <div className="coupon-modal-body">
+            {/* General Info */}
+            <div>
+              <div className="coupon-form-section-title">
+                <Tag size={13} color="#1268a5" /> Campaign Details
               </div>
-              <div className="catalog-field">
-                <label htmlFor="edit-type">Discount Type</label>
-                <select id="edit-type" name="type" value={formData.type} onChange={handleChange}>
-                  <option value="Percentage">Percentage</option>
-                  <option value="Flat Amount">Flat Amount</option>
-                  <option value="Shipping">Free Delivery</option>
-                </select>
+              <div className="coupon-form-grid-2">
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-code">Coupon Code *</label>
+                  <input
+                    id="edit-code"
+                    name="code"
+                    value={formData.code}
+                    onChange={handleChange}
+                    required
+                    placeholder="e.g. SUMMER25"
+                  />
+                </div>
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-type">Discount Type</label>
+                  <select id="edit-type" name="type" value={formData.type} onChange={handleChange}>
+                    <option value="Percentage">Percentage (% Discount)</option>
+                    <option value="Flat Amount">Flat Amount (Fixed ₹)</option>
+                    <option value="Shipping">Free Delivery</option>
+                  </select>
+                </div>
+              </div>
+              <div className="coupon-input-group" style={{ marginTop: '10px' }}>
+                <label htmlFor="edit-description">Description / Campaign Offer *</label>
+                <textarea
+                  id="edit-description"
+                  name="description"
+                  rows={2}
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
+                  placeholder="Describe the promo terms..."
+                />
               </div>
             </div>
-            <div className="catalog-field">
-              <label htmlFor="edit-description">Description</label>
-              <textarea id="edit-description" name="description" rows={2} value={formData.description} onChange={handleChange} required style={{ resize: 'none' }} />
+
+            {/* Discount Rules */}
+            <div>
+              <div className="coupon-form-section-title">
+                <Percent size={13} color="#1268a5" /> Discount Rules &amp; Limits
+              </div>
+              <div className="coupon-form-grid-2">
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-discount">
+                    {formData.type === 'Percentage' ? 'Discount Percentage (%) *' : 'Discount Amount (₹) *'}
+                  </label>
+                  <input
+                    id="edit-discount"
+                    name="discount"
+                    type="number"
+                    value={formData.discount}
+                    onChange={handleChange}
+                    disabled={formData.type === 'Shipping'}
+                    required={formData.type !== 'Shipping'}
+                    min="0"
+                  />
+                </div>
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-maxDiscount">Max Discount Cap (₹)</label>
+                  <input
+                    id="edit-maxDiscount"
+                    name="maxDiscount"
+                    type="number"
+                    value={formData.maxDiscount || ''}
+                    onChange={handleChange}
+                    placeholder="Optional cap"
+                    min="0"
+                  />
+                </div>
+              </div>
+              <div className="coupon-form-grid-2" style={{ marginTop: '10px' }}>
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-minSpend">Min Cart Value (₹)</label>
+                  <input
+                    id="edit-minSpend"
+                    name="minSpend"
+                    type="number"
+                    value={formData.minSpend}
+                    onChange={handleChange}
+                    placeholder="0 for no minimum"
+                    min="0"
+                  />
+                </div>
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-usageLimit">Total Usage Limit</label>
+                  <input
+                    id="edit-usageLimit"
+                    name="usageLimit"
+                    type="number"
+                    value={formData.usageLimit}
+                    onChange={handleChange}
+                    placeholder="0 for unlimited"
+                    min="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule & Status */}
+            <div>
+              <div className="coupon-form-section-title">
+                <Calendar size={13} color="#1268a5" /> Schedule &amp; Lifecycle
+              </div>
+              <div className="coupon-form-grid-3">
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-startDate">Start Date</label>
+                  <input
+                    id="edit-startDate"
+                    name="startDate"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-endDate">Expiry Date</label>
+                  <input
+                    id="edit-endDate"
+                    name="endDate"
+                    type="date"
+                    value={formData.endDate}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="coupon-input-group">
+                  <label htmlFor="edit-status">Status</label>
+                  <select id="edit-status" name="status" value={formData.status} onChange={handleChange}>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Expired">Expired</option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Discount Rules */}
-          <div className="coupon-modal__form-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <h3 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#475569', margin: 0 }}>Discount Rules &amp; Limits</h3>
-            <div className="coupon-modal__grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div className="catalog-field">
-                <label htmlFor="edit-discount">Discount Value</label>
-                <input id="edit-discount" name="discount" value={formData.discount} onChange={handleChange} required />
-              </div>
-              <div className="catalog-field">
-                <label htmlFor="edit-maxDiscount">Max Discount Cap</label>
-                <input id="edit-maxDiscount" name="maxDiscount" type="number" value={formData.maxDiscount} onChange={handleChange} />
-              </div>
-            </div>
-            <div className="coupon-modal__grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div className="catalog-field">
-                <label htmlFor="edit-minSpend">Min Cart Value</label>
-                <input id="edit-minSpend" name="minSpend" type="number" value={formData.minSpend} onChange={handleChange} />
-              </div>
-              <div className="catalog-field">
-                <label htmlFor="edit-usageLimit">Usage Limit</label>
-                <input id="edit-usageLimit" name="usageLimit" value={formData.usageLimit} onChange={handleChange} />
-              </div>
-            </div>
-          </div>
-
-          {/* Schedule & Status */}
-          <div className="coupon-modal__form-section" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <h3 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#475569', margin: 0 }}>Schedule &amp; Status</h3>
-            <div className="coupon-modal__grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              <div className="catalog-field">
-                <label htmlFor="edit-startDate">Start Date</label>
-                <input id="edit-startDate" name="startDate" type="date" value={formData.startDate} onChange={handleChange} />
-              </div>
-              <div className="catalog-field">
-                <label htmlFor="edit-endDate">End Date</label>
-                <input id="edit-endDate" name="endDate" type="date" value={formData.endDate} onChange={handleChange} />
-              </div>
-              <div className="catalog-field">
-                <label htmlFor="edit-status">Status</label>
-                <select id="edit-status" name="status" value={formData.status} onChange={handleChange}>
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                  <option value="Expired">Expired</option>
-                </select>
-              </div>
-            </div>
-          </div>
-
-          <div className="coupon-modal__actions" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-            <button className="catalog-btn cancel-btn" type="button" onClick={onClose} style={{ fontSize: '12px' }}>Cancel</button>
-            <button className="catalog-btn catalog-btn--primary save-btn" type="submit" style={{ fontSize: '12px' }}>
-              Update Coupon
+          <div className="coupon-modal-footer">
+            <button className="btn-coupons-secondary" type="button" onClick={onClose} disabled={isSubmitting}>
+              Cancel
+            </button>
+            <button className="btn-coupons-primary" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving Changes...' : 'Save Coupon'}
             </button>
           </div>
         </form>
@@ -188,253 +319,503 @@ const CouponEditModal = ({ coupon, onClose, onSave }) => {
 const CouponsList = () => {
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+
+  // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [editingCoupon, setEditingCoupon] = useState(null);
+  const [typeFilter, setTypeFilter] = useState('All');
 
-  // Pagination State
+  // Interactive Modal & Actions
+  const [editingCoupon, setEditingCoupon] = useState(null);
+  const [copiedCode, setCopiedCode] = useState('');
+
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Toast Notification State
-  const [toastMessage, setToastMessage] = useState('');
-  const [toastType, setToastType] = useState('success');
+  // Toast State
+  const [toast, setToast] = useState(null);
 
-  // Fetch coupons on mount
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+  };
+
+  const fetchData = async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
+    else setRefreshing(true);
+    setError(null);
+    try {
+      const data = await getCoupons();
+      setCoupons(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError('Failed to load coupons.');
+      showToast('Error loading coupon campaigns.', 'error');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const data = await getCoupons();
-        setCoupons(data);
-        setError(null);
-      } catch (err) {
-        setError('Failed to load coupons');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    fetchData(false);
   }, []);
 
+  // Filter and Search Logic
   const filteredCoupons = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
     return coupons
       .filter((coupon) => {
-        const matchesSearch = [coupon.code, coupon.description, coupon.type]
-          .join(' ')
-          .toLowerCase()
-          .includes(normalizedSearch);
+        const matchesSearch =
+          !normalizedSearch ||
+          [coupon.code, coupon.description, coupon.type, coupon.discountType]
+            .filter(Boolean)
+            .join(' ')
+            .toLowerCase()
+            .includes(normalizedSearch);
+
         const matchesStatus = statusFilter === 'All' || coupon.status === statusFilter;
-        return matchesSearch && matchesStatus;
+        const matchesType = typeFilter === 'All' || coupon.type === typeFilter;
+
+        return matchesSearch && matchesStatus && matchesType;
       })
       .sort((a, b) => Number(b.id) - Number(a.id));
-  }, [coupons, searchTerm, statusFilter]);
+  }, [coupons, searchTerm, statusFilter, typeFilter]);
 
   // Reset page when filter/search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, typeFilter]);
 
-  const summary = useMemo(() => {
-    return coupons.reduce(
-      (acc, coupon) => ({
-        active: acc.active + (coupon.status === 'Active' ? 1 : 0),
-        usage: acc.usage + Number(coupon.usedCount || 0),
-        campaigns: acc.campaigns + 1
-      }),
-      { active: 0, usage: 0, campaigns: 0 }
-    );
+  // KPI Metrics calculation
+  const metrics = useMemo(() => {
+    const total = coupons.length;
+    const active = coupons.filter((c) => c.status === 'Active' || c.isActive).length;
+    const inactive = coupons.filter((c) => c.status === 'Inactive' || (!c.isActive && c.status !== 'Expired')).length;
+    const expired = coupons.filter((c) => c.status === 'Expired').length;
+    const totalUses = coupons.reduce((sum, c) => sum + (Number(c.usedCount) || 0), 0);
+
+    return { total, active, inactive, expired, totalUses };
   }, [coupons]);
 
-  const toggleCouponStatus = async (id, code) => {
-    const target = coupons.find((c) => c.id === id);
-    if (!target || target.status === 'Expired') return;
-    const newIsActive = !target.isActive;
-    // Optimistic status mapping:
-    const newStatus = newIsActive ? (target.status === 'Inactive' ? 'Active' : target.status) : 'Inactive';
-    
+  const handleCopyCode = (code, e) => {
+    e.stopPropagation();
+    navigator.clipboard?.writeText(code);
+    setCopiedCode(code);
+    showToast(`Coupon code "${code}" copied to clipboard!`, 'info');
+    setTimeout(() => setCopiedCode(''), 2500);
+  };
+
+  const handleToggleStatus = async (coupon) => {
+    const isCurrentlyActive = coupon.status === 'Active' || coupon.isActive;
+    const newStatus = isCurrentlyActive ? 'Inactive' : 'Active';
+    const newIsActive = !isCurrentlyActive;
+
     try {
-      await updateCoupon(id, { ...target, isActive: newIsActive, status: newStatus });
+      await updateCoupon(coupon.id, {
+        ...coupon,
+        status: newStatus,
+        isActive: newIsActive
+      });
       setCoupons((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, isActive: newIsActive, status: newStatus } : c))
+        prev.map((c) => (c.id === coupon.id ? { ...c, status: newStatus, isActive: newIsActive } : c))
       );
-      setToastMessage(`Coupon "${code}" status updated to ${newStatus}.`);
-      setToastType('success');
+      showToast(`Coupon "${coupon.code}" set to ${newStatus}.`, 'success');
     } catch (err) {
-      setToastMessage(`Failed to update status for ${code}: ${err.message || err}`);
-      setToastType('error');
+      showToast(`Failed to update status for ${coupon.code}: ${err.message}`, 'error');
     }
   };
 
-  const deleteCoupon = async (id, code) => {
-    if (!window.confirm(`Are you sure you want to delete coupon "${code}"?`)) return;
+  const handleDeleteCoupon = async (id, code) => {
+    if (!window.confirm(`Are you sure you want to delete coupon code "${code}"?`)) return;
     try {
       await apiDeleteCoupon(id);
       setCoupons((prev) => prev.filter((c) => c.id !== id));
-      setToastMessage(`Coupon "${code}" deleted successfully.`);
-      setToastType('success');
+      showToast(`Coupon "${code}" deleted successfully.`, 'success');
     } catch (err) {
-      setToastMessage(`Failed to delete coupon ${code}: ${err.message || err}`);
-      setToastType('error');
+      showToast(`Failed to delete coupon ${code}: ${err.message}`, 'error');
     }
   };
 
-  const saveEditedCoupon = async (updatedCoupon) => {
+  const handleSaveCoupon = async (updatedCoupon) => {
     try {
       await updateCoupon(updatedCoupon.id, updatedCoupon);
       setCoupons((prev) =>
         prev.map((c) => (c.id === updatedCoupon.id ? updatedCoupon : c))
       );
       setEditingCoupon(null);
-      setToastMessage(`Coupon "${updatedCoupon.code}" saved successfully.`);
-      setToastType('success');
+      showToast(`Coupon "${updatedCoupon.code}" saved successfully.`, 'success');
     } catch (err) {
-      setToastMessage(`Failed to save coupon: ${err.message || err}`);
-      setToastType('error');
+      showToast(`Failed to save coupon: ${err.message}`, 'error');
+      throw err;
     }
   };
 
-  // Pagination calculations
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setTypeFilter('All');
+  };
+
+  // Pagination slice
   const totalPages = Math.ceil(filteredCoupons.length / itemsPerPage);
   const pagedCoupons = filteredCoupons.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
-  if (loading) {
-    return <div className="catalog-loader">Loading coupons...</div>;
-  }
-
   return (
-    <div className="coupons-page" style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '16px' }}>
-      {toastMessage && (
-        <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
+    <div className="coupons-mgmt-container">
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
       )}
 
-      {error && <div className="catalog-alert catalog-alert--error">{error}</div>}
-      
-      {/* Compact Title Section */}
-      <section className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
-        <div>
-          <h1 style={{ fontSize: '20px', fontWeight: 800, color: '#1e293b', margin: 0 }}>Promotions &amp; Coupons</h1>
-          <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 0 0' }}>Manage campaign vouchers, cart rules, and seasonal discounts.</p>
+      {/* ── Top Header Card ── */}
+      <section className="coupons-header-card">
+        <div className="coupons-title-wrap">
+          <span className="coupons-kicker">
+            <Sparkles size={13} /> Promotions &amp; Discounts
+          </span>
+          <h1>Coupons &amp; Vouchers Ledger</h1>
+          <p>
+            Configure promotional discount codes, cart criteria, usage limits, and campaign validity periods.
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
-          <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '10px', color: '#64748b', display: 'block' }}>Active Coupons</span>
-            <strong style={{ color: '#059669', fontSize: '15px' }}>{summary.active}</strong>
-          </div>
-          <div style={{ textAlign: 'right', borderLeft: '1px solid #e2e8f0', paddingLeft: '16px' }}>
-            <span style={{ fontSize: '10px', color: '#64748b', display: 'block' }}>Total Uses</span>
-            <strong style={{ color: '#2563eb', fontSize: '15px' }}>{summary.usage}</strong>
-          </div>
-        </div>
-      </section>
 
-      <section className="catalog-card" style={{ margin: 0 }}>
-        <div className="catalog-card__header" style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h2 style={{ fontSize: '13px', fontWeight: 700, color: '#334155' }}>Active Campaigns</h2>
-            <p className="catalog-card__subtitle" style={{ fontSize: '10px', margin: 0 }}>{filteredCoupons.length} coupons match active filter</p>
-          </div>
-          <Link className="catalog-btn catalog-btn--primary" to="/admin/marketing/coupon" style={{ fontSize: '11px', padding: '5px 10px' }}>
-            <Plus size={13} style={{ marginRight: '4px' }} />
+        <div className="coupons-header-actions">
+          <button
+            className="btn-coupons-secondary"
+            type="button"
+            onClick={() => fetchData(true)}
+            disabled={refreshing || loading}
+            title="Refresh coupons"
+          >
+            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+          <Link className="btn-coupons-primary" to="/admin/marketing/coupon">
+            <Plus size={16} />
             Create Coupon
           </Link>
         </div>
-
-        <div className="catalog-filterbar" style={{ padding: '8px 16px', gap: '10px' }}>
-          <div className="catalog-search" style={{ flex: 1 }}>
-            <Search size={16} />
-            <input
-              type="search"
-              placeholder="Search coupon code, campaign..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ fontSize: '12px', padding: '4px 8px 4px 32px' }}
-            />
-          </div>
-          <label className="catalog-filter">
-            <Filter size={14} />
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ fontSize: '12px', padding: '4px' }}>
-              <option value="All">All statuses</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-              <option value="Expired">Expired</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="coupons-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px', padding: '16px' }}>
-          {pagedCoupons.map((coupon) => (
-            <article className={`coupon-card coupon-card--${coupon.status.toLowerCase()}`} key={coupon.code} style={{ padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#fff', position: 'relative', display: 'flex', flexDirection: 'column', gap: '10px', transition: 'all 0.2s' }}>
-              <div className="coupon-card__top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <span className="coupon-code" style={{ fontSize: '13px', fontWeight: 800, color: '#1e293b' }}>{coupon.code}</span>
-                  <p style={{ fontSize: '10px', color: '#64748b', margin: '2px 0 0 0', lineHeight: 1.3 }}>{coupon.description}</p>
-                </div>
-                <CouponStatusBadge status={coupon.status} />
-              </div>
-
-              <div className="coupon-value-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', backgroundColor: '#f8fafc', padding: '8px', borderRadius: '8px', fontSize: '10px', textAlign: 'center' }}>
-                <div>
-                  <span style={{ color: '#64748b', display: 'block' }}>Discount</span>
-                  <strong style={{ color: '#0f172a' }}>{formatDiscount(coupon)}</strong>
-                </div>
-                <div>
-                  <span style={{ color: '#64748b', display: 'block' }}>Min Cart</span>
-                  <strong style={{ color: '#0f172a' }}>{formatCurrency(coupon.minSpend)}</strong>
-                </div>
-                <div>
-                  <span style={{ color: '#64748b', display: 'block' }}>Used</span>
-                  <strong style={{ color: '#0f172a' }}>{coupon.usedCount}</strong>
-                </div>
-              </div>
-
-              <div className="coupon-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#64748b' }}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Calendar size={11} /> {formatDateDMY(coupon.endDate)}</span>
-                <span>{coupon.maxDiscount ? `Cap ${formatCurrency(coupon.maxDiscount)}` : 'No Cap'}</span>
-              </div>
-
-              <div className="coupon-card__footer" style={{ borderTop: '1px solid #f1f5f9', paddingTop: '8px', marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <button
-                    className={`catalog-btn ${coupon.isActive ? 'catalog-btn--outline' : 'catalog-btn--success'}`}
-                    type="button"
-                    onClick={() => toggleCouponStatus(coupon.id, coupon.code)}
-                    disabled={coupon.status === 'Expired'}
-                    style={{ fontSize: '11px', padding: '4px 10px', height: 'auto', minHeight: 'unset' }}
-                  >
-                    {coupon.isActive ? 'Deactivate' : 'Activate'}
-                  </button>
-                <div className="catalog-inline-actions" style={{ display: 'flex', gap: '8px' }}>
-                  <AnimatedEditButton onClick={() => setEditingCoupon(coupon)} title="Edit coupon" />
-                  <OutlookDeleteButton onClick={() => deleteCoupon(coupon.id, coupon.code)} title="Delete coupon" />
-                </div>
-              </div>
-            </article>
-          ))}
-
-          {!filteredCoupons.length && (
-            <div className="catalog-empty-state coupons-empty" style={{ gridColumn: '1 / -1', padding: '24px', textAlign: 'center', color: '#94a3b8' }}>
-              <Tag size={24} style={{ margin: '0 auto 8px', display: 'block' }} />
-              <h3 style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>No coupons found</h3>
-              <p style={{ fontSize: '11px' }}>Try adjusting your search filters or create a new seasonal coupon campaign.</p>
-            </div>
-          )}
-        </div>
-
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          totalItems={filteredCoupons.length}
-          itemsPerPage={itemsPerPage}
-        />
       </section>
 
+      {/* ── KPI Metric Cards ── */}
+      <div className="coupons-kpi-grid">
+        <div
+          className={`coupons-kpi-card ${statusFilter === 'All' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('All')}
+        >
+          <div className="coupons-kpi-info">
+            <span className="coupons-kpi-label">Total Campaigns</span>
+            <span className="coupons-kpi-val">{metrics.total}</span>
+            <span className="coupons-kpi-sub">All created coupons</span>
+          </div>
+          <div className="coupons-kpi-icon-wrap icon-blue">
+            <Tag size={20} />
+          </div>
+        </div>
+
+        <div
+          className={`coupons-kpi-card ${statusFilter === 'Active' ? 'active' : ''}`}
+          onClick={() => setStatusFilter('Active')}
+        >
+          <div className="coupons-kpi-info">
+            <span className="coupons-kpi-label">Active Coupons</span>
+            <span className="coupons-kpi-val" style={{ color: '#059669' }}>
+              {metrics.active}
+            </span>
+            <span className="coupons-kpi-sub">Ready to apply at checkout</span>
+          </div>
+          <div className="coupons-kpi-icon-wrap icon-emerald">
+            <CheckCircle2 size={20} />
+          </div>
+        </div>
+
+        <div className="coupons-kpi-card">
+          <div className="coupons-kpi-info">
+            <span className="coupons-kpi-label">Total Redemptions</span>
+            <span className="coupons-kpi-val" style={{ color: '#7c3aed' }}>
+              {metrics.totalUses}
+            </span>
+            <span className="coupons-kpi-sub">Customer checkout uses</span>
+          </div>
+          <div className="coupons-kpi-icon-wrap icon-purple">
+            <TrendingUp size={20} />
+          </div>
+        </div>
+
+        <div
+          className={`coupons-kpi-card ${statusFilter === 'Inactive' || statusFilter === 'Expired' ? 'active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Inactive' ? 'Expired' : 'Inactive')}
+        >
+          <div className="coupons-kpi-info">
+            <span className="coupons-kpi-label">Inactive / Expired</span>
+            <span className="coupons-kpi-val" style={{ color: '#d97706' }}>
+              {metrics.inactive + metrics.expired}
+            </span>
+            <span className="coupons-kpi-sub">
+              {metrics.inactive} Inactive · {metrics.expired} Expired
+            </span>
+          </div>
+          <div className="coupons-kpi-icon-wrap icon-amber">
+            <Clock size={20} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Filter Toolbar ── */}
+      <div className="coupons-toolbar-card">
+        <div className="coupons-toolbar-left">
+          <div className="coupons-search-box">
+            <Search size={16} className="coupons-search-icon" />
+            <input
+              type="text"
+              className="coupons-search-input"
+              placeholder="Search coupon code, campaign, rules..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                className="coupons-search-clear"
+                onClick={() => setSearchTerm('')}
+                title="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          <div className="coupons-filter-select-wrap">
+            <select
+              className="coupons-filter-select"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="All">All Statuses</option>
+              <option value="Active">Active Only</option>
+              <option value="Inactive">Inactive Only</option>
+              <option value="Expired">Expired Only</option>
+            </select>
+            <ChevronDown size={14} className="coupons-select-caret" />
+          </div>
+
+          <div className="coupons-filter-select-wrap">
+            <select
+              className="coupons-filter-select"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+            >
+              <option value="All">All Discount Types</option>
+              <option value="Percentage">Percentage (%)</option>
+              <option value="Flat Amount">Flat Amount (₹)</option>
+              <option value="Shipping">Free Delivery</option>
+            </select>
+            <ChevronDown size={14} className="coupons-select-caret" />
+          </div>
+        </div>
+
+        <div className="coupons-toolbar-right">
+          {(searchTerm || statusFilter !== 'All' || typeFilter !== 'All') && (
+            <button
+              type="button"
+              className="btn-coupons-reset"
+              onClick={handleResetFilters}
+            >
+              <RotateCcw size={13} /> Reset Filters
+            </button>
+          )}
+
+          <span className="coupons-count-tag">
+            Showing <strong>{filteredCoupons.length}</strong> of {coupons.length}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Table Card ── */}
+      <div className="coupons-table-card">
+        {loading ? (
+          <div className="coupons-empty-state">
+            <div className="coupons-empty-icon">
+              <RefreshCw size={24} className="animate-spin" />
+            </div>
+            <h3>Loading Coupons...</h3>
+            <p>Fetching active marketing campaigns and discount rules.</p>
+          </div>
+        ) : filteredCoupons.length === 0 ? (
+          <div className="coupons-empty-state">
+            <div className="coupons-empty-icon">
+              <Tag size={24} />
+            </div>
+            <h3>No Coupons Found</h3>
+            <p>No promotional vouchers match the applied search and filter criteria.</p>
+            <button className="btn-coupons-secondary" onClick={handleResetFilters}>
+              Reset Filters
+            </button>
+          </div>
+        ) : (
+          <div className="coupons-table-wrapper">
+            <table className="coupons-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '22%' }}>Coupon Code &amp; Campaign</th>
+                  <th style={{ width: '15%' }}>Discount Offer</th>
+                  <th style={{ width: '16%' }}>Cart Rules &amp; Caps</th>
+                  <th style={{ width: '14%' }}>Usage &amp; Limits</th>
+                  <th style={{ width: '15%' }}>Validity Schedule</th>
+                  <th style={{ width: '10%' }}>Status</th>
+                  <th style={{ width: '8%', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pagedCoupons.map((coupon) => {
+                  const isActive = coupon.status === 'Active' || coupon.isActive;
+                  const isExpired = coupon.status === 'Expired';
+
+                  return (
+                    <tr key={coupon.id || coupon.code}>
+                      {/* Coupon Code & Campaign */}
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span className="coupon-code-badge" title="Click to copy code">
+                            {coupon.code}
+                            <button
+                              type="button"
+                              className="coupon-copy-btn"
+                              onClick={(e) => handleCopyCode(coupon.code, e)}
+                              title="Copy code"
+                            >
+                              {copiedCode === coupon.code ? (
+                                <Check size={13} color="#15803d" />
+                              ) : (
+                                <Copy size={13} />
+                              )}
+                            </button>
+                          </span>
+                        </div>
+                        <div className="coupon-desc-text">
+                          {coupon.description || 'Promotional discount voucher'}
+                        </div>
+                      </td>
+
+                      {/* Discount Offer */}
+                      <td>
+                        <div className="coupon-discount-val">
+                          {formatDiscountDisplay(coupon)}
+                        </div>
+                        <span className="coupon-type-tag">
+                          {coupon.type || coupon.discountType || 'Percentage'}
+                        </span>
+                      </td>
+
+                      {/* Cart Rules & Caps */}
+                      <td>
+                        <div className="coupon-rule-item">
+                          <span className="coupon-rule-label">Min Cart:</span>
+                          <strong>{coupon.minSpend > 0 ? formatCurrency(coupon.minSpend) : 'None'}</strong>
+                        </div>
+                        <div className="coupon-rule-item" style={{ marginTop: '2px' }}>
+                          <span className="coupon-rule-label">Max Cap:</span>
+                          <span>{coupon.maxDiscount ? formatCurrency(coupon.maxDiscount) : 'No Cap'}</span>
+                        </div>
+                      </td>
+
+                      {/* Usage & Limits */}
+                      <td>
+                        <div className="coupon-usage-bar-wrap">
+                          <div className="coupon-usage-text">
+                            {coupon.usageLimit > 0 ? (
+                              <span>
+                                <strong>{coupon.usedCount || 0}</strong> / {coupon.usageLimit} uses
+                              </span>
+                            ) : (
+                              <span>
+                                <strong>{coupon.usedCount || 0}</strong> uses
+                              </span>
+                            )}
+                          </div>
+                          <span className="coupon-usage-limit">
+                            {coupon.perCustomerLimit ? `${coupon.perCustomerLimit} per user` : 'Unlimited per user'}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Validity Schedule */}
+                      <td>
+                        <div className="coupon-date-range">
+                          <div className="coupon-date-item">
+                            <Calendar size={12} color="#64748b" />
+                            <span>
+                              {coupon.startDate ? formatDateDMY(coupon.startDate) : 'Immediate'} →{' '}
+                              {coupon.endDate ? formatDateDMY(coupon.endDate) : 'Indefinite'}
+                            </span>
+                          </div>
+                          {coupon.endDate && new Date(coupon.endDate) < new Date() && (
+                            <span style={{ fontSize: '10.5px', color: '#e11d48', fontWeight: 600 }}>
+                              Expired
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td>
+                        <CouponStatusBadge status={coupon.status} />
+                      </td>
+
+                      {/* Actions */}
+                      <td>
+                        <div className="coupon-actions-cell">
+                          <button
+                            type="button"
+                            className={`btn-toggle-switch ${isActive ? 'is-active' : 'is-inactive'}`}
+                            onClick={() => handleToggleStatus(coupon)}
+                            disabled={isExpired}
+                            title={isActive ? 'Deactivate Coupon' : 'Activate Coupon'}
+                          >
+                            {isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                          <AnimatedEditButton
+                            onClick={() => setEditingCoupon(coupon)}
+                            title="Edit Coupon Details"
+                          />
+                          <OutlookDeleteButton
+                            onClick={() => handleDeleteCoupon(coupon.id, coupon.code)}
+                            title="Delete Coupon"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {filteredCoupons.length > 0 && (
+          <div style={{ padding: '8px 16px', borderTop: '1px solid #f1f5f9' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredCoupons.length}
+              itemsPerPage={itemsPerPage}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* ── Edit Modal ── */}
       {editingCoupon && (
         <CouponEditModal
           coupon={editingCoupon}
           onClose={() => setEditingCoupon(null)}
-          onSave={saveEditedCoupon}
+          onSave={handleSaveCoupon}
         />
       )}
     </div>
@@ -442,4 +823,3 @@ const CouponsList = () => {
 };
 
 export default CouponsList;
-

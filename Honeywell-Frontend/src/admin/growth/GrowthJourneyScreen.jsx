@@ -1,20 +1,35 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, RefreshCw, Save, Edit2, Trash2, CheckCircle, AlertCircle, X, TrendingUp } from 'lucide-react';
+import { 
+  Search, 
+  Plus, 
+  RefreshCw, 
+  Save, 
+  Edit2, 
+  Trash2, 
+  AlertCircle, 
+  X, 
+  TrendingUp, 
+  BarChart3 
+} from 'lucide-react';
 import { 
   getGrowthJourneyData, 
   createGrowthJourney, 
   bulkUpdateGrowthJourney, 
   deleteGrowthJourney 
 } from '../../services/growthJourneyService';
-import '../catalog/adminModule.css';
 import { Toast } from '../components/Toast';
-import { OutlookDeleteButton, AnimatedEditButton } from '../components/ActionButtons';
+import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
+import './GrowthJourneyScreen.css';
 
 export default function GrowthJourneyScreen() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Form Modal State (Add / Single Edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,7 +62,6 @@ export default function GrowthJourneyScreen() {
     setLoading(true);
     try {
       const data = await getGrowthJourneyData();
-      // Sort logically by year ascending
       const sorted = [...data].sort((a, b) => String(a.year).localeCompare(String(b.year), undefined, { numeric: true }));
       setItems(sorted);
       setBulkData(JSON.parse(JSON.stringify(sorted)));
@@ -76,12 +90,25 @@ export default function GrowthJourneyScreen() {
     );
   }, [items, searchTerm]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage) || 1;
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredItems.slice(start, start + itemsPerPage);
+  }, [filteredItems, currentPage, itemsPerPage]);
+
   // Handle opening form modal for Add
   const handleOpenAdd = () => {
     setModalMode('add');
+    const nextYear = items.length > 0 
+      ? Math.max(...items.map(i => Number(i.year) || 2024)) + 1 
+      : new Date().getFullYear();
     setFormData({
       id: null,
-      year: String(new Date().getFullYear() + 1),
+      year: String(nextYear),
       business: 50,
       products: 50,
       customers: 50,
@@ -93,14 +120,15 @@ export default function GrowthJourneyScreen() {
 
   // Handle opening form modal for Single Edit
   const handleOpenEdit = (item) => {
+    if (!item) return;
     setModalMode('edit');
     setFormData({
       id: item.id || null,
-      year: String(item.year),
-      business: item.business !== undefined ? item.business : '',
-      products: item.products !== undefined ? item.products : '',
-      customers: item.customers !== undefined ? item.customers : '',
-      sales: item.sales !== undefined ? item.sales : ''
+      year: String(item.year ?? ''),
+      business: item.business !== undefined && item.business !== null ? Number(item.business) : 0,
+      products: item.products !== undefined && item.products !== null ? Number(item.products) : 0,
+      customers: item.customers !== undefined && item.customers !== null ? Number(item.customers) : 0,
+      sales: item.sales !== undefined && item.sales !== null ? Number(item.sales) : 0
     });
     setFormErrors({});
     setIsModalOpen(true);
@@ -133,7 +161,7 @@ export default function GrowthJourneyScreen() {
     return Object.keys(errors).length === 0;
   };
 
-  // Modal form submission (POST for add, POST/PUT for edit)
+  // Modal form submission (POST for add/edit)
   const handleSubmitForm = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -148,16 +176,8 @@ export default function GrowthJourneyScreen() {
         sales: Number(formData.sales)
       };
 
-      if (modalMode === 'add') {
-        await createGrowthJourney(payload);
-        showToast(`Growth Journey record for ${payload.year} created successfully.`);
-      } else {
-        // Edit mode: If year changed or single update, we can update via POST or bulk payload
-        // POST /api/GrowthJourney updates or creates by year in backend
-        await createGrowthJourney(payload);
-        showToast(`Growth Journey record for ${payload.year} updated successfully.`);
-      }
-
+      await createGrowthJourney(payload);
+      showToast(`Growth Journey record for ${payload.year} ${modalMode === 'add' ? 'created' : 'updated'} successfully.`);
       setIsModalOpen(false);
       await loadData();
     } catch (err) {
@@ -180,9 +200,8 @@ export default function GrowthJourneyScreen() {
     });
   };
 
-  // Save Bulk Updates (PUT /api/GrowthJourney/bulk)
+  // Save Bulk Updates
   const handleSaveBulk = async () => {
-    // Validate bulk data
     for (let i = 0; i < bulkData.length; i++) {
       const row = bulkData[i];
       if (!row.year || !String(row.year).trim()) {
@@ -237,8 +256,19 @@ export default function GrowthJourneyScreen() {
     }
   };
 
+  // Close modal on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isModalOpen && !submitting) {
+        setIsModalOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isModalOpen, submitting]);
+
   return (
-    <div className="catalog-page">
+    <div className="growth-journey-container">
       {/* Toast Notification */}
       {toast && (
         <Toast 
@@ -248,66 +278,70 @@ export default function GrowthJourneyScreen() {
         />
       )}
 
-      {/* Header */}
-      <section className="catalog-header">
-        <div className="catalog-title-wrap">
-          <span className="catalog-kicker">Performance & Analytics</span>
+      {/* Top Header Bar (Single horizontal line with heading & action buttons) */}
+      <section className="growth-header-card">
+        <div className="growth-title-wrap">
+          <span className="growth-kicker">PERFORMANCE &amp; ANALYTICS</span>
           <h1>Growth Journey Management</h1>
-          <p>Manage annual performance metrics, product growth, customer network indices, and business indicators displayed across the Honeywell Products platform.</p>
+          <p>Manage annual performance metrics, product range expansion, customer network indexes, and business growth indicators.</p>
         </div>
 
-        <div className="catalog-header__actions">
+        <div className="growth-header-actions">
           <button 
             type="button" 
-            className="catalog-btn" 
+            className="btn-growth-secondary" 
             onClick={loadData} 
             disabled={loading} 
-            title="Refresh Data"
+            title="Refresh Growth Data"
           >
-            <RefreshCw size={16} className={loading ? 'spin' : ''} />
-            Refresh
+            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            <span>Refresh</span>
           </button>
 
           {!isBulkEdit ? (
             <>
               <button 
                 type="button" 
-                className="catalog-btn" 
+                className="btn-growth-secondary" 
                 onClick={() => {
                   setBulkData(JSON.parse(JSON.stringify(items)));
                   setIsBulkEdit(true);
                 }}
                 disabled={loading || items.length === 0}
-                title="Bulk Edit Table"
+                title="Bulk Edit All Growth Journey Rows"
               >
-                <Edit2 size={16} /> Bulk Edit
+                <Edit2 size={15} />
+                <span>Bulk Edit</span>
               </button>
               <button 
                 type="button" 
-                className="catalog-btn catalog-btn--primary" 
+                className="btn-growth-primary" 
                 onClick={handleOpenAdd}
+                title="Create New Annual Growth Record"
               >
-                <Plus size={16} /> Add Growth Record
+                <Plus size={16} />
+                <span>Add Growth Record</span>
               </button>
             </>
           ) : (
             <>
               <button 
                 type="button" 
-                className="catalog-btn" 
+                className="btn-growth-secondary" 
                 onClick={() => setIsBulkEdit(false)}
                 disabled={bulkSubmitting}
               >
-                Cancel Bulk Edit
+                <X size={15} />
+                <span>Cancel Bulk Edit</span>
               </button>
               <button 
                 type="button" 
-                className="catalog-btn catalog-btn--primary" 
+                className="btn-growth-primary" 
                 onClick={handleSaveBulk}
                 disabled={bulkSubmitting}
               >
-                <Save size={16} className={bulkSubmitting ? 'spin' : ''} />
-                {bulkSubmitting ? 'Saving All...' : 'Save Bulk Changes'}
+                <Save size={15} className={bulkSubmitting ? 'animate-spin' : ''} />
+                <span>{bulkSubmitting ? 'Saving All...' : 'Save Bulk Changes'}</span>
               </button>
             </>
           )}
@@ -315,47 +349,58 @@ export default function GrowthJourneyScreen() {
       </section>
 
       {/* Table Card */}
-      <section className="catalog-card">
-        <div className="catalog-filterbar">
-          <div className="catalog-search">
-            <Search size={18} />
+      <section className="growth-card">
+        <div className="growth-filterbar">
+          <div className="growth-search-wrap">
+            <Search size={16} className="growth-search-icon" />
             <input
               type="text"
-              placeholder="Search by year or growth value..."
+              className="growth-search-input"
+              placeholder="Search by year or growth metrics..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               disabled={isBulkEdit}
             />
+            {searchTerm && (
+              <button 
+                type="button" 
+                onClick={() => setSearchTerm('')} 
+                className="growth-search-clear"
+                title="Clear Search"
+              >
+                <X size={13} />
+              </button>
+            )}
           </div>
-          <span className="catalog-count">
-            {loading ? 'Loading...' : `${filteredItems.length} record${filteredItems.length !== 1 ? 's' : ''}`}
+          <span className="growth-count-badge">
+            {loading ? 'Loading...' : `Showing ${filteredItems.length} of ${items.length} records`}
           </span>
         </div>
 
-        <div className="catalog-table-wrap">
-          <table className="catalog-table">
+        <div className="growth-table-wrap">
+          <table className="growth-table">
             <thead>
               <tr>
-                <th style={{ width: '120px' }}>Year</th>
-                <th>Business Growth Index</th>
-                <th>Product Range Growth</th>
-                <th>Customer Network Growth</th>
-                <th>Sales Growth Index</th>
-                <th className="catalog-center-cell" style={{ width: '130px' }}>Actions</th>
+                <th className="col-year">Year</th>
+                <th className="col-metric">Business Growth Index</th>
+                <th className="col-metric">Product Range Growth</th>
+                <th className="col-metric">Customer Network Growth</th>
+                <th className="col-metric">Sales Growth Index</th>
+                <th className="col-actions">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-                    <RefreshCw size={20} className="spin" style={{ display: 'inline-block', marginRight: '8px' }} />
-                    Loading Growth Journey records from API...
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px 20px', color: '#64748b' }}>
+                    <RefreshCw size={20} className="animate-spin" style={{ display: 'inline-block', marginRight: '8px', verticalAlign: 'middle' }} />
+                    <span>Loading Growth Journey records from database...</span>
                   </td>
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-                    No Growth Journey records available. Click <strong>"Add Growth Record"</strong> to create one.
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '48px 20px', color: '#64748b' }}>
+                    {searchTerm ? 'No growth records matching search query.' : 'No Growth Journey records available. Click "Add Growth Record" to create one.'}
                   </td>
                 </tr>
               ) : isBulkEdit ? (
@@ -363,19 +408,16 @@ export default function GrowthJourneyScreen() {
                 bulkData.map((row, idx) => (
                   <tr key={row.id || row.year || idx}>
                     <td>
-                      <input 
-                        type="text" 
-                        className="catalog-input" 
-                        style={{ width: '90px', fontWeight: 'bold' }} 
-                        value={row.year} 
-                        onChange={(e) => handleBulkChange(idx, 'year', e.target.value)}
-                        readOnly // Keep year fixed in bulk edit to avoid index corruption
-                      />
+                      <span className="growth-year-cell" style={{ background: '#f8fafc' }}>
+                        {row.year}
+                      </span>
                     </td>
                     <td>
                       <input 
                         type="number" 
-                        className="catalog-input" 
+                        min="0"
+                        max="100"
+                        className="growth-input" 
                         value={row.business} 
                         onChange={(e) => handleBulkChange(idx, 'business', e.target.value)} 
                       />
@@ -383,7 +425,9 @@ export default function GrowthJourneyScreen() {
                     <td>
                       <input 
                         type="number" 
-                        className="catalog-input" 
+                        min="0"
+                        max="100"
+                        className="growth-input" 
                         value={row.products} 
                         onChange={(e) => handleBulkChange(idx, 'products', e.target.value)} 
                       />
@@ -391,7 +435,9 @@ export default function GrowthJourneyScreen() {
                     <td>
                       <input 
                         type="number" 
-                        className="catalog-input" 
+                        min="0"
+                        max="100"
+                        className="growth-input" 
                         value={row.customers} 
                         onChange={(e) => handleBulkChange(idx, 'customers', e.target.value)} 
                       />
@@ -399,46 +445,86 @@ export default function GrowthJourneyScreen() {
                     <td>
                       <input 
                         type="number" 
-                        className="catalog-input" 
+                        min="0"
+                        max="100"
+                        className="growth-input" 
                         value={row.sales} 
                         onChange={(e) => handleBulkChange(idx, 'sales', e.target.value)} 
                       />
                     </td>
-                    <td className="catalog-center-cell">
-                      <span style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic' }}>Bulk Editing</span>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="growth-bulk-badge">Editing</span>
                     </td>
                   </tr>
                 ))
               ) : (
                 /* Standard View Rows */
-                filteredItems.map((item) => (
+                paginatedItems.map((item) => (
                   <tr key={item.id || item.year}>
-                    <td style={{ fontWeight: '700', color: '#0f172a' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <TrendingUp size={16} color="#1268a5" />
+                    <td>
+                      <div className="growth-year-cell">
+                        <TrendingUp size={14} color="#1268a5" style={{ flexShrink: 0 }} />
                         <span>{item.year}</span>
                       </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: '600', color: '#1e293b' }}>{item.business}</span>
+                      <div className="growth-metric-box">
+                        <span className="growth-metric-val">{item.business}</span>
+                        <div className="growth-progress-track">
+                          <div 
+                            className="growth-progress-bar" 
+                            style={{ width: `${Math.min(100, Math.max(0, Number(item.business) || 0))}%` }} 
+                          />
+                        </div>
+                      </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: '600', color: '#1e293b' }}>{item.products}</span>
+                      <div className="growth-metric-box">
+                        <span className="growth-metric-val">{item.products}</span>
+                        <div className="growth-progress-track">
+                          <div 
+                            className="growth-progress-bar" 
+                            style={{ width: `${Math.min(100, Math.max(0, Number(item.products) || 0))}%` }} 
+                          />
+                        </div>
+                      </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: '600', color: '#1e293b' }}>{item.customers}</span>
+                      <div className="growth-metric-box">
+                        <span className="growth-metric-val">{item.customers}</span>
+                        <div className="growth-progress-track">
+                          <div 
+                            className="growth-progress-bar" 
+                            style={{ width: `${Math.min(100, Math.max(0, Number(item.customers) || 0))}%` }} 
+                          />
+                        </div>
+                      </div>
                     </td>
                     <td>
-                      <span style={{ fontWeight: '600', color: '#1e293b' }}>{item.sales}</span>
+                      <div className="growth-metric-box">
+                        <span className="growth-metric-val">{item.sales}</span>
+                        <div className="growth-progress-track">
+                          <div 
+                            className="growth-progress-bar" 
+                            style={{ width: `${Math.min(100, Math.max(0, Number(item.sales) || 0))}%` }} 
+                          />
+                        </div>
+                      </div>
                     </td>
-                    <td className="catalog-center-cell">
-                      <div className="catalog-inline-actions">
+                    <td style={{ textAlign: 'center' }}>
+                      <div className="growth-inline-actions">
                         <AnimatedEditButton 
-                          onClick={() => handleOpenEdit(item)} 
+                          onClick={(e) => {
+                            if (e) e.stopPropagation();
+                            handleOpenEdit(item);
+                          }} 
                           title={`Edit ${item.year} Record`} 
                         />
                         <OutlookDeleteButton 
-                          onClick={() => setDeleteTarget(item)} 
+                          onClick={(e) => {
+                            if (e) e.stopPropagation();
+                            setDeleteTarget(item);
+                          }} 
                           title={`Delete ${item.year} Record`} 
                         />
                       </div>
@@ -449,104 +535,181 @@ export default function GrowthJourneyScreen() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination bar */}
+        {!isBulkEdit && filteredItems.length > itemsPerPage && (
+          <div style={{ borderTop: '1px solid #f1f5f9', padding: '4px 16px', background: '#ffffff' }}>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredItems.length}
+              itemsPerPage={itemsPerPage}
+            />
+          </div>
+        )}
       </section>
 
       {/* Single Add / Edit Modal */}
       {isModalOpen && (
-        <div className="catalog-modal-overlay" onClick={() => !submitting && setIsModalOpen(false)}>
-          <div className="catalog-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
-            <div className="catalog-modal-header">
-              <h2>{modalMode === 'add' ? 'Add Growth Journey Entry' : `Edit Growth Journey (${formData.year})`}</h2>
+        <div className="growth-modal-overlay" onClick={() => !submitting && setIsModalOpen(false)}>
+          <div className="growth-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="growth-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div className="growth-modal-icon-wrap">
+                  <TrendingUp size={20} color="#1268a5" />
+                </div>
+                <div>
+                  <h2>{modalMode === 'add' ? 'Add Growth Journey Record' : `Edit Growth Record (${formData.year})`}</h2>
+                  <p className="growth-modal-subtitle">
+                    {modalMode === 'add' 
+                      ? 'Create an annual performance entry with custom growth indexes (0–100).' 
+                      : `Update the growth indicators and performance indexes for year ${formData.year}.`}
+                  </p>
+                </div>
+              </div>
               <button 
                 type="button" 
-                className="catalog-modal-close" 
+                className="growth-modal-close" 
                 onClick={() => setIsModalOpen(false)}
                 disabled={submitting}
+                title="Close Modal (Esc)"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmitForm} className="catalog-form" style={{ padding: '20px' }}>
-              <div className="catalog-form-group">
-                <label className="catalog-label">
-                  Year <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input 
-                  type="text" 
-                  className={`catalog-input ${formErrors.year ? 'catalog-input--error' : ''}`}
-                  placeholder="e.g. 2027"
-                  value={formData.year}
-                  onChange={(e) => setFormData({ ...formData, year: e.target.value })}
-                  disabled={modalMode === 'edit' || submitting}
-                />
-                {formErrors.year && <span className="catalog-error-text">{formErrors.year}</span>}
+            <form onSubmit={handleSubmitForm}>
+              <div className="growth-modal-body">
+                {/* Year Field */}
+                <div className="growth-form-group">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <label>
+                      Timeline Year <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    {modalMode === 'edit' && (
+                      <span className="growth-locked-pill">Locked in Edit Mode</span>
+                    )}
+                  </div>
+                  <input 
+                    type="text" 
+                    className={`growth-input ${modalMode === 'edit' ? 'growth-input-locked' : ''}`}
+                    placeholder="e.g. 2027"
+                    value={formData.year}
+                    onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                    disabled={modalMode === 'edit' || submitting}
+                  />
+                  {formErrors.year && <span className="growth-error-msg">{formErrors.year}</span>}
+                </div>
+
+                {/* Growth Metrics Form Grid */}
+                <div className="growth-form-grid">
+                  {/* Business Growth Index */}
+                  <div className="growth-form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label>Business Growth Index <span style={{ color: '#ef4444' }}>*</span></label>
+                      <span className="growth-metric-badge">{formData.business || 0}%</span>
+                    </div>
+                    <input 
+                      type="number" 
+                      min="0"
+                      max="100"
+                      className="growth-input" 
+                      placeholder="e.g. 85"
+                      value={formData.business}
+                      onChange={(e) => setFormData({ ...formData, business: e.target.value })}
+                      disabled={submitting}
+                    />
+                    <div className="growth-progress-track" style={{ marginTop: '4px' }}>
+                      <div 
+                        className="growth-progress-bar" 
+                        style={{ width: `${Math.min(100, Math.max(0, Number(formData.business) || 0))}%` }} 
+                      />
+                    </div>
+                    {formErrors.business && <span className="growth-error-msg">{formErrors.business}</span>}
+                  </div>
+
+                  {/* Product Range Growth */}
+                  <div className="growth-form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label>Product Range Growth <span style={{ color: '#ef4444' }}>*</span></label>
+                      <span className="growth-metric-badge">{formData.products || 0}%</span>
+                    </div>
+                    <input 
+                      type="number" 
+                      min="0"
+                      max="100"
+                      className="growth-input" 
+                      placeholder="e.g. 80"
+                      value={formData.products}
+                      onChange={(e) => setFormData({ ...formData, products: e.target.value })}
+                      disabled={submitting}
+                    />
+                    <div className="growth-progress-track" style={{ marginTop: '4px' }}>
+                      <div 
+                        className="growth-progress-bar" 
+                        style={{ width: `${Math.min(100, Math.max(0, Number(formData.products) || 0))}%` }} 
+                      />
+                    </div>
+                    {formErrors.products && <span className="growth-error-msg">{formErrors.products}</span>}
+                  </div>
+
+                  {/* Customer Network Growth */}
+                  <div className="growth-form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label>Customer Network Growth <span style={{ color: '#ef4444' }}>*</span></label>
+                      <span className="growth-metric-badge">{formData.customers || 0}%</span>
+                    </div>
+                    <input 
+                      type="number" 
+                      min="0"
+                      max="100"
+                      className="growth-input" 
+                      placeholder="e.g. 88"
+                      value={formData.customers}
+                      onChange={(e) => setFormData({ ...formData, customers: e.target.value })}
+                      disabled={submitting}
+                    />
+                    <div className="growth-progress-track" style={{ marginTop: '4px' }}>
+                      <div 
+                        className="growth-progress-bar" 
+                        style={{ width: `${Math.min(100, Math.max(0, Number(formData.customers) || 0))}%` }} 
+                      />
+                    </div>
+                    {formErrors.customers && <span className="growth-error-msg">{formErrors.customers}</span>}
+                  </div>
+
+                  {/* Sales Growth Index */}
+                  <div className="growth-form-group">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <label>Sales Growth Index <span style={{ color: '#ef4444' }}>*</span></label>
+                      <span className="growth-metric-badge">{formData.sales || 0}%</span>
+                    </div>
+                    <input 
+                      type="number" 
+                      min="0"
+                      max="100"
+                      className="growth-input" 
+                      placeholder="e.g. 82"
+                      value={formData.sales}
+                      onChange={(e) => setFormData({ ...formData, sales: e.target.value })}
+                      disabled={submitting}
+                    />
+                    <div className="growth-progress-track" style={{ marginTop: '4px' }}>
+                      <div 
+                        className="growth-progress-bar" 
+                        style={{ width: `${Math.min(100, Math.max(0, Number(formData.sales) || 0))}%` }} 
+                      />
+                    </div>
+                    {formErrors.sales && <span className="growth-error-msg">{formErrors.sales}</span>}
+                  </div>
+                </div>
               </div>
 
-              <div className="catalog-form-group">
-                <label className="catalog-label">
-                  Business Growth Index <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input 
-                  type="number" 
-                  className={`catalog-input ${formErrors.business ? 'catalog-input--error' : ''}`}
-                  placeholder="e.g. 85"
-                  value={formData.business}
-                  onChange={(e) => setFormData({ ...formData, business: e.target.value })}
-                  disabled={submitting}
-                />
-                {formErrors.business && <span className="catalog-error-text">{formErrors.business}</span>}
-              </div>
-
-              <div className="catalog-form-group">
-                <label className="catalog-label">
-                  Product Range Growth <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input 
-                  type="number" 
-                  className={`catalog-input ${formErrors.products ? 'catalog-input--error' : ''}`}
-                  placeholder="e.g. 80"
-                  value={formData.products}
-                  onChange={(e) => setFormData({ ...formData, products: e.target.value })}
-                  disabled={submitting}
-                />
-                {formErrors.products && <span className="catalog-error-text">{formErrors.products}</span>}
-              </div>
-
-              <div className="catalog-form-group">
-                <label className="catalog-label">
-                  Customer Network Growth <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input 
-                  type="number" 
-                  className={`catalog-input ${formErrors.customers ? 'catalog-input--error' : ''}`}
-                  placeholder="e.g. 88"
-                  value={formData.customers}
-                  onChange={(e) => setFormData({ ...formData, customers: e.target.value })}
-                  disabled={submitting}
-                />
-                {formErrors.customers && <span className="catalog-error-text">{formErrors.customers}</span>}
-              </div>
-
-              <div className="catalog-form-group">
-                <label className="catalog-label">
-                  Sales Growth Index <span style={{ color: '#ef4444' }}>*</span>
-                </label>
-                <input 
-                  type="number" 
-                  className={`catalog-input ${formErrors.sales ? 'catalog-input--error' : ''}`}
-                  placeholder="e.g. 82"
-                  value={formData.sales}
-                  onChange={(e) => setFormData({ ...formData, sales: e.target.value })}
-                  disabled={submitting}
-                />
-                {formErrors.sales && <span className="catalog-error-text">{formErrors.sales}</span>}
-              </div>
-
-              <div className="catalog-modal-footer" style={{ marginTop: '24px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <div className="growth-modal-footer">
                 <button 
                   type="button" 
-                  className="catalog-btn" 
+                  className="btn-growth-secondary" 
                   onClick={() => setIsModalOpen(false)}
                   disabled={submitting}
                 >
@@ -554,10 +717,10 @@ export default function GrowthJourneyScreen() {
                 </button>
                 <button 
                   type="submit" 
-                  className="catalog-btn catalog-btn--primary"
+                  className="btn-growth-primary"
                   disabled={submitting}
                 >
-                  {submitting ? 'Saving...' : (modalMode === 'add' ? 'Create Record' : 'Update Record')}
+                  {submitting ? 'Saving...' : (modalMode === 'add' ? 'Create Record' : 'Save Changes')}
                 </button>
               </div>
             </form>
@@ -567,15 +730,15 @@ export default function GrowthJourneyScreen() {
 
       {/* Delete Confirmation Modal */}
       {deleteTarget && (
-        <div className="catalog-modal-overlay" onClick={() => !deleting && setDeleteTarget(null)}>
-          <div className="catalog-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
-            <div className="catalog-modal-header" style={{ borderBottom: '1px solid #fee2e2' }}>
+        <div className="growth-modal-overlay" onClick={() => !deleting && setDeleteTarget(null)}>
+          <div className="growth-modal-card" style={{ maxWidth: '440px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="growth-modal-header" style={{ borderBottom: '1px solid #fee2e2' }}>
               <h2 style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertCircle size={20} color="#dc2626" /> Delete Growth Record
               </h2>
               <button 
                 type="button" 
-                className="catalog-modal-close" 
+                className="growth-modal-close" 
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleting}
               >
@@ -584,18 +747,18 @@ export default function GrowthJourneyScreen() {
             </div>
 
             <div style={{ padding: '20px' }}>
-              <p style={{ margin: 0, color: '#334155', fontSize: '15px', lineHeight: '1.5' }}>
+              <p style={{ margin: 0, color: '#334155', fontSize: '14.5px', lineHeight: '1.5' }}>
                 Are you sure you want to delete the Growth Journey record for Year <strong>{deleteTarget.year}</strong>?
               </p>
-              <p style={{ marginTop: '10px', color: '#64748b', fontSize: '13px' }}>
-                This action will remove the record from both the Admin console and public website growth charts.
+              <p style={{ marginTop: '8px', color: '#64748b', fontSize: '13px' }}>
+                This action will remove the record from both the Admin console and the public website growth charts.
               </p>
             </div>
 
-            <div className="catalog-modal-footer" style={{ padding: '16px 20px', display: 'flex', justifyContent: 'flex-end', gap: '10px', background: '#f8fafc' }}>
+            <div className="growth-modal-footer">
               <button 
                 type="button" 
-                className="catalog-btn" 
+                className="btn-growth-secondary" 
                 onClick={() => setDeleteTarget(null)}
                 disabled={deleting}
               >
@@ -603,10 +766,10 @@ export default function GrowthJourneyScreen() {
               </button>
               <button 
                 type="button" 
-                className="catalog-btn" 
+                className="btn-growth-primary" 
                 onClick={handleDeleteConfirm}
                 disabled={deleting}
-                style={{ background: '#dc2626', color: '#ffffff', border: '1px solid #dc2626' }}
+                style={{ background: '#dc2626', borderColor: '#b91c1c' }}
               >
                 {deleting ? 'Deleting...' : 'Confirm Delete'}
               </button>
