@@ -1,0 +1,1 @@
+var e=`/assets/smart-security-sustainable-future-CKRRfYNS.png`;export{e as t};
