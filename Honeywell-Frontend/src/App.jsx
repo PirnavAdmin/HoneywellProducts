@@ -107,6 +107,7 @@ const GrowthJourneyScreen = lazy(() => import('./admin/growth/GrowthJourneyScree
 const PartnerApplicationsScreen = lazy(() => import('./admin/partner/PartnerApplicationsScreen'));
 const DistributorsList = lazy(() => import('./admin/distributors/DistributorsList'));
 const AboutConfig = lazy(() => import('./admin/screens/AboutConfig'));
+const SolutionsManager = lazy(() => import('./admin/solutions/SolutionsManager'));
 
 
 
@@ -168,6 +169,7 @@ export default function App() {
               <Route path="stock-updates" element={<StockUpdates />} />
               <Route path="marketing" element={<Navigate to="banners" replace />} />
               <Route path="marketing/banners" element={<BannersList />} />
+              <Route path="marketing/solutions" element={<SolutionsManager />} />
               <Route path="marketing/banner" element={<BannerForm />} />
               <Route path="marketing/offers" element={<OffersList />} />
               <Route path="marketing/offer" element={<OfferForm />} />
@@ -211,6 +213,7 @@ export default function App() {
               <Route path="footer" element={<FooterConfig />} />
               <Route path="about" element={<AboutConfig />} />
               <Route path="about-us" element={<AboutConfig />} />
+              <Route path="solutions" element={<SolutionsManager />} />
               <Route path="*" element={<Navigate to="dashboard" replace />} />
             </Route>
 

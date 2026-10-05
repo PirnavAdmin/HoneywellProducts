@@ -66,7 +66,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       customers: path.includes('/admin/customers') || path.includes('/admin/users'),
       purchase:  path.includes('/admin/purchase'),
       orders:    path.includes('/admin/orders') || path.includes('/admin/returns'),
-      marketing: path.includes('/admin/marketing'),
+      marketing: path.includes('/admin/marketing') || path.includes('/admin/solutions'),
       brands:    path.includes('/admin/brands'),
       blogs:     path.includes('/admin/blogs'),
       settings:  path.includes('/admin/settings'),
@@ -90,7 +90,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   const hasAccess = (moduleName) => {
     if (!moduleName) return true;
     if (userRole === 'super admin' || userRole === 'superadmin' || userRole === 'admin' || userRole === 'administrator') return true;
-    if (moduleName === 'testimonials' || moduleName === 'tickets' || moduleName === 'enquiries' || moduleName === 'contact-submissions' || moduleName === 'quotes' || moduleName === 'reports' || moduleName === 'growth journey' || moduleName === 'partner applications' || moduleName === 'distributors' || moduleName === 'dealers') return true;
+    if (moduleName === 'testimonials' || moduleName === 'tickets' || moduleName === 'enquiries' || moduleName === 'contact-submissions' || moduleName === 'quotes' || moduleName === 'reports' || moduleName === 'growth journey' || moduleName === 'partner applications' || moduleName === 'distributors' || moduleName === 'dealers' || moduleName === 'solutions') return true;
     if (moduleName === 'staff') return true;
 
     const norm = moduleName.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
@@ -447,7 +447,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
               <li>
                 <div
                   onClick={() => toggleDropdown('marketing', '/admin/marketing/banners')}
-                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/marketing') ? 'active-parent' : ''}`}
+                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/marketing') || location.pathname.includes('/admin/solutions') ? 'active-parent' : ''}`}
                   data-tooltip="Marketing"
                   title={!expanded ? "Marketing" : undefined}
                 >
@@ -462,6 +462,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                 </div>
                 <ul className={`stroyka-submenu ${openDropdowns.marketing && expanded ? 'show-submenu' : ''}`}>
                   <li><NavLink to="/admin/marketing/banners" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Hero & Banners</NavLink></li>
+                  <li><NavLink to="/admin/solutions"         className={({ isActive }) => (isActive || location.pathname.includes('/admin/solutions')) ? 'submenu-link active' : 'submenu-link'}>Solutions Portfolio</NavLink></li>
                   <li><NavLink to="/admin/marketing/offers" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Offers &amp; Deals</NavLink></li>
                   <li><NavLink to="/admin/marketing/offer" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Create Offer</NavLink></li>
                   <li><NavLink to="/admin/marketing/coupons" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Coupons List</NavLink></li>

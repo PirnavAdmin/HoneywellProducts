@@ -2,23 +2,26 @@ import { API_BASE_URL } from './api';
 import { apiCache } from '../utils/apiCache';
 import { applications } from '../data/solutions';
 import { applicationImages, solutionPortfolioImages } from '../data/imageLibrary';
+import { resolveMediaUrl } from '../utils/apiConfig';
 
 export const mapSolutionFromApi = (raw = {}) => {
-  const rawImage = raw.imageUrl || raw.image || raw.mediaUrl || '';
+  const rawImage = raw.imageUrl || raw.image || raw.mediaUrl || raw.ImageUrl || raw.Image || '';
   const isInvalidImage = !rawImage || rawImage.includes('placeholder.png') || rawImage.includes('placeholder');
   const appId = String(raw.id || raw.solutionId || 'home').toLowerCase();
-  const fallbackImage = solutionPortfolioImages[appId] || applicationImages[appId] || applicationImages['home'] || '/honeywell-products-logo.png';
+  const fallbackImage = solutionPortfolioImages[appId] || applicationImages[appId] || applicationImages['home'] || '/assets/images/smart-technology-trends.png';
+
+  const finalImg = isInvalidImage ? fallbackImage : (rawImage.startsWith('data:') ? rawImage : resolveMediaUrl(rawImage));
 
   return {
     id: String(raw.id ?? raw.solutionId ?? ''),
-    title: raw.title || raw.name || raw.solutionName || 'Security Solution',
-    description: raw.description || raw.shortDescription || 'Comprehensive surveillance planning and application-led product selection.',
-    application: raw.application || raw.targetEnvironment || raw.categoryName || 'General Security',
-    categoryId: String(raw.categoryId || raw.category || 'cctv-cameras'),
-    image: isInvalidImage ? fallbackImage : rawImage,
-    imageUrl: isInvalidImage ? fallbackImage : rawImage,
-    features: Array.isArray(raw.features) && raw.features.length > 0
-      ? raw.features
+    title: raw.title || raw.name || raw.solutionName || raw.Title || 'Security Solution',
+    description: raw.description || raw.shortDescription || raw.Description || 'Comprehensive surveillance planning and application-led product selection.',
+    application: raw.application || raw.targetEnvironment || raw.categoryName || raw.Application || 'General Security',
+    categoryId: String(raw.categoryId || raw.category || raw.CategoryId || 'cctv-cameras'),
+    image: finalImg,
+    imageUrl: finalImg,
+    features: Array.isArray(raw.features || raw.Features) && (raw.features || raw.Features).length > 0
+      ? (raw.features || raw.Features)
       : ['Application-led planning', 'Scalable product selection', 'Sales-assisted recommendation'],
   };
 };
@@ -122,7 +125,23 @@ export const solutionService = {
     };
   },
 
-  // 3. POST (Create)
+  // 3. UPLOAD IMAGE
+  async uploadImage(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await fetch(`${API_BASE_URL}/api/solutions/upload-image`, {
+      method: 'POST',
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+      },
+      body: formData,
+    });
+    if (!response.ok) throw new Error(`Image upload failed (${response.status})`);
+    const data = await response.json();
+    return data.imageUrl || data.ImageUrl;
+  },
+
+  // 4. POST (Create)
   async create(solutionData) {
     const response = await fetch(`${API_BASE_URL}/api/solutions`, {
       method: 'POST',

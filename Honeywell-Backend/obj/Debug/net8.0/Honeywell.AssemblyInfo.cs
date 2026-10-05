@@ -14,11 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Honeywell")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-<<<<<<< HEAD
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f7cfab9bb67ca3842c1b1cd9b0273cece8c01e0d")]
-=======
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7e3ea6ef3b981d60b19c0a48d332a180a0a03746")]
->>>>>>> 1a1c797a (Update project changes)
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+34e7078a451f6f3d25f911ff95231fba32e2cdf9")]
 [assembly: System.Reflection.AssemblyProductAttribute("Honeywell")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Honeywell")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -5,6 +5,7 @@ import PageHero from '../components/common/PageHero';
 import ProductCard from '../components/products/ProductCard';
 import { productService } from '../services/productService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { usePageBanner } from '../hooks/usePageBanner';
 import productsHeroImage from '../assets/images/products-hero.png';
 
 const normalizeCategory = (str) => {
@@ -87,6 +88,12 @@ const checkSubcategoryMatch = (product, filterSubcategoryName, subcategoriesList
 };
 
 export default function Products() {
+  const { banner } = usePageBanner(
+    'Products',
+    'Products',
+    'Search and filter professional surveillance, recording, networking and solar-security product categories.',
+    productsHeroImage
+  );
   useDocumentTitle('Products', 'Explore professional surveillance, recording, networking and security product categories.');
   const [params] = useSearchParams();
   const [productsList, setProductsList] = useState([]);
@@ -384,8 +391,13 @@ export default function Products() {
   const reset = () => { setQuery(''); setFilters({ category: [], subcategory: [], installation: [], connectivity: [], features: [] }); setSort('featured'); setVisible(12); };
 
   return <>
-    <PageHero eyebrow="PRODUCT CATALOGUE" title="Products" description="Search and filter professional surveillance, recording, networking and solar-security product categories." image={productsHeroImage} />
-    <section className="catalogue section">
+   <PageHero
+      eyebrow="PRODUCT CATALOGUE"
+      title={banner.title}
+      description={banner.description}
+      image={banner. Image}
+   />    
+   <section className="catalogue section">
       <div className="container">
         <button className="filter-toggle" onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={18} /> FILTER PRODUCTS</button>
         <div className="catalogue-layout">

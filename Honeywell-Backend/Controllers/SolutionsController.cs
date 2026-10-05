@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
@@ -149,6 +151,7 @@ namespace Honeywell.Controllers
                 solution.Id = Guid.NewGuid().ToString("N");
             }
 
+            solution.ImageUrl = ProcessBase64Image(solution.ImageUrl);
             solution.CreatedAt = DateTime.UtcNow;
             solution.UpdatedAt = DateTime.UtcNow;
 
@@ -169,6 +172,35 @@ namespace Honeywell.Controllers
             return CreatedAtAction(nameof(GetSolutionById), new { id = solution.Id }, solution);
         }
 
+        // POST: api/solutions/upload-image
+        [HttpPost("upload-image")]
+        public async Task<IActionResult> UploadSolutionImage(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { Message = "No file uploaded." });
+            }
+
+            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "solutions");
+            if (!Directory.Exists(uploadsFolder))
+            {
+                Directory.CreateDirectory(uploadsFolder);
+            }
+
+            var extension = Path.GetExtension(file.FileName);
+            if (string.IsNullOrEmpty(extension)) extension = ".jpg";
+            var fileName = $"{Guid.NewGuid():N}{extension}";
+            var filePath = Path.Combine(uploadsFolder, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var imageUrl = $"/uploads/solutions/{fileName}";
+            return Ok(new { ImageUrl = imageUrl, imageUrl });
+        }
+
         // PUT: api/solutions/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateSolution(string id, [FromBody] Solution updated)
@@ -177,6 +209,8 @@ namespace Honeywell.Controllers
             {
                 return BadRequest(new { message = "Invalid solution payload." });
             }
+
+            var processedImageUrl = ProcessBase64Image(updated.ImageUrl);
 
             try
             {
@@ -189,7 +223,10 @@ namespace Honeywell.Controllers
                         dbExisting.Description = updated.Description;
                         dbExisting.Application = updated.Application;
                         dbExisting.CategoryId = updated.CategoryId;
-                        dbExisting.ImageUrl = updated.ImageUrl;
+                        if (!string.IsNullOrEmpty(processedImageUrl))
+                        {
+                            dbExisting.ImageUrl = processedImageUrl;
+                        }
                         dbExisting.Features = updated.Features;
                         dbExisting.UpdatedAt = DateTime.UtcNow;
 
@@ -213,11 +250,51 @@ namespace Honeywell.Controllers
             mockExisting.Description = updated.Description;
             mockExisting.Application = updated.Application;
             mockExisting.CategoryId = updated.CategoryId;
-            mockExisting.ImageUrl = updated.ImageUrl;
+            if (!string.IsNullOrEmpty(processedImageUrl))
+            {
+                mockExisting.ImageUrl = processedImageUrl;
+            }
             mockExisting.Features = updated.Features;
             mockExisting.UpdatedAt = DateTime.UtcNow;
 
             return Ok(mockExisting);
+        }
+
+        private static string ProcessBase64Image(string? raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return string.Empty;
+            if (!raw.StartsWith("data:image/", StringComparison.OrdinalIgnoreCase)) return raw;
+
+            try
+            {
+                var commaIndex = raw.IndexOf(',');
+                if (commaIndex < 0) return raw;
+
+                var meta = raw.Substring(0, commaIndex);
+                var base64Data = raw.Substring(commaIndex + 1);
+
+                var extension = ".jpg";
+                if (meta.Contains("png")) extension = ".png";
+                else if (meta.Contains("webp")) extension = ".webp";
+                else if (meta.Contains("gif")) extension = ".gif";
+
+                var bytes = Convert.FromBase64String(base64Data);
+                var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "solutions");
+                if (!Directory.Exists(uploadsFolder))
+                {
+                    Directory.CreateDirectory(uploadsFolder);
+                }
+
+                var fileName = $"{Guid.NewGuid():N}{extension}";
+                var filePath = Path.Combine(uploadsFolder, fileName);
+                System.IO.File.WriteAllBytes(filePath, bytes);
+
+                return $"/uploads/solutions/{fileName}";
+            }
+            catch
+            {
+                return raw;
+            }
         }
 
         // DELETE: api/solutions/{id}
