@@ -1,8 +1,14 @@
 {
   "version": 2,
+<<<<<<< HEAD
   "dgSpecHash": "Kvj+crJuc7w=",
   "success": true,
   "projectFilePath": "C:\\Users\\ADMIN\\Desktop\\Honeywell Client\\HoneywellProducts\\Honeywell-Backend\\Honeywell.csproj",
+=======
+  "dgSpecHash": "7iMBUY0yHGI=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\ADMIN\\Desktop\\Honeywell Project\\HoneywellProducts\\Honeywell-Backend\\Honeywell.csproj",
+>>>>>>> 1a1c797a (Update project changes)
   "expectedPackageFiles": [
     "C:\\Users\\ADMIN\\.nuget\\packages\\bcrypt.net-next\\4.2.0\\bcrypt.net-next.4.2.0.nupkg.sha512",
     "C:\\Users\\ADMIN\\.nuget\\packages\\bouncycastle.cryptography\\2.6.2\\bouncycastle.cryptography.2.6.2.nupkg.sha512",

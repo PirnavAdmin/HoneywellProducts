@@ -49,11 +49,7 @@ export default function DistributorsList() {
     setLoading(true);
     setError(null);
     try {
-      const params = {};
-      if (searchTerm.trim()) params.search = searchTerm.trim();
-      if (regionFilter !== 'All') params.region = regionFilter;
-
-      const data = await distributorService.getAdminDistributors(params);
+      const data = await distributorService.getAdminDistributors();
       setDistributors(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Failed to load admin distributors:', err);
@@ -62,7 +58,7 @@ export default function DistributorsList() {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, regionFilter]);
+  }, []);
 
   useEffect(() => {
     loadDistributors();

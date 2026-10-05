@@ -59,15 +59,8 @@ export default function CustomerOrders() {
         const userPhone = (user?.phone || localStorage.getItem('customerPhone') || '').replace(/\D/g, '');
         const userName = (user?.name || localStorage.getItem('customerName') || '').toLowerCase().trim();
 
-        // Recent orders created by this client are always included
-        const myRecent = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
-        const recentNums = new Set(myRecent.map(r => String(r.orderNumber || r.id)));
-
-        // Customer isolation filter
+        // Live customer orders from server
         const validOrders = rawList.filter((o) => {
-          const num = String(o.orderNumber || o.id);
-          if (recentNums.has(num)) return true;
-
           const orderEmail = (o.email || o.customerEmail || '').toLowerCase().trim();
           const orderPhone = (o.phone || o.customerPhone || o.mobile || '').replace(/\D/g, '');
 

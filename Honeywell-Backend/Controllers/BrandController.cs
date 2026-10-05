@@ -94,13 +94,13 @@ namespace Honeywell.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Brand>>> GetBrands()
         {
-            return await _context.Brands.ToListAsync();
+            return await _context.Brands.AsNoTracking().ToListAsync();
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Brand>> GetBrand(int id)
         {
-            var brand = await _context.Brands.FindAsync(id);
+            var brand = await _context.Brands.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id);
             if (brand == null) return NotFound();
             return brand;
         }

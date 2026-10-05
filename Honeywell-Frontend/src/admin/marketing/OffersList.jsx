@@ -12,30 +12,47 @@ import {
   Eye,
   EyeOff,
   Percent,
-  RefreshCw
+  RefreshCw,
+  RotateCcw,
+  Sparkles,
+  ShoppingBag,
+  TrendingUp,
+  AlertCircle,
+  ExternalLink,
+  ChevronDown
 } from 'lucide-react';
-import '../catalog/adminModule.css';
+import './coupons.css';
 import { offersService } from '../../services/offersService';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
 import { Toast } from '../components/Toast';
 
-const formatCurrency = (amount) => `₹${Number(amount || 0).toLocaleString('en-IN')}`;
+export const formatCurrency = (amount) => {
+  if (amount === undefined || amount === null || amount === '') return '₹0';
+  const num = Number(String(amount).replace(/[^0-9.-]+/g, '')) || 0;
+  return `₹${num.toLocaleString('en-IN')}`;
+};
 
 export const formatDateDMY = (dateStr) => {
-  if (!dateStr) return '';
+  if (!dateStr) return 'No Expiry';
   const cleanStr = String(dateStr).trim();
   const isoMatch = cleanStr.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (isoMatch) {
     const [, year, month, day] = isoMatch;
+    const d = new Date(Number(year), Number(month) - 1, Number(day));
+    if (!isNaN(d.getTime())) {
+      const dayNum = String(d.getDate()).padStart(2, '0');
+      const monthStr = d.toLocaleString('en-IN', { month: 'short' });
+      return `${dayNum} ${monthStr} ${year}`;
+    }
     return `${day.padStart(2, '0')}-${month.padStart(2, '0')}-${year}`;
   }
   try {
     const d = new Date(cleanStr);
     if (!isNaN(d.getTime())) {
       const day = String(d.getDate()).padStart(2, '0');
-      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const monthStr = d.toLocaleString('en-IN', { month: 'short' });
       const year = d.getFullYear();
-      return `${day}-${month}-${year}`;
+      return `${day} ${monthStr} ${year}`;
     }
   } catch {}
   return cleanStr;
@@ -43,21 +60,21 @@ export const formatDateDMY = (dateStr) => {
 
 const OfferStatusBadge = ({ isActive }) => (
   <span
-    className={`coupon-status coupon-status--${isActive ? 'active' : 'inactive'}`}
+    className={`coupon-status-pill ${isActive ? 'status-active' : 'status-inactive'}`}
     style={{
+      cursor: 'pointer',
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '4px',
-      fontSize: '10px',
-      padding: '2px 8px',
+      gap: '6px',
+      padding: '4px 10px',
       borderRadius: '999px',
-      fontWeight: 600,
-      backgroundColor: isActive ? '#ecfdf5' : '#f1f5f9',
-      color: isActive ? '#059669' : '#64748b',
-      border: `1px solid ${isActive ? '#a7f3d0' : '#cbd5e1'}`
+      fontSize: '11px',
+      fontWeight: 700,
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em'
     }}
   >
-    {isActive ? <CheckCircle2 size={10} /> : <EyeOff size={10} />}
+    <span className="status-dot"></span>
     {isActive ? 'Active' : 'Inactive'}
   </span>
 );
@@ -108,8 +125,9 @@ export default function OffersList() {
 
   const filteredOffers = useMemo(() => {
     return offers.filter((item) => {
-      const term = searchTerm.toLowerCase();
+      const term = searchTerm.toLowerCase().trim();
       const matchesSearch =
+        !term ||
         item.title?.toLowerCase().includes(term) ||
         item.description?.toLowerCase().includes(term) ||
         item.category?.toLowerCase().includes(term) ||
@@ -128,14 +146,13 @@ export default function OffersList() {
   }, [offers, searchTerm, statusFilter, categoryFilter]);
 
   const stats = useMemo(() => {
-    return offers.reduce(
-      (acc, item) => ({
-        total: acc.total + 1,
-        active: acc.active + (item.isActive ? 1 : 0),
-        inactive: acc.inactive + (!item.isActive ? 1 : 0),
-      }),
-      { total: 0, active: 0, inactive: 0 }
-    );
+    const maxDiscount = offers.reduce((max, o) => Math.max(max, Number(o.discountPercentage) || 0), 0);
+    return {
+      total: offers.length,
+      active: offers.filter(o => o.isActive).length,
+      inactive: offers.filter(o => !o.isActive).length,
+      maxDiscount: maxDiscount > 0 ? `${maxDiscount}%` : '0%'
+    };
   }, [offers]);
 
   const totalPages = Math.ceil(filteredOffers.length / itemsPerPage);
@@ -178,21 +195,48 @@ export default function OffersList() {
     }
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setCategoryFilter('All');
+    setCurrentPage(1);
+  };
+
+  const isFiltered = searchTerm !== '' || statusFilter !== 'All' || categoryFilter !== 'All';
+
   return (
-    <div className="coupons-page" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="coupons-mgmt-container">
       {toastMessage && (
         <Toast message={toastMessage} type={toastType} onClose={() => setToastMessage('')} />
       )}
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmId && (
-        <div className="coupon-modal-backdrop" role="dialog" aria-modal="true" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div className="coupon-modal" style={{ backgroundColor: 'white', borderRadius: '12px', width: '100%', maxWidth: '420px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>Confirm Delete</h3>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px 0' }}>Are you sure you want to permanently delete this offer? This will remove it from the public website.</p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button className="catalog-btn" type="button" onClick={() => setDeleteConfirmId(null)} disabled={isDeleting}>Cancel</button>
-              <button className="catalog-btn catalog-btn--primary" type="button" onClick={handleDeleteOffer} disabled={isDeleting} style={{ backgroundColor: '#ef4444' }}>
+        <div className="coupon-modal-backdrop" role="dialog" aria-modal="true">
+          <div className="coupon-modal" style={{ maxWidth: '420px', padding: '24px' }}>
+            <div className="coupon-modal-header" style={{ padding: 0, marginBottom: '14px', border: 'none' }}>
+              <div className="coupon-modal-title">
+                <span style={{ color: '#ef4444' }}>DANGER ZONE</span>
+                <h2 style={{ fontSize: '18px' }}>Delete Offer</h2>
+              </div>
+              <button className="coupon-modal-close" type="button" onClick={() => setDeleteConfirmId(null)}>
+                <X size={18} />
+              </button>
+            </div>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '0 0 20px 0', lineHeight: '1.5' }}>
+              Are you sure you want to permanently delete this offer? This will immediately remove it from the customer storefront and active promotions.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button className="btn-coupons-secondary" type="button" onClick={() => setDeleteConfirmId(null)} disabled={isDeleting}>
+                Cancel
+              </button>
+              <button 
+                className="btn-coupons-primary" 
+                type="button" 
+                onClick={handleDeleteOffer} 
+                disabled={isDeleting} 
+                style={{ backgroundColor: '#dc2626', borderColor: '#dc2626' }}
+              >
                 {isDeleting ? 'Deleting...' : 'Delete Offer'}
               </button>
             </div>
@@ -200,183 +244,372 @@ export default function OffersList() {
         </div>
       )}
 
-      {/* Header Banner */}
-      <section className="catalog-card" style={{ padding: '20px', background: 'linear-gradient(135deg, #1268a5 0%, #0d4b78 100%)', color: 'white', borderRadius: '12px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
-          <div>
-            <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', opacity: 0.9 }}>MARKETING PROMOTIONS</span>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0 0 0' }}>Offers &amp; Deals Management</h1>
-            <p style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px', maxWidth: '600px' }}>Manage all active and inactive promotional deals, discount percentages, prices, and offer banners for the website.</p>
+      {/* ── Top Header Banner Card ── */}
+      <section className="coupons-header-card">
+        <div className="coupons-title-wrap">
+          <div className="coupons-kicker">
+            <Sparkles size={14} />
+            <span>MARKETING &amp; PROMOTIONS</span>
           </div>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="catalog-btn" type="button" onClick={loadAdminOffers} style={{ backgroundColor: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.2)' }}>
-              <RefreshCw size={14} style={{ marginRight: '6px' }} /> Refresh
-            </button>
-            <Link className="catalog-btn catalog-btn--primary" to="/admin/marketing/offer" style={{ backgroundColor: 'white', color: '#1268a5', fontWeight: 700 }}>
-              <Plus size={16} style={{ marginRight: '4px' }} /> Create New Offer
-            </Link>
+          <h1>Offers &amp; Deals Management</h1>
+          <p>
+            Manage website deal promotions, limited-time discounts, percentage cuts, and deal badges for Honeywell products.
+          </p>
+        </div>
+        <div className="coupons-header-actions">
+          <button className="btn-coupons-secondary" type="button" onClick={loadAdminOffers} title="Reload offers from database">
+            <RefreshCw size={14} className={loading ? 'loading-spinner' : ''} />
+            <span>Refresh</span>
+          </button>
+          <Link className="btn-coupons-primary" to="/admin/marketing/offer">
+            <Plus size={15} />
+            <span>Create New Offer</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* ── KPI Summary Cards Grid (4 Interactive Cards) ── */}
+      <section className="coupons-kpi-grid">
+        <div 
+          className={`coupons-kpi-card ${statusFilter === 'All' && !searchTerm ? 'active' : ''}`}
+          onClick={() => { setStatusFilter('All'); setCurrentPage(1); }}
+          title="Click to view all offers"
+        >
+          <div className="coupons-kpi-info">
+            <span className="coupons-kpi-label">TOTAL OFFERS</span>
+            <strong className="coupons-kpi-val">{stats.total}</strong>
+            <span className="coupons-kpi-sub">Campaign items in system</span>
+          </div>
+          <div className="coupons-kpi-icon-wrap icon-blue">
+            <Tag size={20} />
+          </div>
+        </div>
+
+        <div 
+          className={`coupons-kpi-card ${statusFilter === 'Active' ? 'active' : ''}`}
+          onClick={() => { setStatusFilter('Active'); setCurrentPage(1); }}
+          title="Click to filter active deals"
+        >
+          <div className="coupons-kpi-info">
+            <span className="coupons-kpi-label">ACTIVE ON STORE</span>
+            <strong className="coupons-kpi-val" style={{ color: '#059669' }}>{stats.active}</strong>
+            <span className="coupons-kpi-sub">Live customer discounts</span>
+          </div>
+          <div className="coupons-kpi-icon-wrap icon-emerald">
+            <CheckCircle2 size={20} />
+          </div>
+        </div>
+
+        <div 
+          className={`coupons-kpi-card ${statusFilter === 'Inactive' ? 'active' : ''}`}
+          onClick={() => { setStatusFilter('Inactive'); setCurrentPage(1); }}
+          title="Click to filter inactive deals"
+        >
+          <div className="coupons-kpi-info">
+            <span className="coupons-kpi-label">INACTIVE / PAUSED</span>
+            <strong className="coupons-kpi-val" style={{ color: '#d97706' }}>{stats.inactive}</strong>
+            <span className="coupons-kpi-sub">Drafts or paused deals</span>
+          </div>
+          <div className="coupons-kpi-icon-wrap icon-amber">
+            <EyeOff size={20} />
+          </div>
+        </div>
+
+        <div className="coupons-kpi-card">
+          <div className="coupons-kpi-info">
+            <span className="coupons-kpi-label">MAX DISCOUNT</span>
+            <strong className="coupons-kpi-val" style={{ color: '#7c3aed' }}>{stats.maxDiscount}</strong>
+            <span className="coupons-kpi-sub">Highest promotion rate</span>
+          </div>
+          <div className="coupons-kpi-icon-wrap icon-purple">
+            <Percent size={20} />
           </div>
         </div>
       </section>
 
-      {/* Stats Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-        <div className="catalog-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#e0f2fe', color: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Tag size={20} /></div>
-          <div><div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{stats.total}</div><div style={{ fontSize: '12px', color: '#64748b' }}>Total Offers</div></div>
-        </div>
-        <div className="catalog-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#dcfce7', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><CheckCircle2 size={20} /></div>
-          <div><div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{stats.active}</div><div style={{ fontSize: '12px', color: '#64748b' }}>Active on Website</div></div>
-        </div>
-        <div className="catalog-card" style={{ padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: '#f1f5f9', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><EyeOff size={20} /></div>
-          <div><div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{stats.inactive}</div><div style={{ fontSize: '12px', color: '#64748b' }}>Inactive</div></div>
-        </div>
-      </div>
-
-      {/* Filters Bar */}
-      <div className="catalog-card" style={{ padding: '16px', display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: 1, minWidth: '280px' }}>
-          <div className="catalog-search" style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-            <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+      {/* ── Toolbar: Search, Filter Dropdowns, Counter, Reset ── */}
+      <section className="coupons-toolbar-card">
+        <div className="coupons-toolbar-left">
+          {/* Search Box */}
+          <div className="coupons-search-box">
+            <Search size={15} className="coupons-search-icon" />
             <input
               type="text"
-              placeholder="Search offer title, category, badge..."
+              className="coupons-search-input"
+              placeholder="Search title, category, badge..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-              style={{ width: '100%', paddingLeft: '36px', paddingRight: '12px', height: '38px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
             />
+            {searchTerm && (
+              <button 
+                type="button" 
+                className="coupons-search-clear" 
+                onClick={() => setSearchTerm('')}
+                title="Clear Search"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-            style={{ height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: 'white' }}
-          >
-            <option value="All">All Statuses</option>
-            <option value="Active">Active Only</option>
-            <option value="Inactive">Inactive Only</option>
-          </select>
+          {/* Status Filter */}
+          <div className="coupons-filter-select-wrap">
+            <select
+              className="coupons-filter-select"
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="All">All Statuses</option>
+              <option value="Active">Active Only</option>
+              <option value="Inactive">Inactive Only</option>
+            </select>
+            <ChevronDown size={14} className="coupons-select-caret" />
+          </div>
 
-          <select
-            value={categoryFilter}
-            onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
-            style={{ height: '38px', padding: '0 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: 'white' }}
-          >
-            {categories.map(c => <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>)}
-          </select>
+          {/* Category Filter */}
+          <div className="coupons-filter-select-wrap">
+            <select
+              className="coupons-filter-select"
+              value={categoryFilter}
+              onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1); }}
+            >
+              {categories.map(c => (
+                <option key={c} value={c}>
+                  {c === 'All' ? 'All Categories' : c}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="coupons-select-caret" />
+          </div>
         </div>
-      </div>
 
-      {/* Offers Table */}
-      <div className="catalog-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="coupons-toolbar-right">
+          <span className="coupons-count-tag">
+            Showing <strong>{filteredOffers.length}</strong> of <strong>{offers.length}</strong> offers
+          </span>
+
+          {isFiltered && (
+            <button 
+              type="button" 
+              className="btn-coupons-reset" 
+              onClick={handleResetFilters}
+              title="Reset all search filters"
+            >
+              <RotateCcw size={12} />
+              <span>Reset</span>
+            </button>
+          )}
+        </div>
+      </section>
+
+      {/* ── Offers Data Table Card ── */}
+      <section className="coupons-table-card">
         {loading ? (
-          <div style={{ padding: '48px', textAlign: 'center', color: '#64748b' }}>
-            <p>Loading offers from backend API...</p>
+          <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748b' }}>
+            <RefreshCw size={26} className="loading-spinner" style={{ margin: '0 auto 12px auto', color: '#1268a5' }} />
+            <p style={{ fontWeight: 600, fontSize: '14px', color: '#0f172a' }}>Loading Offers &amp; Deals from Server...</p>
+            <span style={{ fontSize: '12px', color: '#94a3b8' }}>Please wait while promotional campaigns are loaded.</span>
           </div>
         ) : error ? (
-          <div style={{ padding: '48px', textAlign: 'center', color: '#ef4444' }}>
-            <p>{error}</p>
-            <button className="catalog-btn" onClick={loadAdminOffers} style={{ marginTop: '12px' }}>Try Again</button>
+          <div style={{ padding: '48px 20px', textAlign: 'center' }}>
+            <AlertCircle size={36} style={{ color: '#ef4444', margin: '0 auto 12px auto' }} />
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>Unable to Load Offers</h3>
+            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px' }}>{error}</p>
+            <button className="btn-coupons-secondary" onClick={loadAdminOffers} style={{ marginTop: '16px' }}>
+              <RefreshCw size={13} /> Try Again
+            </button>
           </div>
         ) : filteredOffers.length === 0 ? (
-          <div style={{ padding: '48px', textAlign: 'center', color: '#64748b' }}>
-            <Tag size={40} style={{ color: '#cbd5e1', marginBottom: '8px' }} />
-            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1e293b' }}>No matching offers found</h3>
-            <p style={{ fontSize: '13px', marginTop: '4px' }}>Try adjusting your search query or filter options.</p>
+          <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '12px', backgroundColor: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px auto', color: '#94a3b8' }}>
+              <Tag size={28} />
+            </div>
+            <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>No matching offers found</h3>
+            <p style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', maxWidth: '380px', margin: '4px auto 0 auto' }}>
+              {isFiltered 
+                ? 'No promotional offers match your current search query or status filter.' 
+                : 'No promotional deals have been published yet. Click "Create New Offer" to start.'}
+            </p>
+            {isFiltered ? (
+              <button className="btn-coupons-secondary" onClick={handleResetFilters} style={{ marginTop: '16px' }}>
+                <RotateCcw size={13} /> Clear Filters
+              </button>
+            ) : (
+              <Link className="btn-coupons-primary" to="/admin/marketing/offer" style={{ marginTop: '16px', display: 'inline-flex' }}>
+                <Plus size={15} /> Create First Offer
+              </Link>
+            )}
           </div>
         ) : (
-          <div className="table-responsive" style={{ overflowX: 'auto' }}>
-            <table className="catalog-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <div className="coupons-table-wrapper">
+            <table className="coupons-table">
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>
-                  <th style={{ padding: '12px 16px' }}>Offer Info</th>
-                  <th style={{ padding: '12px 16px' }}>Category &amp; Tag</th>
-                  <th style={{ padding: '12px 16px' }}>Deal Price</th>
-                  <th style={{ padding: '12px 16px' }}>Discount</th>
-                  <th style={{ padding: '12px 16px' }}>Expiry Date</th>
-                  <th style={{ padding: '12px 16px' }}>Status</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                <tr>
+                  <th style={{ width: '32%' }}>Offer Details</th>
+                  <th style={{ width: '18%' }}>Category &amp; Tag</th>
+                  <th style={{ width: '14%' }}>Deal Price</th>
+                  <th style={{ width: '12%' }}>Discount</th>
+                  <th style={{ width: '12%' }}>Validity / Expiry</th>
+                  <th style={{ width: '12%' }}>Live Status</th>
+                  <th style={{ width: '10%', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody style={{ fontSize: '13px' }}>
-                {paginatedOffers.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <img
-                          src={item.imageUrl}
-                          alt={item.title}
-                          style={{ width: '44px', height: '44px', borderRadius: '6px', objectFit: 'cover', border: '1px solid #e2e8f0' }}
-                          onError={(e) => { e.target.onerror = null; e.target.src = '/honeywell-products-logo.png'; }}
-                        />
-                        <div>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{item.title}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px', maxWidth: '280px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {item.description || 'No description'}
+              <tbody>
+                {paginatedOffers.map((item) => {
+                  const dealAmt = Number(item.dealPrice) || 0;
+                  const origAmt = Number(item.originalPrice) || 0;
+                  const discountPct = Number(item.discountPercentage) || 0;
+
+                  return (
+                    <tr key={item.id}>
+                      {/* 1. Offer Details */}
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <img
+                            src={item.imageUrl || '/honeywell-products-logo.png'}
+                            alt={item.title}
+                            style={{
+                              width: '46px',
+                              height: '46px',
+                              borderRadius: '8px',
+                              objectFit: 'cover',
+                              border: '1px solid #e2e8f0',
+                              backgroundColor: '#f8fafc',
+                              flexShrink: 0
+                            }}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = '/honeywell-products-logo.png';
+                            }}
+                          />
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '13.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }}>
+                              {item.title}
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '280px' }}>
+                              {item.description || 'No offer description provided.'}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 600, color: '#334155', fontSize: '12px' }}>{item.category}</div>
-                      {item.badgeTag && (
-                        <span style={{ fontSize: '10px', backgroundColor: '#eff6ff', color: '#1d4ed8', padding: '1px 6px', borderRadius: '4px', fontWeight: 600, marginTop: '2px', display: 'inline-block' }}>
-                          {item.badgeTag}
+                      </td>
+
+                      {/* 2. Category & Tag */}
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                          <span style={{ fontWeight: 700, color: '#334155', fontSize: '12px' }}>
+                            {item.category || 'General'}
+                          </span>
+                          {item.badgeTag && (
+                            <span style={{
+                              fontSize: '10px',
+                              backgroundColor: '#eff6ff',
+                              color: '#1e40af',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              fontWeight: 700,
+                              border: '1px solid #bfdbfe',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em'
+                            }}>
+                              {item.badgeTag}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 3. Deal Price */}
+                      <td>
+                        <div>
+                          <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '14px' }}>
+                            {formatCurrency(dealAmt)}
+                          </div>
+                          {origAmt > 0 && origAmt > dealAmt && (
+                            <div style={{ fontSize: '11px', color: '#94a3b8', textDecoration: 'line-through', marginTop: '1px' }}>
+                              MRP {formatCurrency(origAmt)}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* 4. Discount */}
+                      <td>
+                        <span style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          fontWeight: 800,
+                          color: '#059669',
+                          backgroundColor: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          padding: '3px 9px',
+                          borderRadius: '6px',
+                          fontSize: '11.5px'
+                        }}>
+                          {discountPct > 0 ? `${discountPct}% OFF` : 'SPECIAL'}
                         </span>
-                      )}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 800, color: '#0f172a' }}>{formatCurrency(item.dealPrice)}</div>
-                      {item.originalPrice > 0 && (
-                        <div style={{ fontSize: '11px', color: '#94a3b8', textDecoration: 'line-through' }}>
-                          {formatCurrency(item.originalPrice)}
+                      </td>
+
+                      {/* 5. Expiry Date */}
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748b', fontSize: '12px', fontWeight: 600 }}>
+                          <Calendar size={13} style={{ color: '#94a3b8' }} />
+                          <span>{formatDateDMY(item.endDate)}</span>
                         </div>
-                      )}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ fontWeight: 700, color: '#16a34a', backgroundColor: '#f0fdf4', padding: '2px 8px', borderRadius: '999px', fontSize: '11px' }}>
-                        {item.discountPercentage}% OFF
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: '#64748b', fontSize: '12px' }}>
-                      {item.endDate ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                          <Clock size={12} /> {formatDateDMY(item.endDate)}
+                      </td>
+
+                      {/* 6. Live Status Toggle */}
+                      <td>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleStatus(item.id, item.title, item.isActive)}
+                          disabled={togglingId === item.id}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            outline: 'none'
+                          }}
+                          title="Click to toggle live publication status"
+                        >
+                          <OfferStatusBadge isActive={item.isActive} />
+                        </button>
+                      </td>
+
+                      {/* 7. Actions */}
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
+                          <AnimatedEditButton to={`/admin/marketing/offer/${item.id}`} />
+                          <OutlookDeleteButton onClick={() => setDeleteConfirmId(item.id)} />
                         </div>
-                      ) : 'No Expiry'}
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleStatus(item.id, item.title, item.isActive)}
-                        disabled={togglingId === item.id}
-                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-                        title="Click to toggle active status on website"
-                      >
-                        <OfferStatusBadge isActive={item.isActive} />
-                      </button>
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                        <AnimatedEditButton to={`/admin/marketing/offer/${item.id}`} />
-                        <OutlookDeleteButton onClick={() => setDeleteConfirmId(item.id)} />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
 
-        {totalPages > 1 && (
-          <div style={{ padding: '16px', borderTop: '1px solid #e2e8f0' }}>
+        {/* ── Table Footer / Pagination ── */}
+        {!loading && !error && filteredOffers.length > 0 && totalPages > 1 && (
+          <div style={{
+            padding: '14px 20px',
+            backgroundColor: '#ffffff',
+            borderTop: '1px solid #e2e8f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}>
+            <span style={{ fontSize: '12.5px', color: '#64748b', fontWeight: 600 }}>
+              Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> (Total <strong>{filteredOffers.length}</strong> items)
+            </span>
             <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={setCurrentPage} />
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

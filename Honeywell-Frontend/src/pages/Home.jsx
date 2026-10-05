@@ -15,7 +15,6 @@ import { applications } from '../data/solutions';
 import { INDUSTRY_VERTICALS } from '../data/industryData';
 import { SOLUTION_PILLARS } from '../data/solutionsData';
 import { industryImages, applicationImages } from '../data/imageLibrary';
-import { marketTrends } from '../data/marketTrends';
 import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useUI } from '../context/UIContext';
@@ -99,7 +98,7 @@ export default function Home() {
           setCategoriesList(sortedCats);
           setSubcategoriesList(Array.isArray(subs) ? subs : []);
           setSolutionsList(Array.isArray(sols) ? sols : []);
-          setBlogsList(Array.isArray(blogs) && blogs.length > 0 ? blogs : marketTrends);
+          setBlogsList(Array.isArray(blogs) ? blogs : []);
         }
       })
       .finally(() => {
@@ -387,132 +386,134 @@ export default function Home() {
     <section className="section business-banner"><div className="container business-banner-grid"><div><SectionHeading eyebrow="BUSINESS PARTNERSHIPS" title="Grow Your Business With Honeywell Products" /><div className="partner-chip-list">{partnerTypes.map((type) => <span key={type}>{type}</span>)}</div><div className="button-row"><Link className="button" to="/business#partner-form">Become a Partner</Link><Link className="button outline" to="/business">Request Business Details</Link></div></div><img src={businessImage} alt="Modern commercial buildings" loading="lazy" /></div></section>
     <TestimonialsSection />
     <GrowthSection />
-    <section className="section insights-section">
-      <div className="container">
-        <div className="split-heading" style={{ alignItems: 'flex-end', marginBottom: '24px' }}>
-          <SectionHeading eyebrow="MARKET TRENDS" title="Technology Trends Shaping Tomorrow" description="Featured blog articles and market technology trends." />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
-              {(blogsList.length > 0 ? blogsList : marketTrends).length} Articles
-            </span>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                onClick={handleBlogScrollLeft}
-                aria-label="Scroll blogs left"
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#1e293b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                }}
-              >
-                <ArrowLeft size={18} />
-              </button>
-              <button
-                onClick={handleBlogScrollRight}
-                aria-label="Scroll blogs right"
-                style={{
-                  width: '38px',
-                  height: '38px',
-                  borderRadius: '50%',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#1e293b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                }}
-              >
-                <ArrowRight size={18} />
-              </button>
+    {blogsList.length > 0 && (
+      <section className="section insights-section">
+        <div className="container">
+          <div className="split-heading" style={{ alignItems: 'flex-end', marginBottom: '24px' }}>
+            <SectionHeading eyebrow="MARKET TRENDS" title="Technology Trends Shaping Tomorrow" description="Featured blog articles and market technology trends." />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+                {blogsList.length} Articles
+              </span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={handleBlogScrollLeft}
+                  aria-label="Scroll blogs left"
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#1e293b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <ArrowLeft size={18} />
+                </button>
+                <button
+                  onClick={handleBlogScrollRight}
+                  aria-label="Scroll blogs right"
+                  style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '50%',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#1e293b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <ArrowRight size={18} />
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div
-          ref={blogScrollRef}
-          className="insights-grid-scrollable"
-          style={{
-            display: 'flex',
-            overflowX: 'auto',
-            scrollBehavior: 'smooth',
-            gap: '24px',
-            paddingBottom: '16px',
-            scrollbarWidth: 'thin',
-          }}
-        >
-          {(blogsList.length > 0 ? blogsList : marketTrends).map((item) => {
-            const imgUrl = resolveBlogImageUrl(item.coverImage || item.imageUrl || item.image) || item.image || '/honeywell-products-logo.png';
-            const blogId = item.id || item.slug || '1';
-            return (
-              <article
-                key={blogId}
-                style={{
-                  flex: '0 0 350px',
-                  minWidth: '300px',
-                  maxWidth: '360px',
-                  background: '#ffffff',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                  border: '1px solid #e2e8f0',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <img
-                  src={imgUrl}
-                  alt={item.title}
-                  loading="lazy"
-                  style={{ width: '100%', height: '200px', objectFit: 'cover' }}
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = '/honeywell-products-logo.png';
+          <div
+            ref={blogScrollRef}
+            className="insights-grid-scrollable"
+            style={{
+              display: 'flex',
+              overflowX: 'auto',
+              scrollBehavior: 'smooth',
+              gap: '24px',
+              paddingBottom: '16px',
+              scrollbarWidth: 'thin',
+            }}
+          >
+            {blogsList.map((item) => {
+              const imgUrl = resolveBlogImageUrl(item.coverImage || item.imageUrl || item.image) || item.image || '/honeywell-products-logo.png';
+              const blogId = item.id || item.slug || '1';
+              return (
+                <article
+                  key={blogId}
+                  style={{
+                    flex: '0 0 350px',
+                    minWidth: '300px',
+                    maxWidth: '360px',
+                    background: '#ffffff',
+                    borderRadius: '12px',
+                    overflow: 'hidden',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    border: '1px solid #e2e8f0',
+                    display: 'flex',
+                    flexDirection: 'column',
                   }}
-                />
-                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <small style={{ color: '#e30613', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '11px', fontWeight: 700 }}>
-                    {item.category || item.authorName || 'Market Trend'}
-                  </small>
-                  <h3 style={{ margin: '10px 0 8px', fontSize: '18px', lineHeight: 1.3, fontWeight: 700, color: '#0f172a' }}>
-                    {item.title}
-                  </h3>
-                  <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.5, margin: '0 0 16px', flex: 1 }}>
-                    {item.summary || item.shortSummary || item.description || item.content?.slice(0, 100) || 'Discover security insights.'}
-                  </p>
-                  <Link
-                    to={`/blogs/${blogId}`}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      color: '#2563eb',
-                      fontWeight: 700,
-                      fontSize: '14px',
-                      textDecoration: 'none',
-                      marginTop: 'auto',
+                >
+                  <img
+                    src={imgUrl}
+                    alt={item.title}
+                    loading="lazy"
+                    style={{ width: '100%', height: '200px', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/honeywell-products-logo.png';
                     }}
-                  >
-                    Learn More <ArrowRight size={16} />
-                  </Link>
-                </div>
-              </article>
-            );
-          })}
+                  />
+                  <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <small style={{ color: '#e30613', textTransform: 'uppercase', letterSpacing: '0.08em', fontSize: '11px', fontWeight: 700 }}>
+                      {item.category || item.authorName || 'Market Trend'}
+                    </small>
+                    <h3 style={{ margin: '10px 0 8px', fontSize: '18px', lineHeight: 1.3, fontWeight: 700, color: '#0f172a' }}>
+                      {item.title}
+                    </h3>
+                    <p style={{ color: '#64748b', fontSize: '14px', lineHeight: 1.5, margin: '0 0 16px', flex: 1 }}>
+                      {item.summary || item.shortSummary || item.description || item.content?.slice(0, 100) || 'Discover security insights.'}
+                    </p>
+                    <Link
+                      to={`/blogs/${blogId}`}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        color: '#2563eb',
+                        fontWeight: 700,
+                        fontSize: '14px',
+                        textDecoration: 'none',
+                        marginTop: 'auto',
+                      }}
+                    >
+                      Learn More <ArrowRight size={16} />
+                    </Link>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+    )}
     <section className="cta-band final-security-cta"><div className="container"><span><small>PRODUCTS • PROJECTS • BUSINESS</small><strong>Looking for the Right Security Solution?</strong><p>Talk to our team about products, projects, bulk requirements and business opportunities.</p></span><div className="button-row"><button className="button light" onClick={() => openQuote()}>Get a Quote</button><Link className="button outline light-outline" to="/contact">Contact Sales</Link>{socialLinks.whatsapp ? <a className="button outline light-outline" href={socialLinks.whatsapp} target="_blank" rel="noreferrer">WhatsApp Us</a> : <a className="button outline light-outline disabled-link" aria-disabled="true" title="WhatsApp URL not configured">WhatsApp Us</a>}</div></div></section>
   </>;
 }

@@ -401,18 +401,20 @@ export const mapProductFromApi = (
 // GET /api/Category
 
 export const fetchCategories = async () => {
-  const response = await api.get('/api/Category');
-  const cats = unwrapList(response).map(mapCategoryFromApi);
-  return cats.sort((a, b) => {
-    const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
-    const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
-    if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
-      if (orderA === 0) return 1;
-      if (orderB === 0) return -1;
-      return orderA - orderB;
-    }
-    return (Number(a.id) || 0) - (Number(b.id) || 0);
-  });
+  return await apiCache.fetchWithCache('categories_all', async () => {
+    const response = await api.get('/api/Category');
+    const cats = unwrapList(response).map(mapCategoryFromApi);
+    return cats.sort((a, b) => {
+      const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
+      const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
+      if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
+        if (orderA === 0) return 1;
+        if (orderB === 0) return -1;
+        return orderA - orderB;
+      }
+      return (Number(a.id) || 0) - (Number(b.id) || 0);
+    });
+  }, 10 * 60 * 1000);
 };
 
 // ─── Subcategories ────────────────────────────────────────────────────────────
@@ -716,24 +718,10 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
 export const saveProduct = async (product, imageFiles = [], videoFile = null, posterFile = null) => {
   const isEditing = Boolean(product.id);
 
-  // Convert File objects to Base64 data URLs for offline/fallback storage
-  const fileDataUrls = await Promise.all(
-    (imageFiles || []).map((file) =>
-      new Promise((resolve) => {
-        if (!file || typeof file === 'string') return resolve(file || '');
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result);
-        reader.onerror = () => resolve('');
-        reader.readAsDataURL(file);
-      })
-    )
-  ).then((list) => list.filter(Boolean));
-
   const existingImages = Array.isArray(product.images) && product.images.length > 0
     ? product.images
     : (product.image ? [product.image] : []);
-  const mergedImages = [...existingImages, ...fileDataUrls].filter(Boolean);
-  const primaryImage = mergedImages[0] || product.image || '';
+  const primaryImage = existingImages[0] || product.image || '';
 
   const fd = new FormData();
   if (isEditing) {
@@ -877,43 +865,43 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   }
 
   if (!mapped.image && primaryImage) mapped.image = primaryImage;
-  if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
-    mapped.images = mergedImages;
-    mapped.gallery = mergedImages;
+  if ((!mapped.images || mapped.images.length === 0) && existingImages.length > 0) {
+    mapped.images = existingImages;
+    mapped.gallery = existingImages;
   }
 
   const targetId = String(savedId || mapped?.id || product.id || '').trim();
 
-  // If deletedReviewIds provided, delete them
+  // If deletedReviewIds provided, delete them in parallel
   if (Array.isArray(product.deletedReviewIds) && product.deletedReviewIds.length > 0) {
-    for (const dId of product.deletedReviewIds) {
-      if (dId) {
-        await deleteProductReview(dId).catch((e) => console.warn('Could not delete review:', dId, e?.message));
-      }
-    }
+    await Promise.all(
+      product.deletedReviewIds
+        .filter(Boolean)
+        .map((dId) => deleteProductReview(dId).catch((e) => console.warn('Could not delete review:', dId, e?.message)))
+    );
   }
 
-  // If reviews provided in product, persist them
-  const savedReviews = [];
+  // If reviews provided in product, persist them in parallel
+  let savedReviews = [];
   if (targetId && Array.isArray(product.reviews) && product.reviews.length > 0) {
-    for (const r of product.reviews) {
-      if (r && (r.customer || r.customerName || r.comment || r.reviewComment)) {
+    const validReviews = product.reviews.filter((r) => r && (r.customer || r.customerName || r.comment || r.reviewComment));
+    const results = await Promise.all(
+      validReviews.map(async (r) => {
         try {
-          let savedRev = null;
           if (r.id) {
-            savedRev = await updateProductReview(r.id, { ...r, productId: targetId });
+            return await updateProductReview(r.id, { ...r, productId: targetId });
           } else {
-            savedRev = await createProductReview(targetId, r);
+            return await createProductReview(targetId, r);
           }
-          if (savedRev) savedReviews.push(savedRev);
         } catch (revErr) {
           console.warn('Could not persist product review:', revErr?.message);
+          return null;
         }
-      }
-    }
+      })
+    );
+    savedReviews = results.filter(Boolean);
   } else if (targetId && calculatedRating > 0) {
     // User set Average Rating in the product form without adding a Featured Review
-    // We must persist a rating record in the backend Reviews table so the backend retains this rating!
     try {
       const existing = await reviewService.getByProduct(targetId);
       if (Array.isArray(existing) && existing.length > 0) {

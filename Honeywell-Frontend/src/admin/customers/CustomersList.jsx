@@ -66,13 +66,13 @@ const CustomersList = () => {
       });
   }, []);
 
-  // Initial fetch and automatic background polling every 15 seconds
+  // Initial fetch and automatic background polling every 60 seconds
   useEffect(() => {
     fetchCustomers(false);
 
     const interval = setInterval(() => {
       fetchCustomers(true);
-    }, 15000);
+    }, 60000);
 
     const handleFocus = () => fetchCustomers(true);
     window.addEventListener('focus', handleFocus);

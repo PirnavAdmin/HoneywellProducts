@@ -22,13 +22,13 @@ namespace Honeywell.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Supplier>>> GetAll()
         {
-            return await _context.Suppliers.ToListAsync();
+            return await _context.Suppliers.AsNoTracking().ToListAsync();
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<Supplier>> GetById(int id)
         {
-            var supplier = await _context.Suppliers.FindAsync(id);
+            var supplier = await _context.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
             if (supplier == null)
             {
                 return NotFound(new { Message = "Supplier not found." });

@@ -416,7 +416,7 @@ const ProductsForm = () => {
       });
 
     return () => { isMounted = false; };
-  }, [productId, categories, subcategories, navigate]);
+  }, [productId, navigate]);
 
   useEffect(() => {
     if (isLoadingMetadata || availableSubcategories.length === 0) return;

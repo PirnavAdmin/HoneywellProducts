@@ -814,25 +814,21 @@ const OrdersLedger = () => {
       try {
         setLoading(true);
         setError('');
-        const data = await getOrders();
-        
-        let customerMap = {};
-        try {
-          const custResponse = await fetch(`${getApiDomain()}/api/Customers`, {
+        const [data, custJson] = await Promise.all([
+          getOrders().catch(() => []),
+          fetch(`${getApiDomain()}/api/Customers`, {
             headers: {
               'ngrok-skip-browser-warning': 'true',
               'Accept': 'application/json'
             }
-          });
-          if (custResponse.ok) {
-            const customersList = await custResponse.json();
-            customersList.forEach(c => {
-              customerMap[c.id] = c;
-            });
-          }
-        } catch (e) {
-          console.warn("Failed to load customers for mapping:", e);
-        }
+          }).then(r => r.ok ? r.json() : []).catch(() => [])
+        ]);
+        
+        let customerMap = {};
+        const customersList = Array.isArray(custJson) ? custJson : (custJson?.data || custJson?.items || []);
+        customersList.forEach(c => {
+          if (c && c.id) customerMap[c.id] = c;
+        });
 
         if (isMounted) {
           const list = Array.isArray(data) ? data : (data.orders || data.data || []);

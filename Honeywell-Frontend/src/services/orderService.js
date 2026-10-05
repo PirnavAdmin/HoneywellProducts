@@ -51,56 +51,28 @@ export const mapOrderFromApi = (item) => {
 };
 
 export const orderService = {
-  /** GET (All) — GET /api/orders */
+  /** GET (All) — GET /api/orders (Live Only) */
   async getAll() {
-    let apiList = [];
     try {
       const data = await apiRequest('/api/orders');
       const list = Array.isArray(data) ? data : (data.orders || data.items || data.data || []);
-      apiList = list.map(mapOrderFromApi).filter(Boolean);
+      return list.map(mapOrderFromApi).filter(Boolean);
     } catch (err) {
-      console.warn('Orders API getAll() error:', err.message);
+      console.warn('Orders API getAll() error (Server offline or error):', err.message);
+      return [];
     }
-
-    // Always merge with client stored orders (deduplicated by orderNumber or id)
-    let localList = [];
-    try {
-      const r1 = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
-      const r2 = JSON.parse(localStorage.getItem('honeywell_orders') || '[]');
-      localList = [...r1, ...r2].map(mapOrderFromApi).filter(Boolean);
-    } catch (e) {}
-
-    const seen = new Set();
-    const merged = [];
-    for (const o of [...localList, ...apiList]) {
-      const key = String(o.orderNumber || o.id || '').trim();
-      if (key && !seen.has(key)) {
-        seen.add(key);
-        merged.push(o);
-      }
-    }
-    return merged;
   },
 
-  /** GET (ById) — GET /api/orders/{id} */
+  /** GET (ById) — GET /api/orders/{id} (Live Only) */
   async getById(id) {
     if (!id) return null;
     try {
       const data = await apiRequest(`/api/orders/${id}`);
       const mapped = mapOrderFromApi(data.order || data.data || data);
       if (mapped) return mapped;
-    } catch (err) {}
-
-    try {
-      const r1 = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
-      const r2 = JSON.parse(localStorage.getItem('honeywell_orders') || '[]');
-      const found = [...r1, ...r2].find(o => 
-        String(o.id) === String(id) || 
-        String(o.orderNumber).toLowerCase() === String(id).toLowerCase()
-      );
-      if (found) return mapOrderFromApi(found);
-    } catch (e) {}
-
+    } catch (err) {
+      console.warn(`Orders API getById(${id}) error:`, err.message);
+    }
     return null;
   },
 
@@ -131,16 +103,14 @@ export const orderService = {
     }
   },
 
-  /** POST (Create) — POST /api/orders */
+  /** POST (Create) — POST /api/orders (Live Server Only) */
   async create(payload) {
     const activeCustomerId = payload.customerId || Number(localStorage.getItem('customerId') || 0);
     const orderNumber = payload.orderNumber || `ORD-${Date.now()}`;
     const cleanAddress = [payload.address || payload.shippingAddress, payload.city, payload.state, payload.pinCode].filter(Boolean).join(', ') || payload.address || '';
 
-    const createdOrder = {
-      id: String(Date.now()),
+    const apiPayload = {
       orderNumber,
-      orderNo: orderNumber,
       customerId: activeCustomerId ? Number(activeCustomerId) : undefined,
       customerName: payload.customerName || payload.name || 'Customer',
       email: payload.email || '',
@@ -153,7 +123,6 @@ export const orderService = {
       district: payload.city || payload.state || 'Local',
       pinCode: payload.pinCode || payload.pincode || '',
       totalAmount: Number(payload.totalAmount || payload.total || 0),
-      total: Number(payload.totalAmount || payload.total || 0),
       finalAmount: Number(payload.totalAmount || payload.total || 0),
       paymentMethod: payload.paymentMethod || 'Cash on Delivery',
       paymentStatus: payload.paymentStatus || 'Pending',
@@ -167,105 +136,44 @@ export const orderService = {
         price: Number(item.price || 0),
         subtotal: Number(item.price || 0) * Number(item.quantity || 1),
         image: item.image || item.imageUrl || ''
-      })) : [],
-      createdAt: new Date().toISOString(),
-      orderDate: new Date().toISOString()
+      })) : []
     };
 
-    // Cache order locally immediately so it instantly reflects in user account & orders ledger
-    try {
-      const existingRecent = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
-      const updatedRecent = [createdOrder, ...existingRecent.filter(o => o.orderNumber !== createdOrder.orderNumber && o.id !== createdOrder.id)];
-      localStorage.setItem('my_recent_orders', JSON.stringify(updatedRecent));
+    const url = `${API_BASE_URL}/api/orders`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: DEFAULT_HEADERS,
+      body: JSON.stringify(apiPayload)
+    });
 
-      const existingOrders = JSON.parse(localStorage.getItem('honeywell_orders') || '[]');
-      const updatedOrders = [createdOrder, ...existingOrders.filter(o => o.orderNumber !== createdOrder.orderNumber && o.id !== createdOrder.id)];
-      localStorage.setItem('honeywell_orders', JSON.stringify(updatedOrders));
-    } catch (e) {}
-
-    // Synchronize to backend server
-    const apiPayload = {
-      orderNumber: createdOrder.orderNumber,
-      customerId: createdOrder.customerId,
-      customerName: createdOrder.customerName,
-      email: createdOrder.email,
-      mobile: createdOrder.mobile,
-      phone: createdOrder.mobile,
-      address: createdOrder.address,
-      shippingAddress: createdOrder.shippingAddress,
-      city: createdOrder.city,
-      state: createdOrder.state,
-      district: createdOrder.district,
-      pinCode: createdOrder.pinCode,
-      totalAmount: createdOrder.totalAmount,
-      finalAmount: createdOrder.finalAmount,
-      paymentMethod: createdOrder.paymentMethod,
-      paymentStatus: createdOrder.paymentStatus,
-      status: createdOrder.status,
-      items: createdOrder.items
-    };
-
-    try {
-      const url = `${API_BASE_URL}/api/orders`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: DEFAULT_HEADERS,
-        body: JSON.stringify(apiPayload)
-      });
-
-      if (response.ok) {
-        const resData = await response.json().catch(() => null);
-        const mapped = mapOrderFromApi(resData?.order || resData?.data || resData);
-        if (mapped) {
-          return mapped;
-        }
-      }
-    } catch (err) {
-      console.warn('Backend /api/orders sync note:', err.message);
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`Server returned error (${response.status}): ${errText || 'Failed to create order on backend.'}`);
     }
 
-    return createdOrder;
+    const resData = await response.json().catch(() => null);
+    const mapped = mapOrderFromApi(resData?.order || resData?.data || resData);
+    return mapped || resData;
   },
 
   /** PUT (Status) — PUT /api/orders/{id}/status */
   async updateStatus(id, status) {
-    // 1. Update local storage caches immediately
-    try {
-      const updateList = (key) => {
-        const list = JSON.parse(localStorage.getItem(key) || '[]');
-        const updated = list.map(o => {
-          if (String(o.id) === String(id) || String(o.orderNumber) === String(id)) {
-            return { ...o, status, orderStatus: status };
-          }
-          return o;
-        });
-        localStorage.setItem(key, JSON.stringify(updated));
-      };
-      updateList('my_recent_orders');
-      updateList('honeywell_orders');
-    } catch (e) {}
-
-    // 2. Dispatch to backend
     const url = `${API_BASE_URL}/api/orders/${id}/status`;
-    try {
-      const response = await fetch(url, {
-        method: 'PUT',
-        headers: DEFAULT_HEADERS,
-        body: JSON.stringify({ status: String(status) })
-      });
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: DEFAULT_HEADERS,
+      body: JSON.stringify({ status: String(status) })
+    });
 
-      if (!response.ok && response.status !== 204) {
-        await fetch(url, {
-          method: 'PUT',
-          headers: {
-            ...DEFAULT_HEADERS,
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: `status=${encodeURIComponent(status)}`
-        });
-      }
-    } catch (err) {
-      console.warn(`Note: Backend updateStatus for ID ${id}:`, err.message);
+    if (!response.ok && response.status !== 204) {
+      await fetch(url, {
+        method: 'PUT',
+        headers: {
+          ...DEFAULT_HEADERS,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: `status=${encodeURIComponent(status)}`
+      });
     }
 
     return { success: true, id, status };
@@ -273,26 +181,15 @@ export const orderService = {
 
   /** DELETE — DELETE /api/orders/{id} */
   async delete(id) {
-    // 1. Remove from local storage caches immediately
-    try {
-      const filterList = (key) => {
-        const list = JSON.parse(localStorage.getItem(key) || '[]');
-        const updated = list.filter(o => String(o.id) !== String(id) && String(o.orderNumber) !== String(id));
-        localStorage.setItem(key, JSON.stringify(updated));
-      };
-      filterList('my_recent_orders');
-      filterList('honeywell_orders');
-    } catch (e) {}
-
-    // 2. Dispatch to backend
     const url = `${API_BASE_URL}/api/orders/${id}`;
-    try {
-      await fetch(url, {
-        method: 'DELETE',
-        headers: DEFAULT_HEADERS
-      });
-    } catch (err) {
-      console.warn(`Note: Backend delete for ID ${id}:`, err.message);
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: DEFAULT_HEADERS
+    });
+
+    if (!response.ok && response.status !== 204) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`Failed to delete order on server: ${errText}`);
     }
 
     return { success: true, id };
@@ -305,8 +202,8 @@ export const orderService = {
       const list = Array.isArray(data) ? data : (data.orders || data.items || data.data || []);
       return list.map(mapOrderFromApi).filter(Boolean);
     } catch (err) {
-      console.warn('Customer my-orders error:', err.message);
-      return this.getAll();
+      console.warn('Customer my-orders error (Server offline or error):', err.message);
+      return [];
     }
   },
 
@@ -318,8 +215,8 @@ export const orderService = {
       const item = data?.data || data?.order || data;
       return mapOrderFromApi(item);
     } catch (err) {
-      console.warn(`trackOrder(${orderNumber}) error:`, err.message);
-      return this.getById(orderNumber);
+      console.warn(`trackOrder(${orderNumber}) error (Server offline):`, err.message);
+      return null;
     }
   }
 };

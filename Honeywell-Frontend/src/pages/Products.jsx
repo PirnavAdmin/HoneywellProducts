@@ -105,9 +105,10 @@ export default function Products() {
     try {
       setLoading(true);
       setError(null);
-      const [cats, subcats] = await Promise.all([
+      const [cats, subcats, prods] = await Promise.all([
         productService.categories().catch(() => []),
         productService.subcategories().catch(() => []),
+        productService.getAll().catch(() => []),
       ]);
       const validCats = (Array.isArray(cats) ? cats : []).slice().sort((a, b) => {
         const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
@@ -120,7 +121,6 @@ export default function Products() {
         return (Number(a.id) || 0) - (Number(b.id) || 0);
       });
       const validSubcats = Array.isArray(subcats) ? subcats : [];
-      const prods = await productService.getAll(validCats, validSubcats).catch(() => []);
 
       setCategoriesList(validCats);
       setSubcategoriesList(validSubcats);

@@ -75,16 +75,19 @@ const ProductsList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  const loadAll = useCallback(async (isMounted) => {
+  const loadAll = useCallback(async (isMounted = true) => {
     setIsLoading(true);
     setErrorMessage('');
     try {
-      const [cats, subcats] = await Promise.all([fetchCategories(), fetchSubcategories()]);
+      const [cats, subcats, apiProducts] = await Promise.all([
+        fetchCategories().catch(() => []),
+        fetchSubcategories().catch(() => []),
+        fetchProducts().catch(() => [])
+      ]);
       if (!isMounted) return;
       setCategories(cats);
       setSubcategories(subcats);
-      const apiProducts = await fetchProducts(cats, subcats);
-      if (isMounted) setProducts(apiProducts);
+      setProducts(Array.isArray(apiProducts) ? apiProducts : []);
     } catch (error) {
       if (isMounted) setErrorMessage(error.message || 'Unable to load products.');
     } finally {
@@ -92,47 +95,33 @@ const ProductsList = () => {
     }
   }, []);
 
-  // Search debounce
   useEffect(() => {
-    if (!searchTerm.trim()) return;
-    let cancelled = false;
-    const timer = setTimeout(async () => {
-      setIsSearching(true);
-      try {
-        const results = await searchProducts(searchTerm.trim(), categories, subcategories);
-        if (!cancelled) setProducts(results);
-      } catch (err) {
-        if (!cancelled) setErrorMessage(err.message || 'Search failed.');
-      } finally {
-        if (!cancelled) setIsSearching(false);
-      }
-    }, 400);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [searchTerm, categories, subcategories]);
-
-  // When search is cleared, reload the full list
-  useEffect(() => {
-    if (searchTerm.trim()) return;
     let isMounted = true;
     loadAll(isMounted);
     return () => { isMounted = false; };
-  }, [searchTerm, loadAll]);
+  }, [loadAll]);
 
-  // Client-side filter by category + status
+  // Client-side instant filter by search + category + status
   const filteredProducts = useMemo(() => {
+    const q = searchTerm.trim().toLowerCase();
     return products
       .filter((product) => {
+        const matchesSearch =
+          !q ||
+          (product.name || '').toLowerCase().includes(q) ||
+          (product.sku || '').toLowerCase().includes(q) ||
+          (product.brand || '').toLowerCase().includes(q) ||
+          (product.category || '').toLowerCase().includes(q) ||
+          (product.productType || '').toLowerCase().includes(q);
+
         const matchesCategory =
           selectedCategoryId === 'All' || String(product.categoryId) === String(selectedCategoryId);
         const matchesStatus =
           selectedStatus === 'All' || product.status === selectedStatus;
-        return matchesCategory && matchesStatus;
+        return matchesSearch && matchesCategory && matchesStatus;
       })
       .sort((a, b) => Number(b.id) - Number(a.id));
-  }, [products, selectedCategoryId, selectedStatus]);
+  }, [products, searchTerm, selectedCategoryId, selectedStatus]);
 
   // Reset page on filter change
   useEffect(() => {

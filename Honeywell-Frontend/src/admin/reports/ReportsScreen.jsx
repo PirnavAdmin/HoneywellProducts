@@ -173,15 +173,15 @@ const ReportsScreen = () => {
         adminReturnsData
       ] = await Promise.all([
         getReportsOrders().catch((err) => {
-          console.warn("Failed to load Reports Orders API, falling back:", err);
+          console.warn("Reports Orders API offline or error:", err.message);
           return null;
         }),
         getReportsProcurement().catch((err) => {
-          console.warn("Failed to load Reports Procurement API, falling back:", err);
+          console.warn("Reports Procurement API offline or error:", err.message);
           return null;
         }),
         getReportsCatalog().catch((err) => {
-          console.warn("Failed to load Reports Catalog API, falling back:", err);
+          console.warn("Reports Catalog API offline or error:", err.message);
           return null;
         }),
         fetchPurchaseIndents().catch(() => []),
@@ -189,10 +189,7 @@ const ReportsScreen = () => {
         getAdminReturns({ pageSize: 100 }).catch(() => ({ returns: [] }))
       ]);
 
-      if (reportsProcurementData) {
-        setProcurementReport(reportsProcurementData);
-      }
-
+      setProcurementReport(reportsProcurementData || null);
       setPurchaseIndents(indentsData || []);
       setPurchaseOrders(posData || []);
       setReturnsList(adminReturnsData?.returns || adminReturnsData?.items || []);
@@ -233,12 +230,8 @@ const ReportsScreen = () => {
         });
         setOrders(mappedOrders);
       } else {
-        const legacyOrders = await getOrders().catch(() => []);
-        const mappedOrders = legacyOrders.map(o => ({
-          ...o,
-          status: mapStatusLocal(o.fulfillment || o.status, o.paymentStatus)
-        }));
-        setOrders(mappedOrders);
+        setOrdersReport(null);
+        setOrders([]);
       }
 
       if (reportsCatalogData) {
@@ -258,16 +251,18 @@ const ReportsScreen = () => {
         });
         setProducts(mappedProducts);
       } else {
-        const [legacyProducts, legacyCategories] = await Promise.all([
-          fetchProducts().catch(() => []),
-          fetchCategories().catch(() => [])
-        ]);
-        setProducts(legacyProducts);
-        setCategories(legacyCategories);
+        setCatalogReport(null);
+        setProducts([]);
+        setCategories([]);
       }
     } catch (err) {
       console.error("Failed to load reporting data:", err);
-      showNotification("Failed to load reporting data", "error");
+      setOrders([]);
+      setProducts([]);
+      setPurchaseIndents([]);
+      setPurchaseOrders([]);
+      setReturnsList([]);
+      showNotification("Server is offline or unreachable. Displaying live state only.", "error");
     } finally {
       setLoading(false);
     }

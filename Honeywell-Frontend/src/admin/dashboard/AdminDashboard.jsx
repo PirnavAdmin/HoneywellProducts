@@ -138,39 +138,36 @@ const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
-  const [staffCount, setStaffCount] = useState(1);
+  const [staffCount, setStaffCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [ordersData, productsData, categoriesData, suppliersData] = await Promise.all([
+      const [ordersData, productsData, categoriesData, suppliersData, staffJson] = await Promise.all([
         getOrders().catch(() => []),
         fetchProducts().catch(() => []),
         fetchCategories().catch(() => []),
-        fetchSuppliers().catch(() => [])
+        fetchSuppliers().catch(() => []),
+        fetch(`${getApiDomain()}/api/Staff`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        }).then(r => r.ok ? r.json() : []).catch(() => [])
       ]);
 
-      setOrders(ordersData || []);
-      setProducts(productsData || []);
-      setCategories(categoriesData || []);
-      setSuppliers(suppliersData || []);
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
 
-      // Fetch staff count
-      try {
-        const staffRes = await fetch(`${getApiDomain()}/api/Staff`, {
-          headers: { 'ngrok-skip-browser-warning': 'true' }
-        });
-        if (staffRes.ok) {
-          const staffJson = await staffRes.json();
-          const staffList = Array.isArray(staffJson) ? staffJson : (staffJson.data || staffJson.value || []);
-          if (staffList.length > 0) setStaffCount(staffList.length);
-        }
-      } catch (err) {
-        console.warn("Failed to fetch staff count", err);
-      }
+      const staffList = Array.isArray(staffJson) ? staffJson : (staffJson?.data || staffJson?.value || []);
+      setStaffCount(staffList.length);
     } catch (error) {
       console.error("Dashboard loading error", error);
+      setOrders([]);
+      setProducts([]);
+      setCategories([]);
+      setSuppliers([]);
+      setStaffCount(0);
     } finally {
       setLoading(false);
     }
@@ -191,17 +188,17 @@ const AdminDashboard = () => {
 
     const activeOrdersCount = orders.filter(o => o.status === 'Processing' || o.status === 'Packed' || o.status === 'Dispatched').length;
     const lowStockCount = products.filter(p => p.status === 'Low Stock' || p.status === 'Out of Stock').length;
-    const newSuppliersCount = suppliers.filter(s => s.status === 'Pending' || s.status === 'New').length || (suppliers.length > 0 ? 1 : 0);
+    const newSuppliersCount = suppliers.filter(s => s.status === 'Pending' || s.status === 'New').length;
 
     const completedOrders = orders.filter(o => o.status === 'Completed' || o.status === 'Delivered').length;
     const totalNonCanceled = orders.filter(o => o.status !== 'Canceled' && o.status !== 'Cancelled').length;
     const fulfillmentRate = totalNonCanceled > 0 ? Math.round((completedOrders / totalNonCanceled) * 100) : 0;
 
     return {
-      totalSales: totalSalesVal || 2891,
-      totalOrders: orders.length || 1,
-      productsCount: products.length || 1,
-      suppliersCount: suppliers.length || 1,
+      totalSales: totalSalesVal,
+      totalOrders: orders.length,
+      productsCount: products.length,
+      suppliersCount: suppliers.length,
       activeOrdersCount,
       lowStockCount,
       newSuppliersCount,
@@ -216,14 +213,7 @@ const AdminDashboard = () => {
   // Sales series data for chart
   const salesSeriesData = useMemo(() => {
     if (orders.length === 0) {
-      return [
-        { name: '26 Aug', value: 20 },
-        { name: '27 Aug', value: 21 },
-        { name: '28 Aug', value: 22 },
-        { name: '29 Aug', value: 23 },
-        { name: '30 Aug', value: 24 },
-        { name: '31 Aug', value: 2891 }
-      ];
+      return [{ name: 'Today', value: 0 }];
     }
     const dailySalesMap = {};
     orders.forEach(o => {
@@ -234,13 +224,14 @@ const AdminDashboard = () => {
     });
 
     const series = Object.entries(dailySalesMap).map(([name, value]) => ({ name, value }));
-    return series.length > 0 ? series : [
-      { name: '31 Aug', value: metrics.totalSales }
-    ];
+    return series.length > 0 ? series : [{ name: 'Today', value: metrics.totalSales }];
   }, [orders, metrics.totalSales]);
 
   // Order status series data
   const orderStatusSeriesData = useMemo(() => {
+    if (orders.length === 0) {
+      return [];
+    }
     const counts = { Pending: 0, Processing: 0, Completed: 0, Canceled: 0 };
     orders.forEach(o => {
       let st = o.status || 'Pending';
@@ -248,10 +239,6 @@ const AdminDashboard = () => {
       if (counts[st] !== undefined) counts[st]++;
       else counts.Pending++;
     });
-
-    if (orders.length === 0) {
-      counts.Pending = 1;
-    }
 
     const colors = { Pending: '#f59e0b', Processing: '#0284c7', Completed: '#10b981', Canceled: '#ef4444' };
     return Object.entries(counts)
@@ -261,16 +248,15 @@ const AdminDashboard = () => {
 
   // Category series data
   const categorySeriesData = useMemo(() => {
+    if (products.length === 0) {
+      return [];
+    }
     const counts = {};
     products.forEach(p => {
       const cat = categories.find(c => String(c.id) === String(p.categoryId));
-      const name = cat ? cat.name : 'Farm and Garden';
+      const name = cat ? cat.name : 'General';
       counts[name] = (counts[name] || 0) + 1;
     });
-
-    if (Object.keys(counts).length === 0) {
-      counts['Farm and Garden'] = 1;
-    }
 
     const colors = ['#1268a5', '#0284c7', '#10b981', '#f59e0b', '#8b5cf6'];
     return Object.entries(counts).map(([name, value], idx) => ({
@@ -288,13 +274,7 @@ const AdminDashboard = () => {
       list.push({
         time: 'Recently',
         title: 'Order Placed',
-        detail: `${firstOrder.customerName || 'nandhitha'} placed order #${firstOrder.id || firstOrder.orderId || 1} of ${formatCurrency(firstOrder.totalAmount || 2891)}`
-      });
-    } else {
-      list.push({
-        time: 'Recently',
-        title: 'Order Placed',
-        detail: 'nandhitha placed order #1 of INR 2,891'
+        detail: `${firstOrder.customerName || 'Customer'} placed order #${firstOrder.id || firstOrder.orderId || 1} of ${formatCurrency(firstOrder.totalAmount || 0)}`
       });
     }
 
@@ -302,14 +282,8 @@ const AdminDashboard = () => {
       const firstProd = products[0];
       list.push({
         time: 'Catalog',
-        title: 'Product Added',
-        detail: `${firstProd.name} (SKU: ${firstProd.sku || 'SAT-DRP-16'}) is now available.`
-      });
-    } else {
-      list.push({
-        time: 'Catalog',
-        title: 'Product Added',
-        detail: 'Surya Heavy Duty Mild Steel Adjustable Drip Line Pipe (SKU: SAT-DRP-16) is now available.'
+        title: 'Product In Inventory',
+        detail: `${firstProd.name} (SKU: ${firstProd.sku || 'N/A'}) is recorded in catalog.`
       });
     }
 
@@ -317,14 +291,16 @@ const AdminDashboard = () => {
       const firstSup = suppliers[0];
       list.push({
         time: 'Suppliers',
-        title: 'Supplier Added',
-        detail: `${firstSup.name} category: ${firstSup.category || 'Farm Tools'}.`
+        title: 'Supplier Registered',
+        detail: `${firstSup.name} category: ${firstSup.category || 'General'}.`
       });
-    } else {
+    }
+
+    if (list.length === 0) {
       list.push({
-        time: 'Suppliers',
-        title: 'Supplier Added',
-        detail: 'harish category: Farm Tools.'
+        time: 'Live State',
+        title: 'No Live Activities Recorded',
+        detail: 'Connect backend server or place transactions to view real-time events.'
       });
     }
 

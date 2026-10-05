@@ -249,11 +249,15 @@ namespace Honeywell.Controllers
             var returnWindowEndsAt = deliveredDate.AddDays(7); // 7 days return window
             bool isWindowActive = DateTime.UtcNow <= returnWindowEndsAt;
 
+            var itemIds = order.Items.Select(i => i.Id).ToList();
+            var returnReqs = await _context.ReturnRequests
+                .AsNoTracking()
+                .Where(r => itemIds.Contains(r.OrderItemId))
+                .ToDictionaryAsync(r => r.OrderItemId);
+
             foreach (var item in order.Items)
             {
-                var returnReq = await _context.ReturnRequests
-                    .FirstOrDefaultAsync(r => r.OrderItemId == item.Id);
-
+                returnReqs.TryGetValue(item.Id, out var returnReq);
                 if (returnReq != null)
                 {
                     item.ReturnEligible = false;
@@ -891,6 +895,37 @@ namespace Honeywell.Controllers
 
             await _context.SaveChangesAsync();
             return NoContent();
+        }
+
+        public class OrderPaymentStatusRequest
+        {
+            public string? PaymentStatus { get; set; }
+            public decimal? PaidAmount { get; set; }
+        }
+
+        // PUT: api/Orders/5/payment-status
+        [HttpPut("{id}/payment-status")]
+        [HttpPut("{id}/payment")]
+        public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] OrderPaymentStatusRequest request)
+        {
+            var order = await _context.Orders.FindAsync(id);
+            if (order == null)
+            {
+                return NotFound(new { Message = "Order not found." });
+            }
+
+            if (!string.IsNullOrEmpty(request.PaymentStatus))
+            {
+                order.PaymentStatus = request.PaymentStatus;
+            }
+
+            if (request.PaidAmount.HasValue && request.PaidAmount.Value > 0)
+            {
+                order.FinalAmount = request.PaidAmount.Value;
+            }
+
+            await _context.SaveChangesAsync();
+            return Ok(new { Message = "Payment status updated successfully.", OrderId = id, PaymentStatus = order.PaymentStatus });
         }
 
         // DELETE: api/Orders/5  (cancel order & restore stock)

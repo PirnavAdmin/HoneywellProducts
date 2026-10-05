@@ -407,67 +407,23 @@ export async function getMyOrders({ customerId, email, status, search } = {}) {
     if (res.ok) {
       const data = await handleResponse(res);
       apiOrders = Array.isArray(data) ? data : (data.orders || data.items || data.data || []);
+      return apiOrders;
     }
   } catch (e) {}
 
-  if (!apiOrders.length) {
-    try {
-      const res2 = await fetch(url(`/api/CustomerPortal/my-orders${q}`), {
-        method: 'GET',
-        headers: authHeaders(),
-      });
-      if (res2.ok) {
-        const data2 = await handleResponse(res2);
-        apiOrders = Array.isArray(data2) ? data2 : (data2.orders || data2.items || data2.data || []);
-      }
-    } catch (e2) {}
-  }
-
-  if (!apiOrders.length) {
-    try {
-      const res3 = await fetch(url(`/api/Orders/my-orders${q}`), {
-        method: 'GET',
-        headers: authHeaders(),
-      });
-      if (res3.ok) {
-        const data3 = await handleResponse(res3);
-        apiOrders = Array.isArray(data3) ? data3 : (data3.orders || data3.items || data3.data || []);
-      }
-    } catch (e3) {}
-  }
-
-  if (!apiOrders.length) {
-    try {
-      const res4 = await fetch(url('/api/orders'), {
-        method: 'GET',
-        headers: authHeaders(),
-      });
-      if (res4.ok) {
-        const data4 = await handleResponse(res4);
-        apiOrders = Array.isArray(data4) ? data4 : (data4.orders || data4.items || data4.data || []);
-      }
-    } catch (e4) {}
-  }
-
-  // Always merge with local orders so placed orders show up immediately in My Orders
-  let localOrders = [];
   try {
-    const r1 = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');
-    const r2 = JSON.parse(localStorage.getItem('honeywell_orders') || '[]');
-    localOrders = [...r1, ...r2];
-  } catch (e5) {}
-
-  const seen = new Set();
-  const merged = [];
-  for (const o of [...localOrders, ...apiOrders]) {
-    const key = String(o.orderNumber || o.orderNo || o.id || '').trim();
-    if (key && !seen.has(key)) {
-      seen.add(key);
-      merged.push(o);
+    const res2 = await fetch(url(`/api/Orders/my-orders${q}`), {
+      method: 'GET',
+      headers: authHeaders(),
+    });
+    if (res2.ok) {
+      const data2 = await handleResponse(res2);
+      apiOrders = Array.isArray(data2) ? data2 : (data2.orders || data2.items || data2.data || []);
+      return apiOrders;
     }
-  }
+  } catch (e2) {}
 
-  return merged;
+  return [];
 }
 
 export async function getOrderDetails(orderId) {

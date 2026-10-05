@@ -55,210 +55,66 @@ export const updateOrderPaymentStatus = async (id, paymentStatus, paidAmount) =>
 
 /** Tracking endpoints */
 export const getOrdersTracking = async () => {
-  let backendTracking = [];
   try {
     const response = await fetch(`${BASE_URL}/tracking`, { headers: DEFAULT_HEADERS });
     if (response.ok) {
-      backendTracking = await response.json();
+      const backendTracking = await response.json();
+      return Array.isArray(backendTracking) ? backendTracking : [];
     }
-  } catch {}
-
-  let allOrders = [];
-  try {
-    allOrders = await orderService.getAll();
-  } catch {}
-
-  const merged = [];
-  const seen = new Set();
-
-  for (const o of allOrders) {
-    const key = String(o.orderNumber || o.id || '').toUpperCase().trim();
-    if (key && !seen.has(key)) {
-      seen.add(key);
-      merged.push({
-        id: o.id,
-        orderId: o.id,
-        orderNumber: o.orderNumber || `ORD-${o.id}`,
-        customerName: o.customerName || o.customer || 'Customer',
-        customerPhone: o.mobile || o.phone || '',
-        finalAmount: Number(o.totalAmount || o.total || 0),
-        status: o.status || 'Processing',
-        currentStatus: o.status || 'Processing',
-        items: o.items || []
-      });
-    }
+  } catch (err) {
+    console.warn('getOrdersTracking error (Server offline):', err.message);
   }
-
-  for (const t of (Array.isArray(backendTracking) ? backendTracking : [])) {
-    const key = String(t.orderNumber || t.orderId || t.id || '').toUpperCase().trim();
-    if (key && !seen.has(key)) {
-      seen.add(key);
-      merged.push(t);
-    }
-  }
-
-  return merged;
+  return [];
 };
 
 export const getOrderTracking = async (id) => {
-  let backendData = null;
   try {
     const response = await fetch(`${BASE_URL}/tracking/${id}`, { headers: DEFAULT_HEADERS });
     if (response.ok) {
-      backendData = await response.json();
+      return await response.json();
     }
-  } catch {}
-
-  const fullOrder = await orderService.getById(id);
-
-  if (backendData && (backendData.orderId || backendData.id)) {
-    return {
-      ...backendData,
-      currentStatus: fullOrder?.status || backendData.currentStatus || backendData.status || 'Processing',
-      customerName: fullOrder?.customerName || backendData.customerName,
-      customerPhone: fullOrder?.mobile || backendData.customerPhone,
-      customerEmail: fullOrder?.email || backendData.customerEmail,
-      shippingAddress: fullOrder?.address || backendData.shippingAddress,
-      items: fullOrder?.items?.length ? fullOrder.items : backendData.items
-    };
+  } catch (err) {
+    console.warn(`getOrderTracking(${id}) error (Server offline):`, err.message);
   }
-
-  if (fullOrder) {
-    const currentStatus = fullOrder.status || 'Processing';
-    return {
-      id: fullOrder.id,
-      orderId: fullOrder.id,
-      orderNumber: fullOrder.orderNumber,
-      customerName: fullOrder.customerName,
-      customerPhone: fullOrder.mobile,
-      customerEmail: fullOrder.email,
-      shippingAddress: fullOrder.address,
-      finalAmount: fullOrder.totalAmount,
-      totalAmount: fullOrder.totalAmount,
-      currentStatus: currentStatus,
-      status: currentStatus,
-      carrierName: fullOrder.logistics || 'Delhivery Express',
-      trackingNumber: fullOrder.trackingNo || `AWB-${fullOrder.id || Date.now()}`,
-      items: fullOrder.items || [],
-      timelineLogs: fullOrder.timeline || [
-        { status: 'Confirmed', date: new Date(fullOrder.createdAt || Date.now()).toLocaleDateString(), time: new Date(fullOrder.createdAt || Date.now()).toLocaleTimeString(), description: 'Order confirmed and verified.' },
-        { status: currentStatus, date: new Date().toLocaleDateString(), time: new Date().toLocaleTimeString(), description: `Order status is currently ${currentStatus}.` }
-      ]
-    };
-  }
-
-  return backendData;
+  return null;
 };
 
 export const postOrderTracking = async (id, trackingData) => {
-  if (trackingData?.status) {
-    await orderService.updateStatus(id, trackingData.status).catch(() => {});
+  const response = await fetch(`${BASE_URL}/tracking/${id}`, {
+    method: 'POST',
+    headers: DEFAULT_HEADERS,
+    body: JSON.stringify(trackingData),
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to update tracking (${response.status})`);
   }
-
-  try {
-    const response = await fetch(`${BASE_URL}/tracking/${id}`, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify(trackingData),
-    });
-    if (response.ok) {
-      return await response.json().catch(() => ({ success: true }));
-    }
-  } catch (err) {
-    console.warn(`Note: Backend postOrderTracking for ${id}:`, err.message);
-  }
-
-  return { success: true, id, ...trackingData };
+  return await response.json().catch(() => ({ success: true }));
 };
 
 /** Shipping endpoints */
 export const getOrdersShipping = async () => {
-  let backendShipping = [];
   try {
     const response = await fetch(`${BASE_URL}/shipping`, { headers: DEFAULT_HEADERS });
     if (response.ok) {
-      backendShipping = await response.json();
+      const backendShipping = await response.json();
+      return Array.isArray(backendShipping) ? backendShipping : [];
     }
-  } catch {}
-
-  let allOrders = [];
-  try {
-    allOrders = await orderService.getAll();
-  } catch {}
-
-  const merged = [];
-  const seen = new Set();
-
-  for (const o of allOrders) {
-    const key = String(o.orderNumber || o.id || '').toUpperCase().trim();
-    if (key && !seen.has(key)) {
-      seen.add(key);
-      merged.push({
-        id: o.id,
-        orderId: o.id,
-        orderNumber: o.orderNumber || `ORD-${o.id}`,
-        customerName: o.customerName || o.customer || 'Customer',
-        customerPhone: o.mobile || o.phone || '',
-        finalAmount: Number(o.totalAmount || o.total || 0),
-        status: o.status || 'Processing',
-        currentStatus: o.status || 'Processing',
-        items: o.items || []
-      });
-    }
+  } catch (err) {
+    console.warn('getOrdersShipping error (Server offline):', err.message);
   }
-
-  for (const s of (Array.isArray(backendShipping) ? backendShipping : [])) {
-    const key = String(s.orderNumber || s.orderId || s.id || '').toUpperCase().trim();
-    if (key && !seen.has(key)) {
-      seen.add(key);
-      merged.push(s);
-    }
-  }
-
-  return merged;
+  return [];
 };
 
 export const getOrderShipping = async (id) => {
-  let backendData = null;
   try {
     const response = await fetch(`${BASE_URL}/shipping/${id}`, { headers: DEFAULT_HEADERS });
     if (response.ok) {
-      backendData = await response.json();
+      return await response.json();
     }
-  } catch {}
-
-  const fullOrder = await orderService.getById(id);
-
-  if (backendData && (backendData.orderId || backendData.id)) {
-    return {
-      ...backendData,
-      currentStatus: fullOrder?.status || backendData.currentStatus || backendData.status || 'Processing',
-      customerName: fullOrder?.customerName || backendData.customerName,
-      customerPhone: fullOrder?.mobile || backendData.customerPhone,
-      customerEmail: fullOrder?.email || backendData.customerEmail,
-      shippingAddress: fullOrder?.address || backendData.shippingAddress,
-      items: fullOrder?.items?.length ? fullOrder.items : backendData.items
-    };
+  } catch (err) {
+    console.warn(`getOrderShipping(${id}) error (Server offline):`, err.message);
   }
-
-  if (fullOrder) {
-    return {
-      id: fullOrder.id,
-      orderId: fullOrder.id,
-      orderNumber: fullOrder.orderNumber,
-      customerName: fullOrder.customerName,
-      customerPhone: fullOrder.mobile,
-      customerEmail: fullOrder.email,
-      shippingAddress: fullOrder.address,
-      finalAmount: fullOrder.totalAmount,
-      totalAmount: fullOrder.totalAmount,
-      currentStatus: fullOrder.status || 'Processing',
-      status: fullOrder.status || 'Processing',
-      items: fullOrder.items || []
-    };
-  }
-
-  return backendData;
+  return null;
 };
 
 export const packOrder = async (id, data = {}) => {
