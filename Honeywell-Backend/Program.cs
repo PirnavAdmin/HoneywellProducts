@@ -110,6 +110,7 @@ builder.Services.AddScoped<ITestAuthService, TestAuthService>();
 builder.Services.AddScoped<IBlogService, BlogService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductSoftwareService, ProductSoftwareService>();
+builder.Services.AddScoped<IChatService, ChatService>();
 
 // JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

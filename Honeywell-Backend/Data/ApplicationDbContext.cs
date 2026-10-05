@@ -79,6 +79,8 @@ namespace Honeywell.Data
         // B2B Partner Portal & Dynamic Settings
         public DbSet<PartnerUser> PartnerUsers { get; set; }
         public DbSet<SystemConfig> SystemConfigs { get; set; }
+        public DbSet<Distributor> Distributors { get; set; }
+        public DbSet<PartnerProgram> PartnerPrograms { get; set; }
 
         // Enquiry & Form Submission Tables
         public DbSet<BulkQuoteRequest> BulkQuoteRequests { get; set; }
