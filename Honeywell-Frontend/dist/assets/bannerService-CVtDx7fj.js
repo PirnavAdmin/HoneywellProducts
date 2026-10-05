@@ -1,1 +1,0 @@
-import{a as e,r as t}from"./bannersApi-BDi3PzEu.js";var n={async getActiveBanners(e=``){return await t(e)},async getBannerById(t){return await e(t)}};export{n as t};

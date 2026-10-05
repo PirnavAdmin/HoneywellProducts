@@ -32,7 +32,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://shaping-simple-lanky.ngrok-free.dev',
+       target: 'https://honeywellproducts.com',       
         changeOrigin: true,
         secure: false,
         headers: {
@@ -40,7 +40,7 @@ export default defineConfig({
         },
       },
       '/uploads': {
-        target: 'https://shaping-simple-lanky.ngrok-free.dev',
+        target: 'https://acquaint-defuse-tamer.ngrok-free.dev',
         changeOrigin: true,
         secure: false,
         headers: {
