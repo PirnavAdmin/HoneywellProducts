@@ -741,13 +741,27 @@ export default function SolutionsManager() {
                   <input
                     type="text"
                     required
+                    list="solutionCategoryOptions"
                     placeholder="e.g. cctv-cameras, networking, solar-cameras"
                     value={formData.categoryId}
                     onChange={(e) => setFormData((prev) => ({ ...prev, categoryId: e.target.value }))}
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
                   />
+                  <datalist id="solutionCategoryOptions">
+                    <option value="cctv-cameras">Commercial CCTV & AI Surveillance (Network & Turbo HD Cameras)</option>
+                    <option value="networking">Access Control & Perimeter Defense (Networking & Controllers)</option>
+                    <option value="dome-camera">Retail Store & POS Security (Dome Cameras)</option>
+                    <option value="wifi-cameras">Smart Home Security (Wi-Fi & Wireless Cameras)</option>
+                    <option value="bullet-cameras">Warehouse & Logistics Security (Bullet Cameras)</option>
+                    <option value="solar-cameras">Off-Grid Solar Surveillance (Solar Kits & 4G)</option>
+                    <option value="network-cameras">Network Cameras</option>
+                    <option value="turbo-hd-cameras">Turbo HD Cameras</option>
+                    <option value="solar-kit">Solar Kit Solutions</option>
+                    <option value="solar-panels">Solar Panels</option>
+                    <option value="ptz-cameras">PTZ & Speed Dome Cameras</option>
+                  </datalist>
                   <small style={{ color: '#64748b', fontSize: '11px', marginTop: '4px', display: 'block' }}>
-                    When users click "View Suggested Products", they are taken to <code>/products?category=&#123;slug&#125;</code>.
+                    When users click &ldquo;View Suggested Products&rdquo;, they are taken to <code>/products?category=&#123;slug&#125;</code>.
                   </small>
                 </div>
 

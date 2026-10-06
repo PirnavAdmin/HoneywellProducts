@@ -22,6 +22,89 @@ const formatCategoryName = (cat) => {
   return String(cat);
 };
 
+// Aliases mapping environment/solution slugs to category/subcategory names and search terms
+const CATEGORY_ALIASES = {
+  'cctv-cameras': {
+    targetCategories: ['Network Cameras', 'Turbo HD Cameras', 'CCTV Cameras'],
+    targetSubcategories: ['Bullet Cameras', 'Dome Cameras', 'IP Cameras'],
+    keywords: ['cctv', 'camera', 'surveillance', 'network', 'turbo hd', 'ip']
+  },
+  'cctv': {
+    targetCategories: ['Network Cameras', 'Turbo HD Cameras'],
+    keywords: ['cctv', 'camera', 'surveillance']
+  },
+  'ip-cameras': {
+    targetCategories: ['Network Cameras'],
+    targetSubcategories: ['IP Cameras', 'Network Cameras', 'Bullet Cameras', 'Dome Cameras'],
+    keywords: ['ip camera', 'network camera', 'ip', 'network', '4mp', '2mp', '8mp']
+  },
+  'network-cameras': {
+    targetCategories: ['Network Cameras'],
+    keywords: ['network', 'ip', 'camera']
+  },
+  'turbo-hd-cameras': {
+    targetCategories: ['Turbo HD Cameras'],
+    keywords: ['turbo', 'hd', 'analog', 'camera']
+  },
+  'solar-cameras': {
+    targetCategories: ['Solar kit', 'Solar panels', 'Solar Kit', 'Solar Panels'],
+    targetSubcategories: ['Solar Camera', 'Solar Cameras', '4G Camera'],
+    keywords: ['solar', 'battery', 'kit', 'panel', 'off-grid', '4g', 'sun']
+  },
+  'solar-kit': {
+    targetCategories: ['Solar kit', 'Solar Kit'],
+    keywords: ['solar', 'kit', 'power']
+  },
+  'solar-panels': {
+    targetCategories: ['Solar panels', 'Solar Panels'],
+    keywords: ['solar', 'panel', 'panels']
+  },
+  'bullet-cameras': {
+    targetSubcategories: ['Bullet Cameras', 'Bullet Camera', 'Outdoor Cameras'],
+    targetCategories: ['Network Cameras', 'Turbo HD Cameras'],
+    keywords: ['bullet', 'outdoor', 'long range', 'ir', 'weatherproof']
+  },
+  'bullet-camera': {
+    targetSubcategories: ['Bullet Cameras', 'Bullet Camera'],
+    targetCategories: ['Network Cameras', 'Turbo HD Cameras'],
+    keywords: ['bullet', 'outdoor', 'ir']
+  },
+  'dome-cameras': {
+    targetSubcategories: ['Dome Cameras', 'Dome Camera', 'Indoor Cameras'],
+    targetCategories: ['Network Cameras', 'Turbo HD Cameras'],
+    keywords: ['dome', 'indoor', '360', 'vandal', 'panoramic']
+  },
+  'dome-camera': {
+    targetSubcategories: ['Dome Cameras', 'Dome Camera'],
+    targetCategories: ['Network Cameras', 'Turbo HD Cameras'],
+    keywords: ['dome', 'indoor', '360', 'vandal', 'pos']
+  },
+  'ptz-cameras': {
+    targetSubcategories: ['PTZ Cameras', 'Speed Dome'],
+    targetCategories: ['Network Cameras'],
+    keywords: ['ptz', 'pan tilt', 'speed dome', 'zoom']
+  },
+  'wifi-cameras': {
+    targetSubcategories: ['Wi-Fi Cameras', 'WiFi Cameras', 'Wireless Cameras'],
+    targetCategories: ['Network Cameras'],
+    keywords: ['wifi', 'wi-fi', 'wireless', 'smart home', 'intercom', 'home']
+  },
+  '4g-cameras': {
+    targetCategories: ['Solar kit', 'Solar panels', 'Network Cameras'],
+    targetSubcategories: ['4G Cameras', 'Solar Cameras'],
+    keywords: ['4g', 'lte', 'cellular', 'solar', 'sim']
+  },
+  'networking': {
+    targetCategories: ['Network Cameras'],
+    targetSubcategories: ['Networking', 'Switches', 'Routers', 'NVR'],
+    keywords: ['network', 'switch', 'poe', 'router', 'nvr', 'ip', 'access']
+  },
+  'access-control': {
+    targetCategories: ['Network Cameras'],
+    keywords: ['access', 'biometric', 'rfid', 'barrier', 'entry', 'door', 'controller']
+  }
+};
+
 const checkCategoryMatch = (product, filterCategoryName, categoriesList = [], subcategoriesList = []) => {
   if (!filterCategoryName) return true;
 
@@ -29,8 +112,15 @@ const checkCategoryMatch = (product, filterCategoryName, categoriesList = [], su
   const prodCatNorm = normalizeCategory(product.category);
   const prodCatId = String(product.categoryId ?? '').trim();
   const prodSubCatId = String(product.subcategoryId ?? '').trim();
+  const prodTypeNorm = normalizeCategory(product.productType || product.subcategory || '');
+  const prodNameNorm = normalizeCategory(product.name || product.productName || '');
 
-  // 1. Check categoriesList for matching category object
+  // 1. Direct match on product category or category ID
+  if (prodCatNorm && prodCatNorm === targetNorm) return true;
+  if (prodCatId && prodCatId === targetNorm) return true;
+  if (prodTypeNorm && prodTypeNorm === targetNorm) return true;
+
+  // 2. Check categoriesList for matching category object
   const catObj = categoriesList.find(
     (c) =>
       String(c.id) === String(filterCategoryName) ||
@@ -39,20 +129,53 @@ const checkCategoryMatch = (product, filterCategoryName, categoriesList = [], su
   );
 
   if (catObj) {
-    // Direct category ID match
     if (prodCatId && prodCatId === String(catObj.id)) return true;
-    // Category name/slug match
     if (prodCatNorm && (prodCatNorm === normalizeCategory(catObj.name) || prodCatNorm === normalizeCategory(catObj.slug))) return true;
-    // Match via product's subcategory belonging to this category
     if (prodSubCatId) {
       const sub = subcategoriesList.find((s) => String(s.id) === prodSubCatId);
       if (sub && String(sub.categoryId) === String(catObj.id)) return true;
     }
   }
 
-  // 2. Direct string match
-  if (prodCatNorm && prodCatNorm === targetNorm) return true;
-  if (prodCatId && prodCatId === targetNorm) return true;
+  // 3. Check Subcategory matching (if filterCategoryName was actually a subcategory)
+  const subObj = subcategoriesList.find(
+    (s) =>
+      String(s.id) === String(filterCategoryName) ||
+      normalizeCategory(s.name) === targetNorm ||
+      normalizeCategory(s.slug) === targetNorm
+  );
+  if (subObj) {
+    if (prodSubCatId && prodSubCatId === String(subObj.id)) return true;
+    if (prodTypeNorm && (prodTypeNorm === normalizeCategory(subObj.name) || prodTypeNorm === normalizeCategory(subObj.slug))) return true;
+    if (prodCatId && String(subObj.categoryId) === prodCatId) return true;
+  }
+
+  // 4. Check Alias Map
+  const slugKey = Object.keys(CATEGORY_ALIASES).find(
+    (k) => normalizeCategory(k) === targetNorm || normalizeCategory(formatCategoryName(k)) === targetNorm
+  );
+  if (slugKey) {
+    const alias = CATEGORY_ALIASES[slugKey];
+    if (alias.targetCategories && alias.targetCategories.some(tc => normalizeCategory(tc) === prodCatNorm)) {
+      return true;
+    }
+    if (alias.targetSubcategories && alias.targetSubcategories.some(ts => normalizeCategory(ts) === prodTypeNorm)) {
+      return true;
+    }
+    if (alias.keywords) {
+      const pText = `${product.name} ${product.category} ${product.productType} ${product.description} ${(product.keyFeatures || []).join(' ')}`.toLowerCase();
+      if (alias.keywords.some(kw => pText.includes(kw.toLowerCase()))) {
+        return true;
+      }
+    }
+  }
+
+  // 5. Broad substring/keyword match fallback on product fields
+  if (targetNorm.length >= 3) {
+    if (prodCatNorm.includes(targetNorm) || targetNorm.includes(prodCatNorm)) return true;
+    if (prodTypeNorm.includes(targetNorm) || targetNorm.includes(prodTypeNorm)) return true;
+    if (prodNameNorm.includes(targetNorm)) return true;
+  }
 
   return false;
 };
@@ -64,8 +187,14 @@ const checkSubcategoryMatch = (product, filterSubcategoryName, subcategoriesList
   const prodSubCatId = String(product.subcategoryId ?? '').trim();
   const prodTypeNorm = normalizeCategory(product.productType);
   const prodSubcatNorm = normalizeCategory(product.subcategory || product.subcategoryName);
+  const prodNameNorm = normalizeCategory(product.name || product.productName || '');
 
-  // 1. Check subcategoriesList for matching subcategory object
+  // 1. Direct match on productType or subcategoryId
+  if (prodSubCatId && prodSubCatId === targetNorm) return true;
+  if (prodTypeNorm && prodTypeNorm === targetNorm) return true;
+  if (prodSubcatNorm && prodSubcatNorm === targetNorm) return true;
+
+  // 2. Check subcategoriesList for matching subcategory object
   const subObj = subcategoriesList.find(
     (s) =>
       String(s.id) === String(filterSubcategoryName) ||
@@ -79,10 +208,27 @@ const checkSubcategoryMatch = (product, filterSubcategoryName, subcategoriesList
     if (prodSubcatNorm && (prodSubcatNorm === normalizeCategory(subObj.name) || prodSubcatNorm === normalizeCategory(subObj.slug))) return true;
   }
 
-  // 2. Direct string match on productType or subcategoryId
-  if (prodSubCatId && prodSubCatId === targetNorm) return true;
-  if (prodTypeNorm && prodTypeNorm === targetNorm) return true;
-  if (prodSubcatNorm && prodSubcatNorm === targetNorm) return true;
+  // 3. Check Alias Map
+  const slugKey = Object.keys(CATEGORY_ALIASES).find(
+    (k) => normalizeCategory(k) === targetNorm || normalizeCategory(formatCategoryName(k)) === targetNorm
+  );
+  if (slugKey) {
+    const alias = CATEGORY_ALIASES[slugKey];
+    if (alias.targetSubcategories && alias.targetSubcategories.some(ts => normalizeCategory(ts) === prodTypeNorm)) {
+      return true;
+    }
+    if (alias.keywords) {
+      const pText = `${product.name} ${product.productType} ${product.description}`.toLowerCase();
+      if (alias.keywords.some(kw => pText.includes(kw.toLowerCase()))) {
+        return true;
+      }
+    }
+  }
+
+  // 4. Substring fallback
+  if (targetNorm.length >= 3 && prodNameNorm.includes(targetNorm)) {
+    return true;
+  }
 
   return false;
 };
@@ -148,20 +294,102 @@ export default function Products() {
   useEffect(() => {
     const categoryParam = params.get('category');
     const subcategoryParam = params.get('subcategory');
-    if (!categoryParam && !subcategoryParam) return;
+    const searchParam = params.get('search') || params.get('q');
+    const applicationParam = params.get('application') || params.get('environment');
 
-    let matchedCatName = '';
-    if (categoryParam) {
-      const matchCat = categoriesList.find(
-        (c) =>
-          String(c.id) === String(categoryParam) ||
-          normalizeCategory(c.slug) === normalizeCategory(categoryParam) ||
-          normalizeCategory(c.name) === normalizeCategory(categoryParam)
-      );
-      matchedCatName = matchCat ? matchCat.name : formatCategoryName(categoryParam);
+    if (searchParam) {
+      setQuery(searchParam.trim());
     }
 
+    if (!categoryParam && !subcategoryParam && !applicationParam) return;
+
+    let targetCatParam = categoryParam;
+    if (!targetCatParam && applicationParam) {
+      // Map application parameter to default category
+      const appMap = {
+        home: 'wifi-cameras',
+        apartment: 'dome-cameras',
+        shop: 'cctv-cameras',
+        office: 'ip-cameras',
+        'retail-store': 'ip-cameras',
+        retail: 'cctv-cameras',
+        warehouse: 'bullet-cameras',
+        factory: 'ptz-cameras',
+        commercial: 'cctv-cameras',
+        school: 'dome-cameras',
+        hospital: 'ip-cameras',
+        hotel: 'dome-cameras',
+        farm: 'solar-cameras',
+        'construction-site': 'solar-cameras',
+      };
+      targetCatParam = appMap[applicationParam.toLowerCase()] || applicationParam;
+    }
+
+    let matchedCatName = '';
     let matchedSubcatName = '';
+
+    if (targetCatParam) {
+      // 1. Try matching category in categoriesList
+      const matchCat = categoriesList.find(
+        (c) =>
+          String(c.id) === String(targetCatParam) ||
+          normalizeCategory(c.slug) === normalizeCategory(targetCatParam) ||
+          normalizeCategory(c.name) === normalizeCategory(targetCatParam)
+      );
+
+      if (matchCat) {
+        matchedCatName = matchCat.name;
+      } else {
+        // 2. Try matching subcategory in subcategoriesList
+        const matchSub = subcategoriesList.find(
+          (s) =>
+            String(s.id) === String(targetCatParam) ||
+            normalizeCategory(s.slug) === normalizeCategory(targetCatParam) ||
+            normalizeCategory(s.name) === normalizeCategory(targetCatParam)
+        );
+
+        if (matchSub) {
+          matchedSubcatName = matchSub.name;
+          // Also find parent category if available
+          const parentCat = categoriesList.find((c) => String(c.id) === String(matchSub.categoryId));
+          if (parentCat) {
+            matchedCatName = parentCat.name;
+          }
+        } else {
+          // 3. Check Alias Map for fallback category
+          const slugKey = Object.keys(CATEGORY_ALIASES).find(
+            (k) => normalizeCategory(k) === normalizeCategory(targetCatParam)
+          );
+          if (slugKey) {
+            const alias = CATEGORY_ALIASES[slugKey];
+            if (alias.targetCategories && alias.targetCategories.length > 0) {
+              const foundCat = categoriesList.find((c) =>
+                alias.targetCategories.some((tc) => normalizeCategory(tc) === normalizeCategory(c.name))
+              );
+              if (foundCat) {
+                matchedCatName = foundCat.name;
+              } else {
+                matchedCatName = alias.targetCategories[0];
+              }
+            } else if (alias.targetSubcategories && alias.targetSubcategories.length > 0) {
+              const foundSub = subcategoriesList.find((s) =>
+                alias.targetSubcategories.some((ts) => normalizeCategory(ts) === normalizeCategory(s.name))
+              );
+              if (foundSub) {
+                matchedSubcatName = foundSub.name;
+              } else {
+                matchedSubcatName = alias.targetSubcategories[0];
+              }
+            } else {
+              matchedCatName = formatCategoryName(targetCatParam);
+            }
+          } else {
+            matchedCatName = formatCategoryName(targetCatParam);
+          }
+        }
+      }
+    }
+
     if (subcategoryParam) {
       const matchSub = subcategoriesList.find(
         (s) =>
@@ -395,7 +623,7 @@ export default function Products() {
       eyebrow="PRODUCT CATALOGUE"
       title={banner.title}
       description={banner.description}
-      image={banner. Image}
+      image={banner.image}
    />    
    <section className="catalogue section">
       <div className="container">
