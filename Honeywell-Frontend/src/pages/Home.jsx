@@ -21,21 +21,6 @@ import { useUI } from '../context/UIContext';
 import { socialLinks } from '../config/socialLinks';
 import OptimizedImage from '../components/common/OptimizedImage';
 import businessImage from '../assets/images/capital-park2.jpg';
-import industryResidentialImage from '../assets/images/catalog/industry-residential.png';
-import industryCommercialImage from '../assets/images/catalog/industry-commercial.png';
-import industryIndustrialImage from '../assets/images/catalog/industry-industrial.png';
-import industryRetailImage from '../assets/images/catalog/industry-retail.png';
-import industryEducationImage from '../assets/images/catalog/industry-education.png';
-import industryHealthcareImage from '../assets/images/catalog/industry-healthcare.png';
-
-const homeIndustryImages = {
-  residential: industryResidentialImage,
-  commercial: industryCommercialImage,
-  industrial: industryIndustrialImage,
-  retail: industryRetailImage,
-  education: industryEducationImage,
-  healthcare: industryHealthcareImage,
-};
 
 const reasons = [
   { icon: ShieldCheck, title: 'Advanced Security Technology', text: 'A structured portfolio prepared for modern surveillance requirements.' },
@@ -276,7 +261,7 @@ export default function Home() {
           <div className="industry-verticals-grid">
             {Object.values(INDUSTRY_VERTICALS).map((ind) => {
               const Icon = ind.icon;
-              const cardImage = homeIndustryImages[ind.id] || ind.image || industryImages[ind.id] || applicationImages[ind.id] || '/honeywell-products-logo.png';
+              const cardImage = industryImages[ind.id] || ind.image || applicationImages[ind.id] || '/honeywell-products-logo.png';
               return (
                 <Link
                   key={ind.id}
