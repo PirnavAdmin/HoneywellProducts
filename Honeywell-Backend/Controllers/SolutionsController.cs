@@ -36,7 +36,7 @@ namespace Honeywell.Controllers
                 Description = "Smart biometric readers, RFID barriers, and cloud-managed access entry points for facilities.",
                 Application = "Office & Facility Security",
                 CategoryId = "networking",
-                ImageUrl = "/assets/images/catalog/solution-office.jpg",
+                ImageUrl = "/assets/solutions/access-control-perimeter.jpg",
                 Features = new List<string> { "Biometric Fingerprint & RFID Readers", "Centralized Real-Time Access Logs", "Emergency Automated Lockdown Support" }
             },
             new Solution
@@ -76,7 +76,7 @@ namespace Honeywell.Controllers
                 Description = "Autonomous 4G LTE solar-powered cameras for remote farms, construction sites, and perimeters.",
                 Application = "Remote & Active Sites",
                 CategoryId = "solar-cameras",
-                ImageUrl = "/assets/images/catalog/solar-camera.jpg",
+                ImageUrl = "/assets/solutions/outdoor-solar-surveillance.jpg",
                 Features = new List<string> { "100% Off-Grid Solar Power System", "Built-in 4G LTE Cellular Modem", "All-Weather IP67 Waterproof Design" }
             }
         };

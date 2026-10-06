@@ -47,23 +47,48 @@ export default function ProductsMegaMenu({ onClose }) {
     return () => { isMounted = false; };
   }, []);
 
+  const displayedCategories = categories.slice(0, 6);
+
+  const handleNavigateToCategories = () => {
+    if (onClose) onClose();
+    setTimeout(() => {
+      const el = document.getElementById('categories') || document.getElementById('product-discovery');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 100);
+  };
+
   return (
     <div className="mega-menu mega-menu-products" onClick={(e) => e.stopPropagation()}>
       <div className="mega-menu-grid">
         <div className="mega-column">
           <h4 className="mega-title">Product Categories</h4>
           <ul className="mega-list">
-            {categories.map((cat) => (
+            {displayedCategories.map((cat) => (
               <li key={cat.id || cat.slug}>
-                <Link to={`/products?category=${cat.id || cat.slug}`} onClick={onClose}>
+                <Link
+                  to={`/products?category=${cat.id || cat.slug}`}
+                  onClick={onClose}
+                  style={{ display: 'flex', alignItems: 'center', gap: '10px' }}
+                >
                   {getCategoryIcon(cat.name)}
-                  <div>
-                    <span className="mega-link-title">{cat.name}</span>
-                    <span className="mega-link-desc">{cat.description || `Explore ${cat.name}`}</span>
-                  </div>
+                  <span className="mega-link-title">{cat.name}</span>
                 </Link>
               </li>
             ))}
+            <li>
+              <Link
+                to="/#categories"
+                onClick={handleNavigateToCategories}
+                style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--red)', fontWeight: 600 }}
+              >
+                <ArrowRight size={16} className="mega-icon" />
+                <span className="mega-link-title" style={{ color: 'var(--red)', fontWeight: 700 }}>
+                  More Categories
+                </span>
+              </Link>
+            </li>
           </ul>
         </div>
 

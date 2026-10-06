@@ -40,7 +40,7 @@ export default defineConfig({
         },
       },
       '/uploads': {
-        target: 'https://acquaint-defuse-tamer.ngrok-free.dev',
+        target: 'https://honeywellproducts.com',
         changeOrigin: true,
         secure: false,
         headers: {

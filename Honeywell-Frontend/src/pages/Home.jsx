@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from 'react';
 import { ArrowLeft, ArrowRight, Camera, Expand, Headphones, Image, MonitorSmartphone, Network, PlugZap, ShieldCheck } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import HeroCarousel from '../components/home/HeroCarousel';
 import SectionHeading from '../components/common/SectionHeading';
 import ProductCard from '../components/products/ProductCard';
@@ -45,6 +45,18 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const blogScrollRef = useRef(null);
   const { openQuote } = useUI();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === '#categories' || location.hash === '#product-discovery') {
+      setTimeout(() => {
+        const el = document.getElementById('categories') || document.getElementById('product-discovery');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 150);
+    }
+  }, [location]);
 
   const handleBlogScrollLeft = () => {
     if (blogScrollRef.current) {
@@ -148,7 +160,7 @@ export default function Home() {
 
   return <>
     <HeroCarousel />
-    <section className="section categories-section">
+    <section className="section categories-section" id="categories">
       <div className="container">
         <div className="split-heading">
           <SectionHeading eyebrow="PRODUCT DISCOVERY" title="Explore Our Products" description="Browse professional camera, recording, storage, networking and installation categories." />
