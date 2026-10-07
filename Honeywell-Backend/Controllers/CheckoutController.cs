@@ -76,6 +76,12 @@ namespace Honeywell.Controllers
         {
             try
             {
+                var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+                if (!isPriceVisibilityEnabled)
+                {
+                    return BadRequest(new { Message = "Checkout is disabled when price visibility is turned off." });
+                }
+
                 var userEmail = GetUserEmail();
                 var summary = await CalculateSummaryAsync(userEmail, couponCode, coinsRedeemed);
                 return Ok(summary);
@@ -95,6 +101,12 @@ namespace Honeywell.Controllers
         {
             try
             {
+                var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+                if (!isPriceVisibilityEnabled)
+                {
+                    return BadRequest(new { Message = "Checkout is disabled when price visibility is turned off." });
+                }
+
                 var userEmail = GetUserEmail();
                 int? coins = request.CoinsRedeemed ?? request.CoinsToRedeem;
                 var summary = await CalculateSummaryAsync(userEmail, request.CouponCode, coins);
@@ -115,6 +127,12 @@ namespace Honeywell.Controllers
         {
             try
             {
+                var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+                if (!isPriceVisibilityEnabled)
+                {
+                    return BadRequest(new { Message = "Placing orders is currently disabled as online purchasing is turned off. Please submit an enquiry or request a quote." });
+                }
+
                 var userEmail = GetUserEmail();
 
                 // 1. Get cart items

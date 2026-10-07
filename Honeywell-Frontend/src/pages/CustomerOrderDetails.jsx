@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, Navigate } from 'react-router-dom';
 import { Package, MapPin, ShieldAlert, ArrowLeft } from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
 import { getOrderDetails } from '../services/customerApi';
+import { useSettings } from '../context/SettingsContext';
 
 const formatOrderTitle = (order) => {
   if (!order) return 'Order Details';
@@ -34,10 +35,15 @@ const formatOrderDate = (order) => {
 };
 
 export default function CustomerOrderDetails() {
+  const { priceVisibility } = useSettings();
   const { id } = useParams();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  if (!priceVisibility) {
+    return <Navigate to="/account" replace />;
+  }
 
   useEffect(() => {
     async function loadOrder() {

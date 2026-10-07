@@ -9,6 +9,7 @@ import { generateProductPdf } from '../utils/pdfGenerator';
 import ProductCard from '../components/products/ProductCard';
 import { useCart } from '../context/CartContext';
 import { useUI } from '../context/UIContext';
+import { useSettings } from '../context/SettingsContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 import OptimizedImage from '../components/common/OptimizedImage';
@@ -87,6 +88,7 @@ export function ProductDetailsContent() {
   const [image, setImage] = useState(0);
   const { addItem } = useCart();
   const { openEnquiry, openQuote, notify } = useUI();
+  const { canPurchase, canShowPrice } = useSettings();
 
   useEffect(() => {
     getDescriptionManager()
@@ -368,21 +370,23 @@ export function ProductDetailsContent() {
 
           <p className="product-description">{productDescriptionText}</p>
 
-          <div className="detail-price-box">
-            <div className="detail-price">
-              {product.priceLabel}
-              {(product.priceNote && !/incl|tax/i.test(product.priceNote)) && <span>{product.priceNote}</span>}
-            </div>
-
-            <div className="purchase-row">
-              <div className="quantity">
-                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Minus size={15} /></button>
-                <span>{quantity}</span>
-                <button onClick={() => setQuantity(quantity + 1)} aria-label="Increase quantity"><Plus size={15} /></button>
+          {canPurchase(product) && (
+            <div className="detail-price-box">
+              <div className="detail-price">
+                {product.priceLabel}
+                {(product.priceNote && !/incl|tax/i.test(product.priceNote)) && <span>{product.priceNote}</span>}
               </div>
-              <button className="button" onClick={add}><ShoppingCart size={17} /> Add to cart</button>
+
+              <div className="purchase-row">
+                <div className="quantity">
+                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="Decrease quantity"><Minus size={15} /></button>
+                  <span>{quantity}</span>
+                  <button onClick={() => setQuantity(quantity + 1)} aria-label="Increase quantity"><Plus size={15} /></button>
+                </div>
+                <button className="button" onClick={add}><ShoppingCart size={17} /> Add to cart</button>
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="detail-enquiry-actions">
             <button className="button outline" onClick={() => openEnquiry(product)}>Enquire Now</button>

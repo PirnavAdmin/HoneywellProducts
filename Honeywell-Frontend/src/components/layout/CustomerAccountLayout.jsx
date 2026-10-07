@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { User, Package, MapPin, ShieldAlert, LogOut, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useSettings } from '../../context/SettingsContext';
 import '../../styles/CustomerAccount.css';
 
 export default function CustomerAccountLayout({ 
@@ -12,6 +13,7 @@ export default function CustomerAccountLayout({
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { priceVisibility } = useSettings();
 
   const rawName = user?.name || user?.fullName || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '') || (localStorage.getItem('customerName') && localStorage.getItem('customerName').toLowerCase() !== 'admin' ? localStorage.getItem('customerName') : 'Valued Customer');
   const nameParts = rawName.trim().split(' ').filter(Boolean);
@@ -40,9 +42,11 @@ export default function CustomerAccountLayout({
 
   const navItems = [
     { path: '/account', label: 'My Profile', icon: User },
-    { path: '/account/orders', label: 'My Orders', icon: Package },
-    { path: '/order-tracking', label: 'Track Order', icon: MapPin },
-    { path: '/warranty', label: 'Warranty & Returns', icon: ShieldAlert },
+    ...(priceVisibility ? [
+      { path: '/account/orders', label: 'My Orders', icon: Package },
+      { path: '/order-tracking', label: 'Track Order', icon: MapPin },
+      { path: '/warranty', label: 'Warranty & Returns', icon: ShieldAlert },
+    ] : []),
   ];
 
   // Helper to determine if nav item is currently active

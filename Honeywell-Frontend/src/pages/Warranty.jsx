@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, Navigate } from 'react-router-dom';
 import {
   ShieldCheck, ShieldAlert, AlertCircle, CheckCircle2, Clock, Wrench,
   RotateCcw, Search, ExternalLink, Calendar, CheckSquare
 } from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
 import { checkReturnEligibility, getReturnsConfig } from '../admin/api/returns';
+import { useSettings } from '../context/SettingsContext';
 
 export default function Warranty() {
+  const { priceVisibility } = useSettings();
   const [searchParams] = useSearchParams();
   const initialItemId = searchParams.get('itemId') || searchParams.get('orderId') || searchParams.get('serial') || searchParams.get('query') || '';
+
+  if (!priceVisibility) {
+    return <Navigate to="/account" replace />;
+  }
 
   const [orderItemId, setOrderItemId] = useState(initialItemId);
   const [loading, setLoading] = useState(false);

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Navigate } from 'react-router-dom';
 import { MapPin, Package, Clock, Truck, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
 import { trackOrder } from '../services/customerApi';
+import { useSettings } from '../context/SettingsContext';
 
 const formatOrderTitle = (order) => {
   if (!order) return 'Order Details';
@@ -34,6 +35,7 @@ const formatOrderDate = (order) => {
 };
 
 export default function OrderTracking() {
+  const { priceVisibility } = useSettings();
   const [searchParams] = useSearchParams();
   const initialOrderId = searchParams.get('orderId') || '';
 
@@ -43,6 +45,10 @@ export default function OrderTracking() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [searched, setSearched] = useState(false);
+
+  if (!priceVisibility) {
+    return <Navigate to="/account" replace />;
+  }
 
   const handleTrack = async (e, targetId = null) => {
     if (e) e.preventDefault();

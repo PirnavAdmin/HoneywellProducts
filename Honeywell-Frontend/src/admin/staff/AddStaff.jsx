@@ -357,28 +357,34 @@ function AddStaff() {
 
     const enabledPermissions = Object.keys(permissions).filter(k => permissions[k]);
 
+    const activeStatus = isEditing 
+      ? (existingStaffRecord?.isActive ?? existingStaffRecord?.IsActive ?? (existingStaffRecord?.status ? existingStaffRecord.status.toLowerCase() === 'active' : true))
+      : true;
+
     const apiStaffPayload = {
       employeeId: formData.employeeId.trim().toUpperCase(),
       firstName: formData.firstName.trim(),
       lastName: formData.lastName.trim(),
-      name: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+      name: `${formData.firstName.trim()} ${formData.lastName.trim()}`.trim(),
       email: formData.email.trim().toLowerCase(),
       mobileNumber: formData.mobile.trim(),
       phone: formData.mobile.trim(),
       role: formData.role,
       password: formData.password || "StaffPass@2026!",
-      isActive: true
+      status: activeStatus ? "Active" : "Inactive",
+      isActive: activeStatus
     };
 
     try {
       let targetId = staffId;
 
       if (isEditing) {
-        const activeStatus = existingStaffRecord?.isActive ?? existingStaffRecord?.IsActive ?? true;
         await updateStaff(staffId, {
           ...apiStaffPayload,
+          id: parseInt(staffId, 10),
           staffId: parseInt(staffId, 10),
           password: formData.password || existingStaffRecord?.password || existingStaffRecord?.Password || "StaffPass@2026!",
+          status: activeStatus ? "Active" : "Inactive",
           isActive: activeStatus
         });
         targetId = staffId;

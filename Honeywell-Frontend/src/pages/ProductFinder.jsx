@@ -5,6 +5,7 @@ import PageHero from '../components/common/PageHero';
 import ProductCard from '../components/products/ProductCard';
 import { productService } from '../services/productService';
 import { useUI } from '../context/UIContext';
+import { useSettings } from '../context/SettingsContext';
 import heroImage from '../assets/images/smart-security-sustainable-future.png';
 
 export default function ProductFinder() {
@@ -21,6 +22,7 @@ export default function ProductFinder() {
   const [selectedFeatures, setSelectedFeatures] = useState([]);
 
   const { openEnquiry } = useUI();
+  const { priceVisibility } = useSettings();
 
   useEffect(() => {
     async function loadProducts() {
@@ -66,7 +68,7 @@ export default function ProductFinder() {
     if (resolution && !item.resolution?.toLowerCase().includes(resolution.toLowerCase()) && !item.name?.toLowerCase().includes(resolution.toLowerCase())) {
       return false;
     }
-    if (priceRange) {
+    if (priceVisibility && priceRange) {
       const price = Number(item.price || item.unitPrice || 0);
       if ((priceRange === 'under-100' || priceRange === 'under-10000') && price > 10000) return false;
       if ((priceRange === '100-500' || priceRange === '10000-50000') && (price < 10000 || price > 50000)) return false;
@@ -159,19 +161,21 @@ export default function ProductFinder() {
                 </select>
               </div>
 
-              <div className="finder-filter-group">
-                <label htmlFor="finder-price">Price Budget</label>
-                <select
-                  id="finder-price"
-                  value={priceRange}
-                  onChange={(e) => setPriceRange(e.target.value)}
-                >
-                  <option value="">All Prices</option>
-                  <option value="under-10000">Under ₹10,000</option>
-                  <option value="10000-50000">₹10,000 - ₹50,000</option>
-                  <option value="above-50000">Above ₹50,000</option>
-                </select>
-              </div>
+              {priceVisibility && (
+                <div className="finder-filter-group">
+                  <label htmlFor="finder-price">Price Budget</label>
+                  <select
+                    id="finder-price"
+                    value={priceRange}
+                    onChange={(e) => setPriceRange(e.target.value)}
+                  >
+                    <option value="">All Prices</option>
+                    <option value="under-10000">Under ₹10,000</option>
+                    <option value="10000-50000">₹10,000 - ₹50,000</option>
+                    <option value="above-50000">Above ₹50,000</option>
+                  </select>
+                </div>
+              )}
 
               <div className="finder-filter-group">
                 <label>Key Features</label>

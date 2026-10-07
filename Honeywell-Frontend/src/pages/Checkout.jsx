@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, LockKeyhole, CreditCard, QrCode, ShieldCheck, Check, AlertCircle, Upload, Info, Tag, X } from 'lucide-react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useSettings } from '../context/SettingsContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import {
   initiatePayment,
@@ -27,6 +28,7 @@ const formatPrice = (price) => `₹${price.toLocaleString('en-IN')}`;
 export default function Checkout() {
   useDocumentTitle('Checkout', 'Submit contact and payment details for products selected in the cart.');
   const { items, count, total, clearCart } = useCart();
+  const { priceVisibility } = useSettings();
   const navigate = useNavigate();
   const { user } = useAuth();
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
@@ -142,6 +144,7 @@ export default function Checkout() {
     setCouponMsg({ type: 'info', text: 'Coupon removed.' });
   };
 
+  if (!priceVisibility) return <Navigate to="/cart" replace />;
   if (!items.length && !orderSuccessPlaced) return <Navigate to="/cart" replace />;
 
   const currentOrderId = `ORD-${Date.now()}`;

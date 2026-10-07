@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import PageHero from '../components/common/PageHero';
 import { useCart } from '../context/CartContext';
 import { useUI } from '../context/UIContext';
+import { useSettings } from '../context/SettingsContext';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const formatPrice = (price) => `₹${price.toLocaleString('en-IN')}`;
@@ -12,6 +13,7 @@ export default function Cart() {
   useDocumentTitle('Shopping Cart', 'Review and update products selected for a frontend cart request.');
   const { items, updateQuantity, removeItem, clearCart, count, total } = useCart();
   const { openQuote } = useUI();
+  const { priceVisibility } = useSettings();
   const [showTaxBreakdown, setShowTaxBreakdown] = useState(false);
   const popoverRef = useRef(null);
 
@@ -29,6 +31,35 @@ export default function Cart() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showTaxBreakdown]);
+
+  if (!priceVisibility) {
+    return (
+      <>
+        <PageHero
+          eyebrow="PRODUCT CATALOGUE"
+          title="Catalogue & Quote Portal"
+          description="Direct online cart checkout is currently disabled. Please browse our products or submit a quote request."
+        />
+        <section className="section cart-page">
+          <div className="container">
+            <div className="empty-state large">
+              <ShoppingBag size={44} />
+              <h2>Catalogue Mode Active</h2>
+              <p>Our online store is currently operating in enquiry and catalogue mode. Explore our products and request a customized quotation for your requirements.</p>
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap', marginTop: '16px' }}>
+                <Link className="button" to="/products">
+                  Browse Products <ArrowRight size={16} />
+                </Link>
+                <button className="button outline" onClick={() => openQuote()}>
+                  Request a Quote
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </>
+    );
+  }
 
   const taxAmount = Math.round(total * 0.18);
   const cgst = total * 0.09;

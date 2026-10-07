@@ -3,11 +3,16 @@ import { ArrowUpRight, ShoppingCart, Star, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useUI } from '../../context/UIContext';
+import { useSettings } from '../../context/SettingsContext';
 import OptimizedImage from '../common/OptimizedImage';
 
 export default function ProductCard({ product, priority = false }) {
   const { addItem } = useCart();
   const { openEnquiry, notify } = useUI();
+  const { canShowPrice, canPurchase } = useSettings();
+  const showPrice = canShowPrice(product);
+  const showPurchase = canPurchase(product);
+
   const add = () => { addItem(product); notify(`${product.name} added to cart.`); };
 
   const rawImg = product.image || product.imageUrl || (Array.isArray(product.images) && product.images[0]);
@@ -69,7 +74,7 @@ export default function ProductCard({ product, priority = false }) {
           decoding="async"
         />
         <span className="product-cat-tag">{product.category || 'General'}</span>
-        {discountPercent > 0 && <span className="product-discount-tag">{discountPercent}% OFF</span>}
+        {showPrice && discountPercent > 0 && <span className="product-discount-tag">{discountPercent}% OFF</span>}
       </Link>
 
       <div className="product-body">
@@ -103,13 +108,15 @@ export default function ProductCard({ product, priority = false }) {
           ))}
         </ul>
 
-        <div className="product-price">
-          <div className="price-stack">
-            <strong>{priceFormatted}</strong>
-            {numMrp > numPrice && <span className="mrp-strike">₹{numMrp.toLocaleString('en-IN')}</span>}
+        {showPrice && (
+          <div className="product-price">
+            <div className="price-stack">
+              <strong>{priceFormatted}</strong>
+              {numMrp > numPrice && <span className="mrp-strike">₹{numMrp.toLocaleString('en-IN')}</span>}
+            </div>
+            {priceNoteFormatted && <small className="price-note">{priceNoteFormatted}</small>}
           </div>
-          {priceNoteFormatted && <small className="price-note">{priceNoteFormatted}</small>}
-        </div>
+        )}
       </div>
 
       <div className="product-actions">
@@ -117,9 +124,11 @@ export default function ProductCard({ product, priority = false }) {
         <button type="button" className="product-action-btn enquire-btn" onClick={() => openEnquiry(product)}>
           <MessageSquare size={12} /> Enquire
         </button>
-        <button type="button" className="cart-square" onClick={add} aria-label={`Add ${product.name} to cart`}>
-          <ShoppingCart size={14} />
-        </button>
+        {showPurchase && (
+          <button type="button" className="cart-square" onClick={add} aria-label={`Add ${product.name} to cart`}>
+            <ShoppingCart size={14} />
+          </button>
+        )}
       </div>
     </article>
   );

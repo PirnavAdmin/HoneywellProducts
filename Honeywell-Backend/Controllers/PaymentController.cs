@@ -55,6 +55,12 @@ namespace Honeywell.Controllers
         [HttpPost("initiate")]
         public async Task<IActionResult> InitiatePayment([FromBody] InitiatePaymentRequest request)
         {
+            var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+            if (!isPriceVisibilityEnabled)
+            {
+                return BadRequest(new { Success = false, Message = "Online payments are currently disabled. Please submit an enquiry or request a quote." });
+            }
+
             if (string.IsNullOrEmpty(request.PaymentMethod))
             {
                 return BadRequest(new { Success = false, Message = "PaymentMethod is required." });

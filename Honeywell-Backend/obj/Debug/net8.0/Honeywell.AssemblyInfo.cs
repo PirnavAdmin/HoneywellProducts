@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Honeywell")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2fdcc22a71afb4c3c840bcb801f19de73e0f049d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a85542f24a05ff2162596ff420662e2ca33bc84d")]
 [assembly: System.Reflection.AssemblyProductAttribute("Honeywell")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Honeywell")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

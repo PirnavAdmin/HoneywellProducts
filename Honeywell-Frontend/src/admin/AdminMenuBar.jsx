@@ -63,7 +63,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     setOpenDropdowns({
       catalog:   path.includes('/admin/catalog'),
       purchase:  path.includes('/admin/purchase'),
-      customers: path.includes('/admin/customers') || path.includes('/admin/users'),
+      customers: path.includes('/admin/customers'),
       purchase:  path.includes('/admin/purchase'),
       orders:    path.includes('/admin/orders') || path.includes('/admin/returns'),
       marketing: path.includes('/admin/marketing') || path.includes('/admin/solutions'),
@@ -189,7 +189,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
               <li>
                 <div
                   onClick={() => toggleDropdown('customers', '/admin/customers/list')}
-                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/customers') || location.pathname.includes('/admin/users') || location.pathname.includes('/admin/call-history') ? 'active-parent' : ''}`}
+                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/customers') || location.pathname.includes('/admin/call-history') ? 'active-parent' : ''}`}
                   data-tooltip="Customers"
                   title={!expanded ? "Customers" : undefined}
                 >
@@ -205,8 +205,32 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                 <ul className={`stroyka-submenu ${openDropdowns.customers && expanded ? 'show-submenu' : ''}`}>
                   <li><NavLink to="/admin/customers/list"     className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Customers List</NavLink></li>
                   <li><NavLink to="/admin/customers/customer" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Customer Profile</NavLink></li>
-                  <li><NavLink to="/admin/users"              className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>User Management</NavLink></li>
                   <li><NavLink to="/admin/call-history"       className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>CRM & Call Logs</NavLink></li>
+                </ul>
+              </li>
+            )}
+
+            {/* Staff */}
+            {hasAccess('staff') && (
+              <li>
+                <div
+                  onClick={() => toggleDropdown('staff', '/admin/staff/list')}
+                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/staff') ? 'active-parent' : ''}`}
+                  data-tooltip="Staff"
+                  title={!expanded ? "Staff" : undefined}
+                >
+                  <div className="nav-left">
+                    <div className="icon-box"><Shield size={18} className="nav-icon" /></div>
+                    <span className="nav-label-text">Staff</span>
+                  </div>
+                  {expanded && (openDropdowns.staff
+                    ? <ChevronDown size={15} className="nav-arrow" />
+                    : <ChevronRight size={15} className="nav-arrow" />
+                  )}
+                </div>
+                <ul className={`stroyka-submenu ${openDropdowns.staff && expanded ? 'show-submenu' : ''}`}>
+                  <li><NavLink to="/admin/staff/list" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Staff List</NavLink></li>
+                  <li><NavLink to="/admin/staff/add"  className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Add Staff</NavLink></li>
                 </ul>
               </li>
             )}
@@ -539,31 +563,6 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
                 <ul className={`stroyka-submenu ${openDropdowns.testimonials && expanded ? 'show-submenu' : ''}`}>
                   <li><NavLink to="/admin/testimonials/list" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Testimonial List</NavLink></li>
                   <li><NavLink to="/admin/testimonials/add"  className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Add Testimonial</NavLink></li>
-                </ul>
-              </li>
-            )}
-
-            {/* Staff */}
-            {hasAccess('staff') && (
-              <li>
-                <div
-                  onClick={() => toggleDropdown('staff', '/admin/staff/list')}
-                  className={`stroyka-nav-link dropdown-header ${location.pathname.includes('/admin/staff') ? 'active-parent' : ''}`}
-                  data-tooltip="Staff"
-                  title={!expanded ? "Staff" : undefined}
-                >
-                  <div className="nav-left">
-                    <div className="icon-box"><Shield size={18} className="nav-icon" /></div>
-                    <span className="nav-label-text">Staff</span>
-                  </div>
-                  {expanded && (openDropdowns.staff
-                    ? <ChevronDown size={15} className="nav-arrow" />
-                    : <ChevronRight size={15} className="nav-arrow" />
-                  )}
-                </div>
-                <ul className={`stroyka-submenu ${openDropdowns.staff && expanded ? 'show-submenu' : ''}`}>
-                  <li><NavLink to="/admin/staff/list" className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Staff List</NavLink></li>
-                  <li><NavLink to="/admin/staff/add"  className={({ isActive }) => isActive ? 'submenu-link active' : 'submenu-link'}>Add Staff</NavLink></li>
                 </ul>
               </li>
             )}

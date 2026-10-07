@@ -11,6 +11,7 @@ import ResourcesMegaMenu from '../navigation/ResourcesMegaMenu';
 import AccountMenu from '../navigation/AccountMenu';
 import { useCart } from '../../context/CartContext';
 import { useUI } from '../../context/UIContext';
+import { useSettings } from '../../context/SettingsContext';
 import { socialLinks } from '../../config/socialLinks';
 import { siteConfig } from '../../config/siteConfig';
 
@@ -24,6 +25,7 @@ export default function Header() {
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [mobileExpanded, setMobileExpanded] = useState({});
 
+  const { priceVisibility } = useSettings();
   const { count } = useCart();
   const { openQuote } = useUI();
   const navRef = useRef(null);
@@ -212,7 +214,11 @@ export default function Header() {
         <div className="header-actions">
           <button className="icon-button" onClick={() => setSearchOpen(true)} aria-label="Search products"><Search size={20} /></button>
           <AccountMenu />
-          <Link className="icon-button cart-link" to="/cart" aria-label={`Shopping cart with ${count} items`}><ShoppingBag size={20} />{count > 0 && <span>{count}</span>}</Link>
+          {priceVisibility && (
+            <Link className="icon-button cart-link" to="/cart" aria-label={`Shopping cart with ${count} items`}>
+              <ShoppingBag size={20} />{count > 0 && <span>{count}</span>}
+            </Link>
+          )}
           <button className="button button-small" onClick={() => openQuote()}>Get a Quote</button>
           <button className="icon-button mobile-menu" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu size={23} /></button>
         </div>

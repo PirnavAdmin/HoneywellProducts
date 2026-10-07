@@ -6,6 +6,7 @@ import WhatsAppIcon from '../common/WhatsAppIcon';
 import { socialLinks } from '../../config/socialLinks';
 import { siteConfig } from '../../config/siteConfig';
 import { getFooterConfig } from '../../services/settingsApi';
+import { useSettings } from '../../context/SettingsContext';
 
 const socialIcons = {
   facebook: Facebook,
@@ -31,6 +32,7 @@ const DEFAULT_FOOTER = {
 
 export default function Footer() {
   const [footerData, setFooterData] = useState(DEFAULT_FOOTER);
+  const { priceVisibility } = useSettings();
 
   useEffect(() => {
     let isMounted = true;
@@ -136,8 +138,8 @@ export default function Footer() {
           <Link to="/videos">Video Center</Link>
           <Link to="/support">Support Center</Link>
           <Link to="/service-request">Service Request</Link>
-          <Link to="/warranty">Warranty</Link>
-          <Link to="/order-tracking">Order Tracking</Link>
+          {priceVisibility && <Link to="/warranty">Warranty</Link>}
+          {priceVisibility && <Link to="/order-tracking">Order Tracking</Link>}
         </div>
         <div className="footer-social">
           <h3>Contact &amp; Social</h3>

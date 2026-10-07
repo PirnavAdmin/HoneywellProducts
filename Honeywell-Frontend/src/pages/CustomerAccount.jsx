@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import CustomerAccountLayout from '../components/layout/CustomerAccountLayout';
 import { useAuth } from '../context/AuthContext';
+import { useSettings } from '../context/SettingsContext';
 import { 
   getProfile, updateProfile, 
   getAddresses, saveAddresses, updateAddresses, 
@@ -17,12 +18,19 @@ import {
 export default function CustomerAccount() {
   const location = useLocation();
   const fileInputRef = useRef(null);
+  const { priceVisibility } = useSettings();
 
   // Auth Mode for Unauthenticated Guests: 'login' | 'register'
   const [authMode, setAuthMode] = useState('login');
 
   // Active section tab: 'personal' | 'addresses' | 'bank'
   const [activeTab, setActiveTab] = useState('personal');
+
+  useEffect(() => {
+    if (!priceVisibility && activeTab === 'bank') {
+      setActiveTab('personal');
+    }
+  }, [priceVisibility, activeTab]);
 
   const auth = useAuth();
   const { user, isLoggedIn } = auth;
@@ -707,15 +715,17 @@ export default function CustomerAccount() {
               <span>Addresses (Shipping &amp; Billing)</span>
             </button>
 
-            <button 
-              className={`profile-tab-pill ${activeTab === 'bank' ? 'active' : ''}`}
-              onClick={() => setActiveTab('bank')}
-              role="tab"
-              aria-selected={activeTab === 'bank'}
-            >
-              <Landmark size={14} />
-              <span>Bank &amp; Payment Details</span>
-            </button>
+            {priceVisibility && (
+              <button 
+                className={`profile-tab-pill ${activeTab === 'bank' ? 'active' : ''}`}
+                onClick={() => setActiveTab('bank')}
+                role="tab"
+                aria-selected={activeTab === 'bank'}
+              >
+                <Landmark size={14} />
+                <span>Bank &amp; Payment Details</span>
+              </button>
+            )}
 
             <button 
               className={`profile-tab-pill ${activeTab === 'security' ? 'active' : ''}`}
@@ -1074,7 +1084,7 @@ export default function CustomerAccount() {
           )}
 
           {/* TAB 3: BANK & PAYMENT DETAILS */}
-          {activeTab === 'bank' && (
+          {priceVisibility && activeTab === 'bank' && (
             <div>
               {isEditing ? (
                 <form onSubmit={handleSaveProfile} noValidate>

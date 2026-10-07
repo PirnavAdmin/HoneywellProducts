@@ -181,5 +181,117 @@ namespace Honeywell.Controllers
                 data = System.Text.Json.JsonSerializer.Deserialize<object>(item.JsonValue)
             });
         }
+
+        // 4. Product Price Visibility Settings (Mode A: Catalogue Mode / Mode B: E-Commerce Mode)
+        // GET: api/Settings/price-visibility
+        [HttpGet("price-visibility")]
+        [HttpGet("pricevisibility")]
+        [HttpGet("pricing-mode")]
+        public async Task<IActionResult> GetPriceVisibility()
+        {
+            var item = await _context.SystemConfigs.FirstOrDefaultAsync(c => c.Key == "product_price_visibility" || c.Key == "price_visibility");
+            bool isEnabled = true;
+
+            if (item != null && !string.IsNullOrWhiteSpace(item.JsonValue))
+            {
+                try
+                {
+                    using var doc = System.Text.Json.JsonDocument.Parse(item.JsonValue);
+                    var root = doc.RootElement;
+                    if (root.ValueKind == System.Text.Json.JsonValueKind.True) isEnabled = true;
+                    else if (root.ValueKind == System.Text.Json.JsonValueKind.False) isEnabled = false;
+                    else if (root.ValueKind == System.Text.Json.JsonValueKind.Object)
+                    {
+                        if (root.TryGetProperty("enabled", out var prop) || root.TryGetProperty("Enabled", out prop) ||
+                            root.TryGetProperty("priceVisibility", out prop) || root.TryGetProperty("PriceVisibility", out prop))
+                        {
+                            if (prop.ValueKind == System.Text.Json.JsonValueKind.True) isEnabled = true;
+                            else if (prop.ValueKind == System.Text.Json.JsonValueKind.False) isEnabled = false;
+                        }
+                    }
+                }
+                catch
+                {
+                    if (bool.TryParse(item.JsonValue, out var parsed)) isEnabled = parsed;
+                }
+            }
+
+            return Ok(new
+            {
+                success = true,
+                enabled = isEnabled,
+                priceVisibility = isEnabled,
+                mode = isEnabled ? "Ecommerce" : "Catalogue",
+                modeLabel = isEnabled ? "Full E-Commerce Mode" : "Catalogue & Enquiry Mode"
+            });
+        }
+
+        // PUT/POST: api/Settings/price-visibility
+        [HttpPut("price-visibility")]
+        [HttpPost("price-visibility")]
+        [HttpPut("pricevisibility")]
+        [HttpPost("pricevisibility")]
+        [HttpPut("pricing-mode")]
+        [HttpPost("pricing-mode")]
+        public async Task<IActionResult> UpdatePriceVisibility([FromBody] System.Text.Json.JsonElement payload)
+        {
+            bool isEnabled = true;
+            try
+            {
+                if (payload.ValueKind == System.Text.Json.JsonValueKind.True) isEnabled = true;
+                else if (payload.ValueKind == System.Text.Json.JsonValueKind.False) isEnabled = false;
+                else if (payload.ValueKind == System.Text.Json.JsonValueKind.Object)
+                {
+                    if (payload.TryGetProperty("enabled", out var prop) || payload.TryGetProperty("Enabled", out prop) ||
+                        payload.TryGetProperty("priceVisibility", out prop) || payload.TryGetProperty("PriceVisibility", out prop))
+                    {
+                        if (prop.ValueKind == System.Text.Json.JsonValueKind.True) isEnabled = true;
+                        else if (prop.ValueKind == System.Text.Json.JsonValueKind.False) isEnabled = false;
+                        else if (prop.ValueKind == System.Text.Json.JsonValueKind.String && bool.TryParse(prop.GetString(), out var pBool)) isEnabled = pBool;
+                    }
+                }
+                else if (payload.ValueKind == System.Text.Json.JsonValueKind.String && bool.TryParse(payload.GetString(), out var sBool))
+                {
+                    isEnabled = sBool;
+                }
+            }
+            catch
+            {
+                isEnabled = true;
+            }
+
+            var item = await _context.SystemConfigs.FirstOrDefaultAsync(c => c.Key == "product_price_visibility" || c.Key == "price_visibility");
+            if (item == null)
+            {
+                item = new SystemConfig { Key = "product_price_visibility" };
+                _context.SystemConfigs.Add(item);
+            }
+            else
+            {
+                item.Key = "product_price_visibility";
+            }
+
+            var serializedObj = new
+            {
+                enabled = isEnabled,
+                priceVisibility = isEnabled,
+                updatedAt = DateTime.UtcNow
+            };
+
+            item.JsonValue = System.Text.Json.JsonSerializer.Serialize(serializedObj);
+            item.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Product Price Visibility updated to {(isEnabled ? "ON (E-Commerce Mode)" : "OFF (Catalogue Mode)")}.",
+                enabled = isEnabled,
+                priceVisibility = isEnabled,
+                mode = isEnabled ? "Ecommerce" : "Catalogue",
+                modeLabel = isEnabled ? "Full E-Commerce Mode" : "Catalogue & Enquiry Mode"
+            });
+        }
     }
 }

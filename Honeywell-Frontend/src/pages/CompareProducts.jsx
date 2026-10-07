@@ -4,6 +4,7 @@ import { X, Eye, Check } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import { productService } from '../services/productService';
 import { useUI } from '../context/UIContext';
+import { useSettings } from '../context/SettingsContext';
 import heroImage from '../assets/images/smart-technology-trends.png';
 
 export default function CompareProducts() {
@@ -21,6 +22,7 @@ export default function CompareProducts() {
   const [availableProducts, setAvailableProducts] = useState([]);
   const [selectedToAdd, setSelectedToAdd] = useState('');
   const { openEnquiry } = useUI();
+  const { priceVisibility } = useSettings();
 
   useEffect(() => {
     localStorage.setItem('honeywell_compare_ids', JSON.stringify(compareIds));
@@ -181,14 +183,16 @@ export default function CompareProducts() {
                       <td key={item.id}>{item.categoryName || item.category || 'Surveillance'}</td>
                     ))}
                   </tr>
-                  <tr>
-                    <td className="spec-label-col">Price / Unit</td>
-                    {products.map((item) => (
-                      <td key={item.id} className="compare-price">
-                        {item.price ? `$${Number(item.price).toFixed(2)}` : 'Request Quote'}
-                      </td>
-                    ))}
-                  </tr>
+                  {priceVisibility && (
+                    <tr>
+                      <td className="spec-label-col">Price / Unit</td>
+                      {products.map((item) => (
+                        <td key={item.id} className="compare-price">
+                          {item.price ? `₹${Number(item.price).toLocaleString('en-IN')}` : 'Request Quote'}
+                        </td>
+                      ))}
+                    </tr>
+                  )}
                   <tr>
                     <td className="spec-label-col">Key Features</td>
                     {products.map((item) => (

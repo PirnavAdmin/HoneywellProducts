@@ -160,6 +160,25 @@ namespace Honeywell.Controllers
                 });
             }
 
+            // Fallback for product_price_visibility config key
+            if (cleanKey == "product_price_visibility" || cleanKey == "price_visibility" || cleanKey == "pricevisibility")
+            {
+                var defaultPriceVis = new
+                {
+                    enabled = true,
+                    priceVisibility = true
+                };
+
+                return Ok(new
+                {
+                    key = "product_price_visibility",
+                    Key = "product_price_visibility",
+                    value = defaultPriceVis,
+                    Value = defaultPriceVis,
+                    data = defaultPriceVis
+                });
+            }
+
             return NotFound(new
             {
                 success = false,

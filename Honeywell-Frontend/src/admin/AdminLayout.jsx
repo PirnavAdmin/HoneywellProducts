@@ -89,7 +89,6 @@ const AdminLayout = () => {
     if (path === 'invoice') moduleKey = 'invoices';
     if (path === 'returns') moduleKey = 'returns';
     if (path === 'categories' || path === 'products' || path === 'descriptions' || path === 'image-categorizer') moduleKey = 'catalog';
-    if (path === 'users') moduleKey = 'customers';
     if (path === 'contact-card' || path === 'footer' || path === 'payments') moduleKey = 'settings';
 
     const normKey = moduleKey.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');

@@ -68,11 +68,11 @@ namespace Honeywell.Controllers
                 return NotFound(new { Message = "Staff member not found." });
             }
 
-            staff.Name = updateData.Name;
-            staff.Email = updateData.Email;
-            staff.Phone = updateData.Phone;
-            staff.Role = updateData.Role;
-            staff.Status = updateData.Status;
+            if (!string.IsNullOrEmpty(updateData.Name)) staff.Name = updateData.Name;
+            if (!string.IsNullOrEmpty(updateData.Email)) staff.Email = updateData.Email;
+            if (!string.IsNullOrEmpty(updateData.Phone)) staff.Phone = updateData.Phone;
+            if (!string.IsNullOrEmpty(updateData.Role)) staff.Role = updateData.Role;
+            if (!string.IsNullOrEmpty(updateData.Status)) staff.Status = updateData.Status;
 
             await _context.SaveChangesAsync();
             return NoContent();

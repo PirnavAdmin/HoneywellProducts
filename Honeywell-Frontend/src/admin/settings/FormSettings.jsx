@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Save, ArrowLeft, Settings, CheckCircle, RefreshCw, CreditCard, Phone, RotateCcw } from 'lucide-react';
+import { Save, ArrowLeft, Settings, CheckCircle, RefreshCw, CreditCard, Phone, RotateCcw, Tag, Eye, EyeOff, ShoppingCart, Info } from 'lucide-react';
 import { 
   getBankDetails, updateBankDetails,
   getUpiDetails, updateUpiDetails,
   getSupportConfig, updateSupportConfig,
-  getReturnsConfig
+  getReturnsConfig,
+  getPriceVisibility, updatePriceVisibility
 } from '../../services/settingsApi';
+import { useSettings } from '../../context/SettingsContext';
 
 const FormSettings = () => {
   const navigate = useNavigate();
+  const settings = useSettings();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
@@ -40,6 +43,11 @@ const FormSettings = () => {
 
   // Returns Policy Window
   const [returnsWindow, setReturnsWindow] = useState(7);
+
+  // Product Price Visibility / Website Mode
+  const [priceVisibility, setPriceVisibility] = useState(true);
+  const [togglingPriceVisibility, setTogglingPriceVisibility] = useState(false);
+  const [priceVisibilityMsg, setPriceVisibilityMsg] = useState('');
 
   const isLegacyOrAgro = (str) => {
     if (!str || typeof str !== 'string') return false;
@@ -98,11 +106,12 @@ const FormSettings = () => {
       setLoading(true);
       setError('');
       try {
-        const [bankRes, upiRes, supportRes, returnsRes] = await Promise.allSettled([
+        const [bankRes, upiRes, supportRes, returnsRes, priceRes] = await Promise.allSettled([
           getBankDetails(),
           getUpiDetails(),
           getSupportConfig(),
-          getReturnsConfig()
+          getReturnsConfig(),
+          getPriceVisibility()
         ]);
 
         if (bankRes.status === 'fulfilled' && bankRes.value) {
@@ -117,6 +126,13 @@ const FormSettings = () => {
         if (returnsRes.status === 'fulfilled' && returnsRes.value) {
           setReturnsWindow(returnsRes.value.returnWindowDays ?? 7);
         }
+        if (priceRes.status === 'fulfilled' && priceRes.value) {
+          if (typeof priceRes.value.priceVisibility === 'boolean') {
+            setPriceVisibility(priceRes.value.priceVisibility);
+          } else if (typeof priceRes.value.enabled === 'boolean') {
+            setPriceVisibility(priceRes.value.enabled);
+          }
+        }
       } catch (err) {
         console.error('Error loading settings:', err);
         setError('Some settings failed to load from API.');
@@ -126,6 +142,27 @@ const FormSettings = () => {
     }
     loadAllSettings();
   }, []);
+
+  const handlePriceVisibilityToggle = async () => {
+    const nextState = !priceVisibility;
+    setTogglingPriceVisibility(true);
+    setPriceVisibilityMsg('');
+    try {
+      setPriceVisibility(nextState);
+      if (settings?.updatePriceVisibility) {
+        await settings.updatePriceVisibility(nextState);
+      } else {
+        await updatePriceVisibility({ enabled: nextState });
+      }
+      setPriceVisibilityMsg(nextState ? 'Product pricing & e-commerce mode enabled.' : 'Catalogue mode enabled (prices & purchasing hidden).');
+      setTimeout(() => setPriceVisibilityMsg(''), 4000);
+    } catch (err) {
+      console.error('Failed to toggle price visibility:', err);
+      setPriceVisibilityMsg(err.message || 'Failed to update website mode.');
+    } finally {
+      setTogglingPriceVisibility(false);
+    }
+  };
 
   const handleBankChange = (e) => {
     const { name, value } = e.target;
@@ -296,6 +333,104 @@ const FormSettings = () => {
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             
+            {/* Section: PRODUCT PRICING & WEBSITE MODE */}
+            <div style={{ background: priceVisibility ? '#f0fdf4' : '#f8fafc', border: `1px solid ${priceVisibility ? '#bbf7d0' : '#e2e8f0'}`, borderRadius: '12px', padding: '20px 22px', transition: 'all 0.2s ease' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', borderBottom: `1px solid ${priceVisibility ? '#dcfce7' : '#e2e8f0'}`, paddingBottom: '14px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: priceVisibility ? '#dcfce7' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: priceVisibility ? '#16a34a' : '#64748b' }}>
+                    {priceVisibility ? <Eye size={18} /> : <EyeOff size={18} />}
+                  </div>
+                  <div>
+                    <h3 style={{ fontSize: '13px', fontWeight: 800, color: priceVisibility ? '#166534' : '#334155', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 2px 0' }}>
+                      PRODUCT PRICING & WEBSITE MODE
+                    </h3>
+                    <p style={{ fontSize: '12px', color: '#64748b', margin: 0 }}>
+                      Control customer-facing price visibility, cart, checkout, and purchasing availability dynamically.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ 
+                    fontSize: '11.5px', 
+                    fontWeight: 700, 
+                    padding: '4px 10px', 
+                    borderRadius: '20px', 
+                    background: priceVisibility ? '#dcfce7' : '#f1f5f9', 
+                    color: priceVisibility ? '#15803d' : '#475569',
+                    border: `1px solid ${priceVisibility ? '#86efac' : '#cbd5e1'}`
+                  }}>
+                    {priceVisibility ? 'MODE B: E-COMMERCE ACTIVE' : 'MODE A: CATALOGUE ONLY'}
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handlePriceVisibilityToggle}
+                    disabled={togglingPriceVisibility}
+                    aria-label={`Toggle product price visibility ${priceVisibility ? 'off' : 'on'}`}
+                    style={{
+                      position: 'relative',
+                      width: '52px',
+                      height: '28px',
+                      borderRadius: '14px',
+                      background: priceVisibility ? '#16a34a' : '#cbd5e1',
+                      border: 'none',
+                      cursor: togglingPriceVisibility ? 'not-allowed' : 'pointer',
+                      transition: 'background 0.2s ease',
+                      padding: 0,
+                      outline: 'none'
+                    }}
+                  >
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '2px',
+                        left: priceVisibility ? '26px' : '2px',
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        background: '#ffffff',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                        transition: 'left 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '10px'
+                      }}
+                    >
+                      {togglingPriceVisibility ? <RefreshCw size={12} className="spin" color="#64748b" /> : null}
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {priceVisibilityMsg && (
+                <div style={{ padding: '10px 14px', borderRadius: '8px', background: priceVisibility ? '#dcfce7' : '#eff6ff', border: `1px solid ${priceVisibility ? '#86efac' : '#bfdbfe'}`, color: priceVisibility ? '#14532d' : '#1e40af', fontSize: '12.5px', marginBottom: '14px' }}>
+                  {priceVisibilityMsg}
+                </div>
+              )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                <div style={{ background: '#ffffff', borderRadius: '8px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                  <strong style={{ display: 'block', fontSize: '12px', color: '#0f172a', marginBottom: '4px' }}>
+                    Mode A — Price Visibility OFF (Catalogue Mode)
+                  </strong>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                    Public prices, Add to Cart, Buy Now, Cart navigation, and Checkout are hidden. The site acts as a clean product catalog with Enquire and Quote requests.
+                  </p>
+                </div>
+
+                <div style={{ background: '#ffffff', borderRadius: '8px', padding: '12px 14px', border: '1px solid #e2e8f0' }}>
+                  <strong style={{ display: 'block', fontSize: '12px', color: '#0f172a', marginBottom: '4px' }}>
+                    Mode B — Price Visibility ON (E-Commerce Mode)
+                  </strong>
+                  <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
+                    Prices, Add to Cart, Cart, and Checkout are fully functional for products with valid prices configured. Zero-price products remain enquiry-only.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Section 1: BANK ACCOUNT PAYMENT SETTINGS */}
             <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '18px 20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px', marginBottom: '16px' }}>

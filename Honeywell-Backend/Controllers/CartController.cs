@@ -192,6 +192,12 @@ namespace Honeywell.Controllers
                     return BadRequest("Quantity must be at least 1.");
                 }
 
+                var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+                if (!isPriceVisibilityEnabled)
+                {
+                    return BadRequest(new { Message = "Online purchasing is currently disabled. Please submit a product enquiry or quote request." });
+                }
+
                 var product = await _context.Products.FindAsync(dto.ProductId);
                 if (product == null)
                 {
@@ -204,6 +210,10 @@ namespace Honeywell.Controllers
                 }
 
                 decimal price = product.SellingPrice ?? product.MRP;
+                if (price <= 0)
+                {
+                    return BadRequest(new { Message = "This product does not have a price configured for direct online purchasing. Please request a quotation or submit an enquiry." });
+                }
 
                 // Check if product already exists in cart
                 var existingItem = await _context.CartItems
@@ -272,6 +282,12 @@ namespace Honeywell.Controllers
                     return BadRequest("Quantity must be at least 1.");
                 }
 
+                var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+                if (!isPriceVisibilityEnabled)
+                {
+                    return BadRequest(new { Message = "Online purchasing is currently disabled. Please submit a product enquiry or quote request." });
+                }
+
                 var existingItem = await _context.CartItems.FindAsync(id);
 
                 if (existingItem == null || existingItem.UserEmail != userEmail)
@@ -294,6 +310,10 @@ namespace Honeywell.Controllers
                 }
 
                 decimal price = product.SellingPrice ?? product.MRP;
+                if (price <= 0)
+                {
+                    return BadRequest(new { Message = "This product cannot be purchased online without a valid price." });
+                }
 
                 existingItem.Quantity = dto.Quantity;
                 existingItem.Price = price;
@@ -385,6 +405,12 @@ namespace Honeywell.Controllers
         {
             try
             {
+                var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+                if (!isPriceVisibilityEnabled)
+                {
+                    return Ok(new { Message = "Price visibility is disabled. Skipping cart merge." });
+                }
+
                 var userEmail = GetUserEmail();
                 if (dto.Items == null || !dto.Items.Any())
                 {
@@ -399,6 +425,7 @@ namespace Honeywell.Controllers
                     if (product == null || !product.IsActive) continue;
 
                     decimal price = product.SellingPrice ?? product.MRP;
+                    if (price <= 0) continue;
 
                     var existingItem = await _context.CartItems
                         .FirstOrDefaultAsync(x => x.UserEmail == userEmail && x.ProductId == localItem.ProductId);
@@ -460,6 +487,12 @@ namespace Honeywell.Controllers
         {
             try
             {
+                var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+                if (!isPriceVisibilityEnabled)
+                {
+                    return BadRequest(new { Message = "Online purchasing is currently disabled." });
+                }
+
                 var userEmail = GetUserEmail();
                 var cartItems = await _context.CartItems
                     .Where(x => x.UserEmail == userEmail)

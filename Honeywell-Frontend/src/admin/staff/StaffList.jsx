@@ -182,14 +182,18 @@ const StaffList = () => {
 
     const newIsActive = !item.isActive;
     const putPayload = {
+      id: parseInt(id, 10) || id,
       staffId: id,
       employeeId: item.employeeId || item.EmployeeId || "",
+      name: item.name || `${item.firstName || ''} ${item.lastName || ''}`.trim(),
       firstName: item.firstName || item.FirstName || "",
       lastName: item.lastName || item.LastName || "",
       email: item.email || item.Email || "",
+      phone: item.mobile || item.phone || "",
       mobileNumber: item.mobile || item.Mobile || item.mobileNumber || item.MobileNumber || "",
       role: item.role || item.Role || "staff",
       password: item.password || item.Password || "",
+      status: newIsActive ? 'Active' : 'Inactive',
       isActive: newIsActive
     };
 

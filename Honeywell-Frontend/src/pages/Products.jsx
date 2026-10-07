@@ -7,6 +7,7 @@ import { productService } from '../services/productService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { usePageBanner } from '../hooks/usePageBanner';
 import { resolveBannerImage } from '../admin/marketing/bannersApi';
+import { useSettings } from '../context/SettingsContext';
 const normalizeCategory = (str) => {
   if (!str) return '';
   return String(str).toLowerCase().trim().replace(/[^a-z0-9]/g, '');
@@ -283,6 +284,7 @@ export default function Products() {
   ''
   );
   useDocumentTitle('Products', 'Explore professional surveillance, recording, networking and security product categories.');
+  const { priceVisibility } = useSettings();
   const [params] = useSearchParams();
   const [productsList, setProductsList] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
@@ -815,19 +817,19 @@ export default function Products() {
 
 
           <div className="catalogue-results">
-            <div className="catalogue-toolbar">
-              <p><strong>{filtered.length}</strong> products</p>
-              <label>Sort by
-                <select value={sort} onChange={(event) => setSort(event.target.value)}>
-                  <option value="featured">Featured</option>
-                  <option value="new">New Products</option>
-                  <option value="rating">Customer rating</option>
-                  <option value="price-low">Price: Low to high</option>
-                  <option value="price-high">Price: High to low</option>
-                  <option value="name">Name A–Z</option>
-                </select>
-              </label>
-            </div>
+            <div className="catalogue-toolbar">
+              <p><strong>{filtered.length}</strong> products</p>
+              <label>Sort by
+                <select value={sort} onChange={(event) => setSort(event.target.value)}>
+                  <option value="featured">Featured</option>
+                  <option value="new">New Products</option>
+                  <option value="rating">Customer rating</option>
+                  {priceVisibility && <option value="price-low">Price: Low to high</option>}
+                  {priceVisibility && <option value="price-high">Price: High to low</option>}
+                  <option value="name">Name A–Z</option>
+                </select>
+              </label>
+            </div>
 
 
 

@@ -156,4 +156,144 @@ export async function updateFooterConfig(data) {
   return res.json().catch(() => ({ success: true }));
 }
 
+// ── Product Price Visibility API ──
+export async function getPriceVisibility() {
+  return await apiCache.fetchWithCache('settings_price_visibility', async () => {
+    // 1. Try Settings/price-visibility
+    try {
+      const res = await fetch(`${getApiDomain()}/api/Settings/price-visibility`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'Accept': 'application/json',
+        },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const enabled = typeof data.priceVisibility === 'boolean' ? data.priceVisibility : (typeof data.enabled === 'boolean' ? data.enabled : true);
+        try { localStorage.setItem('honeywell_product_price_visibility', JSON.stringify({ enabled, priceVisibility: enabled })); } catch {}
+        return data;
+      }
+    } catch (e) {
+      console.warn('Settings/price-visibility fetch failed, trying SystemConfigs fallback:', e);
+    }
+
+    // 2. Fallback to SystemConfigs?key=product_price_visibility
+    try {
+      const res2 = await fetch(`${getApiDomain()}/api/SystemConfigs?key=product_price_visibility`, {
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          'Accept': 'application/json',
+        },
+      });
+      if (res2.ok) {
+        const data2 = await res2.json();
+        const val = data2.value ?? data2.Value ?? data2.data ?? data2;
+        const enabled = typeof val?.priceVisibility === 'boolean' ? val.priceVisibility : (typeof val?.enabled === 'boolean' ? val.enabled : true);
+        try { localStorage.setItem('honeywell_product_price_visibility', JSON.stringify({ enabled, priceVisibility: enabled })); } catch {}
+        return { enabled, priceVisibility: enabled, success: true };
+      }
+    } catch (e) {
+      console.warn('SystemConfigs fallback failed:', e);
+    }
+
+    // 3. Fallback to localStorage
+    try {
+      const cached = localStorage.getItem('honeywell_product_price_visibility');
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch {}
+
+    return { enabled: true, priceVisibility: true, success: true };
+  }, 10 * 1000); // 10s cache
+}
+
+export async function updatePriceVisibility(data) {
+  const isEnabled = typeof data === 'boolean' ? data : (typeof data?.enabled === 'boolean' ? data.enabled : (typeof data?.priceVisibility === 'boolean' ? data.priceVisibility : true));
+  const payload = {
+    enabled: isEnabled,
+    priceVisibility: isEnabled,
+    key: 'product_price_visibility',
+    value: { enabled: isEnabled, priceVisibility: isEnabled }
+  };
+
+  // Always sync immediately to localStorage
+  try {
+    localStorage.setItem('honeywell_product_price_visibility', JSON.stringify(payload));
+  } catch {}
+  apiCache.invalidate('settings_price_visibility');
+
+  // 1. Try PUT /api/Settings/price-visibility
+  try {
+    const res = await fetch(`${getApiDomain()}/api/Settings/price-visibility`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ enabled: isEnabled }),
+    });
+    if (res.ok) {
+      return res.json().catch(() => ({ success: true, enabled: isEnabled }));
+    }
+  } catch (err) {
+    console.warn('PUT /api/Settings/price-visibility failed:', err);
+  }
+
+  // 2. Try POST /api/Settings/price-visibility
+  try {
+    const resPost = await fetch(`${getApiDomain()}/api/Settings/price-visibility`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ enabled: isEnabled }),
+    });
+    if (resPost.ok) {
+      return resPost.json().catch(() => ({ success: true, enabled: isEnabled }));
+    }
+  } catch (err) {
+    console.warn('POST /api/Settings/price-visibility failed:', err);
+  }
+
+  // 3. Fallback to PUT /api/SystemConfigs?key=product_price_visibility
+  try {
+    const resSys = await fetch(`${getApiDomain()}/api/SystemConfigs?key=product_price_visibility`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ key: 'product_price_visibility', value: { enabled: isEnabled, priceVisibility: isEnabled } }),
+    });
+    if (resSys.ok) {
+      return resSys.json().catch(() => ({ success: true, enabled: isEnabled }));
+    }
+  } catch (err) {
+    console.warn('PUT /api/SystemConfigs fallback failed:', err);
+  }
+
+  // 4. Fallback to POST /api/SystemConfigs
+  try {
+    const resSysPost = await fetch(`${getApiDomain()}/api/SystemConfigs`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ key: 'product_price_visibility', value: { enabled: isEnabled, priceVisibility: isEnabled } }),
+    });
+    if (resSysPost.ok) {
+      return resSysPost.json().catch(() => ({ success: true, enabled: isEnabled }));
+    }
+  } catch (err) {
+    console.warn('POST /api/SystemConfigs fallback failed:', err);
+  }
+
+  // 5. Fallback to POST /api/SystemConfig
+  try {
+    const resSysAlt = await fetch(`${getApiDomain()}/api/SystemConfig`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ key: 'product_price_visibility', value: { enabled: isEnabled, priceVisibility: isEnabled } }),
+    });
+    if (resSysAlt.ok) {
+      return resSysAlt.json().catch(() => ({ success: true, enabled: isEnabled }));
+    }
+  } catch (err) {
+    console.warn('POST /api/SystemConfig fallback failed:', err);
+  }
+
+  return { success: true, enabled: isEnabled };
+}
+
 

@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout';
 import { CartProvider } from './context/CartContext';
 import { UIProvider } from './context/UIContext';
 import { AuthProvider } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 
 // Existing Pages
 const Home = lazy(() => import('./pages/Home'));
@@ -92,7 +93,6 @@ const SuppliersForm = lazy(() => import('./admin/suppliers/SuppliersForm'));
 const CoinsConverterScreen = lazy(() => import('./admin/coins/CoinsConverterScreen'));
 const FormSettings = lazy(() => import('./admin/settings/FormSettings'));
 const TableOfContent = lazy(() => import('./admin/settings/TableOfContent'));
-const Users = lazy(() => import('./admin/screens/Users'));
 const PurchaseIndentList = lazy(() => import('./admin/purchaseIndent/PurchaseIndentList'));
 const AddPurchaseIndent = lazy(() => import('./admin/purchaseIndent/AddPurchaseIndent'));
 const PurchaseOrdersList = lazy(() => import('./admin/purchaseOrders/PurchaseOrdersList'));
@@ -117,10 +117,11 @@ function LoadingScreen() {
 
 export default function App() {
   return (
-    <CartProvider>
-      <UIProvider>
-        <AuthProvider>
-          <Suspense fallback={<LoadingScreen />}>
+    <SettingsProvider>
+      <CartProvider>
+        <UIProvider>
+          <AuthProvider>
+            <Suspense fallback={<LoadingScreen />}>
           <Routes>
             {/* Admin Console Routes */}
             <Route path="admin/login" element={<AdminLoginPage />} />
@@ -199,7 +200,6 @@ export default function App() {
               <Route path="settings" element={<Navigate to="form" replace />} />
               <Route path="settings/form" element={<FormSettings />} />
               <Route path="settings/toc" element={<TableOfContent />} />
-              <Route path="users" element={<Users />} />
               <Route path="profile" element={<AdminProfile />} />
               <Route path="account-settings" element={<AdminAccountSettings />} />
               <Route path="categories" element={<CategoriesList />} />
@@ -274,8 +274,9 @@ export default function App() {
             </Route>
           </Routes>
         </Suspense>
-        </AuthProvider>
-      </UIProvider>
-    </CartProvider>
+          </AuthProvider>
+        </UIProvider>
+      </CartProvider>
+    </SettingsProvider>
   );
 }
