@@ -1,0 +1,6 @@
+@Honeywell_HostAddress = http://localhost:5119
+
+GET {{Honeywell_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

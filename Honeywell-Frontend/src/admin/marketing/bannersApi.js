@@ -1,0 +1,310 @@
+import axios from 'axios';
+import { getApiDomain, DEFAULT_BACKEND_URL, resolveMediaUrl } from '../../utils/apiConfig';
+import { apiCache } from '../../utils/apiCache';
+
+export const resolveBannerImage = (url) => {
+  if (!url) return '';
+  return resolveMediaUrl(url);
+};
+
+const getBaseUrl = () => {
+  const domain = getApiDomain() || '';
+  return domain ? `${domain.replace(/\/$/, '')}/api/Banners` : '/api/Banners';
+};
+
+const getHeaders = () => {
+  const token = localStorage.getItem('adminToken');
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+export const mapBannerFromApi = (item) => {
+  if (!item || typeof item !== 'object') return null;
+  const rawId = item.id ?? item.Id ?? item.bannerId ?? item.BannerId ?? item._id ?? '';
+  const rawImage = (
+    item.imageUrl || item.ImageUrl ||
+    item.image || item.Image ||
+    item.bannerImage || item.BannerImage ||
+    item.url || item.Url ||
+    item.path || item.Path ||
+    item.image_url || item.banner_image ||
+    item.filePath || item.FilePath ||
+    ''
+  );
+
+  const rawTarget = item.targetUrl || item.TargetUrl || item.link || item.Link || item.url || item.Url || '';
+  const rawSub = item.subtitle || item.Subtitle || item.description || item.Description || '';
+  let rawType = item.bannerType || item.BannerType || item.type || item.Type;
+
+  // Infer bannerType from targetUrl, subtitle or description tag if missing or defaulted
+  const targetLower = String(rawTarget).toLowerCase();
+  const subLower = String(rawSub).toLowerCase();
+  const titleLower = String(item.title || item.Title || '').toLowerCase();
+
+  if (targetLower.includes('products') || subLower.includes('[type:products]') || titleLower.includes('products banner')) {
+    rawType = 'Products';
+  } else if (targetLower.includes('solutions') || subLower.includes('[type:solutions]') || titleLower.includes('solutions banner')) {
+    rawType = 'Solutions';
+  } else if (targetLower.includes('business') || subLower.includes('[type:business]') || titleLower.includes('business banner')) {
+    rawType = 'Business';
+  } else if (targetLower.includes('about') || subLower.includes('[type:about]') || titleLower.includes('about banner')) {
+    rawType = 'About';
+  } else if (targetLower.includes('resources') || subLower.includes('[type:resources]') || titleLower.includes('resources banner')) {
+    rawType = 'Resources';
+  } else if (targetLower.includes('contact') || subLower.includes('[type:contact]') || titleLower.includes('contact banner')) {
+    rawType = 'Contact';
+  } else if (targetLower.includes('offers') || targetLower.includes('promo') || subLower.includes('[type:promo]')) {
+    rawType = 'Promo';
+  } else if (targetLower.includes('trust') || subLower.includes('[type:trust]')) {
+    rawType = 'Trust';
+  } else if (!rawType) {
+    rawType = 'Hero';
+  }
+
+  // Clean tag from displayed subtitle
+  const cleanSubtitle = String(rawSub).replace(/\[Type:\w+\]/gi, '').trim();
+
+  return {
+    id: String(rawId),
+    title: item.title || item.Title || item.name || item.Name || '',
+    subtitle: cleanSubtitle,
+    imageUrl: String(rawImage || '').trim(),
+    targetUrl: rawTarget || (rawType === 'Products' ? '/products' : '/'),
+    bannerType: rawType,
+    isActive: item.isActive !== undefined ? Boolean(item.isActive) : (item.IsActive !== undefined ? Boolean(item.IsActive) : (item.active !== undefined ? Boolean(item.active) : true)),
+    displayOrder: Number(item.displayOrder ?? item.DisplayOrder ?? item.order ?? item.Order ?? 0),
+    createdAt: item.createdAt || item.CreatedAt || item.dateCreated || new Date().toISOString()
+  };
+};
+
+/**
+ * GET /api/Banners/admin
+ * Fetch all banners for admin panel
+ */
+export const fetchAdminBanners = async () => {
+  try {
+    const response = await axios.get(`${getBaseUrl()}/admin`, { headers: getHeaders() });
+    if (response.status === 200) {
+      const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
+      return list.map(mapBannerFromApi).filter(Boolean);
+    }
+  } catch (err) {
+    // Fallback to GET /api/Banners
+    try {
+      const response = await axios.get(getBaseUrl(), { headers: getHeaders() });
+      if (response.status === 200) {
+        const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
+        return list.map(mapBannerFromApi).filter(Boolean);
+      }
+    } catch (e) {
+      console.warn('Fetch Admin Banners Error:', e.message);
+    }
+  }
+  return [];
+};
+
+/**
+ * GET /api/Banners
+ * Fetch active banners dynamically for public frontend
+ */
+export const fetchActiveBanners = async (type = '') => {
+  const cacheKey = `banners_active_${type || 'all'}`;
+  return await apiCache.fetchWithCache(cacheKey, async () => {
+    try {
+      const response = await axios.get(getBaseUrl(), { headers: getHeaders() });
+      if (response.status === 200) {
+        const list = Array.isArray(response.data) ? response.data : (response.data?.banners || response.data?.items || response.data?.data || []);
+        let mapped = list.map(mapBannerFromApi).filter(Boolean);
+        if (type) {
+          const typeLower = type.toLowerCase();
+          const matched = mapped.filter(b => (b.bannerType && b.bannerType.toLowerCase() === typeLower) || (b.targetUrl && b.targetUrl.toLowerCase().includes(typeLower)));
+          if (matched.length > 0) return matched;
+        }
+        return mapped;
+      }
+    } catch (err) {
+      console.warn('Fetch Active Banners Error:', err.message);
+    }
+    return [];
+  }, 10 * 60 * 1000);
+};
+
+/**
+ * GET /api/Banners/{id}
+ * Fetch single banner by ID
+ */
+export const fetchBannerById = async (id) => {
+  try {
+    const response = await axios.get(`${getBaseUrl()}/${id}`, { headers: getHeaders() });
+    if (response.status === 200) {
+      return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+    }
+  } catch (err) {
+    console.warn(`Fetch Banner By ID ${id} Error:`, err.message);
+  }
+  return null;
+};
+
+/**
+ * POST /api/Banners
+ * Create a new banner
+ */
+export const createBanner = async (bannerData) => {
+  const type = bannerData.bannerType || 'Hero';
+  let targetUrl = bannerData.targetUrl || '/products';
+  if (type === 'Products' && (!targetUrl || targetUrl === '/categories' || targetUrl === '/products')) {
+    targetUrl = '/products?type=Products';
+  } else if (type === 'Solutions' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/solutions?type=Solutions';
+  } else if (type === 'Business' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/business?type=Business';
+  } else if (type === 'About' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/about-us?type=About';
+  } else if (type === 'Resources' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/resources?type=Resources';
+  } else if (type === 'Contact' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/contact?type=Contact';
+  } else if (type === 'Promo' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/offers?type=Promo';
+  }
+
+  const rawSub = bannerData.subtitle || bannerData.description || '';
+  const taggedSub = rawSub.includes('[Type:') ? rawSub : `${rawSub} [Type:${type}]`.trim();
+
+  const payload = {
+    title: bannerData.title || '',
+    subtitle: taggedSub,
+    description: taggedSub,
+    imageUrl: bannerData.imageUrl || '',
+    targetUrl: targetUrl,
+    bannerType: type,
+    isActive: bannerData.isActive !== undefined ? bannerData.isActive : true,
+    displayOrder: Number(bannerData.displayOrder || 0)
+  };
+  const response = await axios.post(getBaseUrl(), payload, { headers: getHeaders() });
+  apiCache.invalidate('banners');
+  return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+};
+
+/**
+ * PUT /api/Banners/{id}
+ * Update banner
+ */
+export const updateBanner = async (id, bannerData) => {
+  const cleanId = isNaN(Number(id)) ? id : Number(id);
+  const type = bannerData.bannerType || 'Hero';
+  let targetUrl = bannerData.targetUrl || '/products';
+  if (type === 'Products' && (!targetUrl || targetUrl === '/categories' || targetUrl === '/products')) {
+    targetUrl = '/products?type=Products';
+  } else if (type === 'Solutions' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/solutions?type=Solutions';
+  } else if (type === 'Business' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/business?type=Business';
+  } else if (type === 'About' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/about-us?type=About';
+  } else if (type === 'Resources' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/resources?type=Resources';
+  } else if (type === 'Contact' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/contact?type=Contact';
+  } else if (type === 'Promo' && (!targetUrl || targetUrl === '/categories')) {
+    targetUrl = '/offers?type=Promo';
+  }
+
+  const rawSub = bannerData.subtitle || bannerData.description || '';
+  const cleanSub = rawSub.replace(/\[Type:\w+\]/gi, '').trim();
+  const taggedSub = `${cleanSub} [Type:${type}]`.trim();
+
+  const payload = {
+    id: cleanId,
+    title: bannerData.title || '',
+    subtitle: taggedSub,
+    description: taggedSub,
+    imageUrl: bannerData.imageUrl || '',
+    targetUrl: targetUrl,
+    bannerType: type,
+    isActive: bannerData.isActive !== undefined ? bannerData.isActive : true,
+    displayOrder: Number(bannerData.displayOrder || 0)
+  };
+  const response = await axios.put(`${getBaseUrl()}/${id}`, payload, { headers: getHeaders() });
+  apiCache.invalidate('banners');
+  return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+};
+
+/**
+ * PUT /api/Banners/{id}/toggle
+ * Toggle active status
+ */
+export const toggleBannerActive = async (id, currentActiveState) => {
+  try {
+    const response = await axios.put(`${getBaseUrl()}/${id}/toggle`, {}, { headers: getHeaders() });
+    if (response.status === 200) {
+      apiCache.invalidate('banners');
+      return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+    }
+  } catch (err) {
+    console.warn(`Toggle banner ${id} error:`, err.message);
+  }
+  return await updateBanner(id, { isActive: !currentActiveState });
+};
+
+/**
+ * POST /api/Banners/upload-image
+ * Upload banner image with automatic fallback
+ */
+export const uploadBannerImage = async (file) => {
+  const domain = getApiDomain() || '';
+  const bannerUploadUrl = domain ? `${domain.replace(/\/$/, '')}/api/Banners/upload-image` : '/api/Banners/upload-image';
+  const fallbackUploadUrl = domain ? `${domain.replace(/\/$/, '')}/api/Category/upload-image` : '/api/Category/upload-image';
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('image', file);
+  formData.append('imageFile', file);
+
+  try {
+    const response = await axios.post(bannerUploadUrl, formData, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    const url = response.data?.imageUrl || response.data?.url || response.data?.image || response.data?.path || '';
+    if (url) return url;
+  } catch (err) {
+    console.warn('Banner upload primary route error, attempting fallback route:', err?.message);
+  }
+
+  // Fallback to Category/upload-image which is verified active on backend
+  try {
+    const fallbackResponse = await axios.post(fallbackUploadUrl, formData, {
+      headers: {
+        'ngrok-skip-browser-warning': 'true',
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    const finalUrl = fallbackResponse.data?.imageUrl || fallbackResponse.data?.url || fallbackResponse.data?.image || fallbackResponse.data?.path || '';
+    if (finalUrl) return finalUrl;
+  } catch (fallbackErr) {
+    console.error('All banner upload routes failed:', fallbackErr);
+    throw fallbackErr;
+  }
+
+  throw new Error('Upload failed: Server did not return an image URL.');
+};
+
+/**
+ * DELETE /api/Banners/{id}
+ * Delete banner
+ */
+export const deleteBanner = async (id) => {
+  await axios.delete(`${getBaseUrl()}/${id}`, { headers: getHeaders() });
+  apiCache.invalidate('banners');
+  return true;
+};

@@ -1,0 +1,338 @@
+/* ============================================================
+   Footer Configuration — Professional UI
+   ============================================================ */
+
+.fc-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 8px 4px 48px;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ── Header ─────────────────────────────────────────── */
+.fc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #1268a5;
+  border-radius: 12px;
+  padding: 22px 26px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+.fc-header-text .fc-kicker {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #1268a5;
+  margin-bottom: 6px;
+}
+
+.fc-header-text h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.fc-header-text p {
+  margin: 5px 0 0;
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+/* ── Reload button ──────────────────────────────────── */
+.fc-reload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s, box-shadow 0.18s, transform 0.12s;
+}
+
+.fc-reload-btn:hover:not(:disabled) {
+  background: #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.fc-reload-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.fc-reload-btn svg.spinning {
+  animation: fc-spin 0.9s linear infinite;
+}
+
+@keyframes fc-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Alert ──────────────────────────────────────────── */
+.fc-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  animation: fc-fadeSlide 0.3s ease;
+}
+
+@keyframes fc-fadeSlide {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fc-alert.success { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+.fc-alert.error   { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+
+/* ── Loading bar ────────────────────────────────────── */
+.fc-loading-bar {
+  height: 3px;
+  width: 100%;
+  background: linear-gradient(90deg, #1268a5 30%, #64b5f6 60%, #1268a5 90%);
+  background-size: 200% 100%;
+  border-radius: 4px;
+  animation: fc-shimmer 1.4s linear infinite;
+}
+
+@keyframes fc-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Section card ───────────────────────────────────── */
+.fc-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 26px 30px 22px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.06);
+}
+
+/* section header row */
+.fc-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fc-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #eff6ff;
+  color: #1268a5;
+  flex-shrink: 0;
+}
+
+.fc-section-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.fc-section-sub {
+  font-size: 12.5px;
+  color: #94a3b8;
+  margin-left: auto;
+  font-weight: 500;
+}
+
+/* ── Grid ───────────────────────────────────────────── */
+.fc-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 22px;
+}
+
+.fc-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 18px 22px;
+}
+
+@media (max-width: 700px) {
+  .fc-grid-2,
+  .fc-grid-3 { grid-template-columns: 1fr; }
+  .fc-card   { padding: 18px 16px; }
+}
+
+/* ── Field ──────────────────────────────────────────── */
+.fc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.fc-field.fc-span-full {
+  grid-column: 1 / -1;
+}
+
+.fc-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fc-label svg {
+  color: #1268a5;
+  flex-shrink: 0;
+}
+
+/* ── Input wrapper ──────────────────────────────────── */
+.fc-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0 14px;
+  background: #f8fafc;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+}
+
+.fc-input-wrap:focus-within {
+  border-color: #1268a5;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(18, 104, 165, 0.10);
+}
+
+.fc-input-wrap svg {
+  color: #94a3b8;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+
+.fc-input-wrap:focus-within svg {
+  color: #1268a5;
+}
+
+.fc-input-wrap input,
+.fc-input-wrap textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13.5px;
+  color: #0f172a;
+  font-family: inherit;
+  padding: 10px 0;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.fc-input-wrap textarea {
+  resize: vertical;
+  min-height: 72px;
+  padding-top: 11px;
+  padding-bottom: 11px;
+}
+
+.fc-input-wrap input::placeholder,
+.fc-input-wrap textarea::placeholder {
+  color: #cbd5e1;
+}
+
+.fc-input-wrap.textarea-wrap {
+  align-items: flex-start;
+}
+
+.fc-input-wrap.textarea-wrap svg {
+  margin-top: 13px;
+}
+
+/* Social badge pill */
+.fc-social-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-left: auto;
+}
+
+.fc-social-badge.linkedin { background: #dbeafe; color: #1d4ed8; }
+.fc-social-badge.twitter  { background: #e0f2fe; color: #0369a1; }
+.fc-social-badge.facebook { background: #eff6ff; color: #1e40af; }
+
+/* ── Form footer ────────────────────────────────────── */
+.fc-form-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+}
+
+.fc-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 28px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1268a5 0%, #1a7fc4 100%);
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 3px 12px rgba(18, 104, 165, 0.30);
+  transition: box-shadow 0.2s, transform 0.15s, opacity 0.2s;
+  letter-spacing: 0.02em;
+}
+
+.fc-save-btn:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(18, 104, 165, 0.40);
+  transform: translateY(-1px);
+}
+
+.fc-save-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(18, 104, 165, 0.25);
+}
+
+.fc-save-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.fc-save-btn svg.saving-spin {
+  animation: fc-spin 0.9s linear infinite;
+}
