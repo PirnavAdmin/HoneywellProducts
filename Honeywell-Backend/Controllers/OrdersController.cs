@@ -162,7 +162,7 @@ namespace Honeywell.Controllers
                 }
             }
 
-            var ordersList = await query.OrderByDescending(o => o.OrderDate).ToListAsync();
+            var ordersList = await query.OrderByDescending(o => o.Id).ToListAsync();
             await PopulateItemImagesAsync(ordersList);
 
             // Format results for UI presentation

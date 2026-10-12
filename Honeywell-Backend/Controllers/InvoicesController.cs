@@ -49,7 +49,9 @@ namespace Honeywell.Controllers
                 );
             }
 
-            var ordersList = await query.OrderByDescending(o => o.OrderDate).ToListAsync();
+            var ordersList = await query
+                .OrderByDescending(o => o.Id)
+                .ToListAsync();
 
             // Format entries into Invoice models
             var formattedInvoices = ordersList.Select(o => {
@@ -195,11 +197,19 @@ namespace Honeywell.Controllers
                 ? invoiceNumClean.Replace("INV-", "ORD-") 
                 : $"ORD-{invoiceNumClean}";
 
+            DateTime orderDateToUse = DateTime.UtcNow;
+            if (request.Date.HasValue)
+            {
+                orderDateToUse = request.Date.Value.Date == DateTime.UtcNow.Date
+                    ? DateTime.UtcNow
+                    : request.Date.Value.Date.Add(DateTime.UtcNow.TimeOfDay);
+            }
+
             var order = new Order
             {
                 CustomerId = customer.Id,
                 OrderNumber = orderNumber,
-                OrderDate = request.Date ?? DateTime.UtcNow,
+                OrderDate = orderDateToUse,
                 TotalAmount = request.SubTotal,
                 FinalAmount = request.TotalAmount,
                 DiscountAmount = request.Discount,

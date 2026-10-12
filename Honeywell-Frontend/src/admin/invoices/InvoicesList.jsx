@@ -81,6 +81,7 @@ const InvoicesList = () => {
       const data = await getInvoices(search);
       const normalizedList = (data.invoices || []).map(inv => ({
         ...inv,
+        id: inv.id ?? inv.Id,
         invoiceId: normalizeInvoiceId(inv.invoiceId)
       }));
       setInvoices(normalizedList);
@@ -382,28 +383,39 @@ const InvoicesList = () => {
     }
   };
 
-  // Filtered invoices
+  // Filtered invoices (sorted so latest created shows at the top)
   const filteredInvoices = useMemo(() => {
-    return invoices.filter((item) => {
-      const searchLower = searchTerm.toLowerCase().trim();
-      const matchesSearch = !searchLower || (
-        (item.invoiceId || '').toLowerCase().includes(searchLower) ||
-        (item.client || '').toLowerCase().includes(searchLower) ||
-        (item.email || '').toLowerCase().includes(searchLower) ||
-        (item.billed || '').toLowerCase().includes(searchLower) ||
-        (item.status || '').toLowerCase().includes(searchLower)
-      );
+    return invoices
+      .filter((item) => {
+        const searchLower = searchTerm.toLowerCase().trim();
+        const matchesSearch = !searchLower || (
+          (item.invoiceId || '').toLowerCase().includes(searchLower) ||
+          (item.client || '').toLowerCase().includes(searchLower) ||
+          (item.email || '').toLowerCase().includes(searchLower) ||
+          (item.billed || '').toLowerCase().includes(searchLower) ||
+          (item.status || '').toLowerCase().includes(searchLower)
+        );
 
-      const matchesStatus = statusFilter === 'All'
-        ? true
-        : statusFilter === 'Paid'
-          ? (item.status || '').toLowerCase() === 'paid'
-          : statusFilter === 'Unpaid'
-            ? (item.status || '').toLowerCase() === 'unpaid'
-            : (item.status || '').toLowerCase() === 'cancelled';
+        const matchesStatus = statusFilter === 'All'
+          ? true
+          : statusFilter === 'Paid'
+            ? (item.status || '').toLowerCase() === 'paid'
+            : statusFilter === 'Unpaid'
+              ? (item.status || '').toLowerCase() === 'unpaid'
+              : (item.status || '').toLowerCase() === 'cancelled';
 
-      return matchesSearch && matchesStatus;
-    });
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        const idA = Number(a.id ?? a.Id ?? 0);
+        const idB = Number(b.id ?? b.Id ?? 0);
+        if (idA && idB && idA !== idB) {
+          return idB - idA;
+        }
+        const timeA = new Date(a.date || a.Date || 0).getTime();
+        const timeB = new Date(b.date || b.Date || 0).getTime();
+        return timeB - timeA;
+      });
   }, [invoices, searchTerm, statusFilter]);
 
   const hasActiveFilters = searchTerm !== '' || statusFilter !== 'All';

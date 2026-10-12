@@ -23,8 +23,8 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 /* Page Header & Stats Dashboard */
@@ -278,16 +278,18 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 99999;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  padding: 60px 20px;
-  overflow-y: auto;
-  animation: fadeInBackdrop 0.2s ease-out;
+  justify-content: center;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  animation: fadeInBackdrop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes fadeInBackdrop {
@@ -295,68 +297,83 @@
   to { opacity: 1; }
 }
 
-/* Centered Modal Panel */
+/* Centered Modal Panel - Compact & Professional */
 .orders-modal-content {
-  background: var(--bg-card);
+  background: #ffffff;
   width: 100%;
-  max-width: 1000px;
-  flex-shrink: 0;
-  height: auto;
-  max-height: 100%;
-  border-radius: 12px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  max-width: 680px;
+  max-height: 86vh;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.04);
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: modalScaleIn 0.2s ease-out;
+  position: relative;
+  z-index: 100000;
+  margin: auto;
+  animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes modalScaleIn {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from { transform: scale(0.96) translateY(6px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
 }
 
 .orders-modal-header {
-  padding: 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #f8fafc;
+  background: #ffffff;
   flex-shrink: 0;
 }
 
 .orders-modal-header h2 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 800;
+  font-size: 17px;
+  font-weight: 700;
   color: var(--text-main);
+  letter-spacing: -0.01em;
 }
 
 .orders-modal-close-btn {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-muted);
-  transition: all 0.2s ease;
+  color: #64748b;
+  transition: all 0.15s ease;
 }
 
 .orders-modal-close-btn:hover {
   background: #f1f5f9;
-  color: var(--text-main);
-  transform: rotate(90deg);
+  color: #0f172a;
+  border-color: #cbd5e1;
+  transform: none;
 }
 
 .orders-modal-body {
-  padding: 24px;
+  padding: 16px 20px 20px;
   flex: 1;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.orders-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.orders-modal-body::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
 }
 
 /* Detail Section Grid */
@@ -364,25 +381,30 @@
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 20px;
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+
+.detail-section-card:last-child {
+  margin-bottom: 0;
 }
 
 .detail-section-card h3 {
-  margin: 0 0 14px 0;
-  font-size: 14px;
+  margin: 0 0 10px 0;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   color: #475569;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .detail-info-row {
   display: flex;
   justify-content: space-between;
-  padding: 8px 0;
+  align-items: center;
+  padding: 6px 0;
   font-size: 13px;
   border-bottom: 1px solid #f8fafc;
 }
@@ -394,6 +416,7 @@
 .detail-info-label {
   color: var(--text-muted);
   font-weight: 500;
+  font-size: 12px;
 }
 
 .detail-info-value {
@@ -402,21 +425,23 @@
   text-align: right;
   max-width: 60%;
   word-break: break-word;
+  font-size: 13px;
 }
 
 /* Timeline component */
 .modern-timeline {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
   position: relative;
-  padding-left: 24px;
+  padding-left: 20px;
+  margin-top: 4px;
 }
 
 .modern-timeline::before {
   content: '';
   position: absolute;
-  left: 7px;
+  left: 5px;
   top: 4px;
   bottom: 4px;
   width: 2px;
@@ -429,10 +454,10 @@
 
 .timeline-dot {
   position: absolute;
-  left: -21px;
-  top: 4px;
-  width: 12px;
-  height: 12px;
+  left: -19px;
+  top: 3px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: #cbd5e1;
   border: 2px solid #ffffff;
@@ -441,22 +466,22 @@
 
 .timeline-event.completed .timeline-dot {
   background: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .timeline-event.active .timeline-dot {
   background: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 .timeline-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
 }
 
 .timeline-title {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-main);
 }
@@ -471,7 +496,7 @@
   color: #475569;
   margin-top: 4px;
   background: #f8fafc;
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 6px;
 }
 
@@ -735,4 +760,43 @@
   cursor: not-allowed;
   filter: grayscale(100%);
 }
+
+/* Modal Helper Styles */
+.orders-modal-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 640px) {
+  .orders-modal-grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .orders-modal-backdrop {
+    padding: 10px;
+  }
+  .orders-modal-content {
+    max-height: 94vh;
+    border-radius: 12px;
+  }
+  .orders-modal-header {
+    padding: 12px 16px;
+  }
+  .orders-modal-body {
+    padding: 14px 16px;
+  }
+}
+
+.orders-modal-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  border: 1px solid #e2e8f0;
+}
+
 

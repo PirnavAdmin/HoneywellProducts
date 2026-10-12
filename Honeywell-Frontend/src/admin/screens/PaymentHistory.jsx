@@ -649,8 +649,55 @@ const PaymentHistory = () => {
       }
     });
     
+    // Sort descending so latest orders always display at the top
+    list.sort((a, b) => {
+      const numA = parseInt(String(a.realOrderId || a.orderId || '').replace(/\D/g, ''), 10) || 0;
+      const numB = parseInt(String(b.realOrderId || b.orderId || '').replace(/\D/g, ''), 10) || 0;
+      if (numB !== numA) return numB - numA;
+
+      const vA = Number(a.verificationRecordId) || 0;
+      const vB = Number(b.verificationRecordId) || 0;
+      if (vB !== vA) return vB - vA;
+
+      const dateA = new Date(a.paymentDate || 0).getTime() || 0;
+      const dateB = new Date(b.paymentDate || 0).getTime() || 0;
+      return dateB - dateA;
+    });
+
     return list;
   }, [manualVerifications, orders]);
+
+  // Metrics summary
+  const metrics = useMemo(() => {
+    const safeList = combinedPayments || [];
+    let pending = 0;
+    let verified = 0;
+    let rejected = 0;
+    let verifiedTotal = 0;
+
+    safeList.forEach(p => {
+      const status = (p.paymentStatus || '').toLowerCase();
+      const isPending = status.includes('pending') || status === 'unverified' || status === 'processing';
+      const isVerified = !isPending && (status.includes('paid') || status.includes('verif') || status.includes('success') || status.includes('approved'));
+      const isRejected = status.includes('reject') || status.includes('cancel') || status.includes('fail');
+
+      if (isPending) pending++;
+      else if (isVerified) {
+        verified++;
+        verifiedTotal += (Number(p.totalAmount || p.amountPaid) || 0);
+      } else if (isRejected) {
+        rejected++;
+      }
+    });
+
+    return {
+      total: safeList.length,
+      pending,
+      verified,
+      rejected,
+      verifiedTotal
+    };
+  }, [combinedPayments]);
 
   // Filtered Payments List
   const filteredPayments = useMemo(() => {
@@ -663,13 +710,17 @@ const PaymentHistory = () => {
         String(p.utr || '').toLowerCase().includes(search);
       
       let matchesFilter = true;
-      const status = p.paymentStatus;
+      const status = (p.paymentStatus || '').toLowerCase();
+      const isPending = status.includes('pending') || status === 'unverified' || status === 'processing';
+      const isVerified = !isPending && (status.includes('paid') || status.includes('verif') || status.includes('success') || status.includes('approved'));
+      const isRejected = status.includes('reject') || status.includes('cancel') || status.includes('fail');
+
       if (statusFilter === 'Pending') {
-        matchesFilter = status === 'Pending Verification' || status === 'Pending' || status === 'PendingVerification' || status === 'Processing';
+        matchesFilter = isPending;
       } else if (statusFilter === 'Verified') {
-        matchesFilter = status === 'Paid' || status === 'Verified' || status === 'Approved';
+        matchesFilter = isVerified;
       } else if (statusFilter === 'Rejected') {
-        matchesFilter = status === 'Rejected' || status === 'Cancelled';
+        matchesFilter = isRejected;
       }
       
       return matchesSearch && matchesFilter;
@@ -678,52 +729,99 @@ const PaymentHistory = () => {
 
   return (
     <div className="payment-history-container">
-      {/* Top Settings Area */}
+      {/* Top Header Area */}
       <div className="payment-header">
         <div className="payment-header-left">
-          <h1 className="payment-title">Payments & Verification Settings</h1>
-          <p className="payment-subtitle">
-            Configure manual checkout credentials, track customer UTR submissions, and manage transaction matching.
-          </p>
-          
-          <div className="alerts-status-row">
-            <button 
-              type="button" 
-              onClick={() => handleToggleNotifications({ target: { checked: !notificationsEnabled } })}
-              title={notificationsEnabled ? "Disable Payment Notifications" : "Enable Payment Notifications"}
-              className={`alerts-pill ${notificationsEnabled ? 'active' : ''}`}
-            >
-              <span className="alerts-dot" />
-              <span className="alerts-text">Alerts: {notificationsEnabled ? 'ON' : 'OFF'}</span>
-            </button>
-            <span className="alerts-description">
-              {notificationsEnabled ? 'Will notify on incoming farmer payments.' : 'Notifications muted.'}
+          <div className="payment-header-badge-row">
+            <span className="payment-module-badge">Admin Settings</span>
+            <span className="payment-live-indicator">
+              <span className="live-pulse-dot" />
+              Live Gateway Sync
             </span>
           </div>
+          <h1 className="payment-title">Payment Settings & Verification</h1>
+          <p className="payment-subtitle">
+            Configure checkout credentials, verify customer UTR submissions, and monitor real-time transaction settlements.
+          </p>
         </div>
         
         <div className="payment-header-right">
-          <label className="module-label">Module:</label>
-          <div className="module-select-wrap">
-            <select 
-              className="module-select"
-              value={activeTab} 
-              onChange={(e) => {
-                setActiveTab(e.target.value);
-                setSaveStatus({ type: '', message: '' });
-              }}
-            >
-              <option value="payments-list">Payments Ledger & Verification</option>
-              <option value="qr-code">QR Code Configurations</option>
-              <option value="bank-details">Bank Transfer Details</option>
-              <option value="upi-id">UPI ID Configuration</option>
-            </select>
-            <ChevronDown size={14} className="module-select-arrow" />
-          </div>
+          <button 
+            type="button" 
+            onClick={() => handleToggleNotifications({ target: { checked: !notificationsEnabled } })}
+            title={notificationsEnabled ? "Click to mute payment notifications" : "Click to enable payment notifications"}
+            className={`alerts-toggle-btn ${notificationsEnabled ? 'active' : ''}`}
+          >
+            {notificationsEnabled ? <Bell size={15} /> : <BellOff size={15} />}
+            <span>Alerts: {notificationsEnabled ? 'ON' : 'OFF'}</span>
+          </button>
+
+          <button 
+            type="button" 
+            onClick={() => loadOrdersList()} 
+            disabled={loadingOrders}
+            className="refresh-btn"
+            title="Refresh payments data"
+          >
+            <RefreshCw size={14} className={loadingOrders ? "animate-spin" : ""} />
+            <span>Refresh</span>
+          </button>
         </div>
       </div>
 
-      <div className="payment-divider" />
+      {/* Modern Horizontal Navigation Tabs */}
+      <div className="payment-nav-tabs">
+        <button
+          type="button"
+          className={`nav-tab-btn ${activeTab === 'payments-list' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('payments-list');
+            setSaveStatus({ type: '', message: '' });
+          }}
+        >
+          <CreditCard size={16} />
+          <span>Payments Ledger</span>
+          {metrics.pending > 0 && (
+            <span className="tab-badge-pending">{metrics.pending}</span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          className={`nav-tab-btn ${activeTab === 'qr-code' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('qr-code');
+            setSaveStatus({ type: '', message: '' });
+          }}
+        >
+          <Upload size={16} />
+          <span>QR Code Setup</span>
+        </button>
+
+        <button
+          type="button"
+          className={`nav-tab-btn ${activeTab === 'bank-details' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('bank-details');
+            setSaveStatus({ type: '', message: '' });
+          }}
+        >
+          <Activity size={16} />
+          <span>Bank Transfer Details</span>
+        </button>
+
+        <button
+          type="button"
+          className={`nav-tab-btn ${activeTab === 'upi-id' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('upi-id');
+            setSaveStatus({ type: '', message: '' });
+          }}
+        >
+          <ArrowUpRight size={16} />
+          <span>UPI ID Settings</span>
+        </button>
+      </div>
 
       {saveStatus.message && (
         <Toast 
@@ -733,80 +831,131 @@ const PaymentHistory = () => {
         />
       )}
 
-      <div className="mt-4">
+      <div className="tab-content-container">
         {/* Module 1: Payments List */}
         {activeTab === 'payments-list' && (
-          <div>
-            <div className="ledger-header">
-              <h2 className="ledger-title">Transaction Ledger</h2>
-              <p className="ledger-subtitle">Verify submitted customer reference details against bank credits to process orders.</p>
+          <div className="ledger-tab-wrapper">
+            {/* KPI Metric Cards */}
+            <div className="payment-kpi-grid">
+              <div className="kpi-card kpi-total">
+                <div className="kpi-icon-wrap total">
+                  <CreditCard size={18} />
+                </div>
+                <div className="kpi-content">
+                  <span className="kpi-label">Total Transactions</span>
+                  <span className="kpi-value">{metrics.total}</span>
+                </div>
+              </div>
+
+              <div className="kpi-card kpi-pending">
+                <div className="kpi-icon-wrap pending">
+                  <Clock size={18} />
+                </div>
+                <div className="kpi-content">
+                  <span className="kpi-label">Pending Verification</span>
+                  <span className="kpi-value">{metrics.pending}</span>
+                </div>
+              </div>
+
+              <div className="kpi-card kpi-verified">
+                <div className="kpi-icon-wrap verified">
+                  <CheckCircle size={18} />
+                </div>
+                <div className="kpi-content">
+                  <span className="kpi-label">Verified & Settled</span>
+                  <span className="kpi-value">{metrics.verified}</span>
+                  <span className="kpi-subtext">₹{metrics.verifiedTotal.toLocaleString('en-IN')}</span>
+                </div>
+              </div>
+
+              <div className="kpi-card kpi-rejected">
+                <div className="kpi-icon-wrap rejected">
+                  <X size={18} />
+                </div>
+                <div className="kpi-content">
+                  <span className="kpi-label">Rejected / Cancelled</span>
+                  <span className="kpi-value">{metrics.rejected}</span>
+                </div>
+              </div>
             </div>
 
-            <div className="search-filter-row">
+            {/* Filter & Search Bar */}
+            <div className="search-filter-card">
               <div className="search-box">
-                <Search size={14} className="search-icon" />
+                <Search size={15} className="search-icon" />
                 <input 
                   type="text" 
                   className="search-input"
-                  placeholder="Search by Order ID, Customer, or UTR..."
+                  placeholder="Search by Order ID, Customer Name, or UTR..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
+                {searchTerm && (
+                  <button 
+                    type="button" 
+                    className="clear-search-btn"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    <X size={13} />
+                  </button>
+                )}
               </div>
 
               <div className="filter-segmented-control">
-                {['All', 'Pending', 'Verified', 'Rejected'].map(filter => (
+                {[
+                  { key: 'All', label: 'All Payments', count: metrics.total },
+                  { key: 'Pending', label: 'Pending Match', count: metrics.pending },
+                  { key: 'Verified', label: 'Verified', count: metrics.verified },
+                  { key: 'Rejected', label: 'Rejected', count: metrics.rejected }
+                ].map(filter => (
                   <button 
-                    key={filter}
+                    key={filter.key}
                     type="button"
-                    className={`segmented-filter-btn ${statusFilter === filter ? 'active' : ''}`}
-                    onClick={() => setStatusFilter(filter)}
+                    className={`segmented-filter-btn ${statusFilter === filter.key ? 'active' : ''}`}
+                    onClick={() => setStatusFilter(filter.key)}
                   >
-                    {filter === 'Pending' ? 'Processing / Pending' : filter}
+                    <span>{filter.label}</span>
+                    <span className="filter-pill-badge">{filter.count}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="accent-progress-line">
-              <div className="accent-progress-active" />
-            </div>
-
             {loadingOrders ? (
               <div className="empty-payments-state">
-                <RefreshCw className="animate-spin" size={24} />
-                <p>Loading transactions ledger...</p>
+                <RefreshCw className="animate-spin text-primary" size={28} />
+                <p className="loading-text">Loading transaction records...</p>
               </div>
             ) : filteredPayments.length === 0 ? (
               <div className="empty-payments-state">
-                <CreditCard size={40} />
-                <h3>No Manual Payments Found</h3>
-                <p>No orders matched your search or selected filter options.</p>
+                <div className="empty-icon-wrap">
+                  <CreditCard size={32} />
+                </div>
+                <h3>No Transactions Found</h3>
+                <p>No orders or verification submissions matched your current filter criteria.</p>
+                {searchTerm && (
+                  <button 
+                    type="button" 
+                    className="reset-search-btn"
+                    onClick={() => { setSearchTerm(''); setStatusFilter('All'); }}
+                  >
+                    Reset Filters
+                  </button>
+                )}
               </div>
             ) : (
               <div className="ledger-table-card">
-                <div 
-                  ref={topScrollRef} 
-                  className="top-scrollbar-bar" 
-                  onScroll={handleTopScroll}
-                >
-                  <div className="top-scrollbar-dummy" />
-                </div>
-                <div 
-                  ref={tableScrollRef} 
-                  className="bottom-table-scroll" 
-                  onScroll={handleTableScroll}
-                >
+                <div className="table-responsive-wrapper">
                   <table className="payments-table">
                     <thead>
                       <tr>
                         <th>ORDER ID</th>
                         <th>CUSTOMER DETAILS</th>
-                        <th>UTR / REF ID</th>
-                        <th>ORDER DATE</th>
-                        <th>AMOUNT DUE</th>
-                        <th>VERIFICATION</th>
-                        <th>ACTIONS</th>
+                        <th>UTR / TRANSACTION REF</th>
+                        <th>PAYMENT DATE</th>
+                        <th>AMOUNT</th>
+                        <th>VERIFICATION STATUS</th>
+                        <th style={{ textAlign: 'right' }}>ACTIONS</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -818,7 +967,7 @@ const PaymentHistory = () => {
                         const isUnknown = !isPending && !isVerified && !isRejected;
                         
                         return (
-                          <tr key={payment.verificationRecordId ? `mv-${payment.verificationRecordId}` : `ord-${payment.orderId}-${payment.utr}`}>
+                          <tr key={payment.verificationRecordId ? `mv-${payment.verificationRecordId}` : `ord-${payment.orderId}-${payment.utr}`} className={isPending ? 'row-pending' : ''}>
                             <td>
                               <Link to={`/admin/orders/details/${payment.realOrderId}`} className="order-id-link">
                                 #{payment.orderId}
@@ -833,7 +982,9 @@ const PaymentHistory = () => {
                             <td>
                               <div className="utr-cell">
                                 <div className="utr-badge-container">
-                                  <span className="utr-text">{payment.utr || 'NOT PROVIDED'}</span>
+                                  <span className={`utr-text ${!payment.utr ? 'missing' : ''}`}>
+                                    {payment.utr || 'NOT PROVIDED'}
+                                  </span>
                                   {payment.utr && (
                                     <button
                                       type="button"
@@ -854,15 +1005,11 @@ const PaymentHistory = () => {
                                   >
                                     <Eye size={12} /> View Payment Slip
                                   </a>
-                                ) : (
-                                  <a 
-                                    href="#" 
-                                    onClick={(e) => { e.preventDefault(); handleCopyText(payment.utr); }}
-                                    className="view-slip-link"
-                                  >
-                                    <Eye size={12} /> View Payment Slip
-                                  </a>
-                                )}
+                                ) : payment.utr ? (
+                                  <span className="view-slip-link-muted">
+                                    Manual UTR Entry
+                                  </span>
+                                ) : null}
                               </div>
                             </td>
                             <td>
@@ -874,7 +1021,7 @@ const PaymentHistory = () => {
                             <td>
                               <div className="amount-cell">
                                 <span className="amount-main">₹{(payment.totalAmount || 0).toLocaleString('en-IN')}</span>
-                                {payment.amountPaid !== undefined && payment.amountPaid !== null && payment.amountPaid !== payment.totalAmount && (
+                                {payment.amountPaid !== undefined && payment.amountPaid !== null && Number(payment.amountPaid) !== Number(payment.totalAmount) && (
                                   <span className="amount-paid-sub">
                                     Paid: ₹{Number(payment.amountPaid || 0).toLocaleString('en-IN')}
                                   </span>
@@ -904,38 +1051,46 @@ const PaymentHistory = () => {
                               )}
                             </td>
                             <td>
-                                <div className="actions-cell" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  {isPending ? (
-                                    <div className="action-buttons-group">
-                                      <button 
-                                        className="action-btn verify-btn"
-                                        title="Approve this payment"
-                                        onClick={() => {
-                                          handleVerifyPayment(payment.orderId, payment.totalAmount || payment.amountPaid || 0, payment.realOrderId, payment.verificationRecordId);
-                                        }}
-                                      >
-                                        <Check size={12} /> Verify Success
-                                      </button>
-                                    </div>
-                                  ) : isRejected ? (
-                                    <span className="action-text-rejected">Rejected</span>
-                                  ) : isVerified ? (
-                                    <span className="action-text-completed">Completed</span>
-                                  ) : (
-                                    <span className="action-text-muted">-</span>
-                                  )}
-                                  {payment.verificationRecordId && (
-                                    <button
-                                      type="button"
-                                      className="action-btn delete-btn"
-                                      title="Delete manual verification record"
-                                      style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fca5a5', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center' }}
-                                      onClick={() => handleDeleteVerification(payment.verificationRecordId, payment.orderId)}
+                              <div className="actions-cell">
+                                {isPending ? (
+                                  <div className="action-buttons-group">
+                                    <button 
+                                      className="action-btn verify-btn"
+                                      title="Approve & verify this payment"
+                                      onClick={() => {
+                                        handleVerifyPayment(payment.orderId, payment.totalAmount || payment.amountPaid || 0, payment.realOrderId, payment.verificationRecordId);
+                                      }}
                                     >
-                                      <Trash2 size={12} />
+                                      <Check size={12} /> Verify
                                     </button>
-                                  )}
-                                </div>
+                                    <button
+                                      className="action-btn reject-btn"
+                                      title="Reject payment"
+                                      onClick={() => {
+                                        handleRejectPayment(payment.orderId, payment.realOrderId, payment.verificationRecordId);
+                                      }}
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                ) : isRejected ? (
+                                  <span className="action-text-rejected">Rejected</span>
+                                ) : isVerified ? (
+                                  <span className="action-text-completed">Completed</span>
+                                ) : (
+                                  <span className="action-text-muted">-</span>
+                                )}
+                                {payment.verificationRecordId && (
+                                  <button
+                                    type="button"
+                                    className="action-btn delete-btn"
+                                    title="Delete manual verification record"
+                                    onClick={() => handleDeleteVerification(payment.verificationRecordId, payment.orderId)}
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

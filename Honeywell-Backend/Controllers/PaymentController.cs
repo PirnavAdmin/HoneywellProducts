@@ -782,7 +782,7 @@ namespace Honeywell.Controllers
                 query = query.Where(v => v.VerificationStatus == filterStatus);
             }
 
-            var verifications = await query.OrderByDescending(v => v.SubmittedAt).ToListAsync();
+            var verifications = await query.OrderByDescending(v => v.Id).ToListAsync();
             return Ok(verifications);
         }
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import {
   Search,
@@ -1208,27 +1209,32 @@ const OrdersLedger = () => {
       </div>
 
       {/* DETAILED ORDER POPUP MODAL SCREEN */}
-      {selectedOrder && (
+      {selectedOrder && createPortal(
         <div className="orders-modal-backdrop" onClick={() => setSelectedOrder(null)}>
           <div className="orders-modal-content" onClick={(e) => e.stopPropagation()}>
             {/* Modal Header */}
             <div className="orders-modal-header">
               <div>
                 <h2>Order Details</h2>
-                <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 500 }}>
-                  Order #{selectedOrder.id} • Invoice {selectedOrder.invoiceNo}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#1e293b' }}>
+                    Order #{selectedOrder.id}
+                  </span>
+                  <span style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>
+                    {selectedOrder.invoiceNo}
+                  </span>
+                </div>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                 <button
                   onClick={() => printInvoice(selectedOrder)}
                   className="catalog-btn catalog-btn--primary"
-                  style={{ padding: '6px 12px', fontSize: '12px', background: '#4f46e5', display: 'flex', alignItems: 'center', gap: '6px', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer' }}
+                  style={{ padding: '6px 12px', fontSize: '12px', background: '#4f46e5', display: 'flex', alignItems: 'center', gap: '6px', border: 'none', color: '#fff', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}
                 >
                   <Printer size={14} /> Print Invoice
                 </button>
-                <button className="orders-modal-close-btn" onClick={() => setSelectedOrder(null)}>
-                  <X size={18} />
+                <button className="orders-modal-close-btn" onClick={() => setSelectedOrder(null)} title="Close">
+                  <X size={16} />
                 </button>
               </div>
             </div>
@@ -1237,42 +1243,42 @@ const OrdersLedger = () => {
             <div className="orders-modal-body">
               
               {/* Order Status Summary */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #e2e8f0' }}>
+              <div className="orders-modal-status-bar">
                 <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, display: 'block' }}>Fulfillment Status</span>
-                  <div style={{ marginTop: '4px' }}>
+                  <span style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block', letterSpacing: '0.04em' }}>Fulfillment Status</span>
+                  <div style={{ marginTop: '3px' }}>
                     <OrderStatusBadge status={selectedOrder.status} />
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 600, display: 'block' }}>Date Placed</span>
-                  <strong style={{ fontSize: '14px', color: '#0f172a', display: 'block', marginTop: '4px' }}>{formatDateToDMY(selectedOrder.date)}</strong>
+                  <span style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block', letterSpacing: '0.04em' }}>Date Placed</span>
+                  <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block', marginTop: '2px' }}>{formatDateToDMY(selectedOrder.date)}</strong>
                 </div>
               </div>
 
               {/* Items Card */}
               <div className="detail-section-card">
-                <h3>Purchased Items</h3>
+                <h3>Purchased Items ({selectedOrder.items.length})</h3>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                     <thead>
-                      <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#475569', fontWeight: 700 }}>
-                        <th style={{ padding: '8px 0', textAlign: 'left' }}>Item Details</th>
-                        <th style={{ padding: '8px 8px', textAlign: 'center' }}>Qty</th>
-                        <th style={{ padding: '8px 8px', textAlign: 'right' }}>Unit Price</th>
-                        <th style={{ padding: '8px 0', textAlign: 'right' }}>Total</th>
+                      <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', fontSize: '10px', letterSpacing: '0.04em' }}>
+                        <th style={{ padding: '6px 0', textAlign: 'left' }}>Item</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'center' }}>Qty</th>
+                        <th style={{ padding: '6px 8px', textAlign: 'right' }}>Unit Price</th>
+                        <th style={{ padding: '6px 0', textAlign: 'right' }}>Total</th>
                       </tr>
                     </thead>
                     <tbody>
                       {selectedOrder.items.map((item, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                          <td style={{ padding: '10px 0' }}>
-                            <div style={{ fontWeight: 600 }}>{item.name}</div>
-                            <div style={{ fontSize: '11px', color: '#64748b' }}>{item.sku} • {item.category}</div>
+                        <tr key={idx} style={{ borderBottom: '1px solid #f8fafc' }}>
+                          <td style={{ padding: '8px 0' }}>
+                            <div style={{ fontWeight: 600, color: '#0f172a' }}>{item.name}</div>
+                            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '1px' }}>{item.sku} {item.category ? `• ${item.category}` : ''}</div>
                           </td>
-                          <td style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 600 }}>{item.qty}</td>
-                          <td style={{ padding: '10px 8px', textAlign: 'right' }}>{formatCurrency(item.price)}</td>
-                          <td style={{ padding: '10px 0', textAlign: 'right', fontWeight: 700 }}>{formatCurrency(item.price * item.qty)}</td>
+                          <td style={{ padding: '8px 8px', textAlign: 'center', fontWeight: 600, color: '#334155' }}>{item.qty}</td>
+                          <td style={{ padding: '8px 8px', textAlign: 'right', color: '#475569' }}>{formatCurrency(item.price)}</td>
+                          <td style={{ padding: '8px 0', textAlign: 'right', fontWeight: 700, color: '#0f172a' }}>{formatCurrency(item.price * item.qty)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1281,64 +1287,64 @@ const OrdersLedger = () => {
               </div>
 
               {/* Two Column Layout for Customer & Operations */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+              <div className="orders-modal-grid-2">
                 
                 {/* Customer Info Card */}
                 <div className="detail-section-card" style={{ marginBottom: 0 }}>
-                  <h3>Customer Profiles</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <User size={15} style={{ color: '#10b981', marginTop: '2px' }} />
+                  <h3>Customer Details</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <User size={14} style={{ color: '#10b981', flexShrink: 0 }} />
                       <div>
-                        <strong style={{ fontSize: '13px', display: 'block' }}>{selectedOrder.customer}</strong>
-                        <span style={{ fontSize: '11px', color: '#64748b' }}>{selectedOrder.customerType}</span>
+                        <strong style={{ fontSize: '12px', display: 'block', color: '#0f172a' }}>{selectedOrder.customer}</strong>
+                        <span style={{ fontSize: '10px', color: '#64748b' }}>{selectedOrder.customerType}</span>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', gap: '8px', fontSize: '12px' }}>
-                      <Phone size={14} style={{ color: '#64748b' }} />
-                      <span>{selectedOrder.phone}</span>
+                    <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: '#334155', alignItems: 'center' }}>
+                      <Phone size={13} style={{ color: '#64748b', flexShrink: 0 }} />
+                      <span>{selectedOrder.phone || '—'}</span>
                     </div>
                     {selectedOrder.email && (
-                      <div style={{ display: 'flex', gap: '8px', fontSize: '12px' }}>
-                        <Mail size={14} style={{ color: '#64748b' }} />
+                      <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: '#334155', alignItems: 'center' }}>
+                        <Mail size={13} style={{ color: '#64748b', flexShrink: 0 }} />
                         <span style={{ wordBreak: 'break-all' }}>{selectedOrder.email}</span>
                       </div>
                     )}
-                    <div style={{ display: 'flex', gap: '8px', fontSize: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '8px' }}>
-                      <MapPin size={14} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
-                      <span style={{ color: '#475569' }}>{selectedOrder.shippingAddress || 'No Address Provided'}</span>
+                    <div style={{ display: 'flex', gap: '8px', fontSize: '11px', borderTop: '1px solid #f1f5f9', paddingTop: '6px' }}>
+                      <MapPin size={13} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
+                      <span style={{ color: '#475569', lineHeight: 1.4 }}>{selectedOrder.shippingAddress || 'No Address Provided'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Operations & Shipping Info Card */}
                 <div className="detail-section-card" style={{ marginBottom: 0 }}>
-                  <h3>Logistics & Fulfillment</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <h3>Shipping & Logistics</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="detail-info-row" style={{ padding: 0, borderBottom: 'none' }}>
                       <span className="detail-info-label">Carrier:</span>
                       <strong className="detail-info-value">{selectedOrder.logistics || 'Self Pickup'}</strong>
                     </div>
                     <div className="detail-info-row" style={{ padding: 0, borderBottom: 'none' }}>
                       <span className="detail-info-label">Tracking No:</span>
-                      <strong className="detail-info-value" style={{ fontFamily: 'monospace' }}>{selectedOrder.trackingNo || '—'}</strong>
+                      <strong className="detail-info-value" style={{ fontFamily: 'monospace', fontSize: '11px' }}>{selectedOrder.trackingNo || '—'}</strong>
                     </div>
 
                     {/* Packer details */}
                     {selectedOrder.isPacked && (
-                      <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '8px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase' }}>Packer Details</span>
-                        <div className="tracking-user-profile" style={{ padding: '6px', background: '#f0fdf4', margin: '4px 0 0 0' }}>
+                      <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Packer</span>
+                        <div className="tracking-user-profile" style={{ padding: '4px 8px', background: '#f0fdf4', margin: '3px 0 0 0' }}>
                           {selectedOrder.packerImage ? (
-                            <img className="tracking-user-avatar" src={selectedOrder.packerImage} alt={selectedOrder.packerName} style={{ width: '28px', height: '28px' }} />
+                            <img className="tracking-user-avatar" src={selectedOrder.packerImage} alt={selectedOrder.packerName} style={{ width: '24px', height: '24px' }} />
                           ) : (
-                            <div className="tracking-user-avatar" style={{ width: '28px', height: '28px', background: '#cbd5e1', display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: '10px', fontWeight: 700 }}>
+                            <div className="tracking-user-avatar" style={{ width: '24px', height: '24px', background: '#cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: 700 }}>
                               {selectedOrder.packerName?.slice(0, 2).toUpperCase()}
                             </div>
                           )}
                           <div className="tracking-user-details">
                             <strong style={{ fontSize: '11px' }}>{selectedOrder.packerName}</strong>
-                            <span style={{ fontSize: '9px' }}>Packed {selectedOrder.packedDate || 'TBD'}</span>
+                            <span style={{ fontSize: '9px' }}>{selectedOrder.packedDate || 'Packed'}</span>
                           </div>
                         </div>
                       </div>
@@ -1346,17 +1352,14 @@ const OrdersLedger = () => {
 
                     {/* Shipper details */}
                     {selectedOrder.isShipped && (
-                      <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '8px' }}>
-                        <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase' }}>Shipper Details</span>
-                        <div className="tracking-user-profile" style={{ padding: '6px', background: '#e0e7ff', margin: '4px 0 0 0' }}>
+                      <div style={{ borderTop: '1px dashed #cbd5e1', paddingTop: '6px' }}>
+                        <span style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, display: 'block', textTransform: 'uppercase' }}>Shipper</span>
+                        <div className="tracking-user-profile" style={{ padding: '4px 8px', background: '#e0e7ff', margin: '3px 0 0 0' }}>
                           <div className="tracking-user-details" style={{ width: '100%' }}>
                             <strong style={{ fontSize: '11px', display: 'flex', justifyContent: 'space-between' }}>
                               <span>{selectedOrder.shipperName}</span>
-                              <span style={{ fontSize: '9px', color: '#4f46e5' }}>Shipped {selectedOrder.shippedDate}</span>
+                              <span style={{ fontSize: '9px', color: '#4f46e5' }}>{selectedOrder.shippedDate}</span>
                             </strong>
-                            {selectedOrder.packageImage && (
-                              <img className="tracking-package-img" src={selectedOrder.packageImage} alt="Package" style={{ maxWidth: '80px', marginTop: '4px', maxHeight: '50px' }} />
-                            )}
                           </div>
                         </div>
                       </div>
@@ -1375,8 +1378,8 @@ const OrdersLedger = () => {
                 </div>
                 {selectedOrder.utr && (
                   <div className="detail-info-row">
-                    <span className="detail-info-label">UTR/Reference Code:</span>
-                    <span className="detail-info-value" style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px' }}>
+                    <span className="detail-info-label">UTR / Ref:</span>
+                    <span className="detail-info-value" style={{ fontFamily: 'monospace', background: '#f1f5f9', padding: '1px 5px', borderRadius: '4px', fontSize: '11px' }}>
                       {selectedOrder.utr}
                     </span>
                   </div>
@@ -1403,16 +1406,16 @@ const OrdersLedger = () => {
                     <span className="detail-info-value" style={{ color: '#ef4444' }}>-{formatCurrency(selectedOrder.discountAmount)}</span>
                   </div>
                 )}
-                <div className="detail-info-row">
-                  <span className="detail-info-label">Total Amount:</span>
-                  <span className="detail-info-value" style={{ color: '#059669', fontWeight: 700 }}>{formatCurrency(selectedOrder.total)}</span>
+                <div className="detail-info-row" style={{ background: '#f8fafc', margin: '4px -8px', padding: '6px 8px', borderRadius: '6px' }}>
+                  <span className="detail-info-label" style={{ fontWeight: 700, color: '#0f172a' }}>Total Amount:</span>
+                  <span className="detail-info-value" style={{ color: '#059669', fontWeight: 800, fontSize: '14px' }}>{formatCurrency(selectedOrder.total)}</span>
                 </div>
                 <div className="detail-info-row">
                   <span className="detail-info-label">Paid Amount:</span>
                   <span className="detail-info-value">{formatCurrency(selectedOrder.paid)}</span>
                 </div>
                 <div className="detail-info-row">
-                  <span className="detail-info-label">Balance Amount:</span>
+                  <span className="detail-info-label">Balance:</span>
                   <span className="detail-info-value" style={{ color: selectedOrder.total - selectedOrder.paid > 0 ? '#d97706' : '#059669', fontWeight: 700 }}>
                     {formatCurrency(selectedOrder.total - selectedOrder.paid)}
                   </span>
@@ -1424,7 +1427,6 @@ const OrdersLedger = () => {
                 <div className="detail-section-card">
                   <h3>Fulfillment Tracker</h3>
                   <div className="modern-timeline">
-                    {/* Hardcoded workflow representing dynamic order status */}
                     <div className="timeline-event completed">
                       <span className="timeline-dot" />
                       <div className="timeline-info">
@@ -1444,11 +1446,9 @@ const OrdersLedger = () => {
                       <div className="timeline-info">
                         <span className="timeline-title">Packed / Prepared</span>
                         {selectedOrder.isPacked ? (
-                          <>
-                            <span className="timeline-time">
-                              {selectedOrder.packedDate === 'Verified' ? 'Automatically Verified' : `Packed on ${selectedOrder.packedDate}`} by {selectedOrder.packerName}
-                            </span>
-                          </>
+                          <span className="timeline-time">
+                            {selectedOrder.packedDate === 'Verified' ? 'Automatically Verified' : `Packed on ${selectedOrder.packedDate}`} by {selectedOrder.packerName}
+                          </span>
                         ) : (
                           <span className="timeline-time">Pending Packaging</span>
                         )}
@@ -1459,11 +1459,9 @@ const OrdersLedger = () => {
                       <div className="timeline-info">
                         <span className="timeline-title">Dispatched / Shipped</span>
                         {selectedOrder.isShipped ? (
-                          <>
-                            <span className="timeline-time">
-                              {selectedOrder.shippedDate === 'Verified' ? 'Automatically Verified' : `Shipped on ${selectedOrder.shippedDate}`} via {selectedOrder.logistics || 'Courier'} {selectedOrder.shipperName !== (selectedOrder.logistics || 'Courier') ? `by ${selectedOrder.shipperName}` : ''}
-                            </span>
-                          </>
+                          <span className="timeline-time">
+                            {selectedOrder.shippedDate === 'Verified' ? 'Automatically Verified' : `Shipped on ${selectedOrder.shippedDate}`} via {selectedOrder.logistics || 'Courier'} {selectedOrder.shipperName !== (selectedOrder.logistics || 'Courier') ? `by ${selectedOrder.shipperName}` : ''}
+                          </span>
                         ) : (
                           <span className="timeline-time">Pending Shipment Dispatch</span>
                         )}
@@ -1482,7 +1480,8 @@ const OrdersLedger = () => {
 
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
