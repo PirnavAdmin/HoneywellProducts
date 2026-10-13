@@ -85,7 +85,13 @@ namespace Honeywell.Controllers
             string resolvedOrderId = request.OrderId ?? "";
             if (dbOrder != null)
             {
-                finalAmount = dbOrder.FinalAmount;
+                decimal sub = dbOrder.TotalAmount;
+                decimal disc = dbOrder.DiscountAmount;
+                decimal taxable = Math.Max(0m, sub - disc);
+                decimal gst = dbOrder.GstAmount > 0m ? dbOrder.GstAmount : Math.Round(taxable * 0.18m);
+                finalAmount = (dbOrder.FinalAmount <= 0m || (sub > 0m && dbOrder.FinalAmount == sub))
+                    ? (taxable + dbOrder.ShippingFee + gst)
+                    : dbOrder.FinalAmount;
                 resolvedOrderId = dbOrder.OrderNumber;
             }
 
@@ -449,7 +455,13 @@ namespace Honeywell.Controllers
             string orderNumberString = orderId;
             if (dbOrder != null)
             {
-                finalAmount = dbOrder.FinalAmount;
+                decimal sub = dbOrder.TotalAmount;
+                decimal disc = dbOrder.DiscountAmount;
+                decimal taxable = Math.Max(0m, sub - disc);
+                decimal gst = dbOrder.GstAmount > 0m ? dbOrder.GstAmount : Math.Round(taxable * 0.18m);
+                finalAmount = (dbOrder.FinalAmount <= 0m || (sub > 0m && dbOrder.FinalAmount == sub))
+                    ? (taxable + dbOrder.ShippingFee + gst)
+                    : dbOrder.FinalAmount;
                 orderNumberString = dbOrder.OrderNumber;
             }
 
@@ -458,7 +470,7 @@ namespace Honeywell.Controllers
                 (dbOrder != null && o.OrderId == dbOrder.Id.ToString()) || 
                 (dbOrder != null && o.OrderId == dbOrder.OrderNumber));
             
-            decimal resolvedAmount = orderSuccess?.TotalAmount ?? finalAmount;
+            decimal resolvedAmount = finalAmount > 0m ? finalAmount : (orderSuccess?.TotalAmount ?? 0m);
             if (resolvedAmount == 0.0m)
             {
                 resolvedAmount = 2183.0m; // Fallback default amount

@@ -460,6 +460,21 @@ export async function getOrderDetails(orderId) {
     }
   } catch (e) {}
 
+  // Fallback: search in customer's my-orders list
+  try {
+    const email = localStorage.getItem('customerEmail') || '';
+    const customerId = localStorage.getItem('customerId') || '';
+    const myOrders = await getMyOrders({ customerId, email });
+    if (Array.isArray(myOrders) && myOrders.length > 0) {
+      const matched = myOrders.find(o =>
+        String(o.id) === String(orderId) ||
+        String(o.orderId) === String(orderId) ||
+        String(o.orderNumber || '').toLowerCase() === String(orderId).toLowerCase()
+      );
+      if (matched) return matched;
+    }
+  } catch (e) {}
+
   // Fallback: search local orders cache
   try {
     const r1 = JSON.parse(localStorage.getItem('my_recent_orders') || '[]');

@@ -86,7 +86,15 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       if (defaultRoute) navigate(defaultRoute);
       return;
     }
-    setOpenDropdowns(prev => ({ ...prev, [menu]: !prev[menu] }));
+    setOpenDropdowns(prev => {
+      const willOpen = !prev[menu];
+      const next = {};
+      Object.keys(prev).forEach(key => {
+        next[key] = false;
+      });
+      next[menu] = willOpen;
+      return next;
+    });
   };
 
   const hasAccess = (moduleName) => {

@@ -41,6 +41,13 @@ namespace Honeywell.Controllers
             }
 
             var customers = await query.ToListAsync();
+            foreach (var c in customers)
+            {
+                if (string.IsNullOrWhiteSpace(c.Role) || c.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) || c.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
+                {
+                    c.Role = "Customer Account";
+                }
+            }
             return Ok(customers);
         }
 
@@ -60,6 +67,11 @@ namespace Honeywell.Controllers
                 return NotFound(new { Message = "Customer not found." });
             }
 
+            if (string.IsNullOrWhiteSpace(customer.Role) || customer.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) || customer.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
+            {
+                customer.Role = "Customer Account";
+            }
+
             return Ok(customer);
         }
 
@@ -72,6 +84,12 @@ namespace Honeywell.Controllers
                 return BadRequest(new { Message = "Name and Phone number are required." });
             }
 
+            // Ensure proper customer role / type from dropdown
+            if (string.IsNullOrWhiteSpace(customer.Role) || customer.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) || customer.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
+            {
+                customer.Role = "Customer Account";
+            }
+
             // Register user if not already exists for this phone
             var user = await _context.GrowerUsers.FirstOrDefaultAsync(u => u.Phone == customer.Phone);
             if (user == null)
@@ -79,10 +97,15 @@ namespace Honeywell.Controllers
                 user = new GrowerUser
                 {
                     Phone = customer.Phone,
-                    Role = "Grower",
+                    Role = customer.Role,
                     IsActive = true
                 };
                 _context.GrowerUsers.Add(user);
+                await _context.SaveChangesAsync();
+            }
+            else
+            {
+                user.Role = customer.Role;
                 await _context.SaveChangesAsync();
             }
 
@@ -122,9 +145,27 @@ namespace Honeywell.Controllers
             customer.District = updateData.District;
             customer.State = updateData.State;
 
+            if (!string.IsNullOrWhiteSpace(updateData.Role))
+            {
+                customer.Role = updateData.Role;
+            }
+            if (!string.IsNullOrWhiteSpace(updateData.CompanyOrganization))
+            {
+                customer.CompanyOrganization = updateData.CompanyOrganization;
+            }
+
             if (!string.IsNullOrEmpty(updateData.ProfilePicture))
             {
                 customer.ProfilePicture = updateData.ProfilePicture;
+            }
+
+            if (customer.UserId.HasValue)
+            {
+                var linkedUser = await _context.GrowerUsers.FindAsync(customer.UserId.Value);
+                if (linkedUser != null && !string.IsNullOrWhiteSpace(customer.Role))
+                {
+                    linkedUser.Role = customer.Role;
+                }
             }
 
             if (updateData.AgrarianProfile != null)
