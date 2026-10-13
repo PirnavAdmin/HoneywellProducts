@@ -76,6 +76,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     });
   }, [location.pathname, expanded]);
 
+  // Toggle module dropdown with accordion behavior (closes other open modules)
   const toggleDropdown = (menu, defaultRoute) => {
     if (!expanded) {
       if (onToggleSidebar) onToggleSidebar();

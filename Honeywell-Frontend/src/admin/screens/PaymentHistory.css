@@ -214,7 +214,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   KPI Summary Metric Cards
+   KPI Summary Metric Cards - 4-Column Horizontal Layout
    -------------------------------------------------------------------------- */
 .payment-kpi-grid {
   display: grid;
