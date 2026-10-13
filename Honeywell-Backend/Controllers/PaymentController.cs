@@ -636,30 +636,20 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     accountHolderName = config.AccountHolderName ?? "Honeywell Products & Solutions Pvt Ltd",
-                    AccountHolderName = config.AccountHolderName ?? "Honeywell Products & Solutions Pvt Ltd",
                     bankName = config.BankName ?? "HDFC Bank",
-                    BankName = config.BankName ?? "HDFC Bank",
                     accountNumber = config.AccountNumber ?? "50200088991122",
-                    AccountNumber = config.AccountNumber ?? "50200088991122",
                     ifscCode = config.IfscCode ?? "HDFC0000123",
-                    IfscCode = config.IfscCode ?? "HDFC0000123",
-                    branch = config.Branch ?? "Cyber City Branch",
-                    Branch = config.Branch ?? "Cyber City Branch"
+                    branch = config.Branch ?? "Cyber City Branch"
                 });
             }
 
             return Ok(new
             {
                 accountHolderName = "Honeywell Products & Solutions Pvt Ltd",
-                AccountHolderName = "Honeywell Products & Solutions Pvt Ltd",
                 bankName = "HDFC Bank",
-                BankName = "HDFC Bank",
                 accountNumber = "50200088991122",
-                AccountNumber = "50200088991122",
                 ifscCode = "HDFC0000123",
-                IfscCode = "HDFC0000123",
-                branch = "Cyber City Branch",
-                Branch = "Cyber City Branch"
+                branch = "Cyber City Branch"
             });
         }
 
@@ -697,15 +687,10 @@ namespace Honeywell.Controllers
                 Data = new
                 {
                     accountHolderName = config.AccountHolderName,
-                    AccountHolderName = config.AccountHolderName,
                     bankName = config.BankName,
-                    BankName = config.BankName,
                     accountNumber = config.AccountNumber,
-                    AccountNumber = config.AccountNumber,
                     ifscCode = config.IfscCode,
-                    IfscCode = config.IfscCode,
-                    branch = config.Branch,
-                    Branch = config.Branch
+                    branch = config.Branch
                 }
             });
         }
@@ -744,26 +729,18 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     merchantName = config.MerchantName ?? "Honeywell Products India",
-                    MerchantName = config.MerchantName ?? "Honeywell Products India",
                     merchantUpiId = config.MerchantUpiId ?? "honeywell@hdfcbank",
-                    MerchantUpiId = config.MerchantUpiId ?? "honeywell@hdfcbank",
                     bankDisplayName = config.BankDisplayName ?? "HDFC Bank - Corporate",
-                    BankDisplayName = config.BankDisplayName ?? "HDFC Bank - Corporate",
-                    currency = config.Currency ?? "INR",
-                    Currency = config.Currency ?? "INR"
+                    currency = config.Currency ?? "INR"
                 });
             }
 
             return Ok(new
             {
                 merchantName = "Honeywell Products India",
-                MerchantName = "Honeywell Products India",
                 merchantUpiId = "honeywell@hdfcbank",
-                MerchantUpiId = "honeywell@hdfcbank",
                 bankDisplayName = "HDFC Bank - Corporate",
-                BankDisplayName = "HDFC Bank - Corporate",
-                currency = "INR",
-                Currency = "INR"
+                currency = "INR"
             });
         }
 
@@ -800,13 +777,9 @@ namespace Honeywell.Controllers
                 Data = new
                 {
                     merchantName = config.MerchantName,
-                    MerchantName = config.MerchantName,
                     merchantUpiId = config.MerchantUpiId,
-                    MerchantUpiId = config.MerchantUpiId,
                     bankDisplayName = config.BankDisplayName,
-                    BankDisplayName = config.BankDisplayName,
-                    currency = config.Currency,
-                    Currency = config.Currency
+                    currency = config.Currency
                 }
             });
         }
