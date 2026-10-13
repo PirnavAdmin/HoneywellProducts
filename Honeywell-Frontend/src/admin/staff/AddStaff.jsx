@@ -1,60 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Save, Shield, User, Key, Plus, Trash2, Eye, EyeOff, CheckCircle2, XCircle } from "lucide-react";
-import { getStaffById, createStaff, updateStaff } from '../../services/staffApi';
+import { ArrowLeft, Save, Shield, User, Key, Eye, EyeOff } from "lucide-react";
+import { 
+  getStaffById, 
+  createStaff, 
+  updateStaff, 
+  getStaffRoles, 
+  getStaffDepartments, 
+  getPermissionsModules, 
+  getStaffPermissions,
+  updateStaffPermissions,
+  assignStaffPermissions
+} from '../../services/staffApi';
 import { Toast } from "../components/Toast";
-import { getApiDomain } from '../../utils/apiConfig';
 import './AddStaff.css';
-
-const BASE_URL = `${getApiDomain()}/api`;
-
-const getHeaders = () => {
-  const headers = {
-    'ngrok-skip-browser-warning': 'true',
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
-  const token = localStorage.getItem('adminToken');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
-};
-
-const safeParseJson = async (response) => {
-  const text = await response.text();
-  if (!text || text.trim() === '') return { success: true };
-  try {
-    return JSON.parse(text);
-  } catch (err) {
-    return { success: true, rawText: text };
-  }
-};
-
-const unwrapList = (data) => {
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.data)) return data.data;
-  if (Array.isArray(data?.value)) return data.value;
-  if (Array.isArray(data?.Value)) return data.Value;
-  if (Array.isArray(data?.items)) return data.items;
-  return [];
-};
-
-const DEFAULT_MODULES = [
-  "dashboard",
-  "catalog",
-  "customers",
-  "orders",
-  "stockupdates",
-  "marketing",
-  "brands",
-  "blogs",
-  "settings",
-  "suppliers",
-  "coins converter",
-  "call history",
-  "invoices"
-];
 
 function AddStaff() {
   const navigate = useNavigate();
@@ -65,6 +24,12 @@ function AddStaff() {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  // Dynamic Metadata from Backend
+  const [availableRoles, setAvailableRoles] = useState([]);
+  const [availableDepartments, setAvailableDepartments] = useState([]);
+  const [dbModules, setDbModules] = useState([]);
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -73,6 +38,7 @@ function AddStaff() {
     mobile: "",
     employeeId: "",
     role: "",
+    department: "",
     password: "",
     confirmPassword: ""
   });
@@ -80,53 +46,58 @@ function AddStaff() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
-  const [dbModules, setDbModules] = useState([]);
   const [permissions, setPermissions] = useState({});
-  const [newModuleName, setNewModuleName] = useState("");
   const [existingStaffRecord, setExistingStaffRecord] = useState(null);
 
-  // Load modules from database (GET /api/Permissions/modules with fallback to /api/Module)
-  const loadModules = async () => {
+  // Load modules dynamically from backend (GET /api/Permissions/modules)
+  const loadModules = useCallback(async () => {
     try {
-      let response = await fetch(`${BASE_URL}/Permissions/modules`, { headers: getHeaders() });
-      if (!response.ok) {
-        response = await fetch(`${BASE_URL}/Module`, { headers: getHeaders() });
+      const list = await getPermissionsModules();
+      if (Array.isArray(list) && list.length > 0) {
+        setDbModules(list);
+        return list;
       }
-      if (!response.ok) throw new Error(`Status: ${response.status}`);
-      const json = await safeParseJson(response);
-      let list = unwrapList(json);
-      
-      if (list.length === 0) {
-        await Promise.all(DEFAULT_MODULES.map(async (name, index) => {
-          try {
-            await fetch(`${BASE_URL}/Permissions/modules`, {
-              method: 'POST',
-              headers: getHeaders(),
-              body: JSON.stringify({ moduleName: name, description: `Core ${name} module`, displayOrder: index })
-            });
-          } catch (e) {}
-        }));
-        const response2 = await fetch(`${BASE_URL}/Permissions/modules`, { headers: getHeaders() });
-        const json2 = await safeParseJson(response2);
-        list = unwrapList(json2);
-      }
-      setDbModules(list);
-      return list;
+      return [];
     } catch (err) {
-      const fallbackList = DEFAULT_MODULES.map((name, index) => ({
-        id: index + 1,
-        moduleName: name,
-        displayOrder: index
-      }));
-      setDbModules(fallbackList);
-      return fallbackList;
+      console.warn("Failed to load permission modules from backend:", err.message);
+      return [];
     }
-  };
+  }, []);
 
-  // Initialize modules and permissions
+  // Load roles dynamically from backend (GET /api/Staff/roles)
+  const loadRoles = useCallback(async () => {
+    try {
+      const roles = await getStaffRoles();
+      if (Array.isArray(roles) && roles.length > 0) {
+        setAvailableRoles(roles);
+      }
+    } catch (err) {
+      console.warn("Failed to load roles from backend:", err.message);
+    }
+  }, []);
+
+  // Load departments dynamically from backend (GET /api/Staff/departments)
+  const loadDepartments = useCallback(async () => {
+    try {
+      const depts = await getStaffDepartments();
+      if (Array.isArray(depts) && depts.length > 0) {
+        setAvailableDepartments(depts);
+      }
+    } catch (err) {
+      console.warn("Failed to load departments from backend:", err.message);
+    }
+  }, []);
+
+  // Initialize modules, roles, departments, and load staff details if editing
   useEffect(() => {
+    let isMounted = true;
+
     const init = async () => {
+      setIsLoadingDetails(true);
+      await Promise.all([loadRoles(), loadDepartments()]);
       const loadedModules = await loadModules();
+
+      // Setup initial permissions state based on dynamic modules
       const initialPerms = {};
       loadedModules.forEach(mod => {
         const key = mod.moduleName || mod.ModuleName;
@@ -134,18 +105,21 @@ function AddStaff() {
           initialPerms[key] = false;
         }
       });
+
+      if (!isMounted) return;
       setPermissions(initialPerms);
 
+      // If in editing mode, fetch staff details from GET /api/Staff/{id}
       if (isEditing) {
         try {
           const target = await getStaffById(staffId);
+          if (!isMounted) return;
           setExistingStaffRecord(target);
 
           const fullName = target.name || target.Name || "";
           const parts = fullName.trim().split(" ");
           const fName = parts[0] || "";
           const lName = parts.slice(1).join(" ") || "";
-
           const actualId = target.id ?? target.Id;
           const empIdVal = target.employeeId || target.EmployeeId || (actualId ? `EMP-${String(actualId).padStart(4, '0')}` : "");
 
@@ -153,76 +127,71 @@ function AddStaff() {
             firstName: target.firstName || target.FirstName || fName,
             lastName: target.lastName || target.LastName || lName,
             email: target.email || target.Email || "",
-            mobile: target.phone || target.Phone || target.mobileNumber || target.MobileNumber || target.mobile || target.Mobile || "",
+            mobile: target.phone || target.Phone || target.mobileNumber || target.MobileNumber || target.mobile || "",
             employeeId: empIdVal,
             role: (target.role || target.Role || "").toLowerCase(),
+            department: target.department || target.Department || "",
             password: "",
             confirmPassword: ""
           });
 
-          // Fetch permissions from GET /api/Staff/{id}/permissions (fallback to /api/Permission/{id})
-          let permsResponse = await fetch(`${BASE_URL}/Staff/${staffId}/permissions`, { headers: getHeaders() });
-          if (!permsResponse.ok) {
-            permsResponse = await fetch(`${BASE_URL}/Permission/${staffId}`, { headers: getHeaders() });
-          }
-          let targetPerms = [];
-          let directPermStrings = Array.isArray(target.permissions) ? target.permissions : [];
-          if (permsResponse.ok) {
-            const permsJson = await safeParseJson(permsResponse);
-            if (Array.isArray(permsJson?.permissions)) {
-              directPermStrings = permsJson.permissions;
-            }
-            if (Array.isArray(permsJson?.modulePermissions)) {
-              targetPerms = permsJson.modulePermissions;
-            } else {
-              targetPerms = unwrapList(permsJson);
-            }
-          }
-          const ROLE_DEFAULTS = {
-            advisory: ['dashboard', 'customers', 'call history', 'reports'],
-            sales: ['dashboard', 'catalog', 'orders', 'invoices', 'customers', 'marketing'],
-            inventory: ['dashboard', 'catalog', 'stockupdates', 'suppliers'],
-            admin: ['dashboard', 'catalog', 'customers', 'orders', 'stockupdates', 'marketing', 'brands', 'blogs', 'settings', 'suppliers', 'coins converter', 'call history', 'invoices', 'reports'],
-            staff: ['dashboard'],
-          };
+          // Fetch real staff permissions from GET /api/Staff/{id}/permissions
+          try {
+            const staffPerms = await getStaffPermissions(staffId);
+            const permsState = { ...initialPerms };
 
-          const permsState = { ...initialPerms };
-          if (targetPerms.length > 0 && typeof targetPerms[0] === 'object') {
-            targetPerms.forEach(p => {
-              const name = p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName));
-              const isAllowed = p.isAllowed ?? p.IsAllowed ?? false;
-              if (name) {
-                permsState[name] = isAllowed;
-              }
-            });
-          } else if (directPermStrings.length > 0) {
-            directPermStrings.forEach(p => {
-              const cleanKey = String(p).toLowerCase();
-              if (cleanKey in permsState) {
-                permsState[cleanKey] = true;
-              }
-            });
-          } else {
-            const roleKey = (target.role || target.Role || "staff").toLowerCase();
-            const fallbackPerms = ROLE_DEFAULTS[roleKey] || ROLE_DEFAULTS.staff;
-            fallbackPerms.forEach(p => {
-              if (p in permsState) {
-                permsState[p] = true;
-              }
-            });
+            if (Array.isArray(staffPerms) && staffPerms.length > 0) {
+              staffPerms.forEach(p => {
+                const name = typeof p === 'string' ? p : (p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName)));
+                const isAllowed = typeof p === 'string' ? true : (p.isAllowed ?? p.IsAllowed ?? p.canView ?? true);
+                if (name) {
+                  const normName = name.toLowerCase().replace(/[-_&]/g, ' ').replace(/\s+/g, ' ').trim();
+                  const match = Object.keys(permsState).find(k => {
+                    const normK = k.toLowerCase().replace(/[-_&]/g, ' ').replace(/\s+/g, ' ').trim();
+                    return normK === normName;
+                  });
+                  if (match) {
+                    permsState[match] = isAllowed;
+                  } else {
+                    permsState[name] = isAllowed;
+                  }
+                }
+              });
+            } else if (Array.isArray(target.permissions) && target.permissions.length > 0) {
+              target.permissions.forEach(pName => {
+                if (pName && typeof pName === 'string') {
+                  const normP = pName.toLowerCase().replace(/[-_&]/g, ' ').replace(/\s+/g, ' ').trim();
+                  const match = Object.keys(permsState).find(k => {
+                    const normK = k.toLowerCase().replace(/[-_&]/g, ' ').replace(/\s+/g, ' ').trim();
+                    return normK === normP;
+                  });
+                  if (match) permsState[match] = true;
+                }
+              });
+            }
+
+            if (isMounted) setPermissions(permsState);
+          } catch (pErr) {
+            console.warn("Could not fetch permissions for staff member:", pErr.message);
           }
-          setPermissions(permsState);
 
         } catch (err) {
-          console.warn("Error loading staff from API:", err);
-          setToastMessage('Error loading staff details from server.');
+          if (!isMounted) return;
+          console.error("Error loading staff from API:", err);
+          setToastMessage(`Error loading staff details: ${err.message}`);
           setToastType('error');
         }
       }
+
+      if (isMounted) setIsLoadingDetails(false);
     };
 
     init();
-  }, [isEditing, staffId]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEditing, staffId, loadRoles, loadDepartments, loadModules]);
 
   const handleChange = (e) => {
     let { name, value } = e.target;
@@ -233,86 +202,33 @@ function AddStaff() {
 
     setFormData(prev => ({ ...prev, [name]: value }));
     setErrors(prev => ({ ...prev, [name]: "" }));
+
+    // When role changes on create form, auto-apply that role's real backend default permissions
+    if (name === "role" && !isEditing) {
+      const selectedRoleObj = availableRoles.find(r => 
+        (r.code || r.id || r.name || '').toLowerCase() === (value || '').toLowerCase()
+      );
+
+      const defaultRolePerms = selectedRoleObj?.defaultPermissions || selectedRoleObj?.permissions || [];
+      if (Array.isArray(defaultRolePerms) && defaultRolePerms.length > 0) {
+        setPermissions(prev => {
+          const next = { ...prev };
+          Object.keys(next).forEach(k => {
+            const normK = k.toLowerCase().replace(/[-_&]/g, ' ').replace(/\s+/g, ' ').trim();
+            next[k] = defaultRolePerms.some(p => {
+              const normP = (typeof p === 'string' ? p : p.moduleName || '').toLowerCase().replace(/[-_&]/g, ' ').replace(/\s+/g, ' ').trim();
+              return normP === normK;
+            });
+          });
+          return next;
+        });
+      }
+    }
   };
 
   const togglePermission = (key) => {
     setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
     setErrors(prev => ({ ...prev, permissions: "" }));
-  };
-
-  const handleAddModule = async (e) => {
-    e.preventDefault();
-    const cleanName = newModuleName.trim().toLowerCase();
-    if (!cleanName) return;
-
-    const exists = dbModules.some(m => String(m.moduleName || m.ModuleName || '').toLowerCase() === cleanName);
-    if (exists) {
-      setToastMessage("Module already exists.");
-      setToastType("warning");
-      return;
-    }
-
-    try {
-      const response = await fetch(`${BASE_URL}/Module`, {
-        method: 'POST',
-        headers: getHeaders(),
-        body: JSON.stringify({
-          moduleName: cleanName,
-          description: `Custom ${cleanName} module`,
-          displayOrder: dbModules.length
-        })
-      });
-      if (!response.ok) throw new Error(`Status: ${response.status}`);
-
-      const response2 = await fetch(`${BASE_URL}/Module`, { headers: getHeaders() });
-      const json2 = await safeParseJson(response2);
-      const updatedList = unwrapList(json2);
-      setDbModules(updatedList);
-      setPermissions(prev => ({ ...prev, [cleanName]: true }));
-      setNewModuleName("");
-      setToastMessage(`Module "${cleanName}" added successfully.`);
-      setToastType("success");
-    } catch (err) {
-      const fallbackList = [...dbModules, { id: Date.now(), moduleName: cleanName }];
-      setDbModules(fallbackList);
-      setPermissions(prev => ({ ...prev, [cleanName]: true }));
-      setNewModuleName("");
-      setToastMessage(`Module "${cleanName}" added.`);
-      setToastType("success");
-    }
-  };
-
-  const handleDeleteModule = async (modToDelete) => {
-    if (DEFAULT_MODULES.includes(modToDelete)) {
-      setToastMessage("Cannot delete default core modules.");
-      setToastType("warning");
-      return;
-    }
-
-    const mod = dbModules.find(m => (m.moduleName || m.ModuleName) === modToDelete);
-    try {
-      const actualModId = mod?.id ?? mod?.Id;
-      if (actualModId) {
-        await fetch(`${BASE_URL}/Module/${actualModId}`, {
-          method: 'DELETE',
-          headers: getHeaders()
-        });
-      }
-      const updatedList = dbModules.filter(m => (m.moduleName || m.ModuleName) !== modToDelete);
-      setDbModules(updatedList);
-
-      setPermissions(prev => {
-        const copy = { ...prev };
-        delete copy[modToDelete];
-        return copy;
-      });
-      setToastMessage(`Module "${modToDelete}" removed.`);
-      setToastType("info");
-    } catch (err) {
-      console.error("Failed to delete module:", err);
-      setToastMessage("Failed to delete module.");
-      setToastType("error");
-    }
   };
 
   const validateForm = () => {
@@ -367,6 +283,8 @@ function AddStaff() {
 
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+    if (isSaving) return; // Prevent duplicate form submission
+
     if (!validateForm()) {
       setToastMessage('Please fix the validation errors.');
       setToastType('warning');
@@ -382,6 +300,7 @@ function AddStaff() {
       ? (existingStaffRecord?.isActive ?? existingStaffRecord?.IsActive ?? (existingStaffRecord?.status ? existingStaffRecord.status.toLowerCase() === 'active' : true))
       : true;
 
+    // Strict payload adhering to Honeywell.Models.Staff schema
     const apiStaffPayload = {
       employeeId: formData.employeeId.trim().toUpperCase(),
       firstName: formData.firstName.trim(),
@@ -391,7 +310,8 @@ function AddStaff() {
       mobileNumber: formData.mobile.trim(),
       phone: formData.mobile.trim(),
       role: formData.role,
-      password: formData.password || "StaffPass@2026!",
+      department: formData.department || null,
+      password: formData.password || existingStaffRecord?.password || "StaffPass@2026!",
       status: activeStatus ? "Active" : "Inactive",
       isActive: activeStatus,
       permissions: enabledPermissions
@@ -404,20 +324,16 @@ function AddStaff() {
         await updateStaff(staffId, {
           ...apiStaffPayload,
           id: parseInt(staffId, 10),
-          staffId: parseInt(staffId, 10),
-          password: formData.password || existingStaffRecord?.password || existingStaffRecord?.Password || "StaffPass@2026!",
-          status: activeStatus ? "Active" : "Inactive",
-          isActive: activeStatus
         });
         targetId = staffId;
       } else {
         const newStaff = await createStaff(apiStaffPayload);
-        targetId = newStaff?.id ?? newStaff?.Id ?? newStaff?.staffId ?? newStaff?.StaffId;
+        targetId = newStaff?.id ?? newStaff?.Id ?? newStaff?.staffId;
       }
 
-      // Sync Permissions to backend via PUT /api/Staff/{id}/permissions
+      // Sync Permissions using Honeywell.Models.StaffPermissionsUpdateDto
       if (targetId && dbModules.length > 0) {
-        const permissionDtoList = dbModules.map(mod => {
+        const staffPermissionEntries = dbModules.map(mod => {
           const modName = mod.moduleName || mod.ModuleName;
           const isAllowed = permissions[modName] || false;
           return {
@@ -430,15 +346,24 @@ function AddStaff() {
             isAllowed: isAllowed
           };
         });
-        await fetch(`${BASE_URL}/Staff/${targetId}/permissions`, {
-          method: 'PUT',
-          headers: getHeaders(),
-          body: JSON.stringify({
-            staffId: parseInt(targetId, 10) || targetId,
-            permissions: enabledPermissions,
-            staffPermissions: permissionDtoList
-          })
-        }).catch(pErr => console.warn('Permissions sync warning:', pErr));
+
+        const permissionsDto = {
+          permissions: enabledPermissions,
+          modules: enabledPermissions,
+          modulePermissions: permissions,
+          staffPermissions: staffPermissionEntries
+        };
+
+        try {
+          // Attempt assign/update permissions
+          if (isEditing) {
+            await updateStaffPermissions(targetId, permissionsDto);
+          } else {
+            await assignStaffPermissions(targetId, permissionsDto);
+          }
+        } catch (permErr) {
+          console.warn('Permissions sync error:', permErr.message);
+        }
       }
 
       setToastMessage(`Staff member ${isEditing ? 'updated' : 'created'} successfully.`);
@@ -446,11 +371,11 @@ function AddStaff() {
       
       setTimeout(() => {
         navigate('/admin/staff/list');
-      }, 1200);
+      }, 1000);
 
     } catch (err) {
       console.error('API Error saving staff:', err);
-      setToastMessage(err?.message || `Failed to ${isEditing ? 'update' : 'create'} staff member. Server or API error.`);
+      setToastMessage(err?.message || `Failed to ${isEditing ? 'update' : 'create'} staff member.`);
       setToastType('error');
     } finally {
       setIsSaving(false);
@@ -519,7 +444,7 @@ function AddStaff() {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={isSaving}
+            disabled={isSaving || isLoadingDetails}
             style={{
               background: '#10b981',
               color: '#ffffff',
@@ -529,12 +454,12 @@ function AddStaff() {
               padding: '0 18px',
               fontSize: '13px',
               fontWeight: 700,
-              cursor: isSaving ? 'not-allowed' : 'pointer',
+              cursor: (isSaving || isLoadingDetails) ? 'not-allowed' : 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
               boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              opacity: isSaving ? 0.7 : 1,
+              opacity: (isSaving || isLoadingDetails) ? 0.7 : 1,
               transition: 'background 0.15s ease'
             }}
           >
@@ -622,14 +547,43 @@ function AddStaff() {
               <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>ROLE</label>
               <select name="role" value={formData.role} onChange={handleChange} style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#ffffff' }}>
                 <option value="">Select Role</option>
-                <option value="admin">Admin</option>
-                <option value="advisory">Advisory</option>
-                <option value="inventory">Inventory</option>
-                <option value="manager">Manager</option>
-                <option value="sales">Sales</option>
-                <option value="staff">Staff</option>
+                {availableRoles.length > 0 ? (
+                  availableRoles.map(r => {
+                    const code = (r.code || r.id || r.name || '').toLowerCase();
+                    const label = r.label || r.name || code;
+                    return (
+                      <option key={code} value={code}>
+                        {label}
+                      </option>
+                    );
+                  })
+                ) : (
+                  <>
+                    <option value="admin">Admin</option>
+                    <option value="advisory">Advisory</option>
+                    <option value="inventory">Inventory</option>
+                    <option value="manager">Manager</option>
+                    <option value="sales">Sales</option>
+                    <option value="staff">Staff</option>
+                  </>
+                )}
               </select>
               {errors.role && <span className="field-error-msg">{errors.role}</span>}
+            </div>
+
+            <div className="staff-field" style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>DEPARTMENT</label>
+              <select name="department" value={formData.department} onChange={handleChange} style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#ffffff' }}>
+                <option value="">Select Department (Optional)</option>
+                {availableDepartments.map(d => {
+                  const name = d.name || d.id || '';
+                  return (
+                    <option key={d.id || name} value={name}>
+                      {name} {d.code ? `(${d.code})` : ''}
+                    </option>
+                  );
+                })}
+              </select>
             </div>
           </div>
 
@@ -731,13 +685,12 @@ function AddStaff() {
             <Shield size={16} /> System Permissions &amp; Modules
           </h3>
           <p className="permission-intro">
-            Check the administrative console modules this staff member is authorized to access:
+            Authorize administrative console modules for this staff member based on their operational duties:
           </p>
 
           <div className="permissions-grid-wrap">
             {dbModules.map((mod) => {
               const key = mod.moduleName || mod.ModuleName;
-              const isDefault = DEFAULT_MODULES.includes(key);
               return (
                 <div
                   className="permission-switch-item"
@@ -745,21 +698,17 @@ function AddStaff() {
                 >
                   <div className="switch-info">
                     <span className="switch-title">{key}</span>
-                    {!isDefault && (
-                      <button 
-                        type="button" 
-                        onClick={() => handleDeleteModule(key)} 
-                        className="delete-custom-mod-btn"
-                        title="Delete module"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                    {mod.description && (
+                      <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>
+                        {mod.description}
+                      </span>
                     )}
                   </div>
                   <button
                     type="button"
                     onClick={() => togglePermission(key)}
                     className={`switch-bg ${permissions[key] ? 'active' : ''}`}
+                    aria-label={`Toggle ${key} access`}
                   >
                     <span className={`switch-toggle-knob ${permissions[key] ? 'active' : ''}`} />
                   </button>
@@ -768,22 +717,6 @@ function AddStaff() {
             })}
           </div>
           {errors.permissions && <span className="field-error-msg block mt-2">{errors.permissions}</span>}
-
-          {/* Dynamic Module Input */}
-          <div className="add-custom-module-box">
-            <h4>Add Future Module / Screen</h4>
-            <div className="inline-add-form">
-              <input
-                type="text"
-                placeholder="Enter module name (e.g. invoices)"
-                value={newModuleName}
-                onChange={(e) => setNewModuleName(e.target.value)}
-              />
-              <button type="button" onClick={handleAddModule}>
-                <Plus size={14} /> Add
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

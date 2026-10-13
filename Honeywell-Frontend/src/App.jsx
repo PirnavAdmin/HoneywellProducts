@@ -48,6 +48,7 @@ const AdminLayout = lazy(() => import('./admin/AdminLayout'));
 const AdminLoginPage = lazy(() => import('./admin/AdminLoginPage'));
 const AdminForgotPassword = lazy(() => import('./admin/AdminForgotPassword'));
 const AdminVerifyOtp = lazy(() => import('./admin/AdminVerifyOTP'));
+const AdminIndexRedirect = lazy(() => import('./admin/AdminIndexRedirect'));
 const AdminDashboard = lazy(() => import('./admin/dashboard/AdminDashboard'));
 const CategoriesList = lazy(() => import('./admin/catalog/CategoriesList'));
 const Category = lazy(() => import('./admin/catalog/Category'));
@@ -128,7 +129,7 @@ export default function App() {
             <Route path="admin/forgot-password" element={<AdminForgotPassword />} />
             <Route path="admin/verify-otp" element={<AdminVerifyOtp />} />
             <Route path="admin" element={<AdminLayout />}>
-              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route index element={<AdminIndexRedirect />} />
               <Route path="dashboard" element={<AdminDashboard />} />
 
               {/* Procurement Routes */}
@@ -214,7 +215,7 @@ export default function App() {
               <Route path="about" element={<AboutConfig />} />
               <Route path="about-us" element={<AboutConfig />} />
               <Route path="solutions" element={<SolutionsManager />} />
-              <Route path="*" element={<Navigate to="dashboard" replace />} />
+              <Route path="*" element={<AdminIndexRedirect />} />
             </Route>
 
             {/* Public Website & Customer Routes */}

@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Menu,
+  Menu, 
   ChevronDown, 
   User, 
   Settings, 
-  LogOut
+  LogOut 
 } from 'lucide-react';
 import NotificationsDropdown from './components/NotificationsDropdown';
 import { getApiDomain } from '../utils/apiConfig';
+import { clearUserSession } from '../utils/rbac';
 import './AdminTopBar.css';
 
 const maskEmail = (email) => {
@@ -81,14 +82,7 @@ const AdminTopBar = ({ onToggleSidebar, sidebarExpanded }) => {
       }
     }
 
-    localStorage.removeItem('isAdmin');
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminEmail');
-    localStorage.removeItem('adminName');
-    localStorage.removeItem('adminRole');
-    localStorage.removeItem('adminPermissions');
-    localStorage.removeItem('authApiVersion');
-    
+    clearUserSession();
     navigate('/admin/login');
   };
 
