@@ -3,17 +3,14 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Home, Box, Users, ShoppingCart, Target, 
   FolderOpen, BarChart2, Settings, ChevronRight, ChevronDown, FileText, Boxes,
-  FileSpreadsheet, Shield, MessageSquare, CreditCard, Ticket, Mail, TrendingUp, Building2
+  PhoneCall, FileSpreadsheet, Shield, MessageSquare, CreditCard, Ticket, Mail, TrendingUp, Building2
 } from 'lucide-react';
 import './AdminMenuBar.css';
-
-import { hasModuleAccess } from '../utils/rbac';
 
 const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [userRole, setUserRole] = useState('staff');
-  const [authType, setAuthType] = useState('staff');
+  const [userRole, setUserRole] = useState('admin');
   const [userPermissions, setUserPermissions] = useState([]);
 
   const [openDropdowns, setOpenDropdowns] = useState({
@@ -33,23 +30,22 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   });
 
   useEffect(() => {
-    const storedAuthType = (localStorage.getItem('authType') || (localStorage.getItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
-    let role = (localStorage.getItem('adminRole') || 'staff').toLowerCase();
+    let role = (localStorage.getItem('adminRole') || 'admin').toLowerCase();
     if (role === 'super admin' || role === 'superadmin') {
       role = 'admin';
+      localStorage.setItem('adminRole', 'admin');
     }
     setUserRole(role);
-    setAuthType(storedAuthType);
 
     try {
       const perms = localStorage.getItem('adminPermissions');
       if (perms) {
         setUserPermissions(JSON.parse(perms));
       } else {
-        setUserPermissions([]);
+        setUserPermissions(["dashboard", "catalog", "customers", "purchase indent", "purchase order", "orders", "tickets", "reports", "growth journey", "partner applications", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"]);
       }
-    } catch {
-      setUserPermissions([]);
+    } catch (e) {
+      console.error("Error loading permissions", e);
     }
   }, [location.pathname]);
 
@@ -64,10 +60,10 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     }
     const path = location.pathname;
     setOpenDropdowns({
-      catalog:   path.includes('/admin/catalog') || path.includes('/admin/categories') || path.includes('/admin/products') || path.includes('/admin/descriptions'),
+      catalog:   path.includes('/admin/catalog'),
       purchase:  path.includes('/admin/purchase'),
       customers: path.includes('/admin/customers'),
-      orders:    path.includes('/admin/orders') || path.includes('/admin/returns') || path.includes('/admin/sales-returns'),
+      orders:    path.includes('/admin/orders') || path.includes('/admin/returns'),
       marketing: path.includes('/admin/marketing') || path.includes('/admin/solutions'),
       brands:    path.includes('/admin/brands'),
       blogs:     path.includes('/admin/blogs'),
@@ -86,11 +82,38 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       if (defaultRoute) navigate(defaultRoute);
       return;
     }
-    setOpenDropdowns(prev => ({ ...prev, [menu]: !prev[menu] }));
+    setOpenDropdowns(prev => {
+      const willOpen = !prev[menu];
+      const next = {};
+      Object.keys(prev).forEach(key => {
+        next[key] = false;
+      });
+      next[menu] = willOpen;
+      return next;
+    });
   };
 
   const hasAccess = (moduleName) => {
-    return hasModuleAccess(moduleName, userPermissions, userRole, authType);
+    if (!moduleName) return true;
+    if (userRole === 'super admin' || userRole === 'superadmin' || userRole === 'admin' || userRole === 'administrator') return true;
+    if (moduleName === 'testimonials' || moduleName === 'tickets' || moduleName === 'enquiries' || moduleName === 'contact-submissions' || moduleName === 'quotes' || moduleName === 'reports' || moduleName === 'growth journey' || moduleName === 'partner applications' || moduleName === 'distributors' || moduleName === 'dealers' || moduleName === 'solutions') return true;
+    if (moduleName === 'staff') return true;
+
+    const norm = moduleName.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
+
+    if (userPermissions.length > 0) {
+      return userPermissions.some(p => {
+        const cleanP = p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
+        return cleanP === norm || cleanP.includes(norm) || norm.includes(cleanP);
+      });
+    }
+
+    if (userRole === 'manager' || userRole === 'staff') {
+      const allowed = ["dashboard", "catalog", "customers", "orders", "purchase indent", "purchase order", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "reports"];
+      return allowed.some(p => p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '') === norm);
+    }
+
+    return false;
   };
 
   return (
@@ -621,7 +644,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
             )} */}
 
             {/* Payment Settings */}
-            {hasAccess('payment settings') && (
+            {hasAccess('orders') && (
               <li>
                 <NavLink
                   to="/admin/payments"

@@ -215,30 +215,52 @@ export default function CustomerOrders() {
                             {item.name || item.productName || 'Honeywell Security Product'}
                           </div>
                           <div className="text-slate-600 font-medium">
-                            Qty: {item.quantity || 1} &bull; ₹{Number(item.price || item.unitPrice || 0).toLocaleString('en-IN')}
+                            Qty: {item.quantity || 1}
                           </div>
                         </div>
                       ))}
                     </div>
 
                     {/* Bottom Row: Total & Actions */}
-                    <div className="order-card-bottom">
-                      <div className="order-total-amount">
-                        <span className="text-xs text-slate-500 font-medium block">Total Amount</span>
-                        <span>₹{Number(order.totalAmount || order.total || 0).toLocaleString('en-IN')}</span>
-                      </div>
+                    {(() => {
+                      const subtotal = Number(order.subtotal || order.items?.reduce((s, i) => s + ((i.quantity || 1) * Number(i.price || 0)), 0) || order.totalAmount || 0);
+                      const discount = Number(order.discountAmount || 0);
+                      const taxable = Math.max(0, subtotal - discount);
+                      const tax = Number(order.gstAmount !== undefined && order.gstAmount > 0 
+                        ? order.gstAmount 
+                        : (order.taxAmount !== undefined && order.taxAmount > 0 ? order.taxAmount : Math.round(taxable * 0.18)));
+                      const shipping = Number(order.shippingFee || 0);
+                      
+                      // If finalAmount is present and actually has tax added (higher than subtotal), use it; otherwise compute true grand total
+                      let displayTotal = Number(order.finalAmount || 0);
+                      if (displayTotal <= 0 || displayTotal === subtotal) {
+                        displayTotal = taxable + shipping + tax;
+                      }
 
-                      <div className="order-card-actions">
-                        <Link to={`/account/orders/${order.id}`} className="btn-portal-secondary">
-                          <Eye size={14} />
-                          <span>View Details</span>
-                        </Link>
-                        <Link to={`/order-tracking?orderId=${encodeURIComponent(order.orderNumber || order.id)}`} className="btn-portal-primary">
-                          <MapPin size={14} />
-                          <span>Track Order</span>
-                        </Link>
-                      </div>
-                    </div>
+                      return (
+                        <div className="order-card-bottom">
+                          <div className="order-total-amount">
+                            <span className="text-xs text-slate-500 font-medium block">Total Amount (Incl. Tax) : </span>
+                            <span>₹ {displayTotal.toLocaleString('en-IN')}</span>
+                          </div>
+
+                          <div className="order-card-actions">
+                            <Link
+                              to={`/account/orders/${encodeURIComponent(order.id || order.orderId || order.orderNumber)}`}
+                              state={{ order }}
+                              className="btn-portal-secondary"
+                            >
+                              <Eye size={14} />
+                              <span>View Details</span>
+                            </Link>
+                            <Link to={`/order-tracking?orderId=${encodeURIComponent(order.orderNumber || order.id)}`} className="btn-portal-primary">
+                              <MapPin size={14} />
+                              <span>Track Order</span>
+                            </Link>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}

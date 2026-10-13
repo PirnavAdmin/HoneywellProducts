@@ -68,8 +68,8 @@ export default function OrderSuccess() {
           <Link className="button button-small" to="/products" style={{ minHeight: '38px', padding: '0 16px', fontSize: '13px' }}>
             Continue Exploring <ArrowRight size={15} />
           </Link>
-          <Link className="button outline button-small" to="/contact" style={{ minHeight: '38px', padding: '0 16px', fontSize: '13px' }}>
-            Contact Support
+          <Link className="button outline button-small" to="/account/orders" style={{ minHeight: '38px', padding: '0 16px', fontSize: '13px' }}>
+            My Orders
           </Link>
         </div>
       </div>

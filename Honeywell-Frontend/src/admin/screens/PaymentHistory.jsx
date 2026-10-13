@@ -337,21 +337,21 @@ const PaymentHistory = () => {
         setManualVerifications(prev => (Array.isArray(prev) ? prev : []).map(mv => mv.id === verificationRecordId ? { ...mv, verificationStatus: 'Approved', smsVerified: true } : mv));
       }
 
-      // 2. Update order payment status and order status on server (supports string & numeric IDs)
+      // 2. Update order payment status ('Paid' so Orders & Invoices endpoints mark it Verified Paid / Paid) and order status on server
       if (realOrderId) {
         try {
-          await updateOrderPaymentStatus(realOrderId, 'Verified', totalAmount);
+          await updateOrderPaymentStatus(realOrderId, 'Paid', totalAmount);
           await updateOrderStatus(realOrderId, 'Processing');
         } catch (err) {
           console.warn("Order endpoint update warning:", err);
         }
 
         // Dynamically update local orders state
-        setOrders(prev => (Array.isArray(prev) ? prev : []).map(o => String(o.id || o.orderId) === String(realOrderId) ? { ...o, paymentStatus: 'Verified', status: 'Processing' } : o));
+        setOrders(prev => (Array.isArray(prev) ? prev : []).map(o => String(o.id || o.orderId) === String(realOrderId) ? { ...o, paymentStatus: 'Verified Paid', status: 'Processing', fulfillment: 'PROCESSING' } : o));
       }
       
       showBannerStatus('success', `Payment for Order #${orderId} verified successfully.`);
-      loadOrdersList();
+      await loadOrdersList();
     } catch (e) {
       showBannerStatus('error', `Failed to verify payment: ${e.message}`);
     }
@@ -374,11 +374,11 @@ const PaymentHistory = () => {
         } catch (err) {
           console.warn("Order endpoint update warning:", err);
         }
-        setOrders(prev => (Array.isArray(prev) ? prev : []).map(o => String(o.id || o.orderId) === String(realOrderId) ? { ...o, paymentStatus: 'Rejected', status: 'Cancelled' } : o));
+        setOrders(prev => (Array.isArray(prev) ? prev : []).map(o => String(o.id || o.orderId) === String(realOrderId) ? { ...o, paymentStatus: 'Rejected', status: 'Cancelled', fulfillment: 'CANCELLED' } : o));
       }
       
       showBannerStatus('success', `Payment for Order #${orderId} rejected.`);
-      loadOrdersList();
+      await loadOrdersList();
     } catch (e) {
       showBannerStatus('error', `Failed to reject payment: ${e.message}`);
     }
@@ -590,12 +590,40 @@ const PaymentHistory = () => {
     const matchedOrderIds = new Set();
     const safeVerifications = Array.isArray(manualVerifications) ? manualVerifications : [];
     const safeOrders = Array.isArray(orders) ? orders : [];
+
+    const parseAmt = (val) => {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      const str = String(val).trim().replace(/^(rs\.?|inr|₹)\s*/i, '').replace(/,/g, '').replace(/[^0-9.-]/g, '');
+      const num = parseFloat(str);
+      return isNaN(num) ? 0 : num;
+    };
+
+    const getOrderGrandTotal = (o) => {
+      if (!o) return 0;
+      const rawSubtotal = parseAmt(o.subtotal || o.totalAmount || 0);
+      const rawDiscount = parseAmt(o.discountAmount || 0);
+      const rawShipping = parseAmt(o.shippingFee || 0);
+      const taxable = Math.max(0, rawSubtotal - rawDiscount);
+      const rawGst = parseAmt(
+        o.gstAmount !== undefined && o.gstAmount > 0
+          ? o.gstAmount
+          : (o.taxAmount !== undefined && o.taxAmount > 0 ? o.taxAmount : Math.round(taxable * 0.18))
+      );
+      let totalVal = parseAmt(o.finalAmount || o.total || o.totalAmount);
+      if (totalVal <= 0 || (rawSubtotal > 0 && totalVal === rawSubtotal)) {
+        totalVal = taxable + rawShipping + rawGst;
+      }
+      return totalVal;
+    };
     
     // First, process manual verification submissions from server
     safeVerifications.forEach(mv => {
       if (!mv) return;
       const mvDigits = String(mv.orderId || '').replace(/\D/g, '');
-      const o = safeOrders.find(ord => {
+      const rawMvAmt = parseAmt(mv.amountPaid);
+
+      let o = safeOrders.find(ord => {
         if (!ord) return false;
         const ordIdDigits = String(ord.id || ord.orderId || '').replace(/\D/g, '');
         const ordNumDigits = String(ord.orderNumber || '').replace(/\D/g, '');
@@ -603,10 +631,40 @@ const PaymentHistory = () => {
                String(ord.id || ord.orderId) === String(mv.orderId) ||
                String(ord.orderNumber) === String(mv.orderId);
       });
+
+      if (!o && rawMvAmt > 0 && mv.customerName) {
+        const mvCust = String(mv.customerName).trim().toLowerCase();
+        o = safeOrders.find(ord => {
+          if (!ord || matchedOrderIds.has(String(ord.id || ord.orderId))) return false;
+          const ordCust = String(ord.customerName || ord.customer || '').trim().toLowerCase();
+          const ordSub = parseAmt(ord.subtotal || ord.totalAmount || 0);
+          const ordGrand = getOrderGrandTotal(ord);
+          return ordCust === mvCust && (ordSub === rawMvAmt || ordGrand === rawMvAmt);
+        });
+      }
       
       if (o) {
         matchedOrderIds.add(String(o.id || o.orderId));
       }
+
+      const hasTaxTag = String(mv.remarks || '').includes('[GST-INCL]');
+      const mvTotalWithTax = hasTaxTag
+        ? rawMvAmt
+        : (rawMvAmt > 0 ? rawMvAmt + Math.round(rawMvAmt * 0.18) : 0);
+      const computedTotal = o ? getOrderGrandTotal(o) : mvTotalWithTax;
+      const oRawSubtotal = o ? parseAmt(o.subtotal || o.totalAmount || 0) : 0;
+      const computedPaid = o
+        ? (rawMvAmt > 0 && rawMvAmt === oRawSubtotal ? computedTotal : (rawMvAmt || computedTotal))
+        : mvTotalWithTax;
+
+      const mvSt = String(mv.verificationStatus || '').trim().toLowerCase();
+      const ordPaySt = String(o?.paymentStatus || '').trim().toLowerCase();
+      const ordSt = String(o?.status || o?.fulfillment || '').trim().toLowerCase();
+      const resolvedMvStatus = (mvSt === 'rejected' || ordPaySt.includes('reject') || ordPaySt.includes('fail') || ordSt === 'cancelled' || ordSt === 'canceled')
+        ? 'Rejected'
+        : (mvSt === 'approved' || mvSt === 'verified' || (!ordPaySt.includes('pending') && (ordPaySt.includes('paid') || ordPaySt.includes('verif') || ordPaySt.includes('success') || ordPaySt.includes('approved'))))
+          ? 'Verified'
+          : 'Pending Verification';
       
       list.push({
         id: mv.orderId || mv.id || 'N/A',
@@ -616,9 +674,9 @@ const PaymentHistory = () => {
         phone: mv.mobileNumber || (o ? o.phone : ''),
         utr: mv.utrNumber || '',
         paymentDate: mv.paymentDate || (o ? o.orderDate : 'TBD'),
-        totalAmount: o ? (o.totalAmount || o.total || o.finalAmount) : mv.amountPaid,
-        amountPaid: mv.amountPaid,
-        paymentStatus: o ? (o.paymentStatus || o.status) : (mv.verificationStatus === 'Pending' ? 'Pending Verification' : mv.verificationStatus),
+        totalAmount: computedTotal,
+        amountPaid: computedPaid,
+        paymentStatus: resolvedMvStatus,
         screenshotUrl: mv.screenshotUrl || null,
         remarks: mv.remarks || null,
         isVerificationRecord: true,
@@ -631,6 +689,19 @@ const PaymentHistory = () => {
     // Add remaining manual payment orders that don't have server verification details
     safeOrders.forEach(o => {
       if (o && o.paymentMethod === 'UPI / Bank Transfer' && !matchedOrderIds.has(String(o.id || o.orderId))) {
+        const computedTotal = getOrderGrandTotal(o);
+        const rawPaid = parseAmt(o.paidAmount);
+        const oRawSubtotal = parseAmt(o.subtotal || o.totalAmount || 0);
+        const computedPaid = rawPaid > 0 && rawPaid === oRawSubtotal ? computedTotal : rawPaid;
+
+        const ordPaySt = String(o.paymentStatus || '').trim().toLowerCase();
+        const ordSt = String(o.status || o.fulfillment || '').trim().toLowerCase();
+        const resolvedOrdStatus = (ordPaySt.includes('reject') || ordPaySt.includes('fail') || ordSt === 'cancelled' || ordSt === 'canceled')
+          ? 'Rejected'
+          : (!ordPaySt.includes('pending') && (ordPaySt.includes('paid') || ordPaySt.includes('verif') || ordPaySt.includes('success') || ordPaySt.includes('approved')))
+            ? 'Verified'
+            : (o.paymentStatus || o.status || 'Pending');
+
         list.push({
           id: o.id || o.orderId || 'N/A',
           orderId: o.id || o.orderId || 'N/A',
@@ -638,9 +709,9 @@ const PaymentHistory = () => {
           phone: o.phone || '',
           utr: o.utr || '',
           paymentDate: o.orderDate ? String(o.orderDate).slice(0, 10) : 'TBD',
-          totalAmount: o.totalAmount || o.total || 0,
-          amountPaid: o.paidAmount || 0,
-          paymentStatus: o.paymentStatus || o.status || 'Pending',
+          totalAmount: computedTotal,
+          amountPaid: computedPaid,
+          paymentStatus: resolvedOrdStatus,
           screenshotUrl: null,
           remarks: null,
           isVerificationRecord: false,
@@ -1076,7 +1147,7 @@ const PaymentHistory = () => {
                                 ) : isRejected ? (
                                   <span className="action-text-rejected">Rejected</span>
                                 ) : isVerified ? (
-                                  <span className="action-text-completed">Completed</span>
+                                  <span className="action-text-completed">Verified</span>
                                 ) : (
                                   <span className="action-text-muted">-</span>
                                 )}

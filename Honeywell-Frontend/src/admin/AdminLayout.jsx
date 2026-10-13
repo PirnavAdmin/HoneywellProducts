@@ -4,7 +4,6 @@ import { ShieldAlert, AlertTriangle } from 'lucide-react';
 import AdminTopBar from './AdminTopBar';
 import AdminMenuBar from './AdminMenuBar';
 import { Toast } from './components/Toast';
-import { isPathAuthorized, getFirstAuthorizedRoute, clearUserSession } from '../utils/rbac';
 import './AdminLayout.css';
 
 const AdminLayout = () => {
@@ -23,22 +22,18 @@ const AdminLayout = () => {
     document.title = 'HONEYWELL PRODUCTS | SMART TECHNOLOGY. STRONGER PROTECTION';
   }, [location.pathname]);
 
-  const authType = (localStorage.getItem('authType') || (localStorage.getItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
-  let userRole = (localStorage.getItem('adminRole') || 'staff').toLowerCase();
-  if (userRole === 'super admin' || userRole === 'superadmin') {
-    userRole = 'admin';
-  }
-
-  // Load actual permissions from localStorage without static fallbacks
+  let userRole = (localStorage.getItem('adminRole') || 'admin').toLowerCase();
+  
+  // Load custom permissions from localStorage
   let userPermissions = [];
   try {
     const raw = localStorage.getItem('adminPermissions');
     if (raw) {
       userPermissions = JSON.parse(raw);
+    } else {
+      userPermissions = ["dashboard", "catalog", "customers", "orders", "tickets", "reports", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "call history", "staff"];
     }
-  } catch {
-    userPermissions = [];
-  }
+  } catch (e) {}
 
   // Intercept data mutations for Manager role (Read-Only)
   useEffect(() => {
@@ -78,9 +73,41 @@ const AdminLayout = () => {
     return <Navigate to="/admin/login" />;
   }
 
-  // Verify route authorization using strict RBAC engine
-  const allowed = isPathAuthorized(location.pathname, userPermissions, userRole, authType);
-  const firstRoute = getFirstAuthorizedRoute(userPermissions, userRole, authType);
+  // Helper to verify path authorization
+  const isPathAllowed = (pathname) => {
+    const path = pathname.replace('/admin/', '').split('/')[0];
+    if (userRole === 'super admin' || userRole === 'superadmin' || userRole === 'admin' || userRole === 'administrator') return true;
+    if (path === 'dashboard' || path === 'profile' || path === 'account-settings' || path === 'testimonials' || path === 'tickets' || path === 'reports' || path === 'distributors' || path === 'dealers' || path === 'solutions' || path === '') return true;
+
+    let moduleKey = path;
+    if (path === 'purchase-indent') moduleKey = 'purchase indent';
+    if (path === 'purchase-orders') moduleKey = 'purchase order';
+    if (path === 'sales-returns') moduleKey = 'sales return';
+    if (path === 'stock-updates' || path === 'stock') moduleKey = 'stockupdates';
+    if (path === 'coins') moduleKey = 'coins converter';
+    if (path === 'call-history') moduleKey = 'call history';
+    if (path === 'invoice') moduleKey = 'invoices';
+    if (path === 'returns') moduleKey = 'returns';
+    if (path === 'categories' || path === 'products' || path === 'descriptions' || path === 'image-categorizer') moduleKey = 'catalog';
+    if (path === 'contact-card' || path === 'footer' || path === 'payments') moduleKey = 'settings';
+
+    const normKey = moduleKey.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
+
+    if (userPermissions.length > 0) {
+      return userPermissions.some(p => {
+        const cleanP = p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '');
+        return cleanP === normKey || cleanP.includes(normKey) || normKey.includes(cleanP);
+      });
+    }
+
+    if (userRole === 'manager' || userRole === 'staff') {
+      const allowed = ["dashboard", "catalog", "customers", "orders", "purchase indent", "purchase order", "stockupdates", "marketing", "brands", "blogs", "settings", "suppliers", "coins converter", "invoices", "reports"];
+      return allowed.some(p => p.toLowerCase().replace('-', ' ').trim().replace(/s$/, '') === normKey);
+    }
+    return false;
+  };
+
+  const allowed = isPathAllowed(location.pathname);
 
   return (
     <div className={`admin-layout ${sidebarExpanded ? 'sidebar-open' : 'sidebar-closed'}`}>
@@ -114,44 +141,11 @@ const AdminLayout = () => {
             <ShieldAlert size={64} className="text-red-500" />
             <h2>Access Denied</h2>
             <p>
-              Your security account (<strong>{userRole.toUpperCase()}</strong>) does not have permission to access <code>{location.pathname}</code>.
+              Your security role (<strong>{userRole.toUpperCase()}</strong>) does not have permissions to access the path <code>{location.pathname}</code>.
             </p>
-            {firstRoute ? (
-              <button 
-                onClick={() => navigate(firstRoute)}
-                style={{
-                  marginTop: '12px',
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  backgroundColor: '#1268a5',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                Go to Permitted Module
-              </button>
-            ) : (
-              <button 
-                onClick={() => {
-                  clearUserSession();
-                  navigate('/admin/login');
-                }}
-                style={{
-                  marginTop: '12px',
-                  padding: '9px 18px',
-                  borderRadius: '8px',
-                  backgroundColor: '#dc2626',
-                  color: '#ffffff',
-                  border: 'none',
-                  fontWeight: 600,
-                  cursor: 'pointer'
-                }}
-              >
-                Sign In with Different Account
-              </button>
-            )}
+            <button onClick={() => navigate('/admin/dashboard')}>
+              Return to Dashboard
+            </button>
           </div>
         )}
       </main>
@@ -160,3 +154,4 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout;
+

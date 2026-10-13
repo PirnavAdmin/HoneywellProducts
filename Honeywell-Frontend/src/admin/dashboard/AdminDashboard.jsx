@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getApiDomain } from '../../utils/apiConfig';
 import {
   Area,
   AreaChart,
@@ -35,7 +36,6 @@ import {
 import { getOrders } from '../api/orders';
 import { fetchProducts, fetchCategories } from '../catalog/productsApi';
 import { fetchSuppliers } from '../suppliers/suppliersApi';
-import { getStaffStats } from '../../services/staffApi';
 import './AdminDashboard.css';
 
 const numberFormatter = new Intl.NumberFormat('en-IN');
@@ -144,12 +144,14 @@ const AdminDashboard = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const [ordersData, productsData, categoriesData, suppliersData, staffStats] = await Promise.all([
+      const [ordersData, productsData, categoriesData, suppliersData, staffJson] = await Promise.all([
         getOrders().catch(() => []),
         fetchProducts().catch(() => []),
         fetchCategories().catch(() => []),
         fetchSuppliers().catch(() => []),
-        getStaffStats().catch(() => null)
+        fetch(`${getApiDomain()}/api/Staff`, {
+          headers: { 'ngrok-skip-browser-warning': 'true' }
+        }).then(r => r.ok ? r.json() : []).catch(() => [])
       ]);
 
       setOrders(Array.isArray(ordersData) ? ordersData : []);
@@ -157,8 +159,8 @@ const AdminDashboard = () => {
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setSuppliers(Array.isArray(suppliersData) ? suppliersData : []);
 
-      const count = staffStats?.totalStaff ?? staffStats?.totalCount ?? 0;
-      setStaffCount(count);
+      const staffList = Array.isArray(staffJson) ? staffJson : (staffJson?.data || staffJson?.value || []);
+      setStaffCount(staffList.length);
     } catch (error) {
       console.error("Dashboard loading error", error);
       setOrders([]);

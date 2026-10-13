@@ -1,20 +1,49 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { 
   Users, Plus, Mail, Phone, AlertTriangle, Trash2, Edit2, X, 
-  Search, RefreshCw, UserCheck, UserX, Shield
+  Search, RefreshCw, UserCheck, UserX, Shield, Briefcase, Filter
 } from 'lucide-react';
-import { 
-  getStaffList, 
-  updateStaffStatus, 
-  deleteStaff, 
-  getStaffStats, 
-  getStaffRoles 
-} from '../../services/staffApi';
-import { Pagination } from '../components/ActionButtons';
+import { getStaffList, updateStaff, deleteStaff } from '../../services/staffApi';
+import { getApiDomain } from '../../utils/apiConfig';
+import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
 import { Toast } from '../components/Toast';
 import './StaffList.css';
+
+const BASE_URL = `${getApiDomain()}/api`;
+
+const getHeaders = () => {
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+const safeParseJson = async (response) => {
+  const text = await response.text();
+  if (!text || text.trim() === '') return { success: true };
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    return { success: true, rawText: text };
+  }
+};
+
+const unwrapList = (data) => {
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.value)) return data.value;
+  if (Array.isArray(data?.Value)) return data.Value;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+};
 
 const formatPhoneNumber = (phone) => {
   if (!phone) return '';
@@ -39,18 +68,12 @@ const getInitials = (name) => {
 const StaffList = () => {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState('');
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const [staffToDelete, setStaffToDelete] = useState(null);
 
-  // Dynamic Metadata State
-  const [availableRoles, setAvailableRoles] = useState([]);
-  const [statsData, setStatsData] = useState(null);
-
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedRole, setSelectedRole] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
 
@@ -58,72 +81,50 @@ const StaffList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // AbortController ref for canceling stale in-flight requests
-  const abortControllerRef = useRef(null);
-
-  // Debounce search input (350ms) to prevent excessive API requests
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm.trim());
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
-
-  // Load backend roles dynamically (GET /api/Staff/roles)
-  const loadRoles = useCallback(async () => {
-    try {
-      const roles = await getStaffRoles();
-      if (Array.isArray(roles) && roles.length > 0) {
-        setAvailableRoles(roles);
-      }
-    } catch (err) {
-      console.warn('Roles fetch error:', err.message);
-    }
-  }, []);
-
-  // Load backend stats dynamically (GET /api/Staff/stats)
-  const loadStats = useCallback(async () => {
-    try {
-      const stats = await getStaffStats();
-      if (stats && typeof stats === 'object') {
-        setStatsData(stats);
-      }
-    } catch (err) {
-      console.warn('Staff stats fetch error:', err.message);
-      // Keep null so KPI cards fall back to calculated live array values
-      setStatsData(null);
-    }
-  }, []);
-
-  // Fetch staff list from real backend (GET /api/Staff) with filter parameters
-  const fetchStaffData = useCallback(async () => {
-    // Cancel previous in-flight request if any
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
+  const fetchStaffData = async () => {
     setLoading(true);
-    setFetchError('');
-
     try {
-      const queryParams = {
-        search: debouncedSearch,
-        role: selectedRole,
-        status: selectedStatus,
+      const apiList = await getStaffList();
+      const combined = [...apiList];
+
+      const ROLE_DEFAULTS = {
+        advisory: ['dashboard', 'customers', 'call history', 'reports'],
+        sales: ['dashboard', 'catalog', 'orders', 'invoices', 'customers', 'marketing'],
+        inventory: ['dashboard', 'catalog', 'stockupdates', 'suppliers'],
+        admin: ['dashboard', 'catalog', 'customers', 'orders', 'stockupdates', 'marketing', 'brands', 'blogs', 'settings', 'suppliers', 'coins converter', 'call history', 'invoices', 'reports'],
+        staff: ['dashboard'],
       };
 
-      const apiList = await getStaffList(queryParams, { signal: controller.signal });
-
-      // Transform raw staff entities into clean UI model
-      const mappedList = apiList.map((staff) => {
+      // Map permissions and properties
+      const mappedList = await Promise.all(combined.map(async (staff) => {
+        let permissions = Array.isArray(staff.permissions) ? staff.permissions : [];
         const actualId = staff.id ?? staff.Id ?? staff.employeeId;
-        const nameVal = staff.name || staff.Name || `${staff.firstName || staff.FirstName || ''} ${staff.lastName || staff.LastName || ''}`.trim() || 'N/A';
+        const role = (staff.role || staff.Role || 'staff').toLowerCase();
         const empIdVal = staff.employeeId || staff.EmployeeId || (actualId ? `EMP-${String(actualId).padStart(4, '0')}` : 'N/A');
-        const phoneVal = staff.phone || staff.Phone || staff.mobileNumber || staff.MobileNumber || staff.mobile || staff.Mobile || '';
+
+        if (permissions.length === 0 && actualId) {
+          try {
+            const permsResponse = await fetch(`${BASE_URL}/Permission/${actualId}`, { headers: getHeaders() });
+            if (permsResponse.ok) {
+              const permsJson = await safeParseJson(permsResponse);
+              const permsData = unwrapList(permsJson);
+              const allowed = permsData
+                .filter(p => p.isAllowed ?? p.IsAllowed ?? false)
+                .map(p => p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName)) || '');
+              permissions = allowed.length > 0 ? allowed : (ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff);
+            } else {
+              permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
+            }
+          } catch (err) {
+            permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
+          }
+        } else if (permissions.length === 0) {
+          permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
+        }
+
         const isActive = staff.isActive ?? staff.IsActive ?? (staff.status ? staff.status.toLowerCase() === 'active' : true);
-        const permissions = Array.isArray(staff.permissions) ? staff.permissions : [];
+        const nameVal = staff.name || staff.Name || `${staff.firstName || staff.FirstName || ''} ${staff.lastName || staff.LastName || ''}`.trim() || 'N/A';
+        const phoneVal = staff.phone || staff.Phone || staff.mobileNumber || staff.MobileNumber || staff.mobile || staff.Mobile || '';
 
         return {
           ...staff,
@@ -134,54 +135,30 @@ const StaffList = () => {
           email: staff.email || staff.Email || '',
           employeeId: empIdVal,
           role: staff.role || staff.Role || 'staff',
-          department: staff.department || staff.Department || '',
           mobile: phoneVal,
           status: isActive ? 'Active' : 'Inactive',
           isActive,
-          permissions,
+          permissions
         };
-      });
+      }));
 
       setStaffList(mappedList);
-      setFetchError('');
     } catch (err) {
-      if (err.name === 'AbortError') {
-        // Request was intentionally aborted due to new search/filter; ignore
-        return;
-      }
-      console.error('Staff fetch error:', err.message);
-      setFetchError(err.message || 'Unable to connect to Staff backend API.');
+      console.warn('Staff fetch error:', err);
       setStaffList([]);
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, selectedRole, selectedStatus]);
+  };
 
-  // Initial load
-  useEffect(() => {
-    loadRoles();
-    loadStats();
-  }, [loadRoles, loadStats]);
-
-  // Refetch staff data whenever debounced search or filters change
   useEffect(() => {
     fetchStaffData();
-  }, [fetchStaffData]);
-
-  // Clean up abort controller on unmount
-  useEffect(() => {
-    return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
   }, []);
 
   const handleOpenDeleteModal = (staff) => {
     setStaffToDelete(staff);
   };
 
-  // 5. DELETE /api/Staff/{id}
   const confirmDeleteStaff = async () => {
     if (!staffToDelete) return;
     const { id, name } = staffToDelete;
@@ -191,55 +168,62 @@ const StaffList = () => {
       setStaffList(prev => prev.filter(item => String(item.id ?? item.employeeId) !== String(id)));
       setToastMessage(`Staff "${name}" removed successfully.`);
       setToastType('success');
-      loadStats();
     } catch (err) {
       console.error('API delete failed:', err);
-      setToastMessage(`Failed to delete staff member: ${err.message}`);
+      setToastMessage(`Failed to delete staff member "${name}". Server or API error.`);
       setToastType('error');
     }
     setStaffToDelete(null);
   };
 
-  // 6. PATCH /api/Staff/{id}/status
   const handleToggleStatus = async (id, name) => {
     const item = staffList.find(s => String(s.id ?? s.employeeId) === String(id));
     if (!item) return;
 
     const newIsActive = !item.isActive;
-    const nextStatus = newIsActive ? 'Active' : 'Inactive';
+    const putPayload = {
+      id: parseInt(id, 10) || id,
+      staffId: id,
+      employeeId: item.employeeId || item.EmployeeId || "",
+      name: item.name || `${item.firstName || ''} ${item.lastName || ''}`.trim(),
+      firstName: item.firstName || item.FirstName || "",
+      lastName: item.lastName || item.LastName || "",
+      email: item.email || item.Email || "",
+      phone: item.mobile || item.phone || "",
+      mobileNumber: item.mobile || item.Mobile || item.mobileNumber || item.MobileNumber || "",
+      role: item.role || item.Role || "staff",
+      password: item.password || item.Password || "",
+      status: newIsActive ? 'Active' : 'Inactive',
+      isActive: newIsActive
+    };
 
     try {
-      await updateStaffStatus(id, {
-        status: nextStatus,
-        isActive: newIsActive,
-      });
-
+      await updateStaff(id, putPayload);
       setStaffList(prev => prev.map(s => {
         if (String(s.id ?? s.employeeId) === String(id)) {
-          return { ...s, isActive: newIsActive, status: nextStatus };
+          return { ...s, isActive: newIsActive, status: newIsActive ? 'Active' : 'Inactive' };
         }
         return s;
       }));
-      setToastMessage(`Staff "${name}" status updated to ${nextStatus}.`);
+      setToastMessage(`Staff status updated to ${newIsActive ? 'Active' : 'Inactive'}.`);
       setToastType('success');
-      loadStats();
     } catch (err) {
       console.error('API status toggle failed:', err);
-      setToastMessage(`Failed to update staff status: ${err.message}`);
+      setToastMessage(`Failed to update staff status. Server or API error.`);
       setToastType('error');
     }
   };
 
-  // KPI Calculations using backend stats if available, or current live dataset
-  const totalStaffCount = statsData?.totalStaff ?? statsData?.totalCount ?? staffList.length;
-  const activeStaffCount = statsData?.activeStaff ?? statsData?.activeCount ?? staffList.filter(s => s.isActive).length;
-  const inactiveStaffCount = statsData?.inactiveStaff ?? statsData?.inactiveCount ?? staffList.filter(s => !s.isActive).length;
-  const adminRoleCount = statsData?.adminCount ?? statsData?.adminRoleCount ?? staffList.filter(s => (s.role || '').toLowerCase() === 'admin').length;
+  // KPI Calculations
+  const totalStaffCount = staffList.length;
+  const activeStaffCount = staffList.filter(s => s.isActive).length;
+  const inactiveStaffCount = staffList.filter(s => !s.isActive).length;
+  const adminRoleCount = staffList.filter(s => (s.role || '').toLowerCase() === 'admin').length;
 
-  // Client-side fallback filter for immediate UI responsiveness
+  // Filtered staff list
   const filteredStaff = useMemo(() => {
     return staffList.filter((s) => {
-      const q = debouncedSearch.toLowerCase().trim();
+      const q = searchTerm.toLowerCase().trim();
       const matchSearch = !q || (
         (s.name && s.name.toLowerCase().includes(q)) ||
         (s.employeeId && s.employeeId.toLowerCase().includes(q)) ||
@@ -254,12 +238,12 @@ const StaffList = () => {
 
       return matchSearch && matchRole && matchStatus;
     });
-  }, [staffList, debouncedSearch, selectedRole, selectedStatus]);
+  }, [staffList, searchTerm, selectedRole, selectedStatus]);
 
   // Reset page on filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, selectedRole, selectedStatus]);
+  }, [searchTerm, selectedRole, selectedStatus]);
 
   // Pagination calculations
   const totalPages = Math.max(1, Math.ceil(filteredStaff.length / itemsPerPage));
@@ -422,26 +406,11 @@ const StaffList = () => {
             onChange={(e) => setSelectedRole(e.target.value)}
           >
             <option value="all">All Roles</option>
-            {availableRoles.length > 0 ? (
-              availableRoles.map((r) => {
-                const code = r.code || r.id || r.name;
-                const label = r.label || r.name || code;
-                return (
-                  <option key={code} value={code.toLowerCase()}>
-                    {label}
-                  </option>
-                );
-              })
-            ) : (
-              <>
-                <option value="admin">Admin</option>
-                <option value="advisory">Advisory</option>
-                <option value="inventory">Inventory</option>
-                <option value="manager">Manager</option>
-                <option value="sales">Sales</option>
-                <option value="staff">General Staff</option>
-              </>
-            )}
+            <option value="admin">Admin</option>
+            <option value="sales">Sales</option>
+            <option value="inventory">Inventory</option>
+            <option value="advisory">Advisory</option>
+            <option value="staff">General Staff</option>
           </select>
 
           <select
@@ -457,11 +426,7 @@ const StaffList = () => {
           <button
             type="button"
             className="staff-refresh-btn"
-            onClick={() => {
-              fetchStaffData();
-              loadStats();
-              loadRoles();
-            }}
+            onClick={fetchStaffData}
             disabled={loading}
             title="Refresh staff directory"
           >
@@ -491,45 +456,7 @@ const StaffList = () => {
                 <tr>
                   <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
                     <RefreshCw size={20} className="spin" style={{ display: 'block', margin: '0 auto 8px', color: '#1268a5' }} />
-                    Loading staff directory from backend...
-                  </td>
-                </tr>
-              ) : fetchError ? (
-                <tr>
-                  <td colSpan="7" style={{ padding: '40px 20px', textAlign: 'center' }}>
-                    <div style={{
-                      maxWidth: '520px',
-                      margin: '0 auto',
-                      padding: '20px',
-                      backgroundColor: '#fef2f2',
-                      border: '1px solid #fee2e2',
-                      borderRadius: '10px',
-                      color: '#991b1b',
-                    }}>
-                      <AlertTriangle size={28} style={{ color: '#ef4444', margin: '0 auto 10px', display: 'block' }} />
-                      <strong style={{ display: 'block', fontSize: '15px', marginBottom: '6px' }}>
-                        Failed to Load Staff Data from Backend
-                      </strong>
-                      <p style={{ fontSize: '13px', margin: '0 0 14px 0', color: '#7f1d1d', lineHeight: 1.5 }}>
-                        {fetchError}
-                      </p>
-                      <button
-                        type="button"
-                        onClick={fetchStaffData}
-                        style={{
-                          backgroundColor: '#dc2626',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '7px 16px',
-                          borderRadius: '6px',
-                          fontSize: '12.5px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Retry Connection
-                      </button>
-                    </div>
+                    Loading staff directory...
                   </td>
                 </tr>
               ) : pagedStaff.length === 0 ? (
@@ -571,11 +498,6 @@ const StaffList = () => {
                           </div>
                           <div>
                             <div className="staff-user-name">{name}</div>
-                            {staff.department && (
-                              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                                {staff.department}
-                              </div>
-                            )}
                           </div>
                         </div>
                       </td>
