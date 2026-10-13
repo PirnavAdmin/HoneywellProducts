@@ -122,14 +122,13 @@ const CustomersList = () => {
       phone: newCustomer.phone,
       email: (newCustomer.email || '').trim().toLowerCase(),
       status: newCustomer.status || 'Active',
-      role: newCustomer.type || 'Customer Account',
-      type: newCustomer.type || 'Customer Account',
-      customerType: newCustomer.type || 'Customer Account',
+      role: newCustomer.type || 'System Integrator',
       companyOrganization: newCustomer.companyOrganization || 'Enterprise Partner',
       address: newCustomer.address || '',
       district: newCustomer.district || '',
       state: newCustomer.state || '',
       profilePicture: `https://ui-avatars.com/api/?name=${encodeURIComponent(newCustomer.name)}&background=1268a5&color=fff`,
+      type: newCustomer.type || 'System Integrator',
       sector: newCustomer.sector || 'Security & CCTV Surveillance',
       projectScale: newCustomer.projectScale || 'Commercial & Industrial',
       gstin: newCustomer.gstin || ''
@@ -147,7 +146,7 @@ const CustomersList = () => {
 
       if (!res.ok) throw new Error('Failed to create customer');
       const data = await res.json();
-      setCustomers(prev => [{ ...data, type: newCustomer.type, role: newCustomer.type, customerType: newCustomer.type }, ...prev]);
+      setCustomers(prev => [{ ...data, type: newCustomer.type }, ...prev]);
       setShowAddModal(false);
       
       setNewCustomer({
@@ -218,7 +217,6 @@ const CustomersList = () => {
       status: editingCustomer.status || 'Active',
       role: editingCustomer.type || 'Customer Account',
       type: editingCustomer.type || 'Customer Account',
-      customerType: editingCustomer.type || 'Customer Account',
       companyOrganization: editingCustomer.companyOrganization || '',
       sector: editingCustomer.sector || 'Security & CCTV Surveillance',
       projectScale: editingCustomer.projectScale || 'Commercial & Industrial',
@@ -271,16 +269,13 @@ const CustomersList = () => {
         emailVal.includes(q) ||
         compVal.includes(q);
       
-      const rawType = (c.type || c.customerType || c.role || '').trim();
+      const rawType = (c.type || c.role || '').trim();
       const isWebsiteAccount =
         !rawType ||
         rawType.toUpperCase() === 'CUSTOMER ACCOUNT' ||
         rawType.toLowerCase() === 'customer' ||
-        rawType.toLowerCase() === 'customer account' ||
         rawType.toLowerCase() === 'registered customer' ||
-        rawType.toLowerCase() === 'individual account' ||
-        rawType.toLowerCase() === 'farmer' ||
-        rawType.toLowerCase() === 'grower';
+        rawType.toLowerCase() === 'individual account';
 
       const customerType = isWebsiteAccount ? 'Customer Account' : rawType;
 
@@ -310,9 +305,7 @@ const CustomersList = () => {
       t.toLowerCase() === 'customer' ||
       t.toLowerCase() === 'customer account' ||
       t.toLowerCase() === 'registered customer' ||
-      t.toLowerCase() === 'individual account' ||
-      t.toLowerCase() === 'grower' ||
-      t.toLowerCase() === 'farmer'
+      t.toLowerCase() === 'individual account'
     ) {
       return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', label: 'Customer Account' };
     }
@@ -508,8 +501,7 @@ const CustomersList = () => {
                 const displayAddress = formatAddr();
                 const orderCount = cust.orders?.length || 0;
                 const totalSpent = cust.orders?.reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0) || 0;
-                const rawType = cust.type || cust.customerType || cust.role || '';
-                const customerType = (!rawType || rawType.toLowerCase() === 'farmer' || rawType.toLowerCase() === 'grower') ? 'Customer Account' : rawType;
+                const customerType = cust.type || cust.role || 'Customer Account';
                 const badgeStyle = getTagBadgeStyle(customerType);
 
                 return (

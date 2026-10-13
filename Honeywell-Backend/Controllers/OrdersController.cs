@@ -88,17 +88,6 @@ namespace Honeywell.Controllers
             var orders = await query.OrderByDescending(o => o.OrderDate).ToListAsync();
             await PopulateItemImagesAsync(orders);
 
-            foreach (var ord in orders)
-            {
-                if (ord.FinalAmount <= 0 || ord.FinalAmount == ord.TotalAmount)
-                {
-                    decimal sub = ord.TotalAmount > 0 ? ord.TotalAmount : ord.Items.Sum(i => i.Subtotal);
-                    decimal tax = ord.GstAmount > 0 ? ord.GstAmount : Math.Round(sub * 0.18m, 2);
-                    ord.GstAmount = tax;
-                    ord.FinalAmount = sub + ord.ShippingFee + tax - ord.DiscountAmount;
-                }
-            }
-
             return Ok(orders);
         }
 
@@ -176,35 +165,13 @@ namespace Honeywell.Controllers
             var ordersList = await query.OrderByDescending(o => o.Id).ToListAsync();
             await PopulateItemImagesAsync(ordersList);
 
-            foreach (var o in ordersList)
-            {
-                if (o.FinalAmount <= 0 || o.FinalAmount == o.TotalAmount)
-                {
-                    decimal sub = o.TotalAmount > 0 ? o.TotalAmount : o.Items.Sum(i => i.Subtotal);
-                    decimal tax = o.GstAmount > 0 ? o.GstAmount : Math.Round(sub * 0.18m, 2);
-                    o.GstAmount = tax;
-                    o.FinalAmount = sub + o.ShippingFee + tax - o.DiscountAmount;
-                }
-            }
-
             // Format results for UI presentation
             var formattedOrders = ordersList.Select(o => {
-                var displayRole = "Customer Account";
-                if (o.Customer != null)
+                var displayRole = "Grower";
+                if (o.Customer != null && o.Customer.User != null)
                 {
-                    var rawRole = o.Customer.Role;
-                    if (!string.IsNullOrWhiteSpace(rawRole) 
-                        && !rawRole.Equals("Grower", StringComparison.OrdinalIgnoreCase) 
-                        && !rawRole.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                    {
-                        displayRole = rawRole;
-                    }
-                    else if (o.Customer.User != null && !string.IsNullOrWhiteSpace(o.Customer.User.Role)
-                        && !o.Customer.User.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase)
-                        && !o.Customer.User.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                    {
-                        displayRole = o.Customer.User.Role;
-                    }
+                    // Map "Grower" to "Farmer" as shown in the UI screen, or keep custom roles
+                    displayRole = o.Customer.User.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) ? "Farmer" : o.Customer.User.Role;
                 }
 
                 var cleanOrderNum = o.OrderNumber.Replace("#", "").Trim();
@@ -213,15 +180,11 @@ namespace Honeywell.Controllers
                     : $"INV-{cleanOrderNum}";
 
                 var displayPaymentStatus = "Pending";
-                if (o.PaymentStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Success", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Verified Paid", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Verified", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                if (o.PaymentStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Success", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Verified Paid", StringComparison.OrdinalIgnoreCase))
                 {
                     displayPaymentStatus = "Verified Paid";
                 }
-                else if (o.PaymentStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Failed", StringComparison.OrdinalIgnoreCase))
-                {
-                    displayPaymentStatus = "Rejected";
-                }
-                else if (o.PaymentStatus.Equals("PendingVerification", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Verification Pending", StringComparison.OrdinalIgnoreCase))
+                else if (o.PaymentStatus.Equals("PendingVerification", StringComparison.OrdinalIgnoreCase))
                 {
                     displayPaymentStatus = "Pending Verification";
                 }
@@ -239,18 +202,12 @@ namespace Honeywell.Controllers
                     InvoiceNumber = invoiceNumber,
                     CustomerName = o.Customer?.Name ?? "Walk-in Customer",
                     CustomerRole = displayRole,
-                    CustomerType = displayRole,
                     CustomerPhone = o.Customer?.Phone ?? "",
                     DateBooked = o.OrderDate.ToString("yyyy-MM-dd"),
                     LogisticsPartner = string.IsNullOrEmpty(o.CarrierName) ? "Not Assigned" : o.CarrierName,
                     PaymentStatus = displayPaymentStatus,
                     PaymentMethod = displayPaymentMethod,
                     TotalAmount = $"INR {o.FinalAmount:N0}",
-                    FinalAmount = o.FinalAmount,
-                    RawTotalAmount = o.TotalAmount,
-                    DiscountAmount = o.DiscountAmount,
-                    ShippingFee = o.ShippingFee,
-                    GstAmount = o.GstAmount,
                     Fulfillment = o.Status.ToUpper(),
                     Items = o.Items
                 };
@@ -688,7 +645,6 @@ namespace Honeywell.Controllers
             public string? Status { get; set; }
             public string? PaymentStatus { get; set; }
             public string? PaymentMethod { get; set; }
-            public string? CustomerType { get; set; }
             public List<OrderItemRequest>? Items { get; set; }
         }
 
@@ -738,12 +694,6 @@ namespace Honeywell.Controllers
                 customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone != null && c.Phone.Contains(phoneClean));
             }
 
-            var resolvedRole = !string.IsNullOrWhiteSpace(request.CustomerType)
-                && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
-                && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase)
-                ? request.CustomerType.Trim()
-                : "Customer Account";
-
             if (customer == null)
             {
                 // Auto-create customer if not found
@@ -772,27 +722,12 @@ namespace Honeywell.Controllers
                     Phone = phoneClean ?? "",
                     Address = fullAddress ?? "",
                     JoinDate = DateTime.UtcNow,
-                    Role = resolvedRole,
+                    Role = "CUSTOMER ACCOUNT",
                     Status = "Active"
                 };
 
                 _context.Customers.Add(customer);
                 await _context.SaveChangesAsync();
-            }
-            else
-            {
-                if (!string.IsNullOrWhiteSpace(request.CustomerType)
-                    && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
-                    && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                {
-                    customer.Role = request.CustomerType.Trim();
-                    await _context.SaveChangesAsync();
-                }
-                else if (string.IsNullOrWhiteSpace(customer.Role) || customer.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) || customer.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                {
-                    customer.Role = "Customer Account";
-                    await _context.SaveChangesAsync();
-                }
             }
 
             // Load settings

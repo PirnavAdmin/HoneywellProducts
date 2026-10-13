@@ -23,24 +23,6 @@ export const mapOrderFromApi = (item) => {
 
   const dateVal = item.dateBooked || item.bookedDate || item.bookingDate || item.orderDate || item.createdAt || item.createdDate || item.dateCreated || item.date || new Date().toISOString();
 
-  const parseVal = (val) => {
-    if (typeof val === 'number') return val;
-    if (!val) return 0;
-    const str = String(val).trim().replace(/^(rs\.?|inr|₹)\s*/i, '').replace(/,/g, '').replace(/[^0-9.-]/g, '');
-    const num = parseFloat(str);
-    return isNaN(num) ? 0 : num;
-  };
-
-  const finalAmount = parseVal(item.finalAmount ?? item.totalAmount ?? item.total ?? item.amount ?? 0);
-  const rawStatus = item.status || item.fulfillment || item.orderStatus || 'Pending';
-  const rawPayStatus = item.paymentStatus || item.payStatus || 'Pending';
-  const isCancelled = ['CANCELLED', 'CANCELED'].includes(String(rawStatus).trim().toUpperCase());
-  const pmLower = String(item.paymentMethod || item.paymentMode || '').toLowerCase();
-  const isUpiOrManual = pmLower.includes('upi') || pmLower.includes('manual') || pmLower.includes('bank');
-  const resolvedPayStatus = (isCancelled && isUpiOrManual && String(rawPayStatus).trim().toUpperCase() === 'PENDING')
-    ? 'Rejected'
-    : rawPayStatus;
-
   return {
     id: String(rawId),
     orderNumber: orderNo,
@@ -54,16 +36,10 @@ export const mapOrderFromApi = (item) => {
     city: item.city || '',
     state: item.state || '',
     pinCode: item.pinCode || item.pincode || item.zipCode || '',
-    subtotal: parseVal(item.subtotal ?? item.totalAmount ?? 0),
-    shippingFee: parseVal(item.shippingFee ?? 0),
-    gstAmount: parseVal(item.gstAmount ?? 0),
-    discountAmount: parseVal(item.discountAmount ?? 0),
-    finalAmount: finalAmount,
-    totalAmount: finalAmount,
-    total: finalAmount,
-    status: rawStatus,
-    fulfillment: item.fulfillment || rawStatus,
-    paymentStatus: resolvedPayStatus,
+    totalAmount: Number(item.totalAmount ?? item.total ?? item.amount ?? 0),
+    total: Number(item.totalAmount ?? item.total ?? item.amount ?? 0),
+    status: item.status || item.orderStatus || 'Pending',
+    paymentStatus: item.paymentStatus || item.payStatus || 'Pending',
     paymentMethod: item.paymentMethod || item.paymentMode || 'UPI',
     items,
     createdAt: dateVal,
@@ -137,7 +113,6 @@ export const orderService = {
       orderNumber,
       customerId: activeCustomerId ? Number(activeCustomerId) : undefined,
       customerName: payload.customerName || payload.name || 'Customer',
-      customerType: payload.customerType || payload.type || payload.role || localStorage.getItem('customerType') || 'Customer Account',
       email: payload.email || '',
       mobile: payload.mobile || payload.phone || '',
       phone: payload.mobile || payload.phone || '',
@@ -148,9 +123,7 @@ export const orderService = {
       district: payload.city || payload.state || 'Local',
       pinCode: payload.pinCode || payload.pincode || '',
       totalAmount: Number(payload.totalAmount || payload.total || 0),
-      gstAmount: Number(payload.gstAmount || payload.taxAmount || 0),
-      discountAmount: Number(payload.discountAmount || 0),
-      finalAmount: Number(payload.finalAmount || payload.totalAmount || payload.total || 0),
+      finalAmount: Number(payload.totalAmount || payload.total || 0),
       paymentMethod: payload.paymentMethod || 'Cash on Delivery',
       paymentStatus: payload.paymentStatus || 'Pending',
       status: payload.status || 'Processing',

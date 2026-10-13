@@ -666,11 +666,6 @@ namespace Honeywell.Controllers
                 } : null;
 
                 var displayStatus = (o.Status ?? "PENDING").ToUpper();
-                var subtotalVal = o.TotalAmount > 0 ? o.TotalAmount : o.Items.Sum(i => i.Subtotal);
-                var taxVal = o.GstAmount > 0 ? o.GstAmount : Math.Round(subtotalVal * 0.18m, 2);
-                var finalVal = (o.FinalAmount > 0 && o.FinalAmount != o.TotalAmount) 
-                    ? o.FinalAmount 
-                    : (subtotalVal + o.ShippingFee + taxVal - o.DiscountAmount);
 
                 return new
                 {
@@ -683,15 +678,8 @@ namespace Honeywell.Controllers
                     statusBadge = displayStatus,
                     paymentStatus = o.PaymentStatus ?? "Pending",
                     paymentMethod = o.PaymentMethod ?? "COD",
-                    subtotal = subtotalVal,
-                    discountAmount = o.DiscountAmount,
-                    shippingFee = o.ShippingFee,
-                    gstAmount = o.GstAmount,
-                    taxAmount = o.GstAmount,
-                    finalAmount = finalVal,
-                    totalAmount = finalVal,
-                    total = finalVal,
-                    totalAmountFormatted = $"₹{finalVal:N0}",
+                    totalAmount = o.TotalAmount > 0 ? o.TotalAmount : o.FinalAmount,
+                    totalAmountFormatted = $"${(o.TotalAmount > 0 ? o.TotalAmount : o.FinalAmount):F2}",
                     totalQuantity = o.Items.Sum(i => i.Quantity),
                     shippingAddress = o.ShippingAddress ?? "",
                     billingAddress = customer?.BillingAddressJson ?? o.ShippingAddress ?? "",
@@ -746,11 +734,6 @@ namespace Honeywell.Controllers
 
             var customer = await _context.Customers.FindAsync(order.CustomerId);
             var displayStatus = (order.Status ?? "PENDING").ToUpper();
-            var subtotalVal = order.TotalAmount > 0 ? order.TotalAmount : order.Items.Sum(i => i.Subtotal);
-            var taxVal = order.GstAmount > 0 ? order.GstAmount : Math.Round(subtotalVal * 0.18m, 2);
-            var finalVal = (order.FinalAmount > 0 && order.FinalAmount != order.TotalAmount) 
-                ? order.FinalAmount 
-                : (subtotalVal + order.ShippingFee + taxVal - order.DiscountAmount);
 
             return Ok(new
             {
@@ -763,15 +746,8 @@ namespace Honeywell.Controllers
                 statusBadge = displayStatus,
                 paymentStatus = order.PaymentStatus ?? "Pending",
                 paymentMethod = order.PaymentMethod ?? "COD",
-                subtotal = subtotalVal,
-                discountAmount = order.DiscountAmount,
-                shippingFee = order.ShippingFee,
-                gstAmount = order.GstAmount,
-                taxAmount = order.GstAmount,
-                finalAmount = finalVal,
-                totalAmount = finalVal,
-                total = finalVal,
-                totalAmountFormatted = $"₹{finalVal:N0}",
+                totalAmount = order.TotalAmount > 0 ? order.TotalAmount : order.FinalAmount,
+                totalAmountFormatted = $"${(order.TotalAmount > 0 ? order.TotalAmount : order.FinalAmount):F2}",
                 shippingAddress = order.ShippingAddress ?? "",
                 billingAddress = customer?.BillingAddressJson ?? order.ShippingAddress ?? "",
                 trackingNumber = order.TrackingNumber ?? "",

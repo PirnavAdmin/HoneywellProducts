@@ -18,10 +18,24 @@ namespace Honeywell.Services
 
         public string GenerateToken(User user)
         {
-            var claims = new[]
+            var email = user.Email ?? "";
+            var role = string.IsNullOrWhiteSpace(user.Role) ? "Admin" : user.Role;
+            var identifier = string.IsNullOrWhiteSpace(user.EmployeeId) ? email : user.EmployeeId;
+
+            var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, user.Email),
-                new Claim(ClaimTypes.Role, user.Role)
+                new Claim(JwtRegisteredClaimNames.Sub, email),
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(ClaimTypes.NameIdentifier, identifier),
+                new Claim(ClaimTypes.Name, email),
+                new Claim(ClaimTypes.Email, email),
+                new Claim(ClaimTypes.Role, role),
+                new Claim("email", email),
+                new Claim("role", role),
+                new Claim("fullName", user.FullName ?? ""),
+                new Claim("name", user.FullName ?? ""),
+                new Claim("employeeId", user.EmployeeId ?? ""),
+                new Claim("mobileNumber", user.MobileNumber ?? "")
             };
 
             var key = new SymmetricSecurityKey(
@@ -36,7 +50,7 @@ namespace Honeywell.Services
                 issuer: _configuration["Jwt:Issuer"],
                 audience: _configuration["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.Now.AddHours(2),
+                expires: DateTime.UtcNow.AddDays(7),
                 signingCredentials: creds);
 
             return new JwtSecurityTokenHandler()

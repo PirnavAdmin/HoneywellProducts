@@ -101,7 +101,7 @@ export default function Checkout() {
   const [nbStep, setNbStep] = useState('login'); // 'login' | 'otp'
 
   const [utrNumber, setUtrNumber] = useState('');
-  const [manualAmount, setManualAmount] = useState(() => Math.max(0, total + Math.round(total * 0.18)));
+  const [manualAmount, setManualAmount] = useState(total);
   const [remarks, setRemarks] = useState('');
   const [screenshotFile, setScreenshotFile] = useState(null);
 
@@ -117,11 +117,6 @@ export default function Checkout() {
   const [couponApplying, setCouponApplying] = useState(false);
   const [couponMsg, setCouponMsg] = useState({ type: '', text: '' });
   const [paymentMessage, setPaymentMessage] = useState({ type: '', text: '' });
-
-  useEffect(() => {
-    const taxAmt = Math.round(total * 0.18);
-    setManualAmount(Math.max(0, total + taxAmt - discountAmount));
-  }, [total, discountAmount]);
 
   const handleApplyCoupon = async (e) => {
     e.preventDefault();
@@ -181,13 +176,12 @@ export default function Checkout() {
     setPaymentMessage({ type: 'info', text: 'Processing payment request...' });
 
     const activeCustId = user?.customerId || user?.id || localStorage.getItem('customerId');
-    const taxAmount = Math.round(total * 0.18);
-    const grandTotal = Math.max(0, total + taxAmount - discountAmount);
+    const finalAmount = Math.max(0, total - discountAmount);
 
     try {
       // 0. RAZORPAY / ONLINE GATEWAY FLOW
       if (paymentMethod === 'Razorpay Gateway' || paymentMethod === 'Online Gateway') {
-        const razorRes = await createRazorpayOrder(grandTotal, 'INR', currentOrderId);
+        const razorRes = await createRazorpayOrder(finalAmount, 'INR', currentOrderId);
 
         if (!razorRes || razorRes.success === false) {
           setPaymentMessage({ type: 'error', text: razorRes?.message || 'Could not initialize Razorpay online gateway.' });
@@ -216,7 +210,7 @@ export default function Checkout() {
 
         const options = {
           key: razorpayKey,
-          amount: grandTotal * 100,
+          amount: finalAmount * 100,
           currency: 'INR',
           name: 'Honeywell Products',
           description: `Order #${currentOrderId}`,
@@ -247,10 +241,7 @@ export default function Checkout() {
                   city: city.trim(),
                   state: state.trim(),
                   pinCode: pinCode.trim(),
-                  totalAmount: total,
-                  gstAmount: taxAmount,
-                  discountAmount: discountAmount,
-                  finalAmount: grandTotal,
+                  totalAmount: finalAmount,
                   paymentMethod: 'Razorpay Online Gateway',
                   paymentStatus: 'Paid',
                   status: 'Processing',
@@ -284,45 +275,19 @@ export default function Checkout() {
 
       // 1. MANUAL VERIFICATION FLOW
       if (paymentMethod === 'Manual Payment') {
-        const amt = Number(manualAmount || grandTotal);
+        const amt = Number(manualAmount || total);
         if (!amt || amt <= 0) {
           setPaymentMessage({ type: 'error', text: 'Amount Paid must be greater than zero.' });
           setSubmitting(false);
           return;
         }
 
-        let resolvedOrderRef = currentOrderId;
-        try {
-          const createdOrder = await orderService.create({
-            orderNumber: currentOrderId,
-            customerId: activeCustId ? Number(activeCustId) : undefined,
-            customerName: customerName.trim(),
-            email: email.trim(),
-            mobile: mobile.trim(),
-            address: address.trim(),
-            city: city.trim(),
-            state: state.trim(),
-            pinCode: pinCode.trim(),
-            totalAmount: total,
-            gstAmount: taxAmount,
-            discountAmount: discountAmount,
-            finalAmount: grandTotal,
-            paymentMethod: 'Manual Payment',
-            paymentStatus: 'Verification Pending',
-            status: 'Processing',
-            items
-          });
-          if (createdOrder && (createdOrder.orderNumber || createdOrder.id)) {
-            resolvedOrderRef = String(createdOrder.orderNumber || createdOrder.id);
-          }
-        } catch (e) {}
-
         const fd = new FormData();
         fd.append('AmountPaid', amt);
-        fd.append('OrderId', resolvedOrderRef);
+        fd.append('OrderId', currentOrderId);
         fd.append('CustomerName', customerName);
         fd.append('MobileNumber', mobile);
-        fd.append('Remarks', `${remarks || 'Manual Payment Verification'} [GST-INCL]`);
+        fd.append('Remarks', remarks || 'Manual Payment Verification');
         fd.append('PaymentTime', new Date().toLocaleTimeString());
         fd.append('PaymentDate', new Date().toISOString().slice(0, 10));
         fd.append('UtrNumber', utrNumber);
@@ -332,11 +297,30 @@ export default function Checkout() {
 
         const res = await submitManualVerification(fd);
         if (res && res.success !== false) {
+          try {
+            await orderService.create({
+              orderNumber: currentOrderId,
+              customerId: activeCustId ? Number(activeCustId) : undefined,
+              customerName: customerName.trim(),
+              email: email.trim(),
+              mobile: mobile.trim(),
+              address: address.trim(),
+              city: city.trim(),
+              state: state.trim(),
+              pinCode: pinCode.trim(),
+              totalAmount: amt,
+              paymentMethod: 'Manual Payment',
+              paymentStatus: 'Verification Pending',
+              status: 'Processing',
+              items
+            });
+          } catch (e) {}
+
           setOrderSuccessPlaced(true);
           clearCart();
           setPaymentMessage({ type: 'success', text: res.message || 'Manual payment submitted for verification!' });
           setTimeout(() => {
-            navigate('/order-success', { state: { reference: resolvedOrderRef, status: 'Verification Pending' } });
+            navigate('/order-success', { state: { reference: currentOrderId, status: 'Verification Pending' } });
           }, 600);
         } else {
           setPaymentMessage({ type: 'error', text: res?.message || 'Manual verification failed.' });
@@ -353,7 +337,7 @@ export default function Checkout() {
             username: nbUsername,
             password: nbPassword,
             orderId: currentOrderId,
-            amount: grandTotal
+            amount: total
           });
           if (loginRes && loginRes.success !== false) {
             const txnId = loginRes.transactionId || `TXN-NB-${Date.now()}`;
@@ -392,10 +376,7 @@ export default function Checkout() {
                   city: city.trim(),
                   state: state.trim(),
                   pinCode: pinCode.trim(),
-                  totalAmount: total,
-                  gstAmount: taxAmount,
-                  discountAmount: discountAmount,
-                  finalAmount: grandTotal,
+                  totalAmount: finalAmount,
                   paymentMethod: 'Net Banking',
                   paymentStatus: 'Paid',
                   status: 'Processing',
@@ -434,10 +415,7 @@ export default function Checkout() {
             city: city.trim(),
             state: state.trim(),
             pinCode: pinCode.trim(),
-            totalAmount: total,
-            gstAmount: taxAmount,
-            discountAmount: discountAmount,
-            finalAmount: grandTotal,
+            totalAmount: finalAmount,
             paymentMethod: 'Cash on Delivery',
             paymentStatus: 'Pending',
             status: 'Processing',
@@ -459,7 +437,7 @@ export default function Checkout() {
       // 4. INITIATE ONLINE PAYMENT (UPI, Card, QR)
       const initPayload = {
         paymentMethod,
-        amount: grandTotal,
+        amount: total,
         orderId: currentOrderId,
         upiId: paymentMethod === 'UPI' ? upiId : undefined,
         cardNumber: paymentMethod === 'Card' ? cardNumber : undefined,
@@ -491,10 +469,7 @@ export default function Checkout() {
               city: city.trim(),
               state: state.trim(),
               pinCode: pinCode.trim(),
-              totalAmount: total,
-              gstAmount: taxAmount,
-              discountAmount: discountAmount,
-              finalAmount: grandTotal,
+              totalAmount: finalAmount,
               paymentMethod,
               paymentStatus: 'Verified',
               status: 'Processing',
@@ -523,10 +498,7 @@ export default function Checkout() {
               city: city.trim(),
               state: state.trim(),
               pinCode: pinCode.trim(),
-              totalAmount: total,
-              gstAmount: taxAmount,
-              discountAmount: discountAmount,
-              finalAmount: grandTotal,
+              totalAmount: finalAmount,
               paymentMethod,
               paymentStatus: initRes.paymentStatus || 'Verified',
               status: 'Processing',
@@ -554,10 +526,7 @@ export default function Checkout() {
             city: city.trim(),
             state: state.trim(),
             pinCode: pinCode.trim(),
-            totalAmount: total,
-            gstAmount: taxAmount,
-            discountAmount: discountAmount,
-            finalAmount: grandTotal,
+            totalAmount: finalAmount,
             paymentMethod,
             paymentStatus: 'Pending',
             status: 'Processing',

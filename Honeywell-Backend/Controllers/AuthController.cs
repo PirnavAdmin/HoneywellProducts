@@ -39,6 +39,58 @@ namespace Honeywell.Controllers
                     dto.Password = pVal.ToString();
             }
 
+            if (!string.IsNullOrWhiteSpace(dto.Email))
+            {
+                var cleanEmail = dto.Email.Trim().ToLowerInvariant();
+                var existingUser = await _context.Users
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == cleanEmail);
+
+                if (existingUser != null)
+                {
+                    var userRole = (existingUser.Role ?? "").Trim();
+                    bool isAdminRole = userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                                       userRole.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                                       userRole.Equals("Super Admin", StringComparison.OrdinalIgnoreCase);
+
+                    if (!isAdminRole)
+                    {
+                        return StatusCode(StatusCodes.Status403Forbidden, new
+                        {
+                            success = false,
+                            message = "Access Denied: This account is registered as Staff. Please use the Staff login endpoint."
+                        });
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        var staffMember = await _context.Staff
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(s => s.Email.ToLower() == cleanEmail || s.EmployeeId.ToLower() == cleanEmail);
+
+                        if (staffMember != null)
+                        {
+                            var staffRole = (staffMember.Role ?? "").Trim();
+                            bool isStaffAdmin = staffRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                                                staffRole.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                                                staffRole.Equals("Super Admin", StringComparison.OrdinalIgnoreCase);
+
+                            if (!isStaffAdmin)
+                            {
+                                return StatusCode(StatusCodes.Status403Forbidden, new
+                                {
+                                    success = false,
+                                    message = "Access Denied: This account is registered as Staff. Please use the Staff login endpoint."
+                                });
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+
             var result = await _authService.LoginAsync(dto);
 
             if (result.Contains("Invalid"))

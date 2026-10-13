@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Honeywell.Models
 {
@@ -17,21 +16,6 @@ namespace Honeywell.Models
         public string? Email { get; set; }
         public string? Password { get; set; }
         public string? Role { get; set; } = "CUSTOMER ACCOUNT";
-
-        [NotMapped]
-        public string? CustomerType
-        {
-            get => Role;
-            set { if (!string.IsNullOrWhiteSpace(value)) Role = value; }
-        }
-
-        [NotMapped]
-        public string? Type
-        {
-            get => Role;
-            set { if (!string.IsNullOrWhiteSpace(value)) Role = value; }
-        }
-
         public string? Status { get; set; } = "Active"; // Active, Inactive
         public DateTime JoinDate { get; set; } = DateTime.UtcNow;
         public int CoinsBalance { get; set; } = 0;

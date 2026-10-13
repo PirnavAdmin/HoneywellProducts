@@ -76,14 +76,12 @@ const Customer = () => {
       })
       .then(data => {
         setProfile(data);
-        const rawType = data.type || data.customerType || data.role || '';
-        const cleanType = (!rawType || rawType.toLowerCase() === 'farmer' || rawType.toLowerCase() === 'grower') ? 'Customer Account' : rawType;
         setEditForm({
           name: data.name || '',
           phone: data.phone || '',
           email: (data.email || '').toLowerCase(),
           status: data.status || 'Active',
-          type: cleanType,
+          type: data.type || data.role || 'System Integrator',
           companyOrganization: data.companyOrganization || '',
           sector: data.sector || 'Security & CCTV Surveillance',
           projectScale: data.projectScale || 'Commercial & Industrial',
@@ -121,9 +119,8 @@ const Customer = () => {
       phone: editForm.phone,
       email: (editForm.email || '').trim().toLowerCase(),
       status: editForm.status || 'Active',
-      role: editForm.type || 'Customer Account',
-      type: editForm.type || 'Customer Account',
-      customerType: editForm.type || 'Customer Account',
+      role: editForm.type || 'System Integrator',
+      type: editForm.type || 'System Integrator',
       companyOrganization: editForm.companyOrganization || '',
       sector: editForm.sector || 'Security & CCTV Surveillance',
       projectScale: editForm.projectScale || 'Commercial & Industrial',
@@ -232,9 +229,7 @@ const Customer = () => {
       t.toLowerCase() === 'customer' ||
       t.toLowerCase() === 'customer account' ||
       t.toLowerCase() === 'registered customer' ||
-      t.toLowerCase() === 'individual account' ||
-      t.toLowerCase() === 'grower' ||
-      t.toLowerCase() === 'farmer'
+      t.toLowerCase() === 'individual account'
     ) {
       return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', label: 'Customer Account' };
     }
@@ -322,8 +317,7 @@ const Customer = () => {
           {/* Scrollable Customer Items List */}
           <div style={{ maxHeight: '380px', overflowY: 'auto', paddingRight: '4px', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
             {filteredSearchList.map(c => {
-              const rawType = c.type || c.customerType || c.role || '';
-              const cType = (!rawType || rawType.toLowerCase() === 'farmer' || rawType.toLowerCase() === 'grower') ? 'Customer Account' : rawType;
+              const cType = c.type || c.role || 'System Integrator';
               const bStyle = getTagBadgeStyle(cType);
               return (
                 <div
@@ -429,8 +423,7 @@ const Customer = () => {
 
   // Derivations
   const totalSpent = profile.orders?.reduce((sum, o) => sum + (o.finalAmount || o.totalAmount || 0), 0) || 0;
-  const rawCustType = profile.type || profile.customerType || profile.role || '';
-  const customerType = (!rawCustType || rawCustType.toLowerCase() === 'farmer' || rawCustType.toLowerCase() === 'grower') ? 'Customer Account' : rawCustType;
+  const customerType = profile.type || profile.role || 'System Integrator';
   const badgeStyle = getTagBadgeStyle(customerType);
 
   return (

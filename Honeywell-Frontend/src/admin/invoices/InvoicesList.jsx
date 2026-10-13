@@ -79,52 +79,17 @@ const InvoicesList = () => {
     setError('');
     try {
       const data = await getInvoices(search);
-      const parseNum = (val) => {
-        if (typeof val === 'number') return val;
-        if (!val) return 0;
-        const str = String(val).trim().replace(/^(rs\.?|inr|₹)\s*/i, '').replace(/,/g, '').replace(/[^0-9.-]/g, '');
-        const n = parseFloat(str);
-        return isNaN(n) ? 0 : n;
-      };
-
-      const normalizedList = (data.invoices || []).map(inv => {
-        const subtotal = parseNum(inv.subTotal || inv.subtotal || inv.totalAmount || inv.billed);
-        const tax = parseNum(inv.taxAmount || inv.gstAmount || Math.round(subtotal * 0.18));
-        let billedNum = parseNum(inv.finalAmount || inv.totalAmount || inv.billed);
-
-        // If billed equals base subtotal, add 18% tax
-        if (billedNum <= 0 || (subtotal > 0 && billedNum === subtotal)) {
-          billedNum = subtotal + tax;
-        }
-
-        const rawSt = String(inv.status || inv.paymentStatus || 'Unpaid').trim().toLowerCase();
-        const resolvedStatus = (rawSt === 'cancelled' || rawSt === 'canceled' || rawSt === 'rejected' || rawSt === 'failed')
-          ? 'Cancelled'
-          : (rawSt === 'paid' || rawSt === 'verified' || rawSt === 'verified paid' || rawSt === 'approved' || rawSt === 'success')
-            ? 'Paid'
-            : 'Unpaid';
-
-        return {
-          ...inv,
-          id: inv.id ?? inv.Id,
-          invoiceId: normalizeInvoiceId(inv.invoiceId),
-          billed: `Rs. ${billedNum.toLocaleString('en-IN')}`,
-          billedNum: billedNum,
-          status: resolvedStatus
-        };
-      });
+      const normalizedList = (data.invoices || []).map(inv => ({
+        ...inv,
+        id: inv.id ?? inv.Id,
+        invoiceId: normalizeInvoiceId(inv.invoiceId)
+      }));
       setInvoices(normalizedList);
-
-      const paidList = normalizedList.filter(i => i.status === 'Paid');
-      const unpaidList = normalizedList.filter(i => i.status === 'Unpaid');
-      const cancelledList = normalizedList.filter(i => i.status === 'Cancelled');
-      const computedRevenue = paidList.reduce((sum, i) => sum + (Number(i.billedNum) || 0), 0);
-
       setMetrics({
-        totalRevenue: `Rs. ${computedRevenue.toLocaleString('en-IN')}`,
-        paidInvoices: paidList.length,
-        unpaidInvoices: unpaidList.length,
-        cancelledInvoices: cancelledList.length
+        totalRevenue: data.totalRevenue || 'Rs. 0',
+        paidInvoices: data.paidInvoices || 0,
+        unpaidInvoices: data.unpaidInvoices || 0,
+        cancelledInvoices: data.cancelledInvoices || 0
       });
     } catch (err) {
       if (!isBackground) {
@@ -170,15 +135,7 @@ const InvoicesList = () => {
 
   const handlePrintInvoice = async (id) => {
     try {
-      let order = null;
-      try {
-        order = await getInvoiceById(id);
-      } catch (fetchErr) {
-        console.warn('Failed to fetch invoice by ID, falling back to local invoice row:', fetchErr);
-      }
-      if (!order) {
-        order = invoices.find(inv => inv.id === id) || { id };
-      }
+      const order = await getInvoiceById(id);
 
       const parseCurrencyValue = (val) => {
         if (typeof val === 'number') return val;
@@ -190,42 +147,23 @@ const InvoicesList = () => {
         return Number(str) || 0;
       };
 
+      const finalAmountNum = order.totalAmount !== undefined ? Number(order.totalAmount) : (order.finalAmount !== undefined ? Number(order.finalAmount) : parseCurrencyValue(order.billed));
+
       const itemsList = Array.isArray(order.items) && order.items.length > 0 ? order.items : [];
       const computedItemsSubtotal = itemsList.reduce((acc, item) => {
         const itemPrice = item.priceNum !== undefined ? Number(item.priceNum) : parseCurrencyValue(item.price);
-        const itemQty = Number(item.quantity || item.qty || 1);
+        const itemQty = Number(item.quantity || 1);
         return acc + (itemPrice * itemQty);
       }, 0);
 
-      const subtotalNum = order.subTotal !== undefined && Number(order.subTotal) > 0
-        ? Number(order.subTotal)
-        : (order.subtotal !== undefined && Number(order.subtotal) > 0
-          ? Number(order.subtotal)
-          : (computedItemsSubtotal > 0 ? computedItemsSubtotal : parseCurrencyValue(order.billed)));
-
+      const subtotalNum = order.subTotal !== undefined ? Number(order.subTotal) : (order.subtotal !== undefined ? Number(order.subtotal) : (computedItemsSubtotal > 0 ? computedItemsSubtotal : (finalAmountNum / 1.18)));
       const discountNum = Number(order.discountAmount || order.discount || 0);
       const shippingNum = Number(order.shippingFee || order.shippingCharge || 0);
       const netTaxableNum = Math.max(0, subtotalNum - discountNum);
-
-      const gstAmountNum = (order.taxAmount !== undefined && Number(order.taxAmount) > 0)
-        ? Number(order.taxAmount)
-        : ((order.gstAmount !== undefined && Number(order.gstAmount) > 0)
-          ? Number(order.gstAmount)
-          : Math.round(netTaxableNum * 0.18));
-
-      const rawFinal = order.finalAmount !== undefined && Number(order.finalAmount) > 0
-        ? Number(order.finalAmount)
-        : ((order.totalAmount !== undefined && Number(order.totalAmount) > 0)
-          ? Number(order.totalAmount)
-          : parseCurrencyValue(order.billed));
-
-      // Ensure Grand Total Due always includes the 18% tax
-      const grandTotalNum = (rawFinal > 0 && rawFinal > (netTaxableNum + shippingNum))
-        ? rawFinal
-        : (netTaxableNum + gstAmountNum + shippingNum);
-
-      const cgstNum = Math.round((gstAmountNum / 2) * 100) / 100;
-      const sgstNum = Math.round((gstAmountNum / 2) * 100) / 100;
+      const gstAmountNum = order.taxAmount !== undefined ? Number(order.taxAmount) : (order.gstAmount !== undefined ? Number(order.gstAmount) : (netTaxableNum * 0.18));
+      const grandTotalNum = finalAmountNum > 0 ? finalAmountNum : (netTaxableNum + gstAmountNum + shippingNum);
+      const cgstNum = gstAmountNum / 2;
+      const sgstNum = gstAmountNum / 2;
 
       let printIframe = document.getElementById('invoice-print-iframe');
       if (!printIframe) {
@@ -240,19 +178,19 @@ const InvoicesList = () => {
         document.body.appendChild(printIframe);
       }
 
-      const itemsHtml = itemsList.length > 0 ? itemsList.map((item, idx) => {
+      const itemsHtml = itemsList.map((item, idx) => {
         const itemPrice = item.priceNum !== undefined ? Number(item.priceNum) : parseCurrencyValue(item.price);
-        const itemQty = Number(item.quantity || item.qty || 1);
+        const itemQty = Number(item.quantity || 1);
         const itemSubtotal = itemPrice * itemQty;
-        const itemTax = Math.round(itemSubtotal * 0.18 * 100) / 100;
+        const itemTax = itemSubtotal * 0.18;
         const itemTotal = itemSubtotal + itemTax;
 
         return `
           <tr>
             <td style="text-align: center; font-weight: 600;">${idx + 1}</td>
             <td>
-              <div style="font-weight: 700; color: #0f172a;">${item.productName || item.name || 'Honeywell Product'}</div>
-              ${item.productCode || item.sku ? `<div style="font-size: 11px; color: #64748b;">SKU: ${item.productCode || item.sku}</div>` : ''}
+              <div style="font-weight: 700; color: #0f172a;">${item.productName || 'Product'}</div>
+              ${item.productCode ? `<div style="font-size: 11px; color: #64748b;">SKU: ${item.productCode}</div>` : ''}
             </td>
             <td style="text-align: center; font-weight: 600;">${itemQty}</td>
             <td style="text-align: right;">₹${itemPrice.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
@@ -260,19 +198,7 @@ const InvoicesList = () => {
             <td style="text-align: right; font-weight: 700;">₹${itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
           </tr>
         `;
-      }).join('') : `
-        <tr>
-          <td style="text-align: center; font-weight: 600;">1</td>
-          <td>
-            <div style="font-weight: 700; color: #0f172a;">Order Items (Consolidated)</div>
-            <div style="font-size: 11px; color: #64748b;">Ref: ORD-${order.id}</div>
-          </td>
-          <td style="text-align: center; font-weight: 600;">1</td>
-          <td style="text-align: right;">₹${subtotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-          <td style="text-align: right;">₹${gstAmountNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-          <td style="text-align: right; font-weight: 700;">₹${grandTotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-        </tr>
-      `;
+      }).join('');
 
       const docTitle = "TAX INVOICE";
       const docSubTitle = "ORIGINAL FOR RECIPIENT";
@@ -413,9 +339,7 @@ const InvoicesList = () => {
                 </div>
 
                 <div class="financial-totals">
-                  <div class="total-line"><span>Subtotal (Taxable Value)</span><span>₹${subtotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
-                  ${discountNum > 0 ? `<div class="total-line" style="color: #dc2626;"><span>Discount</span><span>-₹${discountNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>` : ''}
-                  ${shippingNum > 0 ? `<div class="total-line"><span>Shipping Charges</span><span>₹${shippingNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>` : ''}
+                  <div class="total-line"><span>Subtotal</span><span>₹${subtotalNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                   <div class="total-line"><span>CGST (9%)</span><span>₹${cgstNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                   <div class="total-line"><span>SGST (9%)</span><span>₹${sgstNum.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
                   <div class="grand-total-line">

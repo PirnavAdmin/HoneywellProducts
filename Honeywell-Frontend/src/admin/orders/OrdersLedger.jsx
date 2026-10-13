@@ -98,11 +98,6 @@ export const PaymentStatusBadge = ({ paymentStatus }) => {
     color = '#059669'; // Green for Paid
     bg = '#ecfdf5';
     text = 'Verified';
-  } else if (paymentStatus === 'Rejected' || paymentStatus === 'Failed') {
-    icon = AlertCircle;
-    color = '#dc2626'; // Red for Rejected
-    bg = '#fef2f2';
-    text = 'Rejected';
   } else if (paymentStatus === 'Refunded') {
     icon = AlertCircle;
     color = '#7e22ce'; // Purple for Refunded
@@ -160,10 +155,10 @@ export const mapStatus = (status, paymentStatus) => {
   if (!status) return 'Pending';
   const s = status.toUpperCase();
   const ps = (paymentStatus || '').toUpperCase();
-  const isPaid = ps === 'PAID' || ps === 'VERIFIED PAID' || ps === 'SUCCESS' || ps === 'PAID VERIFIED' || ps === 'VERIFIED' || ps === 'APPROVED';
+  const isPaid = ps === 'PAID' || ps === 'VERIFIED PAID' || ps === 'SUCCESS' || ps === 'PAID VERIFIED' || ps === 'VERIFIED';
   const isPendingPay = ps === 'PENDING' || ps === 'PENDING VERIFICATION' || ps === 'PENDINGVERIFICATION' || ps === 'UNPAID';
 
-  if (s === 'CANCELLED' || s === 'CANCELED' || ps === 'REJECTED' || ps === 'FAILED') return 'Cancelled';
+  if (s === 'CANCELLED' || s === 'CANCELED') return 'Cancelled';
   if (s === 'COMPLETED' || s === 'DELIVERED') return 'Completed';
   if (s === 'SHIPPED' || s === 'DISPATCHED') return 'Dispatched';
   if (s === 'PACKED') return 'Packed';
@@ -197,9 +192,7 @@ const normalizePaymentStatus = (rawPayStatus) => {
   if (!rawPayStatus) return 'Pending';
   const ps = rawPayStatus.trim().toUpperCase();
   // All paid variants → 'Verified'
-  if (ps === 'PAID' || ps === 'VERIFIED PAID' || ps === 'PAID VERIFIED' || ps === 'SUCCESS' || ps === 'VERIFIED' || ps === 'APPROVED') return 'Verified';
-  // Rejected / Failed
-  if (ps === 'REJECTED' || ps === 'FAILED') return 'Rejected';
+  if (ps === 'PAID' || ps === 'VERIFIED PAID' || ps === 'PAID VERIFIED' || ps === 'SUCCESS' || ps === 'VERIFIED') return 'Verified';
   // All pending variants → 'Pending Verification'
   if (ps === 'PENDING' || ps === 'UNPAID' || ps === 'PENDING VERIFICATION' || ps === 'PENDINGVERIFICATION') return 'Pending Verification';
   // Refunded
@@ -211,20 +204,7 @@ const normalizePaymentStatus = (rawPayStatus) => {
 
 // Helper to normalise order details
 const normaliseOrder = (o) => {
-  const rawSubtotal = parseAmount(o.subtotal || o.totalAmount || 0);
-  const rawDiscount = parseAmount(o.discountAmount || 0);
-  const rawShipping = parseAmount(o.shippingFee || 0);
-  const taxable = Math.max(0, rawSubtotal - rawDiscount);
-  const rawGst = parseAmount(o.gstAmount !== undefined && o.gstAmount > 0 
-    ? o.gstAmount 
-    : (o.taxAmount !== undefined && o.taxAmount > 0 ? o.taxAmount : Math.round(taxable * 0.18)));
-  
-  let totalVal = parseAmount(o.finalAmount || o.total || o.totalAmount);
-  // If final amount is 0 or equal to base subtotal without tax, add tax so the ledger shows the true grand total
-  if (totalVal <= 0 || (rawSubtotal > 0 && totalVal === rawSubtotal)) {
-    totalVal = taxable + rawShipping + rawGst;
-  }
-
+  const totalVal = parseAmount(o.finalAmount || o.totalAmount || o.total);
   let statusMapped = mapStatus(o.fulfillment || o.status, o.paymentStatus);
 
   // Bug 1 fix: Normalize payment status through a single consistent function
@@ -232,13 +212,7 @@ const normaliseOrder = (o) => {
   const isCancelled = statusMapped === 'Cancelled' || (o.fulfillment || o.status || '').toUpperCase() === 'CANCELLED' || (o.fulfillment || o.status || '').toUpperCase() === 'CANCELED';
 
   if (isCancelled) {
-    if (payStatus === 'Verified' || payStatus === 'Refunded') {
-      payStatus = 'Refunded';
-    } else if (payStatus === 'Rejected' || normalizePaymentMethod(o.paymentMethod || o.payMethod) === 'UPI / Bank Transfer') {
-      payStatus = 'Rejected';
-    } else {
-      payStatus = 'Payment Not Applicable';
-    }
+    payStatus = payStatus === 'Verified' || payStatus === 'Refunded' ? 'Refunded' : 'Payment Not Applicable';
   } else if (statusMapped === 'Completed' || (o.fulfillment || o.status || '').toUpperCase() === 'COMPLETED' || (o.fulfillment || o.status || '').toUpperCase() === 'DELIVERED') {
     payStatus = 'Verified';
   }
@@ -259,13 +233,7 @@ const normaliseOrder = (o) => {
       return `INV-${raw}`;
     })(),
     customer: o.customerName || o.customer || (o.customerDetails?.name) || 'Unknown',
-    customerType: (() => {
-      const raw = o.customerType || o.customerRole || (o.customerDetails?.type) || (o.customerDetails?.role) || '';
-      if (!raw || raw.toLowerCase() === 'farmer' || raw.toLowerCase() === 'grower') {
-        return 'Customer Account';
-      }
-      return raw;
-    })(),
+    customerType: o.customerType || o.customerRole || (o.customerDetails?.type) || 'Farmer',
     phone: o.customerPhone || o.phone || (o.customerDetails?.phone) || '',
     email: o.customerEmail || o.email || (o.customerDetails?.email) || '',
     date: (() => {
@@ -280,13 +248,11 @@ const normaliseOrder = (o) => {
     })(),
     orderDate: o.orderDate || o.dateBooked || o.bookedDate || o.createdAt || o.createdDate || o.date || new Date().toISOString(),
     deliveryDate: o.deliveryDate ? o.deliveryDate.slice(0, 10) : (o.expectedDelivery || 'TBD'),
-    subtotal: rawSubtotal,
-    shippingFee: rawShipping,
-    gstAmount: rawGst,
-    discountAmount: rawDiscount,
+    subtotal: parseAmount(o.totalAmount || 0),
+    shippingFee: parseAmount(o.shippingFee || 0),
+    gstAmount: parseAmount(o.gstAmount || 0),
+    discountAmount: parseAmount(o.discountAmount || 0),
     total: totalVal,
-    totalAmount: totalVal,
-    finalAmount: totalVal,
     paid: o.paidAmount !== undefined ? parseAmount(o.paidAmount) : (o.paymentStatus === 'Paid' ? totalVal : 0),
     status: statusMapped,
     paymentStatus: payStatus,
@@ -379,7 +345,7 @@ const printInvoice = (order) => {
     ? (order.gstAmount / (order.subtotal - (order.discountAmount || 0))) 
     : 0.18;
     
-  const itemsHtml = (order.items && order.items.length > 0) ? order.items.map((item, idx) => {
+  const itemsHtml = (order.items || []).map((item, idx) => {
     const unitPrice = item.price;
     const itemTax = unitPrice * gstRate * item.qty;
     const itemTotal = (unitPrice * item.qty) + itemTax;
@@ -397,19 +363,7 @@ const printInvoice = (order) => {
         <td style="text-align: right; font-weight: 700; color: #0f172a;">₹${itemTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
       </tr>
     `;
-  }).join('') : `
-    <tr>
-      <td style="text-align: center; font-weight: 600;">1</td>
-      <td>
-        <div style="font-weight: 700; color: #0f172a;">Order Items (Consolidated)</div>
-        <div style="font-size: 11px; color: #64748b;">Ref: ORD-${order.id}</div>
-      </td>
-      <td style="text-align: center;">1</td>
-      <td style="text-align: right;">₹${(order.subtotal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td style="text-align: right;">₹${(order.gstAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-      <td style="text-align: right; font-weight: 700; color: #0f172a;">₹${(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-    </tr>
-  `;
+  }).join('');
 
   const cgst = (order.gstAmount / 2);
   const sgst = (order.gstAmount / 2);
@@ -702,7 +656,7 @@ const printInvoice = (order) => {
               <div class="info-block-title">Payment & Settlement Status</div>
               <div class="info-row"><span class="info-label">Payment Method:</span><span class="info-val">${order.payMethod || 'UPI / Bank Transfer'}</span></div>
               <div class="info-row"><span class="info-label">Payment Status:</span><span class="info-val" style="color: ${statusColor};">${(order.paymentStatus || (isPaid ? 'Paid' : 'Unpaid')).toUpperCase()} ${!isPaid && !isCancelled ? '(Payment Pending)' : ''}</span></div>
-              <div class="info-row"><span class="info-label">Billing Currency:</span><span class="info-val">INR ₹${(order.total || order.finalAmount || order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
+              <div class="info-row"><span class="info-label">Billing Currency:</span><span class="info-val">INR ₹${(order.totalAmount || order.finalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span></div>
             </div>
           </div>
 
@@ -884,10 +838,7 @@ const OrdersLedger = () => {
             const custInfo = customerMap[o.customerId];
             if (custInfo) {
               normalized.customer = custInfo.name || normalized.customer;
-              const rawCustType = custInfo.type || custInfo.customerType || custInfo.role || '';
-              normalized.customerType = (!rawCustType || rawCustType.toLowerCase() === 'farmer' || rawCustType.toLowerCase() === 'grower')
-                ? 'Customer Account'
-                : rawCustType;
+              normalized.customerType = custInfo.role || 'Farmer';
               normalized.phone = custInfo.phone || normalized.phone;
               normalized.email = custInfo.email || normalized.email;
               normalized.shippingAddress = custInfo.address || normalized.shippingAddress;

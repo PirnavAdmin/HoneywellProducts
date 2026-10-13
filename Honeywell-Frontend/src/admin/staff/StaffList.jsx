@@ -5,7 +5,7 @@ import {
   Users, Plus, Mail, Phone, AlertTriangle, Trash2, Edit2, X, 
   Search, RefreshCw, UserCheck, UserX, Shield, Briefcase, Filter
 } from 'lucide-react';
-import { getStaffList, updateStaff, deleteStaff } from '../../services/staffApi';
+import { getStaffList, updateStaff, deleteStaff, patchStaffStatus } from '../../services/staffApi';
 import { getApiDomain } from '../../utils/apiConfig';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
 import { Toast } from '../components/Toast';
@@ -104,14 +104,23 @@ const StaffList = () => {
 
         if (permissions.length === 0 && actualId) {
           try {
-            const permsResponse = await fetch(`${BASE_URL}/Permission/${actualId}`, { headers: getHeaders() });
+            let permsResponse = await fetch(`${BASE_URL}/Staff/${actualId}/permissions`, { headers: getHeaders() });
+            if (!permsResponse.ok) {
+              permsResponse = await fetch(`${BASE_URL}/Permission/${actualId}`, { headers: getHeaders() });
+            }
             if (permsResponse.ok) {
               const permsJson = await safeParseJson(permsResponse);
-              const permsData = unwrapList(permsJson);
-              const allowed = permsData
-                .filter(p => p.isAllowed ?? p.IsAllowed ?? false)
-                .map(p => p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName)) || '');
-              permissions = allowed.length > 0 ? allowed : (ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff);
+              if (Array.isArray(permsJson?.permissions) && permsJson.permissions.length > 0) {
+                permissions = permsJson.permissions;
+              } else {
+                const permsData = Array.isArray(permsJson?.modulePermissions)
+                  ? permsJson.modulePermissions
+                  : unwrapList(permsJson);
+                const allowed = permsData
+                  .filter(p => p.isAllowed ?? p.IsAllowed ?? false)
+                  .map(p => p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName)) || '');
+                permissions = allowed.length > 0 ? allowed : (ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff);
+              }
             } else {
               permissions = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.staff;
             }
@@ -198,7 +207,11 @@ const StaffList = () => {
     };
 
     try {
-      await updateStaff(id, putPayload);
+      try {
+        await patchStaffStatus(id, { status: newIsActive ? 'Active' : 'Inactive', isActive: newIsActive });
+      } catch {
+        await updateStaff(id, putPayload);
+      }
       setStaffList(prev => prev.map(s => {
         if (String(s.id ?? s.employeeId) === String(id)) {
           return { ...s, isActive: newIsActive, status: newIsActive ? 'Active' : 'Inactive' };

@@ -797,11 +797,74 @@ using (var scope = app.Services.CreateScope())
             }
         }
 
+        // 3.11 Ensure extra columns exist in Staff table
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS `Staff` (
+                    `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `EmployeeId` VARCHAR(100) NOT NULL DEFAULT '',
+                    `FirstName` VARCHAR(100) NOT NULL DEFAULT '',
+                    `LastName` VARCHAR(100) NOT NULL DEFAULT '',
+                    `Name` VARCHAR(200) NOT NULL DEFAULT '',
+                    `Email` VARCHAR(200) NOT NULL DEFAULT '',
+                    `Phone` VARCHAR(50) NOT NULL DEFAULT '',
+                    `MobileNumber` VARCHAR(50) NOT NULL DEFAULT '',
+                    `Role` VARCHAR(100) NOT NULL DEFAULT 'Advisory',
+                    `Department` VARCHAR(150) NOT NULL DEFAULT 'General',
+                    `Password` VARCHAR(255) NOT NULL DEFAULT '',
+                    `Status` VARCHAR(50) NOT NULL DEFAULT 'Active',
+                    `IsActive` TINYINT(1) NOT NULL DEFAULT 1,
+                    `PermissionsJson` TEXT NULL,
+                    `DateJoined` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    `UpdatedAt` DATETIME NULL
+                );";
+            cmd.ExecuteNonQuery();
+        }
+
+        var existingStaffCols = new List<string>();
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SHOW COLUMNS FROM `Staff`;";
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    existingStaffCols.Add(reader["Field"].ToString()!.ToLower());
+                }
+            }
+        }
+
+        var staffColsToEnsure = new System.Collections.Generic.Dictionary<string, string>
+        {
+            { "EmployeeId", "VARCHAR(100) NOT NULL DEFAULT ''" },
+            { "FirstName", "VARCHAR(100) NOT NULL DEFAULT ''" },
+            { "LastName", "VARCHAR(100) NOT NULL DEFAULT ''" },
+            { "MobileNumber", "VARCHAR(50) NOT NULL DEFAULT ''" },
+            { "Department", "VARCHAR(150) NOT NULL DEFAULT 'General'" },
+            { "Password", "VARCHAR(255) NOT NULL DEFAULT ''" },
+            { "IsActive", "TINYINT(1) NOT NULL DEFAULT 1" },
+            { "PermissionsJson", "TEXT NULL" },
+            { "UpdatedAt", "DATETIME NULL" }
+        };
+
+        foreach (var c in staffColsToEnsure)
+        {
+            if (!existingStaffCols.Contains(c.Key.ToLower()))
+            {
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = $"ALTER TABLE `Staff` ADD COLUMN `{c.Key}` {c.Value};";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+        }
+
         // 4. Cleanup mismatched foreign keys from orderitems table to avoid FK constraint errors with Orders table
         var fkNames = new List<string>();
         using (var cmd = conn.CreateCommand())
         {
-            cmd.CommandText = "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'orderitems' AND CONSTRAINT_NAME <> 'PRIMARY' AND CONSTRAINT_NAME IS NOT NULL;";
+            cmd.CommandText = "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND LOWER(TABLE_NAME) = 'orderitems' AND CONSTRAINT_NAME <> 'PRIMARY' AND REFERENCED_TABLE_NAME IS NOT NULL AND LOWER(COLUMN_NAME) = 'productid';";
             using (var reader = cmd.ExecuteReader())
             {
                 while (reader.Read())
@@ -821,11 +884,76 @@ using (var scope = app.Services.CreateScope())
             {
                 using (var cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = $"ALTER TABLE `orderitems` DROP FOREIGN KEY `{fkName}`;";
+                    cmd.CommandText = $"ALTER TABLE `OrderItems` DROP FOREIGN KEY `{fkName}`;";
                     cmd.ExecuteNonQuery();
                 }
             }
             catch { }
+        }
+
+        // 4.1 Ensure OrderItems columns match EF Core OrderItem model
+        var existingOrderItemCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        using (var cmd = conn.CreateCommand())
+        {
+            cmd.CommandText = "SHOW COLUMNS FROM `OrderItems`;";
+            using (var reader = cmd.ExecuteReader())
+            {
+                while (reader.Read())
+                {
+                    existingOrderItemCols.Add(reader["Field"].ToString()!);
+                }
+            }
+        }
+
+        if (existingOrderItemCols.Contains("UnitPrice"))
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = "ALTER TABLE `OrderItems` MODIFY COLUMN `UnitPrice` DECIMAL(18,2) NOT NULL DEFAULT 0.00;"; cmd.ExecuteNonQuery(); } catch { }
+        }
+        if (existingOrderItemCols.Contains("LineTotal"))
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = "ALTER TABLE `OrderItems` MODIFY COLUMN `LineTotal` DECIMAL(18,2) NOT NULL DEFAULT 0.00;"; cmd.ExecuteNonQuery(); } catch { }
+        }
+        if (existingOrderItemCols.Contains("ProductCode"))
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = "ALTER TABLE `OrderItems` MODIFY COLUMN `ProductCode` LONGTEXT NULL;"; cmd.ExecuteNonQuery(); } catch { }
+        }
+        if (existingOrderItemCols.Contains("CategoryName"))
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = "ALTER TABLE `OrderItems` MODIFY COLUMN `CategoryName` LONGTEXT NULL;"; cmd.ExecuteNonQuery(); } catch { }
+        }
+        if (!existingOrderItemCols.Contains("Price"))
+        {
+            try
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "ALTER TABLE `OrderItems` ADD COLUMN `Price` DECIMAL(18,2) NOT NULL DEFAULT 0.00;";
+                cmd.ExecuteNonQuery();
+                if (existingOrderItemCols.Contains("UnitPrice"))
+                {
+                    cmd.CommandText = "UPDATE `OrderItems` SET `Price` = `UnitPrice` WHERE `Price` = 0;";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch { }
+        }
+        if (!existingOrderItemCols.Contains("Subtotal"))
+        {
+            try
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "ALTER TABLE `OrderItems` ADD COLUMN `Subtotal` DECIMAL(18,2) NOT NULL DEFAULT 0.00;";
+                cmd.ExecuteNonQuery();
+                if (existingOrderItemCols.Contains("LineTotal"))
+                {
+                    cmd.CommandText = "UPDATE `OrderItems` SET `Subtotal` = `LineTotal` WHERE `Subtotal` = 0;";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch { }
+        }
+        if (!existingOrderItemCols.Contains("ImageUrl"))
+        {
+            try { using var cmd = conn.CreateCommand(); cmd.CommandText = "ALTER TABLE `OrderItems` ADD COLUMN `ImageUrl` VARCHAR(500) NOT NULL DEFAULT '';"; cmd.ExecuteNonQuery(); } catch { }
         }
 
         // 4. Cleanup invalid cart items referencing deleted/non-existent products
@@ -979,8 +1107,13 @@ app.Use(async (context, next) =>
         var path = context.Request.Path.Value ?? string.Empty;
         if (!path.Contains("/admin", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/auth", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/staff", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/module", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/permission", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/roles", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/cart", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/orders", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/invoices", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/category", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/categories", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/catalog", StringComparison.OrdinalIgnoreCase) &&
@@ -1020,5 +1153,24 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Free port 5119 if a previous stale Honeywell instance is still running in the background
+try
+{
+    var currentPid = Environment.ProcessId;
+    foreach (var proc in System.Diagnostics.Process.GetProcessesByName("Honeywell"))
+    {
+        if (proc.Id != currentPid)
+        {
+            try
+            {
+                proc.Kill(true);
+                proc.WaitForExit(2000);
+            }
+            catch { }
+        }
+    }
+}
+catch { }
 
 app.Run();

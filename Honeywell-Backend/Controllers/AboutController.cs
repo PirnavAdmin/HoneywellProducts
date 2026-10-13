@@ -17,6 +17,7 @@ namespace Honeywell.Controllers
     public class AboutController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+
         private const string ConfigKey = "about_us_config";
 
         public AboutController(ApplicationDbContext context)
@@ -27,11 +28,15 @@ namespace Honeywell.Controllers
         // 1. GET ABOUT US DATA (Public)
         // GET: api/About
         // GET: api/Settings/about-us
+
         [HttpGet]
         public async Task<IActionResult> GetAboutData()
         {
-            var item = await _context.SystemConfigs.FirstOrDefaultAsync(c => c.Key == ConfigKey);
-            if (item == null || string.IsNullOrWhiteSpace(item.JsonValue))
+            var item = await _context.SystemConfigs
+                .FirstOrDefaultAsync(c => c.Key == ConfigKey);
+
+            if (item == null ||
+                string.IsNullOrWhiteSpace(item.JsonValue))
             {
                 var defaultData = new
                 {
@@ -42,6 +47,7 @@ namespace Honeywell.Controllers
                         description = "A premium framework prepared for official company story, market position and leadership content.",
                         image = "/uploads/about/hero.jpg"
                     },
+
                     overview = new
                     {
                         eyebrow = "COMPANY OVERVIEW",
@@ -50,41 +56,83 @@ namespace Honeywell.Controllers
                         description = "Scalable foundation for CCTV, security, solar product discovery, eCommerce preparation, bulk enquiries and channel partnerships.",
                         image = "/uploads/about/overview.jpg"
                     },
+
                     vision = new
                     {
                         title = "Long-term Vision Statement",
                         description = "Detailed vision goals."
                     },
+
                     mission = new
                     {
                         title = "Company Mission Statement",
                         description = "Detailed mission goals."
                     },
+
                     portfolio = new
                     {
                         eyebrow = "PRODUCT PORTFOLIO",
                         title = "Security, CCTV & Solar Power Product Portfolio",
                         description = "Comprehensive surveillance systems, solar panels, inverters, storage batteries, and recording solutions.",
+
                         items = new[]
                         {
-                            new { icon = "Camera", title = "CCTV & Surveillance", text = "Analog, Dome, Bullet, PTZ, and IP security cameras." },
-                            new { icon = "Sun", title = "Solar Panels & Energy", text = "High-efficiency Monocrystalline, Polycrystalline, and Bifacial modules." },
-                            new { icon = "Zap", title = "Solar Inverters & Storage", text = "Off-grid and hybrid solar inverters, lithium & gel batteries." },
-                            new { icon = "Network", title = "Recording & Networking", text = "NVRs, DVRs, surveillance drives, and PoE network switches." }
+                            new
+                            {
+                                icon = "Camera",
+                                title = "CCTV & Surveillance",
+                                text = "Analog, Dome, Bullet, PTZ, and IP security cameras."
+                            },
+                            new
+                            {
+                                icon = "Sun",
+                                title = "Solar Panels & Energy",
+                                text = "High-efficiency Monocrystalline, Polycrystalline, and Bifacial modules."
+                            },
+                            new
+                            {
+                                icon = "Zap",
+                                title = "Solar Inverters & Storage",
+                                text = "Off-grid and hybrid solar inverters, lithium & gel batteries."
+                            },
+                            new
+                            {
+                                icon = "Network",
+                                title = "Recording & Networking",
+                                text = "NVRs, DVRs, surveillance drives, and PoE network switches."
+                            }
                         }
                     },
+
                     whyChooseUs = new
                     {
                         eyebrow = "WHY CHOOSE US",
                         title = "A Conservative, Client-Ready Approach",
                         description = "Statements avoid unsupported claims and remain ready for verified company information.",
+
                         items = new[]
                         {
-                            new { icon = "ShieldCheck", title = "Practical Security Focus", text = "Product discovery organized around clear application needs." },
-                            new { icon = "Eye", title = "Transparent Product Data", text = "Verified models and specifications." },
-                            new { icon = "Handshake", title = "Business Ready", text = "Dedicated enquiry journeys for retail, bulk and partner requirements." }
+                            new
+                            {
+                                icon = "ShieldCheck",
+                                title = "Practical Security Focus",
+                                text = "Product discovery organized around clear application needs."
+                            },
+                            new
+                            {
+                                icon = "Eye",
+                                title = "Transparent Product Data",
+                                text = "Verified models and specifications."
+                            },
+                            new
+                            {
+                                icon = "Handshake",
+                                title = "Business Ready",
+                                text = "Dedicated enquiry journeys for retail, bulk and partner requirements."
+                            }
                         }
                     },
+
                     ceo = new
                     {
                         name = "CEO Full Name",
@@ -100,12 +148,17 @@ namespace Honeywell.Controllers
 
             try
             {
-                var parsedData = JsonSerializer.Deserialize<object>(item.JsonValue);
+                var parsedData =
+                    JsonSerializer.Deserialize<object>(item.JsonValue);
+
                 return Ok(parsedData);
             }
-            catch
+            catch (JsonException)
             {
-                return Ok(new { raw = item.JsonValue });
+                return Ok(new
+                {
+                    raw = item.JsonValue
+                });
             }
         }
 
@@ -114,23 +167,36 @@ namespace Honeywell.Controllers
         // POST: api/About
         // PUT: api/Settings/about-us
         // POST: api/Settings/about-us
+
         [HttpPut]
         [HttpPost]
-        public async Task<IActionResult> UpdateAboutData([FromBody] object data)
+        public async Task<IActionResult> UpdateAboutData(
+            [FromBody] JsonElement data)
         {
-            if (data == null)
+            if (data.ValueKind == JsonValueKind.Undefined ||
+                data.ValueKind == JsonValueKind.Null)
             {
-                return BadRequest(new { success = false, message = "Payload is required." });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Payload is required."
+                });
             }
 
-            var item = await _context.SystemConfigs.FirstOrDefaultAsync(c => c.Key == ConfigKey);
+            var item = await _context.SystemConfigs
+                .FirstOrDefaultAsync(c => c.Key == ConfigKey);
+
             if (item == null)
             {
-                item = new SystemConfig { Key = ConfigKey };
+                item = new SystemConfig
+                {
+                    Key = ConfigKey
+                };
+
                 _context.SystemConfigs.Add(item);
             }
 
-            item.JsonValue = JsonSerializer.Serialize(data);
+            item.JsonValue = data.GetRawText();
             item.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -139,45 +205,87 @@ namespace Honeywell.Controllers
             {
                 success = true,
                 message = "About Us settings saved successfully.",
-                data = JsonSerializer.Deserialize<object>(item.JsonValue)
+                data = JsonSerializer.Deserialize<object>(
+                    item.JsonValue
+                )
             });
         }
 
         // 3. UPLOAD ABOUT US IMAGE (Admin)
         // POST: api/About/upload-image
         // POST: api/Settings/about-us/upload-image
+
         [HttpPost("upload-image")]
-        public async Task<IActionResult> UploadAboutImage([FromForm] IFormFile? imageFile, [FromForm] IFormFile? file, [FromForm] string? section)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadAboutImage(
+            [FromForm] AboutImageUploadRequest request)
         {
-            var targetFile = imageFile ?? file;
+            var targetFile = request.ImageFile ?? request.File;
+
             if (targetFile == null || targetFile.Length == 0)
             {
-                return BadRequest(new { success = false, message = "No image file provided." });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "No image file provided."
+                });
             }
 
-            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif" };
-            var extension = Path.GetExtension(targetFile.FileName).ToLowerInvariant();
-            if (string.IsNullOrEmpty(extension) || !allowedExtensions.Contains(extension))
+            var allowedExtensions = new[]
             {
-                return BadRequest(new { success = false, message = "Invalid file type. Supported formats: .jpg, .jpeg, .png, .webp, .gif" });
-            }
+                ".jpg",
+                ".jpeg",
+                ".png",
+                ".webp",
+                ".gif"
+            };
 
-            var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "about");
-            if (!Directory.Exists(uploadsFolder))
+            var extension = Path
+                .GetExtension(targetFile.FileName)
+                .ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(extension) ||
+                !allowedExtensions.Contains(extension))
             {
-                Directory.CreateDirectory(uploadsFolder);
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid file type. Supported formats: .jpg, .jpeg, .png, .webp, .gif"
+                });
             }
 
-            var sectionPrefix = !string.IsNullOrWhiteSpace(section) ? $"{section.Trim().ToLowerInvariant()}_" : "about_";
-            var fileName = $"{sectionPrefix}{Guid.NewGuid():N}{extension}";
-            var filePath = Path.Combine(uploadsFolder, fileName);
+            var uploadsFolder = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                "uploads",
+                "about"
+            );
 
-            using (var stream = new FileStream(filePath, FileMode.Create))
+            Directory.CreateDirectory(uploadsFolder);
+
+            var sectionPrefix =
+                !string.IsNullOrWhiteSpace(request.Section)
+                    ? $"{request.Section.Trim().ToLowerInvariant()}_"
+                    : "about_";
+
+            var fileName =
+                $"{sectionPrefix}{Guid.NewGuid():N}{extension}";
+
+            var filePath = Path.Combine(
+                uploadsFolder,
+                fileName
+            );
+
+            using (var stream = new FileStream(
+                filePath,
+                FileMode.Create,
+                FileAccess.Write))
             {
                 await targetFile.CopyToAsync(stream);
             }
 
             var imageUrl = $"/uploads/about/{fileName}";
+
             return Ok(new
             {
                 success = true,
@@ -185,5 +293,17 @@ namespace Honeywell.Controllers
                 imageUrl = imageUrl
             });
         }
+    }
+
+    // Request model for multipart/form-data image uploads.
+    // Supports both "imageFile" and "file" field names.
+
+    public class AboutImageUploadRequest
+    {
+        public IFormFile? ImageFile { get; set; }
+
+        public IFormFile? File { get; set; }
+
+        public string? Section { get; set; }
     }
 }

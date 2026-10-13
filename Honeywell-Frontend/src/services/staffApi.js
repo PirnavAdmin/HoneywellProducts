@@ -159,3 +159,248 @@ export async function deleteStaff(id) {
   }
   return true;
 }
+
+/**
+ * PATCH /api/Staff/{id}/status
+ * Update or toggle a staff member's active status
+ */
+export async function patchStaffStatus(id, statusPayload = {}) {
+  const res = await fetch(`${getBaseUrl()}/${id}/status`, {
+    method: 'PATCH',
+    headers: getHeaders(),
+    body: JSON.stringify(statusPayload),
+  });
+  if (!res.ok && res.status !== 204) {
+    const errorMsg = await parseErrorMessage(res, `Failed to update status for staff ${id}: HTTP ${res.status}`);
+    throw new Error(errorMsg);
+  }
+  const json = await safeParseJson(res);
+  return unwrapItem(json);
+}
+
+/**
+ * GET /api/Staff/stats
+ * Fetch KPI summary statistics for staff directory
+ */
+export async function getStaffStats() {
+  try {
+    const res = await fetch(`${getBaseUrl()}/stats`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return null;
+    const json = await safeParseJson(res);
+    return unwrapItem(json);
+  } catch (err) {
+    console.warn('[getStaffStats] Network error:', err.message);
+    return null;
+  }
+}
+
+/**
+ * GET /api/Staff/roles
+ * Fetch available staff roles and default permissions
+ */
+export async function getStaffRoles() {
+  try {
+    const res = await fetch(`${getBaseUrl()}/roles`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return [];
+    const json = await safeParseJson(res);
+    return unwrapList(json);
+  } catch (err) {
+    console.warn('[getStaffRoles] Network error:', err.message);
+    return [];
+  }
+}
+
+/**
+ * GET /api/Staff/departments
+ * Fetch available enterprise departments
+ */
+export async function getStaffDepartments() {
+  try {
+    const res = await fetch(`${getBaseUrl()}/departments`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return [];
+    const json = await safeParseJson(res);
+    return unwrapList(json);
+  } catch (err) {
+    console.warn('[getStaffDepartments] Network error:', err.message);
+    return [];
+  }
+}
+
+/**
+ * POST /api/Staff/login
+ * Authenticate a staff member by email/employeeId and password
+ */
+export async function staffLogin(credentials) {
+  const res = await fetch(`${getBaseUrl()}/login`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(credentials),
+  });
+  if (!res.ok) {
+    const errorMsg = await parseErrorMessage(res, `Staff login failed: HTTP ${res.status}`);
+    throw new Error(errorMsg);
+  }
+  return await safeParseJson(res);
+}
+
+/**
+ * 1. GET /api/Permissions/modules
+ * Get all available application modules
+ */
+export async function getPermissionModules() {
+  try {
+    const res = await fetch(`${getApiDomain()}/api/Permissions/modules`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return [];
+    const json = await safeParseJson(res);
+    return unwrapList(json);
+  } catch (err) {
+    console.warn('[getPermissionModules] Network error:', err.message);
+    return [];
+  }
+}
+
+/**
+ * 2. GET /api/Staff/{id}/permissions
+ * Get permissions assigned to a staff member
+ */
+export async function getStaffPermissions(id) {
+  try {
+    const res = await fetch(`${getBaseUrl()}/${id}/permissions`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return null;
+    return await safeParseJson(res);
+  } catch (err) {
+    console.warn('[getStaffPermissions] Network error:', err.message);
+    return null;
+  }
+}
+
+/**
+ * 3. PUT /api/Staff/{id}/permissions
+ * Save or update staff module permissions
+ */
+export async function updateStaffPermissions(id, payload) {
+  const res = await fetch(`${getBaseUrl()}/${id}/permissions`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorMsg = await parseErrorMessage(res, `Failed to update permissions for staff ${id}: HTTP ${res.status}`);
+    throw new Error(errorMsg);
+  }
+  return await safeParseJson(res);
+}
+
+/**
+ * 4. GET /api/Auth/me/permissions
+ * Get the logged-in user's effective permissions
+ */
+export async function getMyEffectivePermissions(email = '') {
+  try {
+    const query = email ? `?email=${encodeURIComponent(email)}` : '';
+    const res = await fetch(`${getApiDomain()}/api/Auth/me/permissions${query}`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return null;
+    return await safeParseJson(res);
+  } catch (err) {
+    console.warn('[getMyEffectivePermissions] Network error:', err.message);
+    return null;
+  }
+}
+
+/**
+ * 5. GET /api/Roles/{id}/permissions
+ * Get permissions for a role
+ */
+export async function getRolePermissions(roleId) {
+  try {
+    const res = await fetch(`${getApiDomain()}/api/Roles/${encodeURIComponent(roleId)}/permissions`, {
+      headers: getHeaders(),
+    });
+    if (!res.ok) return null;
+    return await safeParseJson(res);
+  } catch (err) {
+    console.warn('[getRolePermissions] Network error:', err.message);
+    return null;
+  }
+}
+
+/**
+ * 6. PUT /api/Roles/{id}/permissions
+ * Assign or update role permissions
+ */
+export async function updateRolePermissions(roleId, payload) {
+  const res = await fetch(`${getApiDomain()}/api/Roles/${encodeURIComponent(roleId)}/permissions`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const errorMsg = await parseErrorMessage(res, `Failed to update permissions for role ${roleId}: HTTP ${res.status}`);
+    throw new Error(errorMsg);
+  }
+  return await safeParseJson(res);
+}
+
+/**
+ * 7. POST /api/Roles
+ * Create a role
+ */
+export async function createRole(roleData) {
+  const res = await fetch(`${getApiDomain()}/api/Roles`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(roleData),
+  });
+  if (!res.ok) {
+    const errorMsg = await parseErrorMessage(res, `Failed to create role: HTTP ${res.status}`);
+    throw new Error(errorMsg);
+  }
+  return await safeParseJson(res);
+}
+
+/**
+ * 8. PUT /api/Roles/{id}
+ * Update a role
+ */
+export async function updateRole(roleId, roleData) {
+  const res = await fetch(`${getApiDomain()}/api/Roles/${encodeURIComponent(roleId)}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(roleData),
+  });
+  if (!res.ok) {
+    const errorMsg = await parseErrorMessage(res, `Failed to update role ${roleId}: HTTP ${res.status}`);
+    throw new Error(errorMsg);
+  }
+  return await safeParseJson(res);
+}
+
+/**
+ * 9. DELETE /api/Roles/{id}
+ * Delete a role
+ */
+export async function deleteRole(roleId) {
+  const res = await fetch(`${getApiDomain()}/api/Roles/${encodeURIComponent(roleId)}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+  if (!res.ok && res.status !== 204) {
+    const errorMsg = await parseErrorMessage(res, `Failed to delete role ${roleId}: HTTP ${res.status}`);
+    throw new Error(errorMsg);
+  }
+  return true;
+}
+
+

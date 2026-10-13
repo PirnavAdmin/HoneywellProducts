@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { generateStandardizedSku } from '../../utils/skuGenerator';
 import { fetchProducts } from '../catalog/productsApi';
 import {
@@ -80,488 +79,169 @@ const AdjustModal = ({ item: initialItem, products = [], onClose, onSave }) => {
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
 
-  const reasons = adjustType === 'add'
-    ? ['Stock Received from Supplier', 'Customer Return', 'Warehouse Transfer In', 'Physical Count Surplus', 'Production Output', 'Other Addition']
-    : ['Customer Sale / Dispatch', 'Damaged / Spoiled Goods', 'Warehouse Transfer Out', 'Physical Count Deficit', 'Expired Stock Write-off', 'Other Deduction'];
+  // Search product states
+  const [productSearch, setProductSearch] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
 
-  const currentStock = selectedItem ? Number(selectedItem.currentStock || 0) : 0;
-  const unit = selectedItem ? selectedItem.unit || 'Pcs' : 'Pcs';
-  const qtyNum = Number(qty || 0);
+  // Filter products for dropdown
+  const filteredProducts = useMemo(() => {
+    const q = productSearch.toLowerCase().trim();
+    if (!q) return products.slice(0, 8);
+    return products.filter(p => 
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.sku || '').toLowerCase().includes(q)
+    );
+  }, [products, productSearch]);
+
+  const reasons = adjustType === 'add'
+    ? ['Stock Received', 'Return from Customer', 'Transfer In', 'Correction - Surplus', 'Other']
+    : ['Sale / Dispatch', 'Damaged / Spoiled', 'Transfer Out', 'Correction - Deficit', 'Other'];
+
+  const currentStock = selectedItem ? selectedItem.currentStock : 0;
+  const unit = selectedItem ? selectedItem.unit : 'Pcs';
 
   const newQty = adjustType === 'add'
-    ? currentStock + qtyNum
-    : Math.max(0, currentStock - qtyNum);
+    ? currentStock + Number(qty || 0)
+    : Math.max(0, currentStock - Number(qty || 0));
 
   const handleSave = () => {
     if (!selectedItem || !qty || Number(qty) <= 0) return;
     onSave(selectedItem, {
       actionType: adjustType === 'add' ? 'Add' : 'Remove',
       quantity: Number(qty),
-      reason: reason || (adjustType === 'add' ? 'Stock Received from Supplier' : 'Customer Sale / Dispatch'),
+      reason: reason || 'Other',
       note: note || '',
       newQty: newQty
     });
   };
 
-  return createPortal(
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(4px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 999999,
-        padding: '16px',
-        animation: 'overlayFadeIn 0.2s ease',
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '490px',
-          background: '#ffffff',
-          borderRadius: '14px',
-          boxShadow: '0 25px 60px -10px rgba(15, 23, 42, 0.3), 0 0 0 1px rgba(15, 23, 42, 0.08)',
-          overflow: 'hidden',
-          display: 'flex',
-          flexDirection: 'column',
-          maxHeight: '94vh',
-          animation: 'modalSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* ── Modal Header ── */}
-        <div
-          style={{
-            padding: '14px 20px',
-            background: '#f8fafc',
-            borderBottom: '1px solid #e2e8f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+  return (
+    <div className="stock-modal-overlay" onClick={onClose}>
+      <div className="stock-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="stock-modal__header">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span
-                style={{
-                  fontSize: '10.5px',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  color: '#0284c7',
-                  background: '#e0f2fe',
-                  padding: '2px 7px',
-                  borderRadius: '4px',
-                }}
-              >
-                Stock Ledger
-              </span>
-              <span style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
-                Adjust Stock Level
-              </span>
-            </div>
-            <div
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                color: '#64748b',
-                marginTop: '3px',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: '400px',
-              }}
-              title={selectedItem?.name}
-            >
-              {selectedItem?.name}
-            </div>
+            <p className="stock-modal__kicker">Stock Ledger Adjustment</p>
+            <h2 className="stock-modal__title">{selectedItem ? selectedItem.name : 'Select Product...'}</h2>
+            <p className="stock-modal__sku">SKU: {selectedItem ? selectedItem.sku : '—'}</p>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              width: '30px',
-              height: '30px',
-              borderRadius: '7px',
-              border: '1px solid #e2e8f0',
-              background: '#ffffff',
-              color: '#64748b',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              transition: 'all 0.15s ease',
-            }}
-            title="Close"
-          >
-            <X size={16} />
-          </button>
+          <button className="stock-modal__close" onClick={onClose}><X size={20} /></button>
         </div>
 
-        {/* ── Modal Body ── */}
-        <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto' }}>
-          
-          {/* Target Product Summary Bar */}
-          <div
-            style={{
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '9px',
-              padding: '9px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '10px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  fontFamily: 'monospace',
-                  fontSize: '11px',
-                  fontWeight: 700,
-                  color: '#334155',
-                  background: '#e2e8f0',
-                  padding: '2px 6px',
-                  borderRadius: '4px',
+        <div className="stock-modal__body">
+          {/* Product Autocomplete Dropdown */}
+          <div className="catalog-field relative">
+            <label>Search Product to Adjust</label>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder={selectedItem ? `${selectedItem.name} (${selectedItem.sku})` : "Type name or SKU..."}
+                value={productSearch}
+                onChange={(e) => {
+                  setProductSearch(e.target.value);
+                  setShowProductDropdown(true);
                 }}
-              >
-                SKU: {selectedItem?.sku || '—'}
-              </span>
-              {selectedItem?.category && (
-                <span style={{ fontSize: '11.5px', color: '#64748b', fontWeight: 600 }}>
-                  {selectedItem.category}
-                </span>
+                onFocus={() => setShowProductDropdown(true)}
+                className="w-full"
+              />
+              {showProductDropdown && (
+                <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto z-50">
+                  {filteredProducts.map(p => (
+                    <div
+                      key={p.id}
+                      onClick={() => {
+                        setSelectedItem(p);
+                        setProductSearch('');
+                        setShowProductDropdown(false);
+                      }}
+                      className="p-2 text-xs hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex justify-between"
+                    >
+                      <span className="font-semibold">{p.name}</span>
+                      <span className="text-slate-400">{p.sku}</span>
+                    </div>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <div className="p-2 text-xs text-slate-400 text-center">No products found</div>
+                  )}
+                </div>
               )}
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-              <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 700 }}>Current:</span>
-              <span
-                style={{
-                  fontSize: '12.5px',
-                  fontWeight: 800,
-                  color: currentStock <= 0 ? '#dc2626' : currentStock <= (selectedItem?.reorderLevel || 5) ? '#d97706' : '#15803d',
-                  background: currentStock <= 0 ? '#fee2e2' : currentStock <= (selectedItem?.reorderLevel || 5) ? '#fef3c7' : '#dcfce7',
-                  border: `1px solid ${currentStock <= 0 ? '#fecaca' : currentStock <= (selectedItem?.reorderLevel || 5) ? '#fde68a' : '#bbf7d0'}`,
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                }}
-              >
-                {currentStock} {unit}
-              </span>
-            </div>
           </div>
 
-          {/* Segmented Adjustment Mode Control */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '4px',
-              background: '#f1f5f9',
-              padding: '3px',
-              borderRadius: '8px',
-              border: '1px solid #e2e8f0',
-            }}
-          >
+          {/* Type Toggle */}
+          <div className="stock-adj-toggle">
             <button
-              type="button"
+              className={`stock-adj-btn ${adjustType === 'add' ? 'stock-adj-btn--active-add' : ''}`}
               onClick={() => setAdjustType('add')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '7px 10px',
-                borderRadius: '6px',
-                border: adjustType === 'add' ? '1px solid #10b981' : '1px solid transparent',
-                background: adjustType === 'add' ? '#ffffff' : 'transparent',
-                color: adjustType === 'add' ? '#047857' : '#64748b',
-                fontSize: '12.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: adjustType === 'add' ? '0 1px 4px rgba(16, 185, 129, 0.15)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
             >
-              <ArrowUpCircle size={15} />
-              <span>Add Stock (Inflow)</span>
+              <ArrowUpCircle size={16} /> Add Stock
             </button>
-
             <button
-              type="button"
+              className={`stock-adj-btn ${adjustType === 'remove' ? 'stock-adj-btn--active-remove' : ''}`}
               onClick={() => setAdjustType('remove')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                padding: '7px 10px',
-                borderRadius: '6px',
-                border: adjustType === 'remove' ? '1px solid #ef4444' : '1px solid transparent',
-                background: adjustType === 'remove' ? '#ffffff' : 'transparent',
-                color: adjustType === 'remove' ? '#b91c1c' : '#64748b',
-                fontSize: '12.5px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: adjustType === 'remove' ? '0 1px 4px rgba(239, 68, 68, 0.15)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
             >
-              <ArrowDownCircle size={15} />
-              <span>Deduct Stock (Outflow)</span>
+              <ArrowDownCircle size={16} /> Remove Stock
             </button>
           </div>
 
-          {/* Before & After Live Visualizer */}
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr auto 1fr',
-              alignItems: 'center',
-              gap: '8px',
-              background: '#f8fafc',
-              border: '1px solid #e2e8f0',
-              borderRadius: '9px',
-              padding: '10px 14px',
-            }}
-          >
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Current
-              </span>
-              <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginTop: '1px' }}>
-                {currentStock} <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b' }}>{unit}</span>
-              </div>
+          {/* Current → New */}
+          <div className="stock-adj-preview">
+            <div className="stock-adj-preview__item">
+              <span>Current Stock</span>
+              <strong>{currentStock} {unit}</strong>
             </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
-              <span
-                style={{
-                  fontSize: '10.5px',
-                  fontWeight: 800,
-                  padding: '1px 7px',
-                  borderRadius: '10px',
-                  background: qtyNum > 0 ? (adjustType === 'add' ? '#dcfce7' : '#fee2e2') : '#f1f5f9',
-                  color: qtyNum > 0 ? (adjustType === 'add' ? '#15803d' : '#b91c1c') : '#64748b',
-                  border: `1px solid ${qtyNum > 0 ? (adjustType === 'add' ? '#bbf7d0' : '#fecaca') : '#e2e8f0'}`,
-                }}
-              >
-                {adjustType === 'add' ? `+${qtyNum}` : `-${qtyNum}`} {unit}
-              </span>
-              <TrendingUp
-                size={14}
-                style={{
-                  color: adjustType === 'add' ? '#10b981' : '#ef4444',
-                  transform: adjustType === 'remove' ? 'rotate(90deg)' : 'none',
-                }}
-              />
+            <div className="stock-adj-preview__arrow">
+              {adjustType === 'add' ? <TrendingUp size={20} className="adj-icon-add" /> : <TrendingDown size={20} className="adj-icon-remove" />}
             </div>
-
-            <div style={{ textAlign: 'center' }}>
-              <span style={{ fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                Resulting
-              </span>
-              <div
-                style={{
-                  fontSize: '16px',
-                  fontWeight: 800,
-                  color: adjustType === 'add' ? '#047857' : newQty <= 0 ? '#b91c1c' : '#b45309',
-                  marginTop: '1px',
-                }}
-              >
-                {newQty} <span style={{ fontSize: '11px', fontWeight: 600 }}>{unit}</span>
-              </div>
+            <div className="stock-adj-preview__item">
+              <span>New Stock</span>
+              <strong className={adjustType === 'add' ? 'adj-new--add' : 'adj-new--remove'}>{newQty} {unit}</strong>
             </div>
           </div>
 
-          {/* Form Fields: Quantity & Reason */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  color: '#475569',
-                  letterSpacing: '0.04em',
-                  marginBottom: '5px',
-                }}
-              >
-                Adjust Quantity ({unit}) <span style={{ color: '#dc2626' }}>*</span>
-              </label>
+          <div className="stock-modal__fields">
+            <div className="catalog-field">
+              <label>Quantity ({unit})</label>
               <input
                 type="number"
                 min="1"
-                placeholder="e.g. 10"
+                placeholder="Enter quantity..."
                 value={qty}
                 onChange={(e) => setQty(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: '38px',
-                  padding: '6px 10px',
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: '#0f172a',
-                  border: '1.5px solid #cbd5e1',
-                  borderRadius: '7px',
-                  background: '#ffffff',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                }}
-                autoFocus
               />
             </div>
-
-            <div>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '11px',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  color: '#475569',
-                  letterSpacing: '0.04em',
-                  marginBottom: '5px',
-                }}
-              >
-                Reason
-              </label>
-              <select
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                style={{
-                  width: '100%',
-                  height: '38px',
-                  padding: '6px 10px',
-                  fontSize: '12.5px',
-                  fontWeight: 500,
-                  color: '#0f172a',
-                  border: '1.5px solid #cbd5e1',
-                  borderRadius: '7px',
-                  background: '#ffffff',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                }}
-              >
+            <div className="catalog-field">
+              <label>Reason</label>
+              <select value={reason} onChange={(e) => setReason(e.target.value)}>
                 <option value="">Select reason...</option>
-                {reasons.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
+                {reasons.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </div>
-          </div>
-
-          {/* Remarks Input */}
-          <div>
-            <label
-              style={{
-                display: 'block',
-                fontSize: '11px',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                color: '#475569',
-                letterSpacing: '0.04em',
-                marginBottom: '5px',
-              }}
-            >
-              Notes / Reference (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Stock audit reference or invoice #..."
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              style={{
-                width: '100%',
-                height: '38px',
-                padding: '6px 10px',
-                fontSize: '12.5px',
-                color: '#0f172a',
-                border: '1.5px solid #cbd5e1',
-                borderRadius: '7px',
-                background: '#ffffff',
-                boxSizing: 'border-box',
-                outline: 'none',
-              }}
-            />
+            <div className="catalog-field catalog-field--full">
+              <label>Note (optional)</label>
+              <textarea
+                rows={2}
+                placeholder="Add internal note about this adjustment..."
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                style={{ minHeight: 60 }}
+              />
+            </div>
           </div>
         </div>
 
-        {/* ── Modal Footer ── */}
-        <div
-          style={{
-            padding: '12px 20px',
-            background: '#f8fafc',
-            borderTop: '1px solid #e2e8f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-            gap: '8px',
-          }}
-        >
+        <div className="stock-modal__footer">
+          <button className="catalog-btn" onClick={onClose}>Cancel</button>
           <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: '8px 14px',
-              fontSize: '12.5px',
-              fontWeight: 700,
-              color: '#475569',
-              background: '#ffffff',
-              border: '1px solid #cbd5e1',
-              borderRadius: '7px',
-              cursor: 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            Cancel
-          </button>
-
-          <button
-            type="button"
+            className={`catalog-btn ${adjustType === 'add' ? 'catalog-btn--primary' : 'catalog-btn--remove'}`}
             onClick={handleSave}
             disabled={!selectedItem || !qty || Number(qty) <= 0}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              fontSize: '12.5px',
-              fontWeight: 800,
-              color: '#ffffff',
-              background: !selectedItem || !qty || Number(qty) <= 0
-                ? '#94a3b8'
-                : adjustType === 'add'
-                  ? '#10b981'
-                  : '#dc2626',
-              border: 'none',
-              borderRadius: '7px',
-              cursor: !selectedItem || !qty || Number(qty) <= 0 ? 'not-allowed' : 'pointer',
-              boxShadow: !selectedItem || !qty || Number(qty) <= 0
-                ? 'none'
-                : adjustType === 'add'
-                  ? '0 2px 6px rgba(16, 185, 129, 0.25)'
-                  : '0 2px 6px rgba(220, 38, 38, 0.25)',
-              transition: 'all 0.15s ease',
-            }}
           >
-            <Save size={14} />
-            <span>{adjustType === 'add' ? 'Confirm Addition' : 'Confirm Deduction'}</span>
+            <Save size={16} />
+            Update Adjustment
           </button>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 };
 
@@ -627,8 +307,8 @@ const AddEntryModal = ({ categories = [], onClose, onSave }) => {
     setSku(result.sku);
   };
 
-  return createPortal(
-    <div className="stock-modal-overlay" style={{ zIndex: 999999 }} onClick={onClose}>
+  return (
+    <div className="stock-modal-overlay" onClick={onClose}>
       <div className="stock-modal stock-modal--wide" onClick={(e) => e.stopPropagation()}>
         <div className="stock-modal__header">
           <div>
@@ -804,8 +484,7 @@ const AddEntryModal = ({ categories = [], onClose, onSave }) => {
           </button>
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 };
 
@@ -1087,79 +766,37 @@ const StockUpdates = () => {
       </div>
 
       {/* ── Table Card ── */}
-      <section
-        className="catalog-card"
-        style={{
-          borderRadius: '12px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.04)',
-          overflow: 'hidden',
-          backgroundColor: '#ffffff',
-          padding: 0,
-        }}
-      >
-        <div
-          className="catalog-card__header"
-          style={{
-            padding: '16px 20px',
-            borderBottom: '1px solid #f1f5f9',
-            margin: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+      <section className="catalog-card">
+        <div className="catalog-card__header">
           <div>
-            <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Ledger Entries</h2>
-            <p className="catalog-card__subtitle" style={{ margin: '2px 0 0 0', fontSize: '12.5px', color: '#64748b' }}>
+            <h2>Ledger Entries</h2>
+            <p className="catalog-card__subtitle">
               {filtered.length} products match filters
             </p>
           </div>
         </div>
 
         {/* Filters */}
-        <div
-          className="catalog-filterbar"
-          style={{
-            padding: '12px 20px',
-            margin: 0,
-            background: '#ffffff',
-            borderBottom: '1px solid #e2e8f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
-          <div className="catalog-search" style={{ maxWidth: '360px', flex: '1 1 260px' }}>
-            <Search size={16} />
+        <div className="catalog-filterbar">
+          <div className="catalog-search">
+            <Search size={18} />
             <input
               type="search"
               placeholder="Search by SKU, product name, category..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ minHeight: '38px', padding: '7px 12px 7px 36px', fontSize: '13px' }}
             />
           </div>
           <div className="stock-filters-right">
-            <label className="catalog-filter" style={{ minHeight: '38px' }}>
-              <Filter size={14} />
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                style={{ minHeight: '36px', padding: '6px 10px', fontSize: '13px' }}
-              >
+            <label className="catalog-filter">
+              <Filter size={15} />
+              <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
                 {filterCategories.map(c => <option key={c} value={c}>{c === 'All' ? 'All Categories' : c}</option>)}
               </select>
             </label>
-            <label className="catalog-filter" style={{ minHeight: '38px' }}>
-              <ClipboardList size={14} />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                style={{ minHeight: '36px', padding: '6px 10px', fontSize: '13px' }}
-              >
+            <label className="catalog-filter">
+              <ClipboardList size={15} />
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 {STATUSES.map(s => <option key={s} value={s}>{s === 'All' ? 'All Statuses' : s}</option>)}
               </select>
             </label>
@@ -1167,19 +804,19 @@ const StockUpdates = () => {
         </div>
 
         {/* Table */}
-        <div className="catalog-table-wrap" style={{ border: 'none', borderRadius: 0 }}>
+        <div className="catalog-table-wrap">
           <table className="catalog-table stock-table">
             <thead>
-              <tr>
-                <th style={{ textAlign: 'left', minWidth: '220px' }}>Product / SKU</th>
-                <th style={{ textAlign: 'left', minWidth: '140px' }}>Category</th>
-                <th style={{ textAlign: 'left', minWidth: '130px' }}>Supplier</th>
-                <th style={{ textAlign: 'center', minWidth: '115px' }}>Current Stock</th>
-                <th style={{ textAlign: 'center', minWidth: '110px' }}>Reorder Level</th>
-                <th style={{ textAlign: 'right', minWidth: '125px' }}>Cost Price (₹)</th>
-                <th style={{ textAlign: 'right', minWidth: '130px' }}>Selling Price (₹)</th>
-                <th style={{ textAlign: 'center', minWidth: '120px' }}>Last Updated</th>
-                <th style={{ textAlign: 'center', width: '80px' }}>Actions</th>
+              <tr style={{ fontSize: '11px' }}>
+                <th style={{ width: '24%', padding: '10px 12px' }}>Product / SKU</th>
+                <th style={{ width: '13%', padding: '10px 12px' }}>Category</th>
+                <th style={{ width: '13%', padding: '10px 12px' }}>Supplier</th>
+                <th className="catalog-number-cell" style={{ width: '10%', padding: '10px 12px' }}>Current Stock</th>
+                <th className="catalog-number-cell" style={{ width: '9%', padding: '10px 12px' }}>Reorder Level</th>
+                <th className="catalog-number-cell" style={{ width: '11%', padding: '10px 12px' }}>Cost Price (₹)</th>
+                <th className="catalog-number-cell" style={{ width: '11%', padding: '10px 12px' }}>Selling Price (₹)</th>
+                <th style={{ width: '12%', padding: '10px 12px', textAlign: 'center' }}>Last Updated</th>
+                <th className="catalog-center-cell" style={{ width: '7%', padding: '10px 12px' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -1188,71 +825,62 @@ const StockUpdates = () => {
                 const isLowStock = !isOutOfStock && Number(item.currentStock) <= Number(item.reorderLevel);
                 const costVal = item.costPrice > 0 && item.sellingPrice > 0 ? Math.min(item.costPrice, item.sellingPrice) : item.costPrice;
                 const sellVal = item.costPrice > 0 && item.sellingPrice > 0 ? Math.max(item.costPrice, item.sellingPrice) : item.sellingPrice;
-
+                
                 return (
-                  <tr
-                    key={item.id}
-                    className={
-                      isOutOfStock
-                        ? 'stock-row--alert'
-                        : isLowStock
-                          ? 'stock-row--warning'
-                          : 'stock-row--success'
-                    }
-                  >
-                    <td style={{ textAlign: 'left' }}>
-                      <div className="stock-product-name">{item.name}</div>
-                      <div className="stock-product-meta">
-                        <span className="stock-sku-pill">{item.sku}</span>
-                        <span className="stock-unit-tag">{item.unit}</span>
-                      </div>
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      <div className="stock-category-name">{item.category || '—'}</div>
-                      {item.subcategory && (
-                        <div className="stock-subcategory-name">{item.subcategory}</div>
-                      )}
-                    </td>
-                    <td style={{ textAlign: 'left' }}>
-                      <span className="stock-supplier-name">{item.supplier || '—'}</span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className={`stock-qty ${isOutOfStock ? 'stock-qty--zero' : isLowStock ? 'stock-qty--low' : 'stock-qty--ok'}`}>
-                        {item.currentStock}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className="stock-reorder-val">{item.reorderLevel}</span>
-                    </td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <span className="stock-price-cost">
-                        ₹{Number(costVal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <span className="stock-price-sell">
-                        ₹{Number(sellVal || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      <span className="stock-date-text">{item.lastUpdated || '—'}</span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <button
-                        className="catalog-btn catalog-btn--icon stock-adjust-btn"
-                        title="Adjust stock"
-                        onClick={() => setAdjustingItem(item)}
-                      >
-                        <Edit3 size={14} />
-                      </button>
-                    </td>
-                  </tr>
+                <tr 
+                  key={item.id} 
+                  className={
+                    isOutOfStock
+                      ? 'stock-row--alert' 
+                      : isLowStock
+                        ? 'stock-row--warning' 
+                        : 'stock-row--success'
+                  }
+                  style={{ fontSize: '12px' }}
+                >
+                  <td style={{ padding: '8px 12px' }}>
+                    <div className="catalog-table__title" style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a' }}>{item.name}</div>
+                    <div className="catalog-table__muted" style={{ fontSize: '10px', color: '#64748b' }}>{item.sku} &nbsp;·&nbsp; {item.unit}</div>
+                  </td>
+                  <td style={{ padding: '8px 12px' }}>
+                    <div className="catalog-table__title" style={{ fontSize: '12px', fontWeight: 600 }}>{item.category}</div>
+                    <div className="catalog-table__muted" style={{ fontSize: '10px' }}>{item.subcategory}</div>
+                  </td>
+                  <td style={{ padding: '8px 12px', fontSize: '12px', color: '#334155' }}>{item.supplier}</td>
+                  <td className="catalog-number-cell" style={{ padding: '8px 12px' }}>
+                    <span className={`stock-qty ${isOutOfStock ? 'stock-qty--zero' : isLowStock ? 'stock-qty--low' : 'stock-qty--ok'}`}>
+                      {item.currentStock}
+                    </span>
+                  </td>
+                  <td className="catalog-number-cell" style={{ padding: '8px 12px', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#475569' }}>
+                    {item.reorderLevel}
+                  </td>
+                  <td className="catalog-number-cell" style={{ padding: '8px 12px', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#0f172a' }}>
+                    ₹{costVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td className="catalog-number-cell" style={{ padding: '8px 12px', fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: '#047857' }}>
+                    ₹{sellVal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td style={{ padding: '8px 12px', textAlign: 'center' }}>
+                    <div className="catalog-table__muted" style={{ fontSize: '11px', whiteSpace: 'nowrap' }}>{item.lastUpdated}</div>
+                  </td>
+                  <td className="catalog-center-cell" style={{ padding: '8px 12px' }}>
+                    <button
+                      className="catalog-btn catalog-btn--icon stock-adjust-btn"
+                      title="Adjust stock"
+                      onClick={() => setAdjustingItem(item)}
+                      style={{ padding: '5px 8px' }}
+                    >
+                      <Edit3 size={13} />
+                    </button>
+                  </td>
+                </tr>
                 );
               })}
               {!filtered.length && (
                 <tr>
-                  <td colSpan="9" style={{ textAlign: 'center', padding: '36px 16px', color: '#64748b' }}>
-                    No products match the current filters.
+                  <td colSpan="9">
+                    <div className="orders-empty">No products match the current filters.</div>
                   </td>
                 </tr>
               )}
@@ -1260,15 +888,13 @@ const StockUpdates = () => {
           </table>
         </div>
 
-        <div style={{ padding: '12px 20px', borderTop: '1px solid #f1f5f9', background: '#ffffff' }}>
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            totalItems={filtered.length}
-            itemsPerPage={itemsPerPage}
-          />
-        </div>
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filtered.length}
+          itemsPerPage={itemsPerPage}
+        />
       </section>
 
       {/* ── Adjust Modal ── */}

@@ -50,25 +50,8 @@ namespace Honeywell.Controllers
             }
 
             var ordersList = await query
-                .Include(o => o.Items)
                 .OrderByDescending(o => o.Id)
                 .ToListAsync();
-
-            foreach (var o in ordersList)
-            {
-                if (o.FinalAmount <= 0 || o.FinalAmount == o.TotalAmount)
-                {
-                    decimal sub = o.TotalAmount > 0 ? o.TotalAmount : o.Items.Sum(i => i.Subtotal);
-                    decimal tax = o.GstAmount > 0 ? o.GstAmount : Math.Round(sub * 0.18m, 2);
-                    o.GstAmount = tax;
-                    o.FinalAmount = sub + o.ShippingFee + tax - o.DiscountAmount;
-                }
-            }
-
-            // Recalculate metrics based on tax-inclusive FinalAmount
-            totalRevenue = ordersList
-                .Where(o => o.Status != "Cancelled" && (o.PaymentStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Success", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Verified Paid", StringComparison.OrdinalIgnoreCase)))
-                .Sum(o => o.FinalAmount);
 
             // Format entries into Invoice models
             var formattedInvoices = ordersList.Select(o => {
@@ -78,19 +61,13 @@ namespace Honeywell.Controllers
                     : $"INV-{cleanOrderNum}";
 
                 var displayStatus = "Unpaid";
-                if (o.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Rejected", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Failed", StringComparison.OrdinalIgnoreCase))
+                if (o.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
                 {
                     displayStatus = "Cancelled";
                 }
-                else if (o.PaymentStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Success", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Verified Paid", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Verified", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+                else if (o.PaymentStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Success", StringComparison.OrdinalIgnoreCase) || o.PaymentStatus.Equals("Verified Paid", StringComparison.OrdinalIgnoreCase))
                 {
                     displayStatus = "Paid";
-                }
-
-                var displayCustType = o.Customer?.Role ?? "Customer Account";
-                if (displayCustType.Equals("Grower", StringComparison.OrdinalIgnoreCase) || displayCustType.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                {
-                    displayCustType = "Customer Account";
                 }
 
                 return new
@@ -98,15 +75,9 @@ namespace Honeywell.Controllers
                     o.Id,
                     InvoiceId = invoiceId,
                     Client = o.Customer?.Name ?? "Walk-in Customer",
-                    CustomerRole = displayCustType,
-                    CustomerType = displayCustType,
                     Email = o.Customer?.Email ?? "N/A",
                     Date = o.OrderDate.ToString("yyyy-MM-dd"),
                     Billed = $"Rs. {o.FinalAmount:N0}",
-                    SubTotal = o.TotalAmount,
-                    TaxAmount = o.GstAmount,
-                    TotalAmount = o.FinalAmount,
-                    FinalAmount = o.FinalAmount,
                     Status = displayStatus
                 };
             }).ToList();
@@ -135,14 +106,6 @@ namespace Honeywell.Controllers
                 return NotFound(new { Message = "Invoice/Order not found." });
             }
 
-            if (order.FinalAmount <= 0 || order.FinalAmount == order.TotalAmount)
-            {
-                decimal sub = order.TotalAmount > 0 ? order.TotalAmount : order.Items.Sum(i => i.Subtotal);
-                decimal tax = order.GstAmount > 0 ? order.GstAmount : Math.Round(sub * 0.18m, 2);
-                order.GstAmount = tax;
-                order.FinalAmount = sub + order.ShippingFee + tax - order.DiscountAmount;
-            }
-
             var cleanOrderNum = order.OrderNumber.Replace("#", "").Trim();
             var invoiceId = cleanOrderNum.StartsWith("ORD-") 
                 ? cleanOrderNum.Replace("ORD-", "INV-") 
@@ -165,16 +128,23 @@ namespace Honeywell.Controllers
                 Client = order.Customer?.Name ?? "Walk-in Customer",
                 Email = order.Customer?.Email ?? "N/A",
                 Phone = order.Customer?.Phone ?? "",
+                Address = order.ShippingAddress ?? order.Customer?.Address ?? "",
+                ShippingAddress = order.ShippingAddress ?? order.Customer?.Address ?? "",
                 Date = order.OrderDate.ToString("yyyy-MM-dd"),
                 Billed = $"Rs. {order.FinalAmount:N0}",
                 SubTotal = order.TotalAmount,
                 TaxAmount = order.GstAmount,
+                DiscountAmount = order.DiscountAmount,
+                ShippingFee = order.ShippingFee,
                 TotalAmount = order.FinalAmount,
-                FinalAmount = order.FinalAmount,
+                PaymentMethod = order.PaymentMethod,
                 Status = displayStatus,
+                Notes = order.PackerName ?? "",
                 Items = order.Items.Select(i => new {
                     i.ProductName,
+                    i.ProductCode,
                     i.Quantity,
+                    PriceNum = i.Price,
                     Price = $"Rs. {i.Price:N0}",
                     Total = $"Rs. {i.Subtotal:N0}"
                 })
@@ -183,55 +153,53 @@ namespace Honeywell.Controllers
 
         // POST: api/Invoices
         [HttpPost]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> Create([FromBody] InvoiceCreateRequest request)
         {
-            if (string.IsNullOrEmpty(request.ClientName))
+            if (request == null || string.IsNullOrWhiteSpace(request.ClientName))
             {
                 return BadRequest(new { Message = "Client Name is required." });
             }
 
             // 1. Lookup or create customer by phone/email
-            var contact = string.IsNullOrEmpty(request.ContactNo) ? Guid.NewGuid().ToString() : request.ContactNo;
-            var email = string.IsNullOrEmpty(request.EmailAddress) ? Guid.NewGuid().ToString() : request.EmailAddress;
-            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone == request.ContactNo || c.Email == request.EmailAddress);
-            var resolvedType = !string.IsNullOrWhiteSpace(request.CustomerType)
-                && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
-                && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase)
-                ? request.CustomerType.Trim()
-                : "Customer Account";
+            var clientNameTrimmed = request.ClientName.Trim();
+            var contactTrimmed = request.ContactNo?.Trim() ?? string.Empty;
+            var emailTrimmed = request.EmailAddress?.Trim() ?? string.Empty;
+
+            Customer? customer = null;
+            if (!string.IsNullOrEmpty(contactTrimmed) || !string.IsNullOrEmpty(emailTrimmed))
+            {
+                customer = await _context.Customers.FirstOrDefaultAsync(c =>
+                    (!string.IsNullOrEmpty(contactTrimmed) && c.Phone == contactTrimmed) ||
+                    (!string.IsNullOrEmpty(emailTrimmed) && c.Email != null && c.Email.ToLower() == emailTrimmed.ToLower()));
+            }
 
             if (customer == null)
             {
+                var nameParts = clientNameTrimmed.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                var firstName = nameParts.Length > 0 ? nameParts[0] : clientNameTrimmed;
+                var lastName = nameParts.Length > 1 ? nameParts[1] : "";
+
                 customer = new Customer
                 {
-                    Name = request.ClientName,
-                    Phone = request.ContactNo,
-                    Email = request.EmailAddress,
-                    Address = request.Address ?? string.Empty,
-                    Role = resolvedType,
+                    Name = clientNameTrimmed,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Phone = contactTrimmed,
+                    Email = emailTrimmed,
+                    Address = request.Address ?? request.BillingAddress ?? string.Empty,
                     State = "",
                     District = "",
+                    Role = "CUSTOMER ACCOUNT",
+                    Gender = "Male",
+                    CompanyOrganization = "Individual Account",
                     Status = "Active",
                     JoinDate = DateTime.UtcNow,
                     CoinsBalance = 0
                 };
                 _context.Customers.Add(customer);
                 await _context.SaveChangesAsync();
-            }
-            else
-            {
-                if (!string.IsNullOrWhiteSpace(request.CustomerType)
-                    && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
-                    && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                {
-                    customer.Role = request.CustomerType.Trim();
-                    await _context.SaveChangesAsync();
-                }
-                else if (string.IsNullOrWhiteSpace(customer.Role) || customer.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) || customer.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                {
-                    customer.Role = "Customer Account";
-                    await _context.SaveChangesAsync();
-                }
             }
 
             // 2. Create Order as backing store for the invoice
@@ -268,6 +236,9 @@ namespace Honeywell.Controllers
                     : request.Date.Value.Date.Add(DateTime.UtcNow.TimeOfDay);
             }
 
+            var defaultProdId = await _context.Products.AsNoTracking().Select(p => p.Id).FirstOrDefaultAsync();
+            if (defaultProdId <= 0) defaultProdId = 1;
+
             var order = new Order
             {
                 CustomerId = customer.Id,
@@ -282,22 +253,46 @@ namespace Honeywell.Controllers
                 PaymentStatus = payStatusStr,
                 PaymentMethod = request.PaymentMethod ?? "COD",
                 ShippingAddress = request.ShippingAddress ?? request.Address ?? string.Empty,
-                TrackingNumber = request.TaxNumber ?? string.Empty,
+                TrackingNumber = request.TaxNumber ?? request.TransactionRef ?? string.Empty,
+                CarrierName = string.Empty,
                 PackerName = request.Notes
             };
 
-            // Add placeholder order item to represent invoice charges
-            var orderItem = new OrderItem
+            if (request.Items != null && request.Items.Any())
             {
-                ProductId = 1,
-                ProductName = "Manual Invoice Charges",
-                ProductCode = "SERV-001",
-                CategoryName = "Services",
-                Price = request.SubTotal,
-                Quantity = 1,
-                Subtotal = request.SubTotal
-            };
-            order.Items = new List<OrderItem> { orderItem };
+                order.Items = request.Items.Select(i =>
+                {
+                    var qty = i.Quantity > 0 ? i.Quantity : 1;
+                    var price = i.Price >= 0 ? i.Price : 0;
+                    return new OrderItem
+                    {
+                        ProductId = i.ProductId > 0 ? i.ProductId : defaultProdId,
+                        ProductName = !string.IsNullOrWhiteSpace(i.ProductName) ? i.ProductName.Trim() : "Manual Invoice Item",
+                        ProductCode = !string.IsNullOrWhiteSpace(i.ProductCode) ? i.ProductCode.Trim() : "SERV-001",
+                        CategoryName = "Invoice Item",
+                        Price = price,
+                        Quantity = qty,
+                        Subtotal = price * qty,
+                        ImageUrl = string.Empty
+                    };
+                }).ToList();
+            }
+            else
+            {
+                // Add placeholder order item to represent invoice charges
+                var orderItem = new OrderItem
+                {
+                    ProductId = defaultProdId,
+                    ProductName = "Manual Invoice Charges",
+                    ProductCode = "SERV-001",
+                    CategoryName = "Services",
+                    Price = request.SubTotal,
+                    Quantity = 1,
+                    Subtotal = request.SubTotal,
+                    ImageUrl = string.Empty
+                };
+                order.Items = new List<OrderItem> { orderItem };
+            }
 
             _context.Orders.Add(order);
             await _context.SaveChangesAsync();
@@ -308,7 +303,7 @@ namespace Honeywell.Controllers
             {
                 Id = order.Id,
                 InvoiceId = invoiceId,
-                Client = customer.Name,
+                Client = clientNameTrimmed,
                 Email = customer.Email,
                 Date = order.OrderDate.ToString("yyyy-MM-dd"),
                 Billed = $"Rs. {order.FinalAmount:N0}",
@@ -361,13 +356,21 @@ namespace Honeywell.Controllers
             return NoContent();
         }
 
+        public class InvoiceItemRequest
+        {
+            public int ProductId { get; set; }
+            public string? ProductName { get; set; }
+            public string? ProductCode { get; set; }
+            public int Quantity { get; set; } = 1;
+            public decimal Price { get; set; }
+        }
+
         public class InvoiceCreateRequest
         {
             public string? InvoiceNo { get; set; }
             public DateTime? Date { get; set; }
             public string? PaymentStatus { get; set; } // Unpaid, Paid, Cancelled
             public string ClientName { get; set; } = string.Empty;
-            public string? CustomerType { get; set; }
             public string EmailAddress { get; set; } = string.Empty;
             public string ContactNo { get; set; } = string.Empty;
             public string? Address { get; set; }
@@ -384,12 +387,15 @@ namespace Honeywell.Controllers
             public string? ShippingTaxNumber { get; set; }
             public string? ShippingEmail { get; set; }
             public string? PaymentMethod { get; set; }
+            public string? TransactionRef { get; set; }
+            public string? PaymentDate { get; set; }
             public decimal SubTotal { get; set; }
             public decimal TaxAmount { get; set; }
             public decimal Discount { get; set; }
             public decimal ShippingCharge { get; set; }
             public decimal TotalAmount { get; set; }
             public string? Notes { get; set; }
+            public List<InvoiceItemRequest>? Items { get; set; }
         }
 
         public class InvoiceUpdateRequest

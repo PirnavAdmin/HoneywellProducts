@@ -17,6 +17,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     catalog: false,
     purchase: false,
     customers: false,
+    purchase: false,
     orders: false,
     marketing: false,
     brands: false,
@@ -63,6 +64,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       catalog:   path.includes('/admin/catalog'),
       purchase:  path.includes('/admin/purchase'),
       customers: path.includes('/admin/customers'),
+      purchase:  path.includes('/admin/purchase'),
       orders:    path.includes('/admin/orders') || path.includes('/admin/returns'),
       marketing: path.includes('/admin/marketing') || path.includes('/admin/solutions'),
       brands:    path.includes('/admin/brands'),
@@ -76,22 +78,13 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     });
   }, [location.pathname, expanded]);
 
-  // Toggle module dropdown with accordion behavior (closes other open modules)
   const toggleDropdown = (menu, defaultRoute) => {
     if (!expanded) {
       if (onToggleSidebar) onToggleSidebar();
       if (defaultRoute) navigate(defaultRoute);
       return;
     }
-    setOpenDropdowns(prev => {
-      const willOpen = !prev[menu];
-      const next = {};
-      Object.keys(prev).forEach(key => {
-        next[key] = false;
-      });
-      next[menu] = willOpen;
-      return next;
-    });
+    setOpenDropdowns(prev => ({ ...prev, [menu]: !prev[menu] }));
   };
 
   const hasAccess = (moduleName) => {

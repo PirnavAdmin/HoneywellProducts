@@ -13,7 +13,6 @@ const AddInvoice = () => {
     date: new Date().toISOString().split('T')[0],
     paymentStatus: 'Unpaid',
     clientName: '',
-    customerType: '',
     emailAddress: '',
     contactNo: '',
     address: '',
@@ -130,12 +129,6 @@ const AddInvoice = () => {
       return;
     }
 
-    // 1b. Customer Type Validation
-    if (!formData.customerType) {
-      setError('Please select a Customer Type.');
-      return;
-    }
-
     // 2. Contact Number Validation (10-digit mobile starting 6-9)
     const phoneClean = (formData.contactNo || '').replace(/[\s\-\+\(\)]/g, '');
     if (!formData.contactNo || !phoneClean) {
@@ -197,9 +190,6 @@ const AddInvoice = () => {
     try {
       const payload = {
         ...formData,
-        customerType: formData.customerType,
-        type: formData.customerType,
-        role: formData.customerType,
         date: formData.date ? new Date(formData.date).toISOString() : new Date().toISOString(),
         subTotal: parseFloat(formData.subTotal) || 0,
         taxAmount: parseFloat(formData.taxAmount) || 0,
@@ -281,43 +271,18 @@ const AddInvoice = () => {
           <div className="form-section-group">
             <h3 className="section-group-title">Customer Information</h3>
             
-            <div className="form-input-row-2">
-              <div className="form-input-field">
-                <label>Client / Customer Name <span style={{ color: '#ef4444' }}>*</span></label>
-                <input
-                  type="text"
-                  name="clientName"
-                  placeholder="e.g. Ramesh Patel"
-                  value={formData.clientName}
-                  onChange={handleChange}
-                  pattern="[a-zA-Z\s.'-]{2,}"
-                  title="Please enter a valid full name (minimum 2 letters)"
-                  required
-                />
-              </div>
-
-              <div className="form-input-field">
-                <label>Customer Type <span style={{ color: '#ef4444' }}>*</span></label>
-                <select
-                  required
-                  name="customerType"
-                  value={formData.customerType}
-                  onChange={handleChange}
-                  style={{
-                    color: formData.customerType ? '#0f172a' : '#64748b',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <option value="" disabled style={{ color: '#94a3b8' }}>Select Customer Type</option>
-                  <option value="System Integrator" style={{ color: '#0f172a' }}>System Integrator</option>
-                  <option value="CCTV Installer" style={{ color: '#0f172a' }}>CCTV Installer</option>
-                  <option value="Commercial & Enterprise" style={{ color: '#0f172a' }}>Commercial & Enterprise</option>
-                  <option value="Distributor" style={{ color: '#0f172a' }}>Distributor</option>
-                  <option value="Dealer / Reseller" style={{ color: '#0f172a' }}>Dealer / Reseller</option>
-                  <option value="Residential & Facility Owner" style={{ color: '#0f172a' }}>Residential & Facility Owner</option>
-                  <option value="Channel Partner" style={{ color: '#0f172a' }}>Channel Partner</option>
-                </select>
-              </div>
+            <div className="form-input-field">
+              <label>Client / Customer Name <span style={{ color: '#ef4444' }}>*</span></label>
+              <input
+                type="text"
+                name="clientName"
+                placeholder="e.g. Ramesh Patel"
+                value={formData.clientName}
+                onChange={handleChange}
+                pattern="[a-zA-Z\s.'-]{2,}"
+                title="Please enter a valid full name (minimum 2 letters)"
+                required
+              />
             </div>
 
             <div className="form-input-row-2">

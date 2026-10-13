@@ -85,10 +85,13 @@ function AddStaff() {
   const [newModuleName, setNewModuleName] = useState("");
   const [existingStaffRecord, setExistingStaffRecord] = useState(null);
 
-  // Load modules from database
+  // Load modules from database (GET /api/Permissions/modules with fallback to /api/Module)
   const loadModules = async () => {
     try {
-      const response = await fetch(`${BASE_URL}/Module`, { headers: getHeaders() });
+      let response = await fetch(`${BASE_URL}/Permissions/modules`, { headers: getHeaders() });
+      if (!response.ok) {
+        response = await fetch(`${BASE_URL}/Module`, { headers: getHeaders() });
+      }
       if (!response.ok) throw new Error(`Status: ${response.status}`);
       const json = await safeParseJson(response);
       let list = unwrapList(json);
@@ -96,14 +99,14 @@ function AddStaff() {
       if (list.length === 0) {
         await Promise.all(DEFAULT_MODULES.map(async (name, index) => {
           try {
-            await fetch(`${BASE_URL}/Module`, {
+            await fetch(`${BASE_URL}/Permissions/modules`, {
               method: 'POST',
               headers: getHeaders(),
               body: JSON.stringify({ moduleName: name, description: `Core ${name} module`, displayOrder: index })
             });
           } catch (e) {}
         }));
-        const response2 = await fetch(`${BASE_URL}/Module`, { headers: getHeaders() });
+        const response2 = await fetch(`${BASE_URL}/Permissions/modules`, { headers: getHeaders() });
         const json2 = await safeParseJson(response2);
         list = unwrapList(json2);
       }
@@ -157,12 +160,23 @@ function AddStaff() {
             confirmPassword: ""
           });
 
-          // Fetch permissions from backend Permissions API
-          const permsResponse = await fetch(`${BASE_URL}/Permission/${staffId}`, { headers: getHeaders() });
+          // Fetch permissions from GET /api/Staff/{id}/permissions (fallback to /api/Permission/{id})
+          let permsResponse = await fetch(`${BASE_URL}/Staff/${staffId}/permissions`, { headers: getHeaders() });
+          if (!permsResponse.ok) {
+            permsResponse = await fetch(`${BASE_URL}/Permission/${staffId}`, { headers: getHeaders() });
+          }
           let targetPerms = [];
+          let directPermStrings = Array.isArray(target.permissions) ? target.permissions : [];
           if (permsResponse.ok) {
             const permsJson = await safeParseJson(permsResponse);
-            targetPerms = unwrapList(permsJson);
+            if (Array.isArray(permsJson?.permissions)) {
+              directPermStrings = permsJson.permissions;
+            }
+            if (Array.isArray(permsJson?.modulePermissions)) {
+              targetPerms = permsJson.modulePermissions;
+            } else {
+              targetPerms = unwrapList(permsJson);
+            }
           }
           const ROLE_DEFAULTS = {
             advisory: ['dashboard', 'customers', 'call history', 'reports'],
@@ -173,12 +187,19 @@ function AddStaff() {
           };
 
           const permsState = { ...initialPerms };
-          if (targetPerms.length > 0) {
+          if (targetPerms.length > 0 && typeof targetPerms[0] === 'object') {
             targetPerms.forEach(p => {
               const name = p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName));
               const isAllowed = p.isAllowed ?? p.IsAllowed ?? false;
               if (name) {
                 permsState[name] = isAllowed;
+              }
+            });
+          } else if (directPermStrings.length > 0) {
+            directPermStrings.forEach(p => {
+              const cleanKey = String(p).toLowerCase();
+              if (cleanKey in permsState) {
+                permsState[cleanKey] = true;
               }
             });
           } else {
@@ -372,7 +393,8 @@ function AddStaff() {
       role: formData.role,
       password: formData.password || "StaffPass@2026!",
       status: activeStatus ? "Active" : "Inactive",
-      isActive: activeStatus
+      isActive: activeStatus,
+      permissions: enabledPermissions
     };
 
     try {
@@ -393,13 +415,14 @@ function AddStaff() {
         targetId = newStaff?.id ?? newStaff?.Id ?? newStaff?.staffId ?? newStaff?.StaffId;
       }
 
-      // Sync Permissions to backend
+      // Sync Permissions to backend via PUT /api/Staff/{id}/permissions
       if (targetId && dbModules.length > 0) {
         const permissionDtoList = dbModules.map(mod => {
           const modName = mod.moduleName || mod.ModuleName;
           const isAllowed = permissions[modName] || false;
           return {
             moduleId: mod.id ?? mod.Id,
+            moduleName: modName,
             canView: isAllowed,
             canAdd: isAllowed,
             canEdit: isAllowed,
@@ -407,11 +430,12 @@ function AddStaff() {
             isAllowed: isAllowed
           };
         });
-        await fetch(`${BASE_URL}/Permission`, {
-          method: isEditing ? 'PUT' : 'POST',
+        await fetch(`${BASE_URL}/Staff/${targetId}/permissions`, {
+          method: 'PUT',
           headers: getHeaders(),
           body: JSON.stringify({
             staffId: parseInt(targetId, 10) || targetId,
+            permissions: enabledPermissions,
             staffPermissions: permissionDtoList
           })
         }).catch(pErr => console.warn('Permissions sync warning:', pErr));
