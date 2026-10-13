@@ -22,11 +22,65 @@ namespace Honeywell.Controllers
             _context = context;
         }
 
+        private static bool _customerSchemaEnsured = false;
+        private async Task EnsureCustomerSchemaAsync()
+        {
+            if (_customerSchemaEnsured) return;
+            try
+            {
+                var conn = _context.Database.GetDbConnection();
+                bool wasClosed = conn.State != System.Data.ConnectionState.Open;
+                if (wasClosed) await conn.OpenAsync();
+                try
+                {
+                    var colsToAdd = new[]
+                    {
+                        "ALTER TABLE `Customers` ADD COLUMN `AccountHolderName` VARCHAR(200) NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `BankName` VARCHAR(200) NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `AccountNumber` VARCHAR(100) NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `IfscCode` VARCHAR(50) NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `UpiId` VARCHAR(100) NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `FirstName` VARCHAR(100) NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `LastName` VARCHAR(100) NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `Password` VARCHAR(255) NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `Role` VARCHAR(100) NOT NULL DEFAULT 'CUSTOMER ACCOUNT';",
+                        "ALTER TABLE `Customers` ADD COLUMN `Gender` VARCHAR(50) NOT NULL DEFAULT 'Male';",
+                        "ALTER TABLE `Customers` ADD COLUMN `CompanyOrganization` VARCHAR(200) NOT NULL DEFAULT 'Individual Account';",
+                        "ALTER TABLE `Customers` ADD COLUMN `ShippingAddressJson` TEXT NULL;",
+                        "ALTER TABLE `Customers` ADD COLUMN `BillingAddressJson` TEXT NULL;",
+                        "ALTER TABLE `customers` ADD COLUMN `AccountHolderName` VARCHAR(200) NULL;",
+                        "ALTER TABLE `customers` ADD COLUMN `BankName` VARCHAR(200) NULL;",
+                        "ALTER TABLE `customers` ADD COLUMN `AccountNumber` VARCHAR(100) NULL;",
+                        "ALTER TABLE `customers` ADD COLUMN `IfscCode` VARCHAR(50) NULL;",
+                        "ALTER TABLE `customers` ADD COLUMN `UpiId` VARCHAR(100) NULL;"
+                    };
+                    using var cmd = conn.CreateCommand();
+                    foreach (var alterSql in colsToAdd)
+                    {
+                        try
+                        {
+                            cmd.CommandText = alterSql;
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                        catch { }
+                    }
+                    _customerSchemaEnsured = true;
+                }
+                finally
+                {
+                    if (wasClosed && conn.State == System.Data.ConnectionState.Open)
+                        await conn.CloseAsync();
+                }
+            }
+            catch { }
+        }
+
         // 1. Sign In Modal (Customer Login)
         // POST: api/Customer/login
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] CustomerLoginDto dto)
         {
+            await EnsureCustomerSchemaAsync();
             if (dto == null || string.IsNullOrWhiteSpace(dto.EmailOrPhone) || string.IsNullOrWhiteSpace(dto.Password))
             {
                 return BadRequest(new { success = false, message = "Email/Mobile and Password are required." });
@@ -129,6 +183,7 @@ namespace Honeywell.Controllers
         [HttpGet("my-profile")]
         public async Task<IActionResult> GetMyProfile([FromQuery] int? customerId, [FromQuery] string? email)
         {
+            await EnsureCustomerSchemaAsync();
             Customer? customer = null;
             if (customerId.HasValue && customerId.Value > 0)
             {
@@ -406,6 +461,7 @@ namespace Honeywell.Controllers
         [HttpGet("bank-details")]
         public async Task<IActionResult> GetBankDetails([FromQuery] int? customerId)
         {
+            await EnsureCustomerSchemaAsync();
             Customer? customer = null;
             if (customerId.HasValue && customerId.Value > 0)
             {
@@ -444,6 +500,7 @@ namespace Honeywell.Controllers
         [HttpPut("bank-details")]
         public async Task<IActionResult> SaveBankDetails([FromBody] SaveBankDetailsDto dto, [FromQuery] int? customerId)
         {
+            await EnsureCustomerSchemaAsync();
             Customer? customer = null;
             if (customerId.HasValue && customerId.Value > 0)
             {
