@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link } from 'react-router-dom';
 import { 
   Users, Plus, Mail, Phone, AlertTriangle, Trash2, Edit2, X, 
-  Search, RefreshCw, UserCheck, UserX, Shield
+  Search, RefreshCw, UserCheck, UserX, Shield, CheckCircle2
 } from 'lucide-react';
 import { 
   getStaffList, 
@@ -34,6 +34,46 @@ const getInitials = (name) => {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
   return name.slice(0, 2).toUpperCase();
+};
+
+// Formats raw permission module key to a clean, readable name
+const formatModuleTitle = (key) => {
+  if (!key) return '';
+  const norm = String(key).toLowerCase().trim();
+  const titleMap = {
+    'dashboard': 'Dashboard',
+    'catalog': 'Catalog',
+    'customers': 'Customers',
+    'staff': 'Staff',
+    'reports': 'Reports',
+    'growth journey': 'Growth Journey',
+    'tickets': 'Tickets',
+    'enquiries': 'Enquiries',
+    'contact form': 'Contact Form',
+    'bulk quotes': 'Bulk Quotes',
+    'partner applications': 'Partners',
+    'dealers & distributors': 'Dealers',
+    'orders': 'Orders & Sales',
+    'orders & sales': 'Orders & Sales',
+    'invoices': 'Invoices',
+    'stockupdates': 'Stock',
+    'stock updates': 'Stock',
+    'marketing': 'Marketing',
+    'brands': 'Brands',
+    'blogs': 'Blogs',
+    'testimonials': 'Testimonials',
+    'settings': 'Settings',
+    'suppliers': 'Suppliers',
+    'payment settings': 'Payments',
+    'call history': 'CRM Logs'
+  };
+
+  if (titleMap[norm]) return titleMap[norm];
+
+  return key
+    .split(/[\s_-]+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
 };
 
 const StaffList = () => {
@@ -90,14 +130,12 @@ const StaffList = () => {
       }
     } catch (err) {
       console.warn('Staff stats fetch error:', err.message);
-      // Keep null so KPI cards fall back to calculated live array values
       setStatsData(null);
     }
   }, []);
 
   // Fetch staff list from real backend (GET /api/Staff) with filter parameters
   const fetchStaffData = useCallback(async () => {
-    // Cancel previous in-flight request if any
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -123,7 +161,13 @@ const StaffList = () => {
         const empIdVal = staff.employeeId || staff.EmployeeId || (actualId ? `EMP-${String(actualId).padStart(4, '0')}` : 'N/A');
         const phoneVal = staff.phone || staff.Phone || staff.mobileNumber || staff.MobileNumber || staff.mobile || staff.Mobile || '';
         const isActive = staff.isActive ?? staff.IsActive ?? (staff.status ? staff.status.toLowerCase() === 'active' : true);
-        const permissions = Array.isArray(staff.permissions) ? staff.permissions : [];
+        const rawPermissions = Array.isArray(staff.permissions) ? staff.permissions : [];
+
+        // Filter out legacy "coins converter" from displayed permissions
+        const cleanPermissions = rawPermissions.filter(p => {
+          const norm = (typeof p === 'string' ? p : p?.moduleName || '').toLowerCase().trim();
+          return norm !== 'coins converter' && norm !== 'coin converter' && norm !== 'coins';
+        });
 
         return {
           ...staff,
@@ -138,7 +182,7 @@ const StaffList = () => {
           mobile: phoneVal,
           status: isActive ? 'Active' : 'Inactive',
           isActive,
-          permissions,
+          permissions: cleanPermissions,
         };
       });
 
@@ -146,7 +190,6 @@ const StaffList = () => {
       setFetchError('');
     } catch (err) {
       if (err.name === 'AbortError') {
-        // Request was intentionally aborted due to new search/filter; ignore
         return;
       }
       console.error('Staff fetch error:', err.message);
@@ -189,7 +232,7 @@ const StaffList = () => {
     try {
       await deleteStaff(id);
       setStaffList(prev => prev.filter(item => String(item.id ?? item.employeeId) !== String(id)));
-      setToastMessage(`Staff "${name}" removed successfully.`);
+      setToastMessage(`Staff member "${name}" deleted successfully.`);
       setToastType('success');
       loadStats();
     } catch (err) {
@@ -236,7 +279,7 @@ const StaffList = () => {
   const inactiveStaffCount = statsData?.inactiveStaff ?? statsData?.inactiveCount ?? staffList.filter(s => !s.isActive).length;
   const adminRoleCount = statsData?.adminCount ?? statsData?.adminRoleCount ?? staffList.filter(s => (s.role || '').toLowerCase() === 'admin').length;
 
-  // Client-side fallback filter for immediate UI responsiveness
+  // Client-side filter for immediate UI responsiveness
   const filteredStaff = useMemo(() => {
     return staffList.filter((s) => {
       const q = debouncedSearch.toLowerCase().trim();
@@ -310,6 +353,7 @@ const StaffList = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               <button
+                type="button"
                 onClick={() => setStaffToDelete(null)}
                 style={{
                   padding: '9px 18px', borderRadius: '8px',
@@ -321,6 +365,7 @@ const StaffList = () => {
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={confirmDeleteStaff}
                 style={{
                   padding: '9px 20px', borderRadius: '8px',
@@ -339,25 +384,28 @@ const StaffList = () => {
         document.body
       )}
 
-      {/* ── Header Row Card ── */}
-      <section className="staff-header-card">
+      {/* ── Top Header Row Card ── */}
+      <header className="staff-header-card">
         <div className="staff-header-left">
           <div className="staff-header-icon-wrap">
             <Users size={22} />
           </div>
           <div>
+            <span className="staff-kicker">STAFF DIRECTORY</span>
             <h1 className="staff-header-title">Staff Management Directory</h1>
             <p className="staff-header-desc">
-              Manage enterprise roles, application permissions, and staff accounts.
+              Manage enterprise staff accounts, role assignments, and application permissions.
             </p>
           </div>
         </div>
 
-        <Link to="/admin/staff/add" className="staff-add-btn">
-          <Plus size={16} />
-          Add Staff Member
-        </Link>
-      </section>
+        <div className="staff-header-actions">
+          <Link to="/admin/staff/add" className="staff-add-btn">
+            <Plus size={16} />
+            <span>Add Staff Member</span>
+          </Link>
+        </div>
+      </header>
 
       {/* ── KPI Stat Cards ── */}
       <div className="staff-kpi-grid">
@@ -365,9 +413,10 @@ const StaffList = () => {
           <div className="staff-kpi-icon blue">
             <Users size={20} />
           </div>
-          <div>
+          <div className="staff-kpi-content">
             <div className="staff-kpi-label">Total Staff</div>
             <div className="staff-kpi-value">{totalStaffCount}</div>
+            <span className="staff-kpi-subtext">Active Directory</span>
           </div>
         </div>
 
@@ -375,9 +424,10 @@ const StaffList = () => {
           <div className="staff-kpi-icon green">
             <UserCheck size={20} />
           </div>
-          <div>
+          <div className="staff-kpi-content">
             <div className="staff-kpi-label">Active Members</div>
             <div className="staff-kpi-value">{activeStaffCount}</div>
+            <span className="staff-kpi-subtext">Authorized Access</span>
           </div>
         </div>
 
@@ -385,9 +435,10 @@ const StaffList = () => {
           <div className="staff-kpi-icon amber">
             <UserX size={20} />
           </div>
-          <div>
+          <div className="staff-kpi-content">
             <div className="staff-kpi-label">Inactive / On Leave</div>
             <div className="staff-kpi-value">{inactiveStaffCount}</div>
+            <span className="staff-kpi-subtext">Revoked / Suspended</span>
           </div>
         </div>
 
@@ -395,9 +446,10 @@ const StaffList = () => {
           <div className="staff-kpi-icon purple">
             <Shield size={20} />
           </div>
-          <div>
+          <div className="staff-kpi-content">
             <div className="staff-kpi-label">Admin Accounts</div>
             <div className="staff-kpi-value">{adminRoleCount}</div>
+            <span className="staff-kpi-subtext">Console Control</span>
           </div>
         </div>
       </div>
@@ -413,6 +465,16 @@ const StaffList = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {searchTerm && (
+            <button
+              type="button"
+              className="staff-search-clear"
+              onClick={() => setSearchTerm('')}
+              title="Clear search"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
         <div className="staff-filter-controls">
@@ -435,9 +497,9 @@ const StaffList = () => {
             ) : (
               <>
                 <option value="admin">Admin</option>
+                <option value="manager">Manager</option>
                 <option value="advisory">Advisory</option>
                 <option value="inventory">Inventory</option>
-                <option value="manager">Manager</option>
                 <option value="sales">Sales</option>
                 <option value="staff">General Staff</option>
               </>
@@ -450,8 +512,8 @@ const StaffList = () => {
             onChange={(e) => setSelectedStatus(e.target.value)}
           >
             <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="active">Active Only</option>
+            <option value="inactive">Inactive Only</option>
           </select>
 
           <button
@@ -483,14 +545,14 @@ const StaffList = () => {
                 <th>Assigned Role</th>
                 <th>Application Access</th>
                 <th style={{ width: '110px' }}>Status</th>
-                <th style={{ width: '120px', textAlign: 'center' }}>Actions</th>
+                <th style={{ width: '100px', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
-                    <RefreshCw size={20} className="spin" style={{ display: 'block', margin: '0 auto 8px', color: '#1268a5' }} />
+                  <td colSpan="7" style={{ padding: '56px 0', textAlign: 'center', color: '#64748b', fontSize: '14px' }}>
+                    <RefreshCw size={22} className="spin" style={{ display: 'block', margin: '0 auto 10px', color: '#1268a5' }} />
                     Loading staff directory from backend...
                   </td>
                 </tr>
@@ -503,7 +565,7 @@ const StaffList = () => {
                       padding: '20px',
                       backgroundColor: '#fef2f2',
                       border: '1px solid #fee2e2',
-                      borderRadius: '10px',
+                      borderRadius: '12px',
                       color: '#991b1b',
                     }}>
                       <AlertTriangle size={28} style={{ color: '#ef4444', margin: '0 auto 10px', display: 'block' }} />
@@ -520,9 +582,9 @@ const StaffList = () => {
                           backgroundColor: '#dc2626',
                           color: '#ffffff',
                           border: 'none',
-                          padding: '7px 16px',
-                          borderRadius: '6px',
-                          fontSize: '12.5px',
+                          padding: '8px 18px',
+                          borderRadius: '8px',
+                          fontSize: '13px',
                           fontWeight: 700,
                           cursor: 'pointer',
                         }}
@@ -534,15 +596,15 @@ const StaffList = () => {
                 </tr>
               ) : pagedStaff.length === 0 ? (
                 <tr>
-                  <td colSpan="7" style={{ padding: '48px 0', textAlign: 'center', color: '#64748b' }}>
-                    <Users size={32} style={{ margin: '0 auto 8px', color: '#94a3b8', display: 'block' }} />
-                    <strong style={{ display: 'block', color: '#334155', fontSize: '15px', marginBottom: '4px' }}>
+                  <td colSpan="7" style={{ padding: '60px 0', textAlign: 'center', color: '#64748b' }}>
+                    <Users size={36} style={{ margin: '0 auto 10px', color: '#94a3b8', display: 'block' }} />
+                    <strong style={{ display: 'block', color: '#0f172a', fontSize: '16px', marginBottom: '4px' }}>
                       No staff members found
                     </strong>
-                    <span style={{ fontSize: '13px' }}>
+                    <span style={{ fontSize: '13px', color: '#64748b' }}>
                       {searchTerm || selectedRole !== 'all' || selectedStatus !== 'all'
-                        ? 'Try adjusting your search or filters.'
-                        : 'Click "Add Staff Member" above to create your first staff account.'}
+                        ? 'Try adjusting your search query or role/status filters.'
+                        : 'Click "Add Staff Member" above to create the first staff account.'}
                     </span>
                   </td>
                 </tr>
@@ -572,9 +634,9 @@ const StaffList = () => {
                           <div>
                             <div className="staff-user-name">{name}</div>
                             {staff.department && (
-                              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+                              <span className="staff-dept-badge">
                                 {staff.department}
-                              </div>
+                              </span>
                             )}
                           </div>
                         </div>
@@ -605,16 +667,19 @@ const StaffList = () => {
                         <div className="staff-perms-cluster">
                           {perms.slice(0, 4).map(p => (
                             <span key={p} className="staff-perm-pill">
-                              {p}
+                              {formatModuleTitle(p)}
                             </span>
                           ))}
                           {perms.length > 4 && (
-                            <span className="staff-perm-pill" style={{ backgroundColor: '#e2e8f0', color: '#475569' }}>
+                            <span 
+                              className="staff-perm-pill more-pill"
+                              title={perms.slice(4).map(formatModuleTitle).join(', ')}
+                            >
                               +{perms.length - 4} more
                             </span>
                           )}
                           {perms.length === 0 && (
-                            <span style={{ fontSize: '11px', color: '#94a3b8', fontStyle: 'italic' }}>
+                            <span style={{ fontSize: '11.5px', color: '#94a3b8', fontStyle: 'italic' }}>
                               Basic Access
                             </span>
                           )}

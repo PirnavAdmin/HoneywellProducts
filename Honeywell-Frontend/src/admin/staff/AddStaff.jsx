@@ -1,6 +1,36 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
-import { ArrowLeft, Save, Shield, User, Key, Eye, EyeOff } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Save, 
+  Shield, 
+  User, 
+  Key, 
+  Eye, 
+  EyeOff,
+  Home,
+  Box,
+  Users,
+  BarChart2,
+  TrendingUp,
+  Ticket,
+  MessageSquare,
+  Mail,
+  FileSpreadsheet,
+  Building2,
+  ShoppingCart,
+  Boxes,
+  Target,
+  FolderOpen,
+  CreditCard,
+  Settings,
+  FileText,
+  PhoneCall,
+  Search,
+  Check,
+  RotateCcw,
+  RefreshCw
+} from "lucide-react";
 import { 
   getStaffById, 
   createStaff, 
@@ -14,6 +44,169 @@ import {
 } from '../../services/staffApi';
 import { Toast } from "../components/Toast";
 import './AddStaff.css';
+
+// Excluded modules that do not exist in the active admin console sidebar
+const EXCLUDED_MODULE_NAMES = ['coins converter', 'coin converter', 'coins'];
+
+// Dynamic Fallback in case backend API is temporarily offline
+const FALLBACK_MODULES = [
+  { id: 1, moduleName: "dashboard", description: "Analytics overview, metrics & live sales summaries" },
+  { id: 2, moduleName: "catalog", description: "Categories, subcategories, products & inventory items" },
+  { id: 3, moduleName: "customers", description: "Customer accounts, profiles, addresses & CRM logs" },
+  { id: 4, moduleName: "staff", description: "Staff accounts, role assignments & system access" },
+  { id: 5, moduleName: "reports", description: "Business performance, sales reports & data exports" },
+  { id: 6, moduleName: "growth journey", description: "Milestones, progress tracking & performance metrics" },
+  { id: 7, moduleName: "tickets", description: "Customer support tickets & customer dispute queue" },
+  { id: 8, moduleName: "enquiries", description: "Inbound product enquiries & commercial leads" },
+  { id: 9, moduleName: "contact form", description: "Submissions from the public contact us page" },
+  { id: 10, moduleName: "bulk quotes", description: "Commercial bulk purchase quote inquiries & pricing" },
+  { id: 11, moduleName: "partner applications", description: "Channel partner & distributor application reviews" },
+  { id: 12, moduleName: "dealers & distributors", description: "Dealer network, branches & distribution partners" },
+  { id: 14, moduleName: "orders & sales", description: "Customer orders, tracking, fulfillment & returns" },
+  { id: 15, moduleName: "invoices", description: "Tax invoices, billing documents & payment receipts" },
+  { id: 16, moduleName: "stockupdates", description: "Inventory levels, stock adjustments & ledger logs" },
+  { id: 17, moduleName: "marketing", description: "Hero banners, promotional offers, deals & coupons" },
+  { id: 18, moduleName: "brands", description: "Authorized brands, logos & manufacturer profiles" },
+  { id: 19, moduleName: "blogs", description: "Industry articles, company news & blog publications" },
+  { id: 20, moduleName: "testimonials", description: "Customer feedback, reviews & social ratings" },
+  { id: 21, moduleName: "settings", description: "Site configuration, footer, about us & policy pages" },
+  { id: 22, moduleName: "suppliers", description: "Vendor profiles, sourcing & supplier directory" },
+  { id: 23, moduleName: "payment settings", description: "Gateways, payment accounts & banking configurations" },
+  { id: 25, moduleName: "call history", description: "CRM telephone interactions, call logs & transcripts" }
+];
+
+// Map module names to relevant Lucide icons
+const getModuleIcon = (key) => {
+  const norm = (key || '').toLowerCase().trim();
+  switch (norm) {
+    case 'dashboard':
+      return <Home size={17} />;
+    case 'catalog':
+      return <Box size={17} />;
+    case 'customers':
+      return <Users size={17} />;
+    case 'staff':
+      return <Shield size={17} />;
+    case 'reports':
+      return <BarChart2 size={17} />;
+    case 'growth journey':
+      return <TrendingUp size={17} />;
+    case 'tickets':
+      return <Ticket size={17} />;
+    case 'enquiries':
+      return <MessageSquare size={17} />;
+    case 'contact form':
+      return <Mail size={17} />;
+    case 'bulk quotes':
+      return <FileSpreadsheet size={17} />;
+    case 'partner applications':
+      return <Shield size={17} />;
+    case 'dealers & distributors':
+      return <Building2 size={17} />;
+    case 'orders':
+    case 'orders & sales':
+      return <ShoppingCart size={17} />;
+    case 'invoices':
+      return <FileSpreadsheet size={17} />;
+    case 'stockupdates':
+    case 'stock updates':
+      return <Boxes size={17} />;
+    case 'marketing':
+      return <Target size={17} />;
+    case 'brands':
+      return <Box size={17} />;
+    case 'blogs':
+      return <FileText size={17} />;
+    case 'testimonials':
+      return <MessageSquare size={17} />;
+    case 'settings':
+      return <Settings size={17} />;
+    case 'suppliers':
+      return <FolderOpen size={17} />;
+    case 'payment settings':
+      return <CreditCard size={17} />;
+    case 'call history':
+      return <PhoneCall size={17} />;
+    default:
+      return <Shield size={17} />;
+  }
+};
+
+// Clean formatted module title
+const formatModuleTitle = (key) => {
+  if (!key) return '';
+  const norm = key.toLowerCase().trim();
+  const titleMap = {
+    'dashboard': 'Dashboard',
+    'catalog': 'Catalog',
+    'customers': 'Customers',
+    'staff': 'Staff Directory',
+    'reports': 'Reports & Analytics',
+    'growth journey': 'Growth Journey',
+    'tickets': 'Tickets',
+    'enquiries': 'Enquiries',
+    'contact form': 'Contact Form',
+    'bulk quotes': 'Bulk Quotes',
+    'partner applications': 'Partner Applications',
+    'dealers & distributors': 'Dealers & Distributors',
+    'orders': 'Orders & Sales',
+    'orders & sales': 'Orders & Sales',
+    'invoices': 'Invoices',
+    'stockupdates': 'Stock Updates',
+    'stock updates': 'Stock Updates',
+    'marketing': 'Marketing',
+    'brands': 'Brands',
+    'blogs': 'Blogs',
+    'testimonials': 'Testimonials',
+    'settings': 'Settings',
+    'suppliers': 'Suppliers',
+    'payment settings': 'Payment Settings',
+    'call history': 'CRM & Call History'
+  };
+
+  if (titleMap[norm]) return titleMap[norm];
+
+  return key
+    .split(/[\s_-]+/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
+
+// Helpful descriptions explaining console module operations
+const formatModuleDescription = (key, customDesc) => {
+  if (customDesc && !customDesc.startsWith('Core ') && customDesc.length > 10) {
+    return customDesc;
+  }
+  const norm = (key || '').toLowerCase().trim();
+  const descMap = {
+    'dashboard': 'Analytics overview, metrics & live sales summaries',
+    'catalog': 'Categories, subcategories, products & inventory items',
+    'customers': 'Customer accounts, profiles, addresses & CRM logs',
+    'staff': 'Staff accounts, role assignments & system access',
+    'reports': 'Business performance, sales reports & data exports',
+    'growth journey': 'Milestones, progress tracking & performance metrics',
+    'tickets': 'Customer support tickets & customer dispute queue',
+    'enquiries': 'Inbound product enquiries & commercial leads',
+    'contact form': 'Submissions from the public contact us page',
+    'bulk quotes': 'Commercial bulk purchase quote inquiries & pricing',
+    'partner applications': 'Channel partner & distributor application reviews',
+    'dealers & distributors': 'Dealer network, branches & distribution partners',
+    'orders': 'Customer orders, tracking, fulfillment & returns',
+    'orders & sales': 'Customer orders, tracking, fulfillment & returns',
+    'invoices': 'Tax invoices, billing documents & payment receipts',
+    'stockupdates': 'Inventory levels, stock adjustments & ledger logs',
+    'marketing': 'Hero banners, promotional offers, deals & coupons',
+    'brands': 'Authorized brands, logos & manufacturer profiles',
+    'blogs': 'Industry articles, company news & blog publications',
+    'testimonials': 'Customer feedback, reviews & social ratings',
+    'settings': 'Site configuration, footer, about us & policy pages',
+    'suppliers': 'Vendor profiles, sourcing & supplier directory',
+    'payment settings': 'Gateways, payment accounts & banking configurations',
+    'call history': 'CRM telephone interactions, call logs & transcripts'
+  };
+
+  return descMap[norm] || customDesc || 'Access to this console module';
+};
 
 function AddStaff() {
   const navigate = useNavigate();
@@ -30,6 +223,7 @@ function AddStaff() {
   const [availableRoles, setAvailableRoles] = useState([]);
   const [availableDepartments, setAvailableDepartments] = useState([]);
   const [dbModules, setDbModules] = useState([]);
+  const [permissionSearch, setPermissionSearch] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -53,14 +247,30 @@ function AddStaff() {
   const loadModules = useCallback(async () => {
     try {
       const list = await getPermissionsModules();
-      if (Array.isArray(list) && list.length > 0) {
-        setDbModules(list);
-        return list;
-      }
-      return [];
+      const rawList = Array.isArray(list) && list.length > 0 ? list : FALLBACK_MODULES;
+
+      // Filter out modules that are not in the active admin console sidebar (specifically coins converter)
+      const validModules = rawList.filter(mod => {
+        const name = (mod.moduleName || mod.ModuleName || '').toLowerCase().trim();
+        return name && !EXCLUDED_MODULE_NAMES.includes(name);
+      });
+
+      // Deduplicate 'orders' vs 'orders & sales' to display a single unified module matching sidebar
+      const hasOrdersAndSales = validModules.some(m => (m.moduleName || m.ModuleName || '').toLowerCase().trim() === 'orders & sales');
+      const rectifiedModules = validModules.filter(m => {
+        const name = (m.moduleName || m.ModuleName || '').toLowerCase().trim();
+        if (hasOrdersAndSales && name === 'orders') {
+          return false;
+        }
+        return true;
+      });
+
+      setDbModules(rectifiedModules);
+      return rectifiedModules;
     } catch (err) {
-      console.warn("Failed to load permission modules from backend:", err.message);
-      return [];
+      console.warn("Failed to load permission modules from backend, using dynamic fallback:", err.message);
+      setDbModules(FALLBACK_MODULES);
+      return FALLBACK_MODULES;
     }
   }, []);
 
@@ -105,6 +315,8 @@ function AddStaff() {
           initialPerms[key] = false;
         }
       });
+      // Ensure 'orders' key is tracked alongside 'orders & sales'
+      initialPerms['orders'] = false;
 
       if (!isMounted) return;
       setPermissions(initialPerms);
@@ -170,6 +382,12 @@ function AddStaff() {
               });
             }
 
+            // Sync 'orders' and 'orders & sales'
+            if (permsState['orders'] || permsState['orders & sales']) {
+              permsState['orders'] = true;
+              permsState['orders & sales'] = true;
+            }
+
             if (isMounted) setPermissions(permsState);
           } catch (pErr) {
             console.warn("Could not fetch permissions for staff member:", pErr.message);
@@ -220,6 +438,10 @@ function AddStaff() {
               return normP === normK;
             });
           });
+          if (next['orders & sales'] || next['orders']) {
+            next['orders & sales'] = true;
+            next['orders'] = true;
+          }
           return next;
         });
       }
@@ -227,8 +449,41 @@ function AddStaff() {
   };
 
   const togglePermission = (key) => {
-    setPermissions(prev => ({ ...prev, [key]: !prev[key] }));
+    setPermissions(prev => {
+      const nextVal = !prev[key];
+      const next = { ...prev, [key]: nextVal };
+      // Keep 'orders' and 'orders & sales' aliases in sync
+      if (key === 'orders & sales' || key === 'orders') {
+        next['orders & sales'] = nextVal;
+        next['orders'] = nextVal;
+      }
+      return next;
+    });
     setErrors(prev => ({ ...prev, permissions: "" }));
+  };
+
+  const handleSelectAllPermissions = () => {
+    setPermissions(prev => {
+      const next = { ...prev };
+      dbModules.forEach(mod => {
+        const key = mod.moduleName || mod.ModuleName;
+        if (key) next[key] = true;
+      });
+      next['orders'] = true;
+      next['orders & sales'] = true;
+      return next;
+    });
+    setErrors(prev => ({ ...prev, permissions: "" }));
+  };
+
+  const handleClearAllPermissions = () => {
+    setPermissions(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(k => {
+        next[k] = false;
+      });
+      return next;
+    });
   };
 
   const validateForm = () => {
@@ -295,6 +550,9 @@ function AddStaff() {
     setToastMessage('');
 
     const enabledPermissions = Object.keys(permissions).filter(k => permissions[k]);
+    if (permissions['orders & sales'] && !enabledPermissions.includes('orders')) {
+      enabledPermissions.push('orders');
+    }
 
     const activeStatus = isEditing 
       ? (existingStaffRecord?.isActive ?? existingStaffRecord?.IsActive ?? (existingStaffRecord?.status ? existingStaffRecord.status.toLowerCase() === 'active' : true))
@@ -335,7 +593,7 @@ function AddStaff() {
       if (targetId && dbModules.length > 0) {
         const staffPermissionEntries = dbModules.map(mod => {
           const modName = mod.moduleName || mod.ModuleName;
-          const isAllowed = permissions[modName] || false;
+          const isAllowed = Boolean(permissions[modName]);
           return {
             moduleId: mod.id ?? mod.Id,
             moduleName: modName,
@@ -355,7 +613,6 @@ function AddStaff() {
         };
 
         try {
-          // Attempt assign/update permissions
           if (isEditing) {
             await updateStaffPermissions(targetId, permissionsDto);
           } else {
@@ -382,6 +639,26 @@ function AddStaff() {
     }
   };
 
+  // Filter modules based on quick search
+  const filteredDbModules = useMemo(() => {
+    if (!permissionSearch.trim()) return dbModules;
+    const q = permissionSearch.toLowerCase().trim();
+    return dbModules.filter(mod => {
+      const key = (mod.moduleName || mod.ModuleName || '').toLowerCase();
+      const title = formatModuleTitle(key).toLowerCase();
+      const desc = formatModuleDescription(key, mod.description).toLowerCase();
+      return key.includes(q) || title.includes(q) || desc.includes(q);
+    });
+  }, [dbModules, permissionSearch]);
+
+  // Count active permissions
+  const activeCount = useMemo(() => {
+    return dbModules.filter(mod => {
+      const key = mod.moduleName || mod.ModuleName;
+      return Boolean(permissions[key]);
+    }).length;
+  }, [dbModules, permissions]);
+
   return (
     <div className="add-staff-screen">
       {toastMessage && (
@@ -389,54 +666,28 @@ function AddStaff() {
       )}
 
       {/* Top Header Card */}
-      <section style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', boxShadow: '0 1px 3px rgba(0,0,0,0.03)', boxSizing: 'border-box' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+      <header className="add-staff-header">
+        <div className="staff-header-left">
           <Link
             to="/admin/staff/list"
-            style={{
-              width: '36px',
-              height: '36px',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#475569',
-              background: '#ffffff',
-              transition: 'all 0.15s ease',
-              textDecoration: 'none'
-            }}
+            className="staff-back-btn"
+            title="Return to Staff Directory"
+            aria-label="Back to Staff Directory"
           >
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#10b981', fontWeight: 700, letterSpacing: '0.04em', display: 'block', marginBottom: '2px' }}>
-              STAFF DIRECTORY
-            </span>
-            <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, lineHeight: 1.2 }}>
+            <span className="staff-kicker">STAFF DIRECTORY</span>
+            <h1 className="header-title">
               {isEditing ? 'Edit Staff Profile' : 'Add Staff Member'}
             </h1>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: 'auto' }}>
+        <div className="staff-header-actions">
           <Link
             to="/admin/staff/list"
-            style={{
-              background: '#ffffff',
-              color: '#475569',
-              border: '1px solid #cbd5e1',
-              borderRadius: '8px',
-              height: '38px',
-              padding: '0 18px',
-              fontSize: '13px',
-              fontWeight: 700,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textDecoration: 'none',
-              transition: 'all 0.15s ease'
-            }}
+            className="staff-cancel-btn"
           >
             Cancel
           </Link>
@@ -445,107 +696,112 @@ function AddStaff() {
             type="button"
             onClick={handleSubmit}
             disabled={isSaving || isLoadingDetails}
-            style={{
-              background: '#10b981',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '8px',
-              height: '38px',
-              padding: '0 18px',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: (isSaving || isLoadingDetails) ? 'not-allowed' : 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              opacity: (isSaving || isLoadingDetails) ? 0.7 : 1,
-              transition: 'background 0.15s ease'
-            }}
+            className="staff-save-btn"
           >
-            <Save size={15} />
-            <span>{isSaving ? (isEditing ? 'Updating...' : 'Saving...') : (isEditing ? 'Update Profile' : 'Save Profile')}</span>
+            {isSaving ? <RefreshCw size={15} className="spin" /> : <Save size={15} />}
+            <span>
+              {isSaving 
+                ? (isEditing ? 'Updating...' : 'Saving...') 
+                : (isEditing ? 'Update Profile' : 'Save Profile')}
+            </span>
           </button>
         </div>
-      </section>
+      </header>
 
-      {/* Form Fields Card Layout */}
+      {/* Two-Column Content Grid */}
       <div className="staff-content-grid">
-        {/* Left Card: Basic Info & Access Password */}
+        {/* Left Card: Basic Credentials & Access Password */}
         <div className="staff-form-card">
           {/* Basic Credentials Section */}
-          <h3 className="card-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>
-            <User size={18} style={{ color: '#064e3b' }} /> BASIC CREDENTIALS
+          <h3 className="card-section-title">
+            <User size={17} className="section-title-icon" />
+            <span>Basic Credentials</span>
           </h3>
           
-          <div className="fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 20px', marginBottom: '28px' }}>
+          <div className="fields-grid">
             <div className="staff-field">
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>FIRST NAME</label>
+              <label>
+                First Name <span className="required-star">*</span>
+              </label>
               <input
                 name="firstName"
-                placeholder="First name"
+                placeholder="e.g. John"
                 value={formData.firstName}
                 onChange={handleChange}
-                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
+                className={errors.firstName ? 'input-error' : ''}
               />
               {errors.firstName && <span className="field-error-msg">{errors.firstName}</span>}
             </div>
 
             <div className="staff-field">
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>LAST NAME</label>
+              <label>
+                Last Name <span className="required-star">*</span>
+              </label>
               <input
                 name="lastName"
-                placeholder="Last name"
+                placeholder="e.g. Doe"
                 value={formData.lastName}
                 onChange={handleChange}
-                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
+                className={errors.lastName ? 'input-error' : ''}
               />
               {errors.lastName && <span className="field-error-msg">{errors.lastName}</span>}
             </div>
 
             <div className="staff-field">
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569' }}>Email Address</label>
+              <label>
+                Email Address <span className="required-star">*</span>
+              </label>
               <input
                 type="email"
                 name="email"
-                placeholder="name@gmail.com"
+                placeholder="name@company.com"
                 value={formData.email}
                 onChange={handleChange}
-                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none' }}
+                className={errors.email ? 'input-error' : ''}
               />
               {errors.email && <span className="field-error-msg">{errors.email}</span>}
             </div>
 
             <div className="staff-field">
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>MOBILE NUMBER</label>
-              <div className="phone-input-container" style={{ display: 'flex', border: '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
-                <span className="phone-prefix" style={{ backgroundColor: '#f8fafc', padding: '10px 14px', fontSize: '13px', fontWeight: 700, color: '#334155', borderRight: '1px solid #e2e8f0', display: 'flex', alignItems: 'center' }}>+91</span>
+              <label>
+                Mobile Number <span className="required-star">*</span>
+              </label>
+              <div className={`phone-input-container ${errors.mobile ? 'input-error' : ''}`}>
+                <span className="phone-prefix">+91</span>
                 <input
                   name="mobile"
                   value={formData.mobile}
                   placeholder="10 digit number"
                   onChange={handleChange}
-                  style={{ border: 'none', padding: '10px 14px', fontSize: '13px', width: '100%', outline: 'none' }}
                 />
               </div>
               {errors.mobile && <span className="field-error-msg">{errors.mobile}</span>}
             </div>
 
             <div className="staff-field">
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>EMPLOYEE ID</label>
+              <label>
+                Employee ID <span className="required-star">*</span>
+              </label>
               <input
                 name="employeeId"
-                placeholder="staff@honeywell.local"
+                placeholder="e.g. EMP-0042"
                 value={formData.employeeId}
                 onChange={handleChange}
-                style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #dbeafe', outline: 'none', backgroundColor: '#eff6ff', color: '#1e293b', fontWeight: 500 }}
+                className={errors.employeeId ? 'input-error' : ''}
               />
               {errors.employeeId && <span className="field-error-msg">{errors.employeeId}</span>}
             </div>
 
             <div className="staff-field">
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>ROLE</label>
-              <select name="role" value={formData.role} onChange={handleChange} style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#ffffff' }}>
+              <label>
+                Assigned Role <span className="required-star">*</span>
+              </label>
+              <select 
+                name="role" 
+                value={formData.role} 
+                onChange={handleChange}
+                className={errors.role ? 'input-error' : ''}
+              >
                 <option value="">Select Role</option>
                 {availableRoles.length > 0 ? (
                   availableRoles.map(r => {
@@ -560,11 +816,11 @@ function AddStaff() {
                 ) : (
                   <>
                     <option value="admin">Admin</option>
+                    <option value="manager">Manager</option>
                     <option value="advisory">Advisory</option>
                     <option value="inventory">Inventory</option>
-                    <option value="manager">Manager</option>
                     <option value="sales">Sales</option>
-                    <option value="staff">Staff</option>
+                    <option value="staff">General Staff</option>
                   </>
                 )}
               </select>
@@ -572,8 +828,12 @@ function AddStaff() {
             </div>
 
             <div className="staff-field" style={{ gridColumn: 'span 2' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>DEPARTMENT</label>
-              <select name="department" value={formData.department} onChange={handleChange} style={{ padding: '10px 14px', fontSize: '13px', borderRadius: '10px', border: '1px solid #e2e8f0', outline: 'none', backgroundColor: '#ffffff' }}>
+              <label>Department</label>
+              <select 
+                name="department" 
+                value={formData.department} 
+                onChange={handleChange}
+              >
                 <option value="">Select Department (Optional)</option>
                 {availableDepartments.map(d => {
                   const name = d.name || d.id || '';
@@ -588,30 +848,25 @@ function AddStaff() {
           </div>
 
           {/* Access Password Section */}
-          <h3 className="card-section-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: 800, color: '#064e3b', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px', marginBottom: '20px' }}>
-            <Key size={18} style={{ color: '#064e3b' }} /> ACCESS PASSWORD
+          <h3 className="card-section-title" style={{ marginTop: '30px' }}>
+            <Key size={17} className="section-title-icon" />
+            <span>Access Password</span>
           </h3>
           
-          <div className="fields-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 20px' }}>
-            {/* Password Field */}
+          <div className="fields-grid">
             <div className="staff-field">
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>PASSWORD</label>
+              <label>
+                Password {!isEditing && <span className="required-star">*</span>}
+              </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
-                  placeholder="••••••••"
+                  placeholder={isEditing ? "Leave blank to keep unchanged" : "••••••••"}
                   value={formData.password}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '10px 40px 10px 14px',
-                    fontSize: '13px',
-                    borderRadius: '10px',
-                    border: '1px solid #dbeafe',
-                    backgroundColor: formData.password ? '#eff6ff' : '#ffffff',
-                    outline: 'none'
-                  }}
+                  className={errors.password ? 'input-error' : ''}
+                  style={{ paddingRight: '40px' }}
                 />
                 <button
                   type="button"
@@ -628,32 +883,27 @@ function AddStaff() {
                     padding: '2px'
                   }}
                   title={showPassword ? "Hide password" : "Show password"}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
               {errors.password && <span className="field-error-msg">{errors.password}</span>}
             </div>
 
-            {/* Confirm Password Field */}
             <div className="staff-field">
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>CONFIRM PASSWORD</label>
+              <label>
+                Confirm Password {!isEditing && <span className="required-star">*</span>}
+              </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
-                  placeholder="Confirm password"
+                  placeholder={isEditing ? "Confirm if updating" : "Confirm password"}
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  style={{
-                    width: '100%',
-                    padding: '10px 40px 10px 14px',
-                    fontSize: '13px',
-                    borderRadius: '10px',
-                    border: '1px solid #e2e8f0',
-                    backgroundColor: '#ffffff',
-                    outline: 'none'
-                  }}
+                  className={errors.confirmPassword ? 'input-error' : ''}
+                  style={{ paddingRight: '40px' }}
                 />
                 <button
                   type="button"
@@ -670,53 +920,138 @@ function AddStaff() {
                     padding: '2px'
                   }}
                   title={showConfirmPassword ? "Hide password" : "Show password"}
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 >
-                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
               {errors.confirmPassword && <span className="field-error-msg">{errors.confirmPassword}</span>}
             </div>
           </div>
+          <span className="field-hint">
+            Must contain at least 7 characters including 1 uppercase letter, 1 digit, and 1 symbol.
+          </span>
         </div>
 
-        {/* Right Card: Permissions Checklist */}
+        {/* Right Card: Dynamic Permissions Checklist */}
         <div className="staff-form-card">
-          <h3 className="card-section-title">
-            <Shield size={16} /> System Permissions &amp; Modules
-          </h3>
+          <div className="permissions-header-row">
+            <h3 className="card-section-title">
+              <Shield size={18} className="section-title-icon" />
+              <span>System Permissions</span>
+            </h3>
+            <span className="perm-counter-pill">
+              <Check size={13} />
+              <span>{activeCount} of {dbModules.length} Enabled</span>
+            </span>
+          </div>
+
           <p className="permission-intro">
             Authorize administrative console modules for this staff member based on their operational duties:
           </p>
 
-          <div className="permissions-grid-wrap">
-            {dbModules.map((mod) => {
-              const key = mod.moduleName || mod.ModuleName;
-              return (
-                <div
-                  className="permission-switch-item"
-                  key={key}
-                >
-                  <div className="switch-info">
-                    <span className="switch-title">{key}</span>
-                    {mod.description && (
-                      <span style={{ fontSize: '10px', color: '#94a3b8', display: 'block' }}>
-                        {mod.description}
-                      </span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => togglePermission(key)}
-                    className={`switch-bg ${permissions[key] ? 'active' : ''}`}
-                    aria-label={`Toggle ${key} access`}
-                  >
-                    <span className={`switch-toggle-knob ${permissions[key] ? 'active' : ''}`} />
-                  </button>
-                </div>
-              );
-            })}
+          {/* Quick Toolbar: Search & Bulk Actions */}
+          <div className="permissions-toolbar">
+            <div className="perm-search-box">
+              <Search size={14} />
+              <input
+                type="text"
+                placeholder="Filter modules..."
+                className="perm-search-input"
+                value={permissionSearch}
+                onChange={(e) => setPermissionSearch(e.target.value)}
+              />
+            </div>
+
+            <div className="perm-actions-group">
+              <button
+                type="button"
+                className="perm-action-pill-btn primary"
+                onClick={handleSelectAllPermissions}
+                title="Enable all modules"
+              >
+                Select All
+              </button>
+              <button
+                type="button"
+                className="perm-action-pill-btn"
+                onClick={handleClearAllPermissions}
+                title="Disable all modules"
+              >
+                <RotateCcw size={12} />
+                <span>Clear All</span>
+              </button>
+            </div>
           </div>
-          {errors.permissions && <span className="field-error-msg block mt-2">{errors.permissions}</span>}
+
+          {/* Module Cards Grid */}
+          <div className="permissions-grid-wrap">
+            {filteredDbModules.length > 0 ? (
+              filteredDbModules.map((mod) => {
+                const key = mod.moduleName || mod.ModuleName;
+                const isChecked = Boolean(permissions[key]);
+                const title = formatModuleTitle(key);
+                const desc = formatModuleDescription(key, mod.description);
+
+                return (
+                  <div
+                    key={key}
+                    className={`permission-switch-item ${isChecked ? 'active' : ''}`}
+                    onClick={() => togglePermission(key)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === ' ' || e.key === 'Enter') {
+                        e.preventDefault();
+                        togglePermission(key);
+                      }
+                    }}
+                    aria-label={`Toggle access for ${title}`}
+                    aria-pressed={isChecked}
+                  >
+                    <div className="perm-card-left">
+                      <div className="perm-icon-wrap">
+                        {getModuleIcon(key)}
+                      </div>
+                      <div className="switch-info">
+                        <span className="switch-title">{title}</span>
+                        <p className="switch-desc">{desc}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={`switch-bg ${isChecked ? 'active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePermission(key);
+                      }}
+                      aria-hidden="true"
+                      tabIndex={-1}
+                    >
+                      <span className={`switch-toggle-knob ${isChecked ? 'active' : ''}`} />
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="perm-empty-state">
+                <p>No modules match "{permissionSearch}".</p>
+                <button
+                  type="button"
+                  onClick={() => setPermissionSearch('')}
+                >
+                  Clear filter
+                </button>
+              </div>
+            )}
+          </div>
+
+          {errors.permissions && (
+            <div style={{ marginTop: '12px' }}>
+              <span className="field-error-msg">{errors.permissions}</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
