@@ -15,7 +15,7 @@ const api = axios.create({
 
 export const mapStockItemFromApi = (raw = {}) => {
   const currentStock = Number(raw.currentStock ?? raw.stockQuantity ?? raw.stock ?? 0);
-  const reorderLevel = Number(raw.reorderLevel ?? 0);
+  const reorderLevel = Number(raw.reorderLevel ?? raw.ReorderLevel ?? 0);
   
   // Force determine status regardless of what the backend string says
   let status = 'In Stock';
@@ -38,17 +38,8 @@ export const mapStockItemFromApi = (raw = {}) => {
     return 0;
   };
 
-  let cp = parseAmount(raw.costPrice ?? raw.CostPrice ?? raw.basePrice ?? 0);
-  let sp = parseAmount(raw.sellingPrice ?? raw.SellingPrice ?? raw.price ?? 0);
-
-  // If cost price is higher than selling price, swap/adjust so CP is purchase cost (lower) and SP is customer price (higher)
-  if (cp > 0 && sp > 0 && cp > sp) {
-    const temp = cp;
-    cp = sp;
-    sp = temp;
-  } else if (cp > 0 && (sp === 0 || sp === cp)) {
-    sp = Math.round(cp * 1.18);
-  }
+  let cp = parseAmount(raw.rawCostPrice ?? raw.costPrice ?? raw.CostPrice ?? raw.basePrice ?? 0);
+  let sp = parseAmount(raw.rawSellingPrice ?? raw.sellingPrice ?? raw.SellingPrice ?? raw.price ?? 0);
 
   return {
     id: raw.id ?? raw.productId ?? '',
@@ -99,13 +90,24 @@ export const getStockLedger = async (params = {}) => {
  * POST /api/Stock/adjust/{productId}
  */
 export const adjustStock = async (productId, adjustmentData) => {
-  // adjustmentData should match StockAdjustmentRequest schema: { actionType, quantity, reason, note }
-  const response = await api.post(`/api/Stock/adjust/${productId}`, {
-    actionType: adjustmentData.actionType, // 'Add' or 'Remove'
-    quantity: Number(adjustmentData.quantity),
+  const payload = {
+    actionType: adjustmentData.actionType || 'ADD', // 'Add' or 'Remove' or 'Set'
+    quantity: Number(adjustmentData.quantity || 0),
     reason: adjustmentData.reason || '',
     note: adjustmentData.note || '',
-  });
+  };
+
+  if (adjustmentData.reorderLevel !== undefined && adjustmentData.reorderLevel !== null && adjustmentData.reorderLevel !== '') {
+    payload.reorderLevel = Number(adjustmentData.reorderLevel);
+  }
+  if (adjustmentData.costPrice !== undefined && adjustmentData.costPrice !== null && adjustmentData.costPrice !== '') {
+    payload.costPrice = Number(adjustmentData.costPrice);
+  }
+  if (adjustmentData.sellingPrice !== undefined && adjustmentData.sellingPrice !== null && adjustmentData.sellingPrice !== '') {
+    payload.sellingPrice = Number(adjustmentData.sellingPrice);
+  }
+
+  const response = await api.post(`/api/Stock/adjust/${productId}`, payload);
   return response.data;
 };
 

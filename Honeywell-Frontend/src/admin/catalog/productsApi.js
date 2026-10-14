@@ -676,6 +676,32 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
         (r) => !r.productId || String(r.productId) === String(prodId)
       );
 
+      // If backend product response omits reorderLevel or costPrice, enrich from stock ledger
+      if (product && product.reorderLevel === undefined && product.ReorderLevel === undefined) {
+        try {
+          const ledgerRes = await api.get('/api/Stock/ledger', { params: { _t: Date.now() } });
+          const rawLedger = ledgerRes?.data;
+          const list = Array.isArray(rawLedger)
+            ? rawLedger
+            : (Array.isArray(rawLedger?.Products)
+              ? rawLedger.Products
+              : (Array.isArray(rawLedger?.products) ? rawLedger.products : []));
+          const match = list.find((p) => String(p.id || p.Id) === String(prodId));
+          if (match) {
+            if (match.reorderLevel !== undefined || match.ReorderLevel !== undefined) {
+              product.reorderLevel = match.reorderLevel ?? match.ReorderLevel;
+            }
+            if (match.costPrice !== undefined || match.CostPrice !== undefined) {
+              const cleanCp = String(match.costPrice ?? match.CostPrice).replace(/[^0-9.]/g, '');
+              const numCp = parseFloat(cleanCp);
+              if (!isNaN(numCp) && numCp >= 0) product.costPrice = numCp;
+            }
+          }
+        } catch (e) {
+          // ignore ledger enrichment failure
+        }
+      }
+
       return mapProductFromApi(product, categories, subcategories, features, strictReviews);
     } catch (err) {
       console.warn(`GET /api/products/${id} failed (${err.message}), attempting catalog fallback search.`);
@@ -731,9 +757,15 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   fd.append('SKU', product.sku || '');
   fd.append('Brand', product.brand || 'Honeywell');
   fd.append('SupplierName', product.supplier || product.manufacturer || '');
+  const parseNumOrDef = (val, def) => (val !== undefined && val !== null && val !== '' && !isNaN(Number(val)) ? Number(val) : def);
+  const reorderVal = parseNumOrDef(product.reorderLevel, 10);
+  const costVal = parseNumOrDef(product.costPrice, 0);
+
   fd.append('MRP', String(Number(product.mrp) || 0));
   fd.append('SellingPrice', String(Number(product.price) || 0));
   fd.append('StockQuantity', String(Number(product.stock) || 0));
+  fd.append('ReorderLevel', String(reorderVal));
+  fd.append('CostPrice', String(costVal));
   fd.append('CategoryId', String(Number(product.categoryId) || 0));
   fd.append('SubcategoryId', String(Number(product.subcategoryId) || 0));
   fd.append('ShortDescription', product.shortDescription || product.description || '');
@@ -771,6 +803,8 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   fd.append('Manufacturer', product.supplier || product.manufacturer || '');
   fd.append('Price', String(Number(product.price) || 0));
   fd.append('Stock', String(Number(product.stock) || 0));
+  fd.append('reorderLevel', String(reorderVal));
+  fd.append('costPrice', String(costVal));
 
   // Ratings & Reviews
   let calculatedRating = Number(product.rating) || 0;
@@ -828,6 +862,8 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       sellingPrice: Number(product.price) || 0,
       stock: Number(product.stock) || 0,
       stockQuantity: Number(product.stock) || 0,
+      reorderLevel: reorderVal,
+      costPrice: costVal,
       shortDescription: product.shortDescription || product.description || '',
       productDetails: product.productDetails || '',
       packageIncludes: product.packageIncludes || '',
@@ -956,9 +992,7 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   };
   upsertProduct(finalProduct);
 
-  apiCache.invalidate('products_all');
-  apiCache.invalidate(`prod_${targetId}`);
-  apiCache.invalidate('product');
+  apiCache.invalidate(); // Clear all cache so fresh products, search, paged, and stock ledger are always loaded
   reviewService.clearCache();
 
   return finalProduct;

@@ -103,7 +103,9 @@ namespace Honeywell.Controllers
                     Status = displayStatus,
                     Trend30Day = p.Trend30Day ?? "+10%",
                     CostPrice = $"₹{p.CostPrice:N0}",
+                    rawCostPrice = p.CostPrice,
                     SellingPrice = $"₹{(p.SellingPrice ?? p.MRP):N0}",
+                    rawSellingPrice = p.SellingPrice ?? p.MRP,
                     LastUpdated = p.LastUpdated.ToString("yyyy-MM-dd")
                 };
             }).ToList();
@@ -129,44 +131,63 @@ namespace Honeywell.Controllers
                 return NotFound(new { Message = "Product not found." });
             }
 
-            if (request.Quantity <= 0)
-            {
-                return BadRequest(new { Message = "Quantity must be greater than zero." });
-            }
-
             int oldStock = product.Stock;
             int newStock = oldStock;
 
-            if (request.ActionType.Equals("ADD", StringComparison.OrdinalIgnoreCase))
+            if (request.Quantity > 0)
             {
-                newStock = oldStock + request.Quantity;
-            }
-            else if (request.ActionType.Equals("REMOVE", StringComparison.OrdinalIgnoreCase))
-            {
-                newStock = oldStock - request.Quantity;
-                if (newStock < 0) newStock = 0;
-            }
-            else
-            {
-                return BadRequest(new { Message = "ActionType must be either ADD or REMOVE." });
+                if (request.ActionType.Equals("ADD", StringComparison.OrdinalIgnoreCase))
+                {
+                    newStock = oldStock + request.Quantity;
+                }
+                else if (request.ActionType.Equals("REMOVE", StringComparison.OrdinalIgnoreCase))
+                {
+                    newStock = oldStock - request.Quantity;
+                    if (newStock < 0) newStock = 0;
+                }
+                else if (request.ActionType.Equals("SET", StringComparison.OrdinalIgnoreCase))
+                {
+                    newStock = request.Quantity;
+                }
+                else
+                {
+                    return BadRequest(new { Message = "ActionType must be ADD, REMOVE, or SET." });
+                }
+
+                // Update product stock
+                product.Stock = newStock;
+
+                // Log adjustment audit entry
+                var log = new StockLedgerLog
+                {
+                    ProductId = productId,
+                    ActionType = request.ActionType.ToUpper(),
+                    Quantity = request.Quantity,
+                    Reason = string.IsNullOrWhiteSpace(request.Reason) ? "Stock Level Adjustment" : request.Reason,
+                    Note = request.Note,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                _context.StockLedgerLogs.Add(log);
             }
 
-            // Update product stock and last updated fields
-            product.Stock = newStock;
+            // Update ledger parameters if provided
+            if (request.ReorderLevel.HasValue && request.ReorderLevel.Value >= 0)
+            {
+                product.ReorderLevel = request.ReorderLevel.Value;
+            }
+
+            if (request.CostPrice.HasValue && request.CostPrice.Value >= 0)
+            {
+                product.CostPrice = request.CostPrice.Value;
+            }
+
+            if (request.SellingPrice.HasValue && request.SellingPrice.Value >= 0)
+            {
+                product.SellingPrice = request.SellingPrice.Value;
+            }
+
             product.LastUpdated = DateTime.UtcNow;
-
-            // Log adjustment audit entry
-            var log = new StockLedgerLog
-            {
-                ProductId = productId,
-                ActionType = request.ActionType.ToUpper(),
-                Quantity = request.Quantity,
-                Reason = request.Reason,
-                Note = request.Note,
-                Timestamp = DateTime.UtcNow
-            };
-
-            _context.StockLedgerLogs.Add(log);
             await _context.SaveChangesAsync();
 
             var displayStatus = "In Stock";
@@ -186,6 +207,9 @@ namespace Honeywell.Controllers
                 ProductName = product.ProductName,
                 OldStock = oldStock,
                 NewStock = product.Stock,
+                ReorderLevel = product.ReorderLevel,
+                CostPrice = product.CostPrice,
+                SellingPrice = product.SellingPrice ?? product.MRP,
                 Status = displayStatus,
                 LastUpdated = product.LastUpdated.ToString("yyyy-MM-dd")
             });
@@ -314,10 +338,13 @@ namespace Honeywell.Controllers
 
         public class StockAdjustmentRequest
         {
-            public string ActionType { get; set; } = "ADD"; // ADD or REMOVE
+            public string ActionType { get; set; } = "ADD"; // ADD, REMOVE, or SET
             public int Quantity { get; set; }
             public string Reason { get; set; } = string.Empty;
             public string? Note { get; set; }
+            public int? ReorderLevel { get; set; }
+            public decimal? CostPrice { get; set; }
+            public decimal? SellingPrice { get; set; }
         }
     }
 }

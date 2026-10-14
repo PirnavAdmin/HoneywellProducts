@@ -147,7 +147,10 @@ const normalizeProduct = (product) => {
   };
 
   const currentStock = String(product.stock ?? product.stockQuantity ?? '');
-  const currentReorder = String(product.reorderLevel ?? 10);
+  const currentReorder = String(product.reorderLevel ?? product.ReorderLevel ?? 10);
+  const currentCost = product.costPrice !== undefined && product.costPrice !== null
+    ? String(product.costPrice)
+    : (product.CostPrice !== undefined && product.CostPrice !== null ? String(product.CostPrice) : '');
 
   return {
     ...emptyProduct,
@@ -163,6 +166,7 @@ const normalizeProduct = (product) => {
     discountValue: String(product.discountValue || product.discountAmount || ''),
     stock: currentStock,
     reorderLevel: currentReorder,
+    costPrice: currentCost,
     status: computeStockStatus(currentStock, currentReorder),
     countryOfOrigin: product.countryOfOrigin || 'India',
     codAvailable: product.codAvailable === 'No' || product.codAvailability === false ? 'No' : 'Yes',
@@ -735,6 +739,8 @@ const ProductsForm = () => {
       rating: Number(formData.rating) || 0,
       totalReviews: Number(formData.totalReviews) || 0,
       stock: Number(formData.stock) || 0,
+      reorderLevel: formData.reorderLevel !== '' && formData.reorderLevel !== undefined && !isNaN(Number(formData.reorderLevel)) ? Number(formData.reorderLevel) : 10,
+      costPrice: formData.costPrice !== '' && formData.costPrice !== undefined && !isNaN(Number(formData.costPrice)) ? Number(formData.costPrice) : 0,
       shortDesc: formData.shortDescription,
       longDesc: formData.productDetails,
       description: formData.shortDescription,
@@ -1510,7 +1516,23 @@ const ProductsForm = () => {
                 </div>
 
                 <div className="catalog-field">
-                  <label htmlFor="product-stock">Stock</label>
+                  <label htmlFor="product-cost-price">Cost Price (₹)</label>
+                  <input
+                    id="product-cost-price"
+                    name="costPrice"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={formData.costPrice}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+
+              <div className="catalog-form-grid product-compact-grid">
+                <div className="catalog-field">
+                  <label htmlFor="product-stock">Stock Quantity</label>
                   <input
                     id="product-stock"
                     name="stock"
@@ -1519,6 +1541,19 @@ const ProductsForm = () => {
                     value={formData.stock}
                     onChange={handleInputChange}
                     required
+                  />
+                </div>
+
+                <div className="catalog-field">
+                  <label htmlFor="product-reorder-level">Reorder Level</label>
+                  <input
+                    id="product-reorder-level"
+                    name="reorderLevel"
+                    type="number"
+                    min="0"
+                    placeholder="10"
+                    value={formData.reorderLevel}
+                    onChange={handleInputChange}
                   />
                 </div>
               </div>

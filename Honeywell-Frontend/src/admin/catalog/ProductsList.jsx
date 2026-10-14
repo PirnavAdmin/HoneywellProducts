@@ -392,6 +392,11 @@ const ProductsList = () => {
                             MRP {formatCurrency(mrpNum)}
                           </div>
                         )}
+                        {product.costPrice !== undefined && product.costPrice !== null && Number(product.costPrice) > 0 && (
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }} title="Cost Price">
+                            Cost: {formatCurrency(Number(product.costPrice))}
+                          </div>
+                        )}
                       </td>
 
                       {/* Discount */}
@@ -418,7 +423,10 @@ const ProductsList = () => {
 
                       {/* Stock */}
                       <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: '600', color: '#334155' }}>
-                        {product.stock || 0}
+                        <div>{product.stock || 0}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }} title="Reorder Level">
+                          Reorder: {product.reorderLevel ?? 10}
+                        </div>
                       </td>
 
                       {/* Status */}

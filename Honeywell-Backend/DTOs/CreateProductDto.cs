@@ -11,6 +11,8 @@ namespace Honeywell.DTOs
         public string Manufacturer { get; set; }
         public decimal MRP { get; set; }
         public int Stock { get; set; }
+        public int? ReorderLevel { get; set; }
+        public decimal? CostPrice { get; set; }
         public int CategoryId { get; set; }
         public int SubcategoryId { get; set; }
         public List<IFormFile> Images { get; set; }

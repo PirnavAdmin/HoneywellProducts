@@ -79,6 +79,9 @@ const AdjustModal = ({ item: initialItem, products = [], onClose, onSave }) => {
   const [qty, setQty] = useState('');
   const [reason, setReason] = useState('');
   const [note, setNote] = useState('');
+  const [reorderLevel, setReorderLevel] = useState(initialItem?.reorderLevel ?? 10);
+  const [costPrice, setCostPrice] = useState(initialItem?.costPrice ?? '');
+  const [sellingPrice, setSellingPrice] = useState(initialItem?.sellingPrice ?? '');
 
   const reasons = adjustType === 'add'
     ? ['Stock Received from Supplier', 'Customer Return', 'Warehouse Transfer In', 'Physical Count Surplus', 'Production Output', 'Other Addition']
@@ -92,14 +95,24 @@ const AdjustModal = ({ item: initialItem, products = [], onClose, onSave }) => {
     ? currentStock + qtyNum
     : Math.max(0, currentStock - qtyNum);
 
+  const isChanged = (
+    qtyNum > 0 ||
+    String(reorderLevel) !== String(selectedItem?.reorderLevel ?? '') ||
+    String(costPrice) !== String(selectedItem?.costPrice ?? '') ||
+    String(sellingPrice) !== String(selectedItem?.sellingPrice ?? '')
+  );
+
   const handleSave = () => {
-    if (!selectedItem || !qty || Number(qty) <= 0) return;
+    if (!selectedItem || !isChanged) return;
     onSave(selectedItem, {
       actionType: adjustType === 'add' ? 'Add' : 'Remove',
-      quantity: Number(qty),
-      reason: reason || (adjustType === 'add' ? 'Stock Received from Supplier' : 'Customer Sale / Dispatch'),
+      quantity: qtyNum,
+      reason: reason || (qtyNum > 0 ? (adjustType === 'add' ? 'Stock Received from Supplier' : 'Customer Sale / Dispatch') : 'Ledger Update'),
       note: note || '',
-      newQty: newQty
+      newQty: qtyNum > 0 ? newQty : currentStock,
+      reorderLevel: reorderLevel !== '' ? Number(reorderLevel) : undefined,
+      costPrice: costPrice !== '' ? Number(costPrice) : undefined,
+      sellingPrice: sellingPrice !== '' ? Number(sellingPrice) : undefined,
     });
   };
 
@@ -495,6 +508,116 @@ const AdjustModal = ({ item: initialItem, products = [], onClose, onSave }) => {
               }}
             />
           </div>
+
+          {/* Ledger Thresholds & Pricing Section */}
+          <div
+            style={{
+              background: '#f8fafc',
+              border: '1px solid #e2e8f0',
+              borderRadius: '9px',
+              padding: '12px 14px',
+              marginTop: '4px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', color: '#334155', letterSpacing: '0.04em' }}>
+                Ledger Thresholds & Pricing
+              </span>
+              <a
+                href={`/admin/catalog/products-form?id=${selectedItem?.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: '11.5px', fontWeight: 700, color: '#0284c7', textDecoration: 'none' }}
+              >
+                Full Product Edit ↗
+              </a>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  Reorder Level
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={reorderLevel}
+                  onChange={(e) => setReorderLevel(e.target.value)}
+                  placeholder="10"
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '6px 8px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '6px',
+                    background: '#ffffff',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  Cost Price (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={costPrice}
+                  onChange={(e) => setCostPrice(e.target.value)}
+                  placeholder="0.00"
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '6px 8px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '6px',
+                    background: '#ffffff',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>
+                  Selling Price (₹)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={sellingPrice}
+                  onChange={(e) => setSellingPrice(e.target.value)}
+                  placeholder="0.00"
+                  style={{
+                    width: '100%',
+                    height: '36px',
+                    padding: '6px 8px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    color: '#0f172a',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '6px',
+                    background: '#ffffff',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ── Modal Footer ── */}
@@ -530,7 +653,7 @@ const AdjustModal = ({ item: initialItem, products = [], onClose, onSave }) => {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!selectedItem || !qty || Number(qty) <= 0}
+            disabled={!selectedItem || !isChanged}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -539,15 +662,15 @@ const AdjustModal = ({ item: initialItem, products = [], onClose, onSave }) => {
               fontSize: '12.5px',
               fontWeight: 800,
               color: '#ffffff',
-              background: !selectedItem || !qty || Number(qty) <= 0
+              background: !selectedItem || !isChanged
                 ? '#94a3b8'
                 : adjustType === 'add'
                   ? '#10b981'
                   : '#dc2626',
               border: 'none',
               borderRadius: '7px',
-              cursor: !selectedItem || !qty || Number(qty) <= 0 ? 'not-allowed' : 'pointer',
-              boxShadow: !selectedItem || !qty || Number(qty) <= 0
+              cursor: !selectedItem || !isChanged ? 'not-allowed' : 'pointer',
+              boxShadow: !selectedItem || !isChanged
                 ? 'none'
                 : adjustType === 'add'
                   ? '0 2px 6px rgba(16, 185, 129, 0.25)'
@@ -556,7 +679,7 @@ const AdjustModal = ({ item: initialItem, products = [], onClose, onSave }) => {
             }}
           >
             <Save size={14} />
-            <span>{adjustType === 'add' ? 'Confirm Addition' : 'Confirm Deduction'}</span>
+            <span>{qtyNum > 0 ? (adjustType === 'add' ? 'Confirm Addition' : 'Confirm Deduction') : 'Save Changes'}</span>
           </button>
         </div>
       </div>
@@ -1186,8 +1309,8 @@ const StockUpdates = () => {
               {pagedItems.map((item) => {
                 const isOutOfStock = Number(item.currentStock) === 0;
                 const isLowStock = !isOutOfStock && Number(item.currentStock) <= Number(item.reorderLevel);
-                const costVal = item.costPrice > 0 && item.sellingPrice > 0 ? Math.min(item.costPrice, item.sellingPrice) : item.costPrice;
-                const sellVal = item.costPrice > 0 && item.sellingPrice > 0 ? Math.max(item.costPrice, item.sellingPrice) : item.sellingPrice;
+                const costVal = Number(item.costPrice || 0);
+                const sellVal = Number(item.sellingPrice || 0);
 
                 return (
                   <tr
@@ -1237,14 +1360,23 @@ const StockUpdates = () => {
                     <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                       <span className="stock-date-text">{item.lastUpdated || '—'}</span>
                     </td>
-                    <td style={{ textAlign: 'center' }}>
+                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                       <button
                         className="catalog-btn catalog-btn--icon stock-adjust-btn"
-                        title="Adjust stock"
+                        title="Adjust stock level & ledger parameters"
                         onClick={() => setAdjustingItem(item)}
+                        style={{ marginRight: '4px' }}
                       >
                         <Edit3 size={14} />
                       </button>
+                      <a
+                        href={`/admin/catalog/products-form?id=${item.id}`}
+                        className="catalog-btn catalog-btn--icon"
+                        title="Open full Product form in Catalog"
+                        style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Boxes size={14} />
+                      </a>
                     </td>
                   </tr>
                 );

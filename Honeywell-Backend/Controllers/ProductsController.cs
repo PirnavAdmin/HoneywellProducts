@@ -127,6 +127,8 @@ namespace Honeywell.Controllers
                 stockQuantity = p.Stock,
                 stock = p.Stock,
                 quantity = p.Stock,
+                reorderLevel = p.ReorderLevel,
+                costPrice = p.CostPrice,
                 slug = slug,
                 shortDescription = shortDesc,
                 description = shortDesc,
@@ -358,6 +360,12 @@ namespace Honeywell.Controllers
             var stockStr = GetFormVal("Stock", "stock", "StockQuantity", "quantity", "stockQuantity", "qty");
             if (int.TryParse(stockStr, out var parsedStock)) dto.Stock = parsedStock;
 
+            var costStr = GetFormVal("CostPrice", "costPrice", "cost_price", "cost");
+            if (decimal.TryParse(costStr, out var parsedCost) && parsedCost >= 0) dto.CostPrice = parsedCost;
+
+            var reorderStr = GetFormVal("ReorderLevel", "reorderLevel", "reorder_level", "reorder");
+            if (int.TryParse(reorderStr, out var parsedReorder) && parsedReorder >= 0) dto.ReorderLevel = parsedReorder;
+
             var catStr = GetFormVal("CategoryId", "categoryId", "category_id", "category", "catId");
             if (int.TryParse(catStr, out var parsedCatId)) dto.CategoryId = parsedCatId;
 
@@ -447,7 +455,7 @@ namespace Honeywell.Controllers
                     return string.Empty;
                 }
 
-                decimal GetDecVal(params string[] propNames)
+                decimal? GetDecVal(params string[] propNames)
                 {
                     foreach (var p in propNames)
                     {
@@ -462,10 +470,10 @@ namespace Honeywell.Controllers
                             }
                         }
                     }
-                    return 0m;
+                    return null;
                 }
 
-                int GetIntVal(params string[] propNames)
+                int? GetIntVal(params string[] propNames)
                 {
                     foreach (var p in propNames)
                     {
@@ -480,7 +488,7 @@ namespace Honeywell.Controllers
                             }
                         }
                     }
-                    return 0;
+                    return null;
                 }
 
                 var name = GetStrVal("ProductName", "productName", "Name", "name", "title", "Product_Name");
@@ -496,19 +504,25 @@ namespace Honeywell.Controllers
                 if (!string.IsNullOrWhiteSpace(mfg)) dto.Manufacturer = mfg;
 
                 var mrp = GetDecVal("MRP", "mrp", "originalPrice", "regularPrice", "marketPrice");
-                if (mrp > 0) dto.MRP = mrp;
+                if (mrp.HasValue && mrp.Value > 0) dto.MRP = mrp.Value;
 
                 var price = GetDecVal("SellingPrice", "sellingPrice", "Price", "price", "productPrice", "offerPrice");
-                if (price > 0) dto.SellingPrice = price;
+                if (price.HasValue && price.Value > 0) dto.SellingPrice = price.Value;
 
                 var stock = GetIntVal("Stock", "stock", "StockQuantity", "quantity", "stockQuantity", "qty");
-                if (stock > 0) dto.Stock = stock;
+                if (stock.HasValue && stock.Value >= 0) dto.Stock = stock.Value;
+
+                var cost = GetDecVal("CostPrice", "costPrice", "cost_price", "cost");
+                if (cost.HasValue && cost.Value >= 0) dto.CostPrice = cost.Value;
+
+                var reorder = GetIntVal("ReorderLevel", "reorderLevel", "reorder_level", "reorder");
+                if (reorder.HasValue && reorder.Value >= 0) dto.ReorderLevel = reorder.Value;
 
                 var catId = GetIntVal("CategoryId", "categoryId", "category_id", "category");
-                if (catId > 0) dto.CategoryId = catId;
+                if (catId.HasValue && catId.Value > 0) dto.CategoryId = catId.Value;
 
                 var subcatId = GetIntVal("SubcategoryId", "subcategoryId", "subcategory_id", "subcategory");
-                if (subcatId > 0) dto.SubcategoryId = subcatId;
+                if (subcatId.HasValue && subcatId.Value > 0) dto.SubcategoryId = subcatId.Value;
 
                 var desc = GetStrVal("ShortDescription", "shortDescription", "Description", "description", "short_description", "summary");
                 if (!string.IsNullOrWhiteSpace(desc)) dto.ShortDescription = desc;
@@ -547,7 +561,7 @@ namespace Honeywell.Controllers
                 if (!string.IsNullOrWhiteSpace(discType)) dto.DiscountType = discType;
 
                 var discAmt = GetDecVal("DiscountAmount", "discountAmount", "discount_amount", "discount");
-                if (discAmt > 0) dto.DiscountAmount = discAmt;
+                if (discAmt.HasValue && discAmt.Value > 0) dto.DiscountAmount = discAmt.Value;
 
                 var stockStat = GetStrVal("StockStatus", "stockStatus", "stock_status");
                 if (!string.IsNullOrWhiteSpace(stockStat)) dto.StockStatus = stockStat;
@@ -807,6 +821,8 @@ namespace Honeywell.Controllers
                             if (parsedDto.MRP > 0) dto.MRP = parsedDto.MRP;
                             if (parsedDto.SellingPrice > 0) dto.SellingPrice = parsedDto.SellingPrice;
                             if (parsedDto.Stock > 0) dto.Stock = parsedDto.Stock;
+                            if (parsedDto.CostPrice.HasValue && parsedDto.CostPrice.Value >= 0) dto.CostPrice = parsedDto.CostPrice.Value;
+                            if (parsedDto.ReorderLevel.HasValue && parsedDto.ReorderLevel.Value > 0) dto.ReorderLevel = parsedDto.ReorderLevel.Value;
                             if (parsedDto.CategoryId > 0) dto.CategoryId = parsedDto.CategoryId;
                             if (parsedDto.SubcategoryId > 0) dto.SubcategoryId = parsedDto.SubcategoryId;
                             if (!string.IsNullOrWhiteSpace(parsedDto.ShortDescription)) dto.ShortDescription = parsedDto.ShortDescription;
@@ -1000,6 +1016,8 @@ namespace Honeywell.Controllers
                 Manufacturer = dto.Manufacturer,
                 MRP = dto.MRP,
                 Stock = dto.Stock,
+                ReorderLevel = dto.ReorderLevel.HasValue && dto.ReorderLevel.Value >= 0 ? dto.ReorderLevel.Value : 30,
+                CostPrice = dto.CostPrice ?? 0m,
                 CategoryId = dto.CategoryId,
                 SubcategoryId = dto.SubcategoryId,
                 Images = productImages,
@@ -1113,6 +1131,8 @@ namespace Honeywell.Controllers
                             if (parsedDto.MRP > 0) dto.MRP = parsedDto.MRP;
                             if (parsedDto.SellingPrice > 0) dto.SellingPrice = parsedDto.SellingPrice;
                             if (parsedDto.Stock > 0) dto.Stock = parsedDto.Stock;
+                            if (parsedDto.CostPrice.HasValue && parsedDto.CostPrice.Value >= 0) dto.CostPrice = parsedDto.CostPrice.Value;
+                            if (parsedDto.ReorderLevel.HasValue && parsedDto.ReorderLevel.Value > 0) dto.ReorderLevel = parsedDto.ReorderLevel.Value;
                             if (parsedDto.CategoryId > 0) dto.CategoryId = parsedDto.CategoryId;
                             if (parsedDto.SubcategoryId > 0) dto.SubcategoryId = parsedDto.SubcategoryId;
                             if (!string.IsNullOrWhiteSpace(parsedDto.ShortDescription)) dto.ShortDescription = parsedDto.ShortDescription;
@@ -1178,6 +1198,8 @@ namespace Honeywell.Controllers
             if (dto.MRP > 0) product.MRP = dto.MRP;
             if (dto.SellingPrice > 0) product.SellingPrice = dto.SellingPrice;
             if (dto.Stock >= 0) product.Stock = dto.Stock;
+            if (dto.ReorderLevel.HasValue && dto.ReorderLevel.Value >= 0) product.ReorderLevel = dto.ReorderLevel.Value;
+            if (dto.CostPrice.HasValue && dto.CostPrice.Value >= 0) product.CostPrice = dto.CostPrice.Value;
             product.CategoryId = dto.CategoryId;
             product.SubcategoryId = dto.SubcategoryId;
 
