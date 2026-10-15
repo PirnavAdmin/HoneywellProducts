@@ -1,14 +1,21 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, Building2, Headphones, Handshake, Mail, MapPin, Phone, ShoppingBag, AlertCircle } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
-import { siteConfig } from '../config/siteConfig';
-import { contactService } from '../services/contactService';
-import { getSupportConfig, getContactCard } from '../services/settingsApi';
-import { useDocumentTitle } from '../hooks/useDocumentTitle';
-import { usePageBanner } from '../hooks/usePageBanner';
-import heroImage from '../assets/images/capital-park2.jpg';
-import { validateName, validateEmail, validatePhone } from '../utils/validators';
 
+import { ArrowRight, Building2, Headphones, Handshake, Mail, MapPin, Phone, ShoppingBag, AlertCircle } from 'lucide-react';
+
+import PageHero from '../components/common/PageHero';
+
+import { siteConfig } from '../config/siteConfig';
+
+import { contactService } from '../services/contactService';
+
+import { getSupportConfig, getContactCard } from '../services/settingsApi';
+
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
+
+import { usePageBanner } from '../hooks/usePageBanner';
+
+import heroImage from '../assets/images/capital-park2.jpg';
+ 
 const empty = { name: '', mobile: '', email: '', company: '', enquiryType: '', message: '' };
  
 export default function Contact() {
@@ -122,68 +129,60 @@ export default function Contact() {
   ];
  
   const validate = () => {
+
     const next = {};
-    const nameRes = validateName(form.name, 'Name');
-    if (!nameRes.isValid) next.name = nameRes.message;
 
-    const phoneRes = validatePhone(form.mobile);
-    if (!phoneRes.isValid) next.mobile = phoneRes.message;
+    if (!form.name.trim()) next.name = 'Please enter your name.';
 
-    const emailRes = validateEmail(form.email);
-    if (!emailRes.isValid) next.email = emailRes.message;
+    if (!/^[6-9]\d{9}$/.test(form.mobile.trim())) next.mobile = 'Enter a valid 10-digit Indian mobile number.';
+
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Enter a valid email address.';
 
     if (!form.enquiryType) next.enquiryType = 'Select an enquiry type.';
+
     if (!form.message.trim()) next.message = 'Please enter your message.';
 
     setErrors(next);
+
     return Object.keys(next).length === 0;
-  };
 
-  const handleBlur = (e) => {
-    const { name, value } = e.target;
-    let err = '';
-    if (name === 'name') {
-      const res = validateName(value, 'Name');
-      if (!res.isValid) err = res.message;
-    } else if (name === 'mobile') {
-      const res = validatePhone(value);
-      if (!res.isValid) err = res.message;
-    } else if (name === 'email') {
-      const res = validateEmail(value);
-      if (!res.isValid) err = res.message;
-    } else if (name === 'enquiryType') {
-      if (!value) err = 'Select an enquiry type.';
-    } else if (name === 'message') {
-      if (!value.trim()) err = 'Please enter your message.';
-    }
-    setErrors((prev) => ({ ...prev, [name]: err }));
   };
-
+ 
   const submit = async (event) => {
-    event.preventDefault();
-    if (!validate()) return;
-    setStatus('loading');
-    setErrorMessage('');
-    try {
-      const res = await contactService.submit(Object.fromEntries(Object.entries(form).map(([key, value]) => [key, value.trim()])));
-      if (res && res.id) {
-        setSubmittedId(res.id);
-      }
-      setStatus('success');
-    } catch (err) {
-      console.error('Contact submission error:', err);
-      setStatus('error');
-      setErrorMessage(err.message || 'Failed to submit enquiry. Please check your submission and try again.');
-    }
-  };
 
-  const change = ({ target }) => {
-    const { name, value } = target;
-    setForm((current) => ({ ...current, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+    event.preventDefault();
+
+    if (!validate()) return;
+
+    setStatus('loading');
+
+    setErrorMessage('');
+
+    try {
+
+      const res = await contactService.submit(Object.fromEntries(Object.entries(form).map(([key, value]) => [key, value.trim()])));
+
+      if (res && res.id) {
+
+        setSubmittedId(res.id);
+
+      }
+
+      setStatus('success');
+
+    } catch (err) {
+
+      console.error('Contact submission error:', err);
+
+      setStatus('error');
+
+      setErrorMessage(err.message || 'Failed to submit enquiry. Please check your submission and try again.');
+
     }
+
   };
+ 
+  const change = ({ target }) => setForm((current) => ({ ...current, [target.name]: target.value }));
  
   return (
 <>
@@ -235,12 +234,12 @@ export default function Contact() {
 </div>
 
                 )}
-<label className="field"><span>Name *</span><input name="name" value={form.name} onChange={change} onBlur={handleBlur} placeholder="Your full name" />{errors.name && <small>{errors.name}</small>}</label>
-<label className="field"><span>Mobile *</span><input name="mobile" value={form.mobile} onChange={change} onBlur={handleBlur} inputMode="numeric" maxLength="10" placeholder="10-digit mobile number" />{errors.mobile && <small>{errors.mobile}</small>}</label>
-<label className="field"><span>Email *</span><input name="email" value={form.email} onChange={change} onBlur={handleBlur} type="email" placeholder="name@example.com" />{errors.email && <small>{errors.email}</small>}</label>
-<label className="field"><span>Company</span><input name="company" value={form.company} onChange={change} placeholder="Company or organization" /></label>
-<label className="field full"><span>Enquiry Type *</span><select name="enquiryType" value={form.enquiryType} onChange={change} onBlur={handleBlur}><option value="">Select enquiry type</option>{['Product Enquiry', 'Sales Enquiry', 'Dealer Enquiry', 'Distributor Enquiry', 'Support Enquiry'].map((item) => <option key={item}>{item}</option>)}</select>{errors.enquiryType && <small>{errors.enquiryType}</small>}</label>
-<label className="field full"><span>Message *</span><textarea name="message" value={form.message} onChange={change} onBlur={handleBlur} rows="5" placeholder="Write your enquiry message here..." /></label>
+<label className="field"><span>Name *</span><input name="name" value={form.name} onChange={change} />{errors.name && <small>{errors.name}</small>}</label>
+<label className="field"><span>Mobile *</span><input name="mobile" value={form.mobile} onChange={change} inputMode="numeric" maxLength="10" />{errors.mobile && <small>{errors.mobile}</small>}</label>
+<label className="field"><span>Email *</span><input name="email" value={form.email} onChange={change} type="email" />{errors.email && <small>{errors.email}</small>}</label>
+<label className="field"><span>Company</span><input name="company" value={form.company} onChange={change} /></label>
+<label className="field full"><span>Enquiry Type *</span><select name="enquiryType" value={form.enquiryType} onChange={change}><option value="">Select enquiry type</option>{['Product Enquiry', 'Sales Enquiry', 'Dealer Enquiry', 'Distributor Enquiry', 'Support Enquiry'].map((item) => <option key={item}>{item}</option>)}</select>{errors.enquiryType && <small>{errors.enquiryType}</small>}</label>
+<label className="field full"><span>Message *</span><textarea name="message" value={form.message} onChange={change} rows="5" /></label>
 
                 {errors.message && <small>{errors.message}</small>}
 <button className="button full" disabled={status === 'loading'}>{status === 'loading' ? 'Submitting…' : <>Submit Message <ArrowRight /></>}</button>

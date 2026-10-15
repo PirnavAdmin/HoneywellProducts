@@ -14,14 +14,6 @@ import {
   getBankDetails, saveBankDetails, updateBankDetails,
   changePassword, forgotPassword
 } from '../services/customerApi';
-import { 
-  validateName, 
-  validateEmail, 
-  validatePhone, 
-  validatePassword, 
-  validateConfirmPassword, 
-  validateEmailOrPhone 
-} from '../utils/validators';
 
 export default function CustomerAccount() {
   const location = useLocation();
@@ -120,9 +112,6 @@ export default function CustomerAccount() {
   const [currentPasswordInput, setCurrentPasswordInput] = useState('');
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [confirmNewPasswordInput, setConfirmNewPasswordInput] = useState('');
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [changePasswordLoading, setChangePasswordLoading] = useState(false);
   const [changePasswordMsg, setChangePasswordMsg] = useState(null);
 
@@ -133,14 +122,12 @@ export default function CustomerAccount() {
       setChangePasswordMsg({ type: 'error', text: 'Current password is required.' });
       return;
     }
-    const newPassRes = validatePassword(newPasswordInput);
-    if (!newPassRes.isValid) {
-      setChangePasswordMsg({ type: 'error', text: newPassRes.message });
+    if (newPasswordInput.length < 6) {
+      setChangePasswordMsg({ type: 'error', text: 'New password must be at least 6 characters.' });
       return;
     }
-    const confirmRes = validateConfirmPassword(newPasswordInput, confirmNewPasswordInput);
-    if (!confirmRes.isValid) {
-      setChangePasswordMsg({ type: 'error', text: confirmRes.message });
+    if (newPasswordInput !== confirmNewPasswordInput) {
+      setChangePasswordMsg({ type: 'error', text: 'New passwords do not match.' });
       return;
     }
     setChangePasswordLoading(true);
@@ -322,26 +309,9 @@ export default function CustomerAccount() {
   // Handle Save All Profile Details
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    const nameRes = validateName(editName, 'Full name');
-    if (!nameRes.isValid) {
-      setSaveSuccessMsg({ type: 'error', text: nameRes.message });
+    if (!editName.trim()) {
+      setSaveSuccessMsg({ type: 'error', text: 'Full name is required.' });
       return;
-    }
-
-    if (editEmail) {
-      const emailRes = validateEmail(editEmail);
-      if (!emailRes.isValid) {
-        setSaveSuccessMsg({ type: 'error', text: emailRes.message });
-        return;
-      }
-    }
-
-    if (editPhone) {
-      const phoneRes = validatePhone(editPhone);
-      if (!phoneRes.isValid) {
-        setSaveSuccessMsg({ type: 'error', text: phoneRes.message });
-        return;
-      }
     }
 
     const cleanBankHolder = editBankAccountHolder.trim();
@@ -482,31 +452,42 @@ export default function CustomerAccount() {
   // Guest validation helper
   const validateField = (name, value) => {
     let errorMsg = '';
+    const trimmedVal = value ? value.trim() : '';
 
     if (name === 'email') {
-      const res = validateEmailOrPhone(value);
-      if (!res.isValid) errorMsg = res.message;
-    }
-
-    if (name === 'password') {
-      if (authMode === 'register') {
-        const res = validatePassword(value);
-        if (!res.isValid) errorMsg = res.message;
+      if (!trimmedVal) {
+        errorMsg = 'Email address or mobile number is required.';
       } else {
-        if (!value) {
-          errorMsg = 'Password is required.';
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedVal);
+        const isMobile = /^\d{10}$/.test(trimmedVal.replace(/[\s\-\(\)]/g, ''));
+        if (!isEmail && !isMobile) {
+          errorMsg = 'Please enter a valid email address or 10-digit mobile number.';
         }
       }
     }
 
+    if (name === 'password') {
+      if (!value) {
+        errorMsg = 'Password is required.';
+      } else if (value.length < 6) {
+        errorMsg = 'Password must be at least 6 characters.';
+      }
+    }
+
     if (name === 'confirmPassword' && authMode === 'register') {
-      const res = validateConfirmPassword(inputPassword, value);
-      if (!res.isValid) errorMsg = res.message;
+      if (!value) {
+        errorMsg = 'Please confirm your password.';
+      } else if (value !== inputPassword) {
+        errorMsg = 'Passwords do not match.';
+      }
     }
 
     if (name === 'fullName' && authMode === 'register') {
-      const res = validateName(value, 'Full name');
-      if (!res.isValid) errorMsg = res.message;
+      if (!trimmedVal) {
+        errorMsg = 'Full name is required.';
+      } else if (trimmedVal.length < 2) {
+        errorMsg = 'Please enter your full name.';
+      }
     }
 
     return errorMsg;
@@ -596,9 +577,8 @@ export default function CustomerAccount() {
   };
 
   const handleForgotPassword = async () => {
-    const emailRes = validateEmail(inputEmail);
-    if (!emailRes.isValid) {
-      setErrors((prev) => ({ ...prev, email: emailRes.message }));
+    if (!inputEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail.trim())) {
+      setErrors((prev) => ({ ...prev, email: 'Please enter a valid email address first.' }));
       setTouched((prev) => ({ ...prev, email: true }));
       return;
     }
@@ -1357,82 +1337,49 @@ export default function CustomerAccount() {
               <form onSubmit={handleChangePasswordSubmit} className="portal-form-grid" noValidate>
                 <div className="portal-form-group full-width">
                   <label htmlFor="current-pwd">Current Password *</label>
-                  <div className="portal-input-wrap" style={{ position: 'relative' }}>
+                  <div className="portal-input-wrap">
                     <Lock size={16} className="portal-input-icon" />
                     <input
                       id="current-pwd"
-                      type={showCurrentPassword ? 'text' : 'password'}
+                      type="password"
                       className="portal-input has-icon"
                       required
                       value={currentPasswordInput}
                       onChange={(e) => setCurrentPasswordInput(e.target.value)}
                       placeholder="Enter your current password"
-                      style={{ paddingRight: '40px' }}
                     />
-                    <button
-                      type="button"
-                      className="password-toggle-btn"
-                      onClick={() => setShowCurrentPassword((prev) => !prev)}
-                      title={showCurrentPassword ? 'Hide password' : 'Show password'}
-                      aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
-                      tabIndex={-1}
-                    >
-                      {showCurrentPassword ? <Eye size={16} /> : <EyeOff size={16} />}
-                    </button>
                   </div>
                 </div>
 
                 <div className="portal-form-group">
                   <label htmlFor="new-pwd">New Password *</label>
-                  <div className="portal-input-wrap" style={{ position: 'relative' }}>
+                  <div className="portal-input-wrap">
                     <Lock size={16} className="portal-input-icon" />
                     <input
                       id="new-pwd"
-                      type={showNewPassword ? 'text' : 'password'}
+                      type="password"
                       className="portal-input has-icon"
                       required
                       value={newPasswordInput}
                       onChange={(e) => setNewPasswordInput(e.target.value)}
                       placeholder="Minimum 6 characters"
-                      style={{ paddingRight: '40px' }}
                     />
-                    <button
-                      type="button"
-                      className="password-toggle-btn"
-                      onClick={() => setShowNewPassword((prev) => !prev)}
-                      title={showNewPassword ? 'Hide password' : 'Show password'}
-                      aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                      tabIndex={-1}
-                    >
-                      {showNewPassword ? <Eye size={16} /> : <EyeOff size={16} />}
-                    </button>
                   </div>
                 </div>
 
                 <div className="portal-form-group">
                   <label htmlFor="confirm-new-pwd">Confirm New Password *</label>
-                  <div className="portal-input-wrap" style={{ position: 'relative' }}>
+                  <div className="portal-input-wrap">
                     <Lock size={16} className="portal-input-icon" />
                     <input
                       id="confirm-new-pwd"
-                      type={showConfirmNewPassword ? 'text' : 'password'}
+                      type="password"
                       className="portal-input has-icon"
                       required
                       value={confirmNewPasswordInput}
                       onChange={(e) => setConfirmNewPasswordInput(e.target.value)}
                       placeholder="Re-enter new password"
-                      style={{ paddingRight: '40px' }}
                     />
-                    <button
-                      type="button"
-                      className="password-toggle-btn"
-                      onClick={() => setShowConfirmNewPassword((prev) => !prev)}
-                      title={showConfirmNewPassword ? 'Hide password' : 'Show password'}
-                      aria-label={showConfirmNewPassword ? 'Hide password' : 'Show password'}
-                      tabIndex={-1}
-                    >
-                      {showConfirmNewPassword ? <Eye size={16} /> : <EyeOff size={16} />}
-                    </button>
                   </div>
                 </div>
 
@@ -1583,11 +1530,9 @@ export default function CustomerAccount() {
                         type="button"
                         className="password-toggle-btn"
                         onClick={() => setShowPassword(!showPassword)}
-                        title={showPassword ? 'Hide password' : 'Show password'}
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        tabIndex={-1}
                       >
-                        {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                       </button>
                     </div>
                     {errors.password && (
@@ -1618,11 +1563,9 @@ export default function CustomerAccount() {
                           type="button"
                           className="password-toggle-btn"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          title={showConfirmPassword ? 'Hide password' : 'Show password'}
                           aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                          tabIndex={-1}
                         >
-                          {showConfirmPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                          {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
                       {errors.confirmPassword && (
