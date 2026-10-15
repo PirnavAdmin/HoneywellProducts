@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom';
 import {
   Search, Plus, RefreshCw, Eye, Edit2, Trash2, CheckCircle2,
   XCircle, ArrowUpDown, ShieldCheck, MapPin, Phone, Mail, Building2,
-  AlertTriangle, X, Check, Building, Layers, RotateCcw
+  AlertTriangle, X, Check, Building, Layers, RotateCcw, Truck, FileText
 } from 'lucide-react';
 import { distributorService } from '../../services/distributorService';
 import DistributorFormModal from './DistributorFormModal';
 import '../catalog/adminModule.css';
+import './Distributors.css';
 
 export default function DistributorsList() {
   const [distributors, setDistributors] = useState([]);
@@ -815,137 +816,208 @@ export default function DistributorsList() {
 
       {/* Details Modal */}
       {isDetailOpen && detailDistributor && createPortal(
-        <div
-          onClick={() => setIsDetailOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            width: '100vw',
-            height: '100vh',
-            backgroundColor: 'rgba(15, 23, 42, 0.65)',
-            backdropFilter: 'blur(4px)',
-            zIndex: 999999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-            boxSizing: 'border-box'
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: '#ffffff',
-              borderRadius: '14px',
-              maxWidth: '640px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-              border: '1px solid #e2e8f0',
-              position: 'relative'
-            }}
-          >
-            <div className="catalog-modal-header" style={{ padding: '18px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span style={{ fontSize: '11px', color: '#1268a5', fontWeight: 800, textTransform: 'uppercase', display: 'block', letterSpacing: '0.05em' }}>
-                  Distributor Profile #{detailDistributor.id}
+        <div className="distributor-modal-overlay" onClick={() => setIsDetailOpen(false)}>
+          <div className="distributor-modal-card" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="distributor-modal-header">
+              <div className="distributor-header-info">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h2 className="distributor-modal-title">
+                    Distributor #{detailDistributor.id} — {detailDistributor.name || detailDistributor.companyName}
+                  </h2>
+                  <span className={`distributor-status-pill ${detailDistributor.isActive ? 'active' : 'inactive'}`}>
+                    {detailDistributor.isActive ? 'Active' : 'Inactive'}
+                  </span>
+                  <span className="distributor-type-pill">
+                    {detailDistributor.partnerType || detailDistributor.tier || 'Distributor'}
+                  </span>
+                  {detailDistributor.isVerified && (
+                    <span className="distributor-verified-pill">
+                      <ShieldCheck size={11} /> Verified
+                    </span>
+                  )}
+                </div>
+                <span className="distributor-subtitle">
+                  Region: {detailDistributor.region || 'Pan-India'} · Territory: {detailDistributor.territory || detailDistributor.city || '—'}
                 </span>
-                <h2 style={{ margin: '4px 0 0', fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{detailDistributor.name || detailDistributor.companyName}</h2>
               </div>
               <button
                 type="button"
-                className="catalog-modal-close"
+                className="distributor-modal-close"
                 onClick={() => setIsDetailOpen(false)}
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  backgroundColor: '#f1f5f9',
-                  color: '#64748b',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer'
-                }}
+                title="Close dialog"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Partner Type</span>
-                  <span style={{ fontSize: '13.5px', color: '#1268a5', fontWeight: 600 }}>{detailDistributor.partnerType || detailDistributor.tier}</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Region / Territory</span>
-                  <span style={{ fontSize: '13.5px', color: '#0f172a', fontWeight: 600 }}>{detailDistributor.region} ({detailDistributor.city || detailDistributor.territory})</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Contact Lead</span>
-                  <span style={{ fontSize: '13.5px', color: '#0f172a' }}>{detailDistributor.contactPerson} ({detailDistributor.designation || detailDistributor.contactTitle})</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Contact Channels</span>
-                  <span style={{ fontSize: '13px', color: '#0f172a' }}>{detailDistributor.phone} | {detailDistributor.email}</span>
-                </div>
-                {detailDistributor.gstin && (
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>GSTIN</span>
-                    <span style={{ fontSize: '13px', color: '#0f172a', fontWeight: 600 }}>{detailDistributor.gstin}</span>
+            {/* Body */}
+            <div className="distributor-modal-body">
+              <div className="distributor-modal-grid">
+                {/* Left Column: Corporate, Contact & Address */}
+                <div className="distributor-col-info">
+                  <div className="distributor-section-card">
+                    <h4 className="distributor-section-title">
+                      <Building2 size={13} style={{ color: '#1268a5' }} />
+                      Company &amp; Contact Details
+                    </h4>
+                    <div className="distributor-info-grid">
+                      <div className="distributor-info-item full-width">
+                        <span className="distributor-info-label">Distributor / Firm</span>
+                        <span className="distributor-info-value">
+                          <strong>{detailDistributor.name || detailDistributor.companyName}</strong>
+                        </span>
+                      </div>
+                      <div className="distributor-info-item">
+                        <span className="distributor-info-label">Contact Person</span>
+                        <span className="distributor-info-value">{detailDistributor.contactPerson || '—'}</span>
+                      </div>
+                      <div className="distributor-info-item">
+                        <span className="distributor-info-label">Designation / Role</span>
+                        <span className="distributor-info-value">{detailDistributor.contactTitle || detailDistributor.designation || 'Lead'}</span>
+                      </div>
+                      <div className="distributor-info-item">
+                        <span className="distributor-info-label">Phone Number</span>
+                        <span className="distributor-info-value">
+                          {detailDistributor.phone ? (
+                            <a href={`tel:${detailDistributor.phone}`} className="distributor-info-link">
+                              <Phone size={11} /> {detailDistributor.phone}
+                            </a>
+                          ) : '—'}
+                        </span>
+                      </div>
+                      <div className="distributor-info-item">
+                        <span className="distributor-info-label">Email Address</span>
+                        <span className="distributor-info-value">
+                          {detailDistributor.email ? (
+                            <a href={`mailto:${detailDistributor.email}`} className="distributor-info-link" title={detailDistributor.email}>
+                              <Mail size={11} /> {detailDistributor.email}
+                            </a>
+                          ) : '—'}
+                        </span>
+                      </div>
+                      <div className="distributor-info-item">
+                        <span className="distributor-info-label">GSTIN / Tax ID</span>
+                        <span className="distributor-info-value"><strong>{detailDistributor.gstin || 'Not Provided'}</strong></span>
+                      </div>
+                      <div className="distributor-info-item">
+                        <span className="distributor-info-label">Badge Highlight</span>
+                        <span className="distributor-info-value">{detailDistributor.badgeText || 'Standard'}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                {detailDistributor.address && (
-                  <div style={{ gridColumn: '1 / -1' }}>
-                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'block' }}>Operational Address</span>
-                    <span style={{ fontSize: '13px', color: '#334155' }}>{detailDistributor.address}</span>
+
+                  <div className="distributor-section-card">
+                    <h4 className="distributor-section-title">
+                      <MapPin size={13} style={{ color: '#1268a5' }} />
+                      Territory &amp; Operational Coverage
+                    </h4>
+                    <div className="distributor-info-grid">
+                      <div className="distributor-info-item">
+                        <span className="distributor-info-label">Region</span>
+                        <span className="distributor-info-value">{detailDistributor.region || '—'}</span>
+                      </div>
+                      <div className="distributor-info-item">
+                        <span className="distributor-info-label">City / Territory</span>
+                        <span className="distributor-info-value">{detailDistributor.territory || detailDistributor.city || '—'}</span>
+                      </div>
+                      <div className="distributor-info-item full-width">
+                        <span className="distributor-info-label">Coverage Locations</span>
+                        <span className="distributor-info-value">{detailDistributor.coverageLocations || 'Not Specified'}</span>
+                      </div>
+                      <div className="distributor-info-item full-width">
+                        <span className="distributor-info-label">Warehouse / Operational Address</span>
+                        <span className="distributor-info-value" title={detailDistributor.address || '—'}>
+                          {detailDistributor.address || '—'}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {detailDistributor.productCategories && (
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Product Categories</span>
-                  <div style={{ fontSize: '13px', color: '#334155' }}>{detailDistributor.productCategories}</div>
                 </div>
-              )}
 
-              {detailDistributor.description && (
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 700, display: 'block', marginBottom: '4px' }}>Description</span>
-                  <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '10px', borderRadius: '6px', fontSize: '13px', color: '#334155', lineHeight: 1.45 }}>
-                    {detailDistributor.description}
+                {/* Right Column: Commercial Specs & Business Profile */}
+                <div className="distributor-col-specs">
+                  <div className="distributor-section-card">
+                    <h4 className="distributor-section-title">
+                      <Truck size={13} style={{ color: '#1268a5' }} />
+                      Commercial &amp; Operations Specs
+                    </h4>
+                    <div className="distributor-spec-grid">
+                      <div className="distributor-spec-item">
+                        <span className="distributor-spec-label">Dispatch SLA</span>
+                        <span className="distributor-spec-val">{detailDistributor.dispatchSla || '—'}</span>
+                      </div>
+                      <div className="distributor-spec-item">
+                        <span className="distributor-spec-label">Buffer Capacity</span>
+                        <span className="distributor-spec-val">{detailDistributor.bufferCapacity || detailDistributor.warehouseCapacity || '—'}</span>
+                      </div>
+                      <div className="distributor-spec-item">
+                        <span className="distributor-spec-label">Commercial Terms</span>
+                        <span className="distributor-spec-val">{detailDistributor.commercialTerms || detailDistributor.paymentTerms || '—'}</span>
+                      </div>
+                      <div className="distributor-spec-item">
+                        <span className="distributor-spec-label">Track Rating</span>
+                        <span className="distributor-spec-val">{detailDistributor.rating || '—'}</span>
+                      </div>
+                      <div className="distributor-spec-item">
+                        <span className="distributor-spec-label">Display Order</span>
+                        <span className="distributor-spec-val">Sequence #{detailDistributor.displayOrder ?? 0}</span>
+                      </div>
+                      <div className="distributor-spec-item">
+                        <span className="distributor-spec-label">Partner Status</span>
+                        <span className="distributor-spec-val" style={{ color: detailDistributor.isActive ? '#059669' : '#dc2626' }}>
+                          {detailDistributor.isActive ? 'Active Record' : 'Inactive'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="distributor-section-card full-height">
+                    <h4 className="distributor-section-title">
+                      <FileText size={13} style={{ color: '#1268a5' }} />
+                      Product Lines &amp; Business Profile
+                    </h4>
+                    {detailDistributor.productCategories && (
+                      <div style={{ marginBottom: '2px' }}>
+                        <span className="distributor-info-label" style={{ display: 'block', marginBottom: '2px' }}>
+                          Authorized Product Categories
+                        </span>
+                        <div style={{ fontSize: '11.5px', color: '#1e293b', fontWeight: 600 }}>
+                          {detailDistributor.productCategories}
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <span className="distributor-info-label" style={{ display: 'block', marginBottom: '2px' }}>
+                        Profile Overview
+                      </span>
+                      <div className="distributor-desc-box">
+                        {detailDistributor.description || 'No detailed business overview description recorded for this distributor.'}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f0fdf4', padding: '10px 14px', borderRadius: '6px', border: '1px solid #bbf7d0', fontSize: '12px', color: '#166534' }}>
-                <div><strong>Dispatch SLA:</strong> {detailDistributor.dispatchSla || '—'}</div>
-                <div><strong>Buffer Stock:</strong> {detailDistributor.bufferCapacity || detailDistributor.warehouseCapacity || '—'}</div>
-                <div><strong>Terms:</strong> {detailDistributor.commercialTerms || detailDistributor.paymentTerms || '—'}</div>
-                <div><strong>Rating:</strong> {detailDistributor.rating || '—'}</div>
               </div>
             </div>
 
-            <div className="catalog-modal-footer" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+            {/* Footer */}
+            <div className="distributor-modal-footer">
               <button
                 type="button"
-                className="catalog-btn catalog-btn--primary"
-                onClick={() => setIsDetailOpen(false)}
-                style={{
-                  height: '36px',
-                  padding: '0 18px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  borderRadius: '6px',
-                  border: 'none',
-                  backgroundColor: '#1268a5',
-                  color: '#ffffff',
-                  cursor: 'pointer'
+                className="btn-distributor-secondary"
+                onClick={() => {
+                  const toEdit = detailDistributor;
+                  setIsDetailOpen(false);
+                  setSelectedDistributor(toEdit);
+                  setIsFormOpen(true);
                 }}
+              >
+                <Edit2 size={13} /> Edit Distributor
+              </button>
+              <button
+                type="button"
+                className="btn-distributor-primary"
+                onClick={() => setIsDetailOpen(false)}
               >
                 Close
               </button>

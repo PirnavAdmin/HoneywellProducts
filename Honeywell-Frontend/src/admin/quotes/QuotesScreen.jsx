@@ -4,7 +4,7 @@ import {
   Search, Eye, Edit3, Trash2, Plus, X, 
   FileSpreadsheet, Clock, CheckCircle, RefreshCw, Phone, 
   Building, Calendar, MapPin, DollarSign, Filter, RotateCcw,
-  Sparkles, CheckCircle2, AlertCircle, ShieldAlert, Mail, Package, Hash
+  Sparkles, CheckCircle2, AlertCircle, ShieldAlert, Mail, Package, Hash, User
 } from 'lucide-react';
 import { getQuotes, getQuoteById, createQuote, updateQuote, deleteQuote } from '../api/quotes';
 import { Pagination } from '../components/ActionButtons';
@@ -629,8 +629,15 @@ export default function QuotesScreen() {
           <div className="quote-modal-card quote-modal-medium" onClick={(e) => e.stopPropagation()}>
             <div className="quote-modal-header">
               <div className="modal-header-info">
-                <div className="modal-kicker">COMMERCIAL PROPOSAL</div>
-                <h2>Quote Request #{selectedQuote.id}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h2>Quote Request #{selectedQuote.id} Details</h2>
+                  <span className={`status-pill status-${(selectedQuote.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                    {selectedQuote.status || 'Pending'}
+                  </span>
+                  <span className="quote-amount-pill">
+                    {selectedQuote.quoteAmount > 0 ? formatPrice(selectedQuote.quoteAmount) : 'Pending Offer'}
+                  </span>
+                </div>
                 <span className="modal-subtitle">Requested on {formatDateTimeToDMY(selectedQuote.createdAt)}</span>
               </div>
               <button 
@@ -644,84 +651,87 @@ export default function QuotesScreen() {
             </div>
 
             <div className="quote-modal-body">
-              {/* Top Banner with Status & Quoted Amount */}
-              <div className="quote-detail-banner">
-                <div className="detail-banner-item">
-                  <span className="banner-label">Status</span>
-                  <span className={`status-pill status-${(selectedQuote.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
-                    {selectedQuote.status || 'Pending'}
-                  </span>
-                </div>
-                <div className="detail-banner-item">
-                  <span className="banner-label">Commercial Offer</span>
-                  <span className="quote-amount-highlight">
-                    {selectedQuote.quoteAmount > 0 ? formatPrice(selectedQuote.quoteAmount) : 'Pending Offer Calculation'}
-                  </span>
-                </div>
-              </div>
+              <div className="quote-modal-grid">
+                {/* Left Column: Client & Enterprise Details + Required Product */}
+                <div className="quote-col-info">
+                  <div className="detail-section-card">
+                    <h4 className="section-title">
+                      <Building size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Client &amp; Enterprise Details
+                    </h4>
+                    <div className="detail-info-grid">
+                      <div className="info-item">
+                        <span className="info-label">Company Name</span>
+                        <span className="info-value"><strong>{selectedQuote.companyName || 'N/A'}</strong></span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">GSTIN / Tax ID</span>
+                        <span className="info-value">{selectedQuote.gstin || 'Not Provided'}</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Contact Person</span>
+                        <span className="info-value">{selectedQuote.name || 'N/A'}</span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Mobile Phone</span>
+                        <span className="info-value">
+                          {selectedQuote.mobile ? (
+                            <a href={`tel:${selectedQuote.mobile}`} className="contact-link">
+                              <Phone size={11} /> {selectedQuote.mobile}
+                            </a>
+                          ) : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Email Address</span>
+                        <span className="info-value">
+                          {selectedQuote.email ? (
+                            <a href={`mailto:${selectedQuote.email}`} className="contact-link email" title={selectedQuote.email}>
+                              <Mail size={11} /> {selectedQuote.email}
+                            </a>
+                          ) : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Project Location</span>
+                        <span className="info-value" title={selectedQuote.location || 'N/A'}>
+                          {selectedQuote.location || 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-              {/* Company & Client Info Card */}
-              <div className="detail-section-card">
-                <h4 className="section-title">Client &amp; Enterprise Details</h4>
-                <div className="detail-info-grid">
-                  <div className="info-item">
-                    <span className="info-label">Company Name</span>
-                    <span className="info-value"><strong>{selectedQuote.companyName || 'N/A'}</strong></span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">GSTIN / Tax ID</span>
-                    <span className="info-value">{selectedQuote.gstin || 'Not Provided'}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Contact Person</span>
-                    <span className="info-value">{selectedQuote.name || 'N/A'}</span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Mobile Phone</span>
-                    <span className="info-value">
-                      {selectedQuote.mobile ? (
-                        <a href={`tel:${selectedQuote.mobile}`} className="contact-link">
-                          <Phone size={13} /> {selectedQuote.mobile}
-                        </a>
-                      ) : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Email Address</span>
-                    <span className="info-value">
-                      {selectedQuote.email ? (
-                        <a href={`mailto:${selectedQuote.email}`} className="contact-link email">
-                          <Mail size={13} /> {selectedQuote.email}
-                        </a>
-                      ) : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Project Location</span>
-                    <span className="info-value">{selectedQuote.location || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Product & Scope Details */}
-              <div className="detail-section-card">
-                <h4 className="section-title">Required Product &amp; Volume</h4>
-                <div className="product-quote-box">
-                  <Package size={20} className="text-primary" />
-                  <div style={{ flex: '1 1 auto' }}>
-                    <div style={{ fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>{selectedQuote.product}</div>
-                    <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: 2 }}>
-                      Target Quantity: <strong>{selectedQuote.quantity} units</strong>
+                  {/* Required Product & Volume */}
+                  <div className="detail-section-card">
+                    <h4 className="section-title">
+                      <Package size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Required Product &amp; Volume
+                    </h4>
+                    <div className="product-quote-box">
+                      <Package size={16} className="text-primary" />
+                      <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: '13px', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {selectedQuote.product}
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: 1 }}>
+                          Target Quantity: <strong style={{ color: '#0f172a' }}>{selectedQuote.quantity} units</strong>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Requirement Notes */}
-              <div className="detail-section-card">
-                <h4 className="section-title">Specifications &amp; Custom Requirements</h4>
-                <div className="message-content-box">
-                  {selectedQuote.requirement || 'No custom requirement notes provided.'}
+                {/* Right Column: Specifications & Custom Requirements */}
+                <div className="quote-col-message">
+                  <div className="detail-section-card full-height">
+                    <h4 className="section-title">
+                      <FileSpreadsheet size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Specifications &amp; Custom Requirements
+                    </h4>
+                    <div className="message-content-box">
+                      {selectedQuote.requirement || 'No custom requirement notes provided.'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -742,7 +752,7 @@ export default function QuotesScreen() {
                   handleEditOpen(selectedQuote);
                 }}
               >
-                <Edit3 size={15} /> Update Pricing / Status
+                <Edit3 size={14} /> Update Pricing / Status
               </button>
             </div>
           </div>
@@ -828,7 +838,7 @@ export default function QuotesScreen() {
                   <label htmlFor="edit-requirement">Terms &amp; Specification Notes</label>
                   <textarea
                     id="edit-requirement"
-                    rows={4}
+                    rows={2}
                     className="quote-form-textarea"
                     placeholder="Enter quote commercial notes, validity terms, lead time..."
                     value={formData.requirement}
@@ -994,7 +1004,7 @@ export default function QuotesScreen() {
                   <label htmlFor="new-requirement">Requirement Specifications *</label>
                   <textarea
                     id="new-requirement"
-                    rows={3}
+                    rows={2}
                     required
                     placeholder="Enter project details, delivery expectations, technical specifications..."
                     className="quote-form-textarea"

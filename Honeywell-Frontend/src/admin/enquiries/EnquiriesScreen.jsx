@@ -659,8 +659,15 @@ export default function EnquiriesScreen() {
           <div className="enquiry-modal-card enquiry-modal-medium" onClick={(e) => e.stopPropagation()}>
             <div className="enquiry-modal-header">
               <div className="modal-header-info">
-                <div className="modal-kicker">ENQUIRY DETAILS</div>
-                <h2>Enquiry #{selectedEnquiry.id}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h2>Enquiry #{selectedEnquiry.id} Details</h2>
+                  <span className={`status-pill status-${(selectedEnquiry.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                    {selectedEnquiry.status || 'Pending'}
+                  </span>
+                  <span className={`type-badge ${typeBadgeConfig[selectedEnquiry.enquiryType]?.class || 'type-product'}`}>
+                    {selectedEnquiry.enquiryType || 'General Enquiry'}
+                  </span>
+                </div>
                 <span className="modal-subtitle">Submitted on {formatDateTimeToDMY(selectedEnquiry.createdAt)}</span>
               </div>
               <button 
@@ -674,76 +681,78 @@ export default function EnquiriesScreen() {
             </div>
 
             <div className="enquiry-modal-body">
-              {/* Top Banner with Status & Type */}
-              <div className="enquiry-detail-banner">
-                <div className="detail-banner-item">
-                  <span className="banner-label">Status</span>
-                  <span className={`status-pill status-${(selectedEnquiry.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
-                    {selectedEnquiry.status || 'Pending'}
-                  </span>
-                </div>
-                <div className="detail-banner-item">
-                  <span className="banner-label">Enquiry Type</span>
-                  <span className="type-badge type-product">
-                    {selectedEnquiry.enquiryType || 'General Enquiry'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Customer Info Card */}
-              <div className="detail-section-card">
-                <h4 className="section-title">Customer Information</h4>
-                <div className="detail-info-grid">
-                  <div className="info-item">
-                    <span className="info-label">Customer Name</span>
-                    <span className="info-value"><strong>{selectedEnquiry.name || 'N/A'}</strong></span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Mobile Number</span>
-                    <span className="info-value">
-                      {selectedEnquiry.mobile ? (
-                        <a href={`tel:${selectedEnquiry.mobile}`} className="contact-link">
-                          <Phone size={13} /> {selectedEnquiry.mobile}
-                        </a>
-                      ) : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Email Address</span>
-                    <span className="info-value">
-                      {selectedEnquiry.email ? (
-                        <a href={`mailto:${selectedEnquiry.email}`} className="contact-link email">
-                          <Mail size={13} /> {selectedEnquiry.email}
-                        </a>
-                      ) : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Company / Organization</span>
-                    <span className="info-value">{selectedEnquiry.company || 'Individual Customer'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Product Association */}
-              {selectedEnquiry.productName && (
-                <div className="detail-section-card">
-                  <h4 className="section-title">Associated Product</h4>
-                  <div className="product-attached-box">
-                    <Package size={18} className="text-primary" />
-                    <div>
-                      <strong>{selectedEnquiry.productName}</strong>
-                      <span className="text-muted block text-xs">Customer is requesting details for this product</span>
+              <div className="enquiry-modal-grid">
+                {/* Left Column: Customer & Product Info */}
+                <div className="enquiry-col-info">
+                  {/* Customer Info Card */}
+                  <div className="detail-section-card">
+                    <h4 className="section-title">
+                      <Building size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Customer Information
+                    </h4>
+                    <div className="detail-info-grid">
+                      <div className="info-item">
+                        <span className="info-label">Customer Name</span>
+                        <span className="info-value"><strong>{selectedEnquiry.name || 'N/A'}</strong></span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Mobile Number</span>
+                        <span className="info-value">
+                          {selectedEnquiry.mobile ? (
+                            <a href={`tel:${selectedEnquiry.mobile}`} className="contact-link">
+                              <Phone size={11} /> {selectedEnquiry.mobile}
+                            </a>
+                          ) : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Email Address</span>
+                        <span className="info-value">
+                          {selectedEnquiry.email ? (
+                            <a href={`mailto:${selectedEnquiry.email}`} className="contact-link email" title={selectedEnquiry.email}>
+                              <Mail size={11} /> {selectedEnquiry.email}
+                            </a>
+                          ) : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Company / Org</span>
+                        <span className="info-value" title={selectedEnquiry.company || 'Individual Customer'}>
+                          {selectedEnquiry.company || 'Individual Customer'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )}
 
-              {/* Message Details */}
-              <div className="detail-section-card">
-                <h4 className="section-title">Message / Request Content</h4>
-                <div className="message-content-box">
-                  {selectedEnquiry.message || 'No additional message was provided by customer.'}
+                  {/* Product Association */}
+                  {selectedEnquiry.productName && (
+                    <div className="detail-section-card">
+                      <h4 className="section-title">
+                        <Package size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                        Associated Product
+                      </h4>
+                      <div className="product-attached-box">
+                        <Package size={15} className="text-primary" />
+                        <div>
+                          <strong>{selectedEnquiry.productName}</strong>
+                          <span className="text-muted block text-xs">Customer requested details</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column: Message Details */}
+                <div className="enquiry-col-message">
+                  <div className="detail-section-card full-height">
+                    <h4 className="section-title">
+                      <MessageSquare size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Message / Request Content
+                    </h4>
+                    <div className="message-content-box">
+                      {selectedEnquiry.message || 'No additional message was provided by customer.'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -764,7 +773,7 @@ export default function EnquiriesScreen() {
                   handleEditOpen(selectedEnquiry);
                 }}
               >
-                <Edit3 size={15} /> Update Status
+                <Edit3 size={14} /> Update Status
               </button>
             </div>
           </div>
@@ -792,20 +801,38 @@ export default function EnquiriesScreen() {
               </div>
 
               <div className="enquiry-modal-body">
-                <div className="form-group-field">
-                  <label htmlFor="edit-status">Enquiry Status *</label>
-                  <select
-                    id="edit-status"
-                    className="enquiry-form-input"
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    required
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Resolved">Resolved</option>
-                    <option value="Closed">Closed</option>
-                  </select>
+                <div className="form-grid-two">
+                  <div className="form-group-field">
+                    <label htmlFor="edit-status">Enquiry Status *</label>
+                    <select
+                      id="edit-status"
+                      className="enquiry-form-input"
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      required
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Resolved">Resolved</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group-field">
+                    <label htmlFor="edit-type">Enquiry Type</label>
+                    <select
+                      id="edit-type"
+                      className="enquiry-form-input"
+                      value={formData.enquiryType}
+                      onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
+                    >
+                      <option value="Product Enquiry">Product Enquiry</option>
+                      <option value="Sales Enquiry">Sales Enquiry</option>
+                      <option value="Dealer Enquiry">Dealer Enquiry</option>
+                      <option value="Distributor Enquiry">Distributor Enquiry</option>
+                      <option value="Support Enquiry">Support Enquiry</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="form-group-field">
@@ -820,26 +847,10 @@ export default function EnquiriesScreen() {
                 </div>
 
                 <div className="form-group-field">
-                  <label htmlFor="edit-type">Enquiry Type</label>
-                  <select
-                    id="edit-type"
-                    className="enquiry-form-input"
-                    value={formData.enquiryType}
-                    onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
-                  >
-                    <option value="Product Enquiry">Product Enquiry</option>
-                    <option value="Sales Enquiry">Sales Enquiry</option>
-                    <option value="Dealer Enquiry">Dealer Enquiry</option>
-                    <option value="Distributor Enquiry">Distributor Enquiry</option>
-                    <option value="Support Enquiry">Support Enquiry</option>
-                  </select>
-                </div>
-
-                <div className="form-group-field">
                   <label htmlFor="edit-message">Notes &amp; Conversation History</label>
                   <textarea
                     id="edit-message"
-                    rows={4}
+                    rows={2}
                     className="enquiry-form-textarea"
                     placeholder="Enter internal notes, follow-up comments, or resolution details..."
                     value={formData.message}

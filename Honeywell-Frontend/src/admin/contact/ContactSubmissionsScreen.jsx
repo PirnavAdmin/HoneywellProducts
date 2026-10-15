@@ -4,7 +4,7 @@ import {
   Search, Eye, Edit3, Trash2, Plus, X, 
   Mail, Clock, CheckCircle, RefreshCw, Phone, 
   Building, Calendar, MessageSquare, Filter, RotateCcw,
-  Sparkles, CheckCircle2, AlertCircle, ShieldAlert, FileText, Send
+  Sparkles, CheckCircle2, AlertCircle, ShieldAlert, FileText, Send, User
 } from 'lucide-react';
 import { 
   getContactSubmissions, 
@@ -658,8 +658,15 @@ export default function ContactSubmissionsScreen() {
           <div className="contact-modal-card contact-modal-medium" onClick={(e) => e.stopPropagation()}>
             <div className="contact-modal-header">
               <div className="modal-header-info">
-                <div className="modal-kicker">CONTACT SUBMISSION</div>
-                <h2>Submission #{selectedSubmission.id}</h2>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h2>Submission #{selectedSubmission.id} Details</h2>
+                  <span className={`status-pill status-${(selectedSubmission.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
+                    {selectedSubmission.status || 'Pending'}
+                  </span>
+                  <span className={`type-badge ${typeBadgeConfig[selectedSubmission.enquiryType]?.class || 'type-general'}`}>
+                    {selectedSubmission.enquiryType || 'General Enquiry'}
+                  </span>
+                </div>
                 <span className="modal-subtitle">Received on {formatDateTimeToDMY(selectedSubmission.createdAt)}</span>
               </div>
               <button 
@@ -673,62 +680,60 @@ export default function ContactSubmissionsScreen() {
             </div>
 
             <div className="contact-modal-body">
-              {/* Top Banner with Status & Type */}
-              <div className="contact-detail-banner">
-                <div className="detail-banner-item">
-                  <span className="banner-label">Current Status</span>
-                  <span className={`status-pill status-${(selectedSubmission.status || 'Pending').toLowerCase().replace(/\s+/g, '-')}`}>
-                    {selectedSubmission.status || 'Pending'}
-                  </span>
+              <div className="contact-modal-grid">
+                {/* Left Column: Sender Information */}
+                <div className="contact-col-info">
+                  <div className="detail-section-card full-height">
+                    <h4 className="section-title">
+                      <User size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Sender Information
+                    </h4>
+                    <div className="detail-info-grid">
+                      <div className="info-item">
+                        <span className="info-label">Sender Name</span>
+                        <span className="info-value"><strong>{selectedSubmission.name || 'N/A'}</strong></span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Mobile Number</span>
+                        <span className="info-value">
+                          {selectedSubmission.mobile ? (
+                            <a href={`tel:${selectedSubmission.mobile}`} className="contact-link">
+                              <Phone size={11} /> {selectedSubmission.mobile}
+                            </a>
+                          ) : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Email Address</span>
+                        <span className="info-value">
+                          {selectedSubmission.email ? (
+                            <a href={`mailto:${selectedSubmission.email}`} className="contact-link email" title={selectedSubmission.email}>
+                              <Mail size={11} /> {selectedSubmission.email}
+                            </a>
+                          ) : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Company / Business</span>
+                        <span className="info-value" title={selectedSubmission.company || 'Individual User'}>
+                          {selectedSubmission.company || 'Individual User'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div className="detail-banner-item">
-                  <span className="banner-label">Enquiry Category</span>
-                  <span className="type-badge type-general">
-                    {selectedSubmission.enquiryType || 'General Enquiry'}
-                  </span>
-                </div>
-              </div>
 
-              {/* Customer Info Card */}
-              <div className="detail-section-card">
-                <h4 className="section-title">Sender Information</h4>
-                <div className="detail-info-grid">
-                  <div className="info-item">
-                    <span className="info-label">Sender Name</span>
-                    <span className="info-value"><strong>{selectedSubmission.name || 'N/A'}</strong></span>
+                {/* Right Column: Full Message Content */}
+                <div className="contact-col-message">
+                  <div className="detail-section-card full-height">
+                    <h4 className="section-title">
+                      <MessageSquare size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Full Message Content
+                    </h4>
+                    <div className="message-content-box">
+                      {selectedSubmission.message || 'No message content provided.'}
+                    </div>
                   </div>
-                  <div className="info-item">
-                    <span className="info-label">Mobile Number</span>
-                    <span className="info-value">
-                      {selectedSubmission.mobile ? (
-                        <a href={`tel:${selectedSubmission.mobile}`} className="contact-link">
-                          <Phone size={13} /> {selectedSubmission.mobile}
-                        </a>
-                      ) : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Email Address</span>
-                    <span className="info-value">
-                      {selectedSubmission.email ? (
-                        <a href={`mailto:${selectedSubmission.email}`} className="contact-link email">
-                          <Mail size={13} /> {selectedSubmission.email}
-                        </a>
-                      ) : 'N/A'}
-                    </span>
-                  </div>
-                  <div className="info-item">
-                    <span className="info-label">Company / Business</span>
-                    <span className="info-value">{selectedSubmission.company || 'Individual User'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Message Details */}
-              <div className="detail-section-card">
-                <h4 className="section-title">Full Message Content</h4>
-                <div className="message-content-box">
-                  {selectedSubmission.message || 'No message content provided.'}
                 </div>
               </div>
             </div>
@@ -749,7 +754,7 @@ export default function ContactSubmissionsScreen() {
                   handleEditOpen(selectedSubmission);
                 }}
               >
-                <Edit3 size={15} /> Update Status
+                <Edit3 size={14} /> Update Status
               </button>
             </div>
           </div>
@@ -777,20 +782,39 @@ export default function ContactSubmissionsScreen() {
               </div>
 
               <div className="contact-modal-body">
-                <div className="form-group-field">
-                  <label htmlFor="edit-status">Submission Status *</label>
-                  <select
-                    id="edit-status"
-                    className="contact-form-input"
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    required
-                  >
-                    <option value="Pending">Pending</option>
-                    <option value="In Progress">In Progress</option>
-                    <option value="Resolved">Resolved</option>
-                    <option value="Closed">Closed</option>
-                  </select>
+                <div className="form-grid-two">
+                  <div className="form-group-field">
+                    <label htmlFor="edit-status">Submission Status *</label>
+                    <select
+                      id="edit-status"
+                      className="contact-form-input"
+                      value={formData.status}
+                      onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                      required
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="In Progress">In Progress</option>
+                      <option value="Resolved">Resolved</option>
+                      <option value="Closed">Closed</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group-field">
+                    <label htmlFor="edit-type">Enquiry Category</label>
+                    <select
+                      id="edit-type"
+                      className="contact-form-input"
+                      value={formData.enquiryType}
+                      onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
+                    >
+                      <option value="General Enquiry">General Enquiry</option>
+                      <option value="Product Enquiry">Product Enquiry</option>
+                      <option value="Sales Enquiry">Sales Enquiry</option>
+                      <option value="Dealer Enquiry">Dealer Enquiry</option>
+                      <option value="Distributor Enquiry">Distributor Enquiry</option>
+                      <option value="Support Enquiry">Support Enquiry</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="form-group-field">
@@ -805,27 +829,10 @@ export default function ContactSubmissionsScreen() {
                 </div>
 
                 <div className="form-group-field">
-                  <label htmlFor="edit-type">Enquiry Category</label>
-                  <select
-                    id="edit-type"
-                    className="contact-form-input"
-                    value={formData.enquiryType}
-                    onChange={(e) => setFormData({ ...formData, enquiryType: e.target.value })}
-                  >
-                    <option value="General Enquiry">General Enquiry</option>
-                    <option value="Product Enquiry">Product Enquiry</option>
-                    <option value="Sales Enquiry">Sales Enquiry</option>
-                    <option value="Dealer Enquiry">Dealer Enquiry</option>
-                    <option value="Distributor Enquiry">Distributor Enquiry</option>
-                    <option value="Support Enquiry">Support Enquiry</option>
-                  </select>
-                </div>
-
-                <div className="form-group-field">
                   <label htmlFor="edit-message">Notes &amp; Response History</label>
                   <textarea
                     id="edit-message"
-                    rows={4}
+                    rows={2}
                     className="contact-form-textarea"
                     placeholder="Enter internal resolution notes, customer follow-up actions..."
                     value={formData.message}
@@ -952,7 +959,7 @@ export default function ContactSubmissionsScreen() {
                   <label htmlFor="new-message">Message Content *</label>
                   <textarea
                     id="new-message"
-                    rows={3}
+                    rows={2}
                     required
                     placeholder="Enter customer message / feedback..."
                     className="contact-form-textarea"

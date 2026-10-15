@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Search,
   Eye,
@@ -24,11 +25,27 @@ import {
 } from 'lucide-react';
 import { getTickets, updateTicket } from '../api/tickets';
 import { getOrders } from '../api/orders';
-import { Pagination } from '../components/ActionButtons';
+import { Pagination, AnimatedViewButton } from '../components/ActionButtons';
 import { Toast } from '../components/Toast';
 import './TicketsScreen.css';
 
 const formatCurrency = (amount) => `INR ${Number(amount || 0).toLocaleString('en-IN')}`;
+
+const formatPhoneNumber = (phone) => {
+  if (!phone) return '—';
+  const clean = String(phone).replace(/^\+?91\s*/, '').replace(/\D/g, '');
+  if (clean.length === 10) {
+    return `+91 ${clean.slice(0, 5)} ${clean.slice(5)}`;
+  }
+  return String(phone);
+};
+
+const truncateWords = (text, maxWords = 4) => {
+  if (!text) return '';
+  const words = String(text).trim().split(/\s+/);
+  if (words.length <= maxWords) return text;
+  return words.slice(0, maxWords).join(' ') + '...';
+};
 
 const formatDateToDMY = (dateInput) => {
   if (!dateInput) return '';
@@ -372,6 +389,22 @@ const TicketsScreen = () => {
           </div>
           {statusFilter === 'Resolved' && <span className="stat-active-badge">Filtered</span>}
         </div>
+
+        {/* Closed Tickets */}
+        <div 
+          className={`tickets-stat-card ${statusFilter === 'Closed' ? 'stat-card-active' : ''}`}
+          onClick={() => setStatusFilter(statusFilter === 'Closed' ? 'All' : 'Closed')}
+          title="Click to filter by Closed tickets"
+        >
+          <div className="stat-card-icon closed">
+            <X size={22} />
+          </div>
+          <div className="stat-card-info">
+            <span className="stat-label">Closed</span>
+            <strong className="stat-val">{stats.closed}</strong>
+          </div>
+          {statusFilter === 'Closed' && <span className="stat-active-badge">Filtered</span>}
+        </div>
       </div>
 
       {/* Main Table Card */}
@@ -492,7 +525,11 @@ const TicketsScreen = () => {
                 paginatedTickets.map((ticket) => {
                   const StatusIcon = statusMeta[ticket.status]?.icon || AlertCircle;
                   return (
-                    <tr key={ticket.id || ticket.ticketNo}>
+                    <tr 
+                      key={ticket.id || ticket.ticketNo}
+                      onClick={() => handleOpenDetails(ticket)}
+                      style={{ cursor: 'pointer' }}
+                    >
                       {/* Ticket Details */}
                       <td>
                         <div className="ticket-primary-info">
@@ -545,29 +582,29 @@ const TicketsScreen = () => {
                           {ticket.phone && (
                             <span className="ticket-cust-sub">
                               <Phone size={11} />
-                              <span>{ticket.phone}</span>
+                              <span>{formatPhoneNumber(ticket.phone)}</span>
                             </span>
                           )}
                         </div>
                       </td>
 
-                      {/* Issue & Audit Note */}
+                      {/* Issue & Audit Note (Truncated to 3-4 words for compactness) */}
                       <td>
                         <div className="ticket-issue-cell">
                           <div className="ticket-issue-title" title={ticket.issue}>
-                            {ticket.issue || 'No description provided'}
+                            {truncateWords(ticket.issue, 4) || 'No description provided'}
                           </div>
                           {ticket.notes && (
                             <div className="ticket-note-preview" title={`Audit Note: ${ticket.notes}`}>
                               <span className="note-dot" />
-                              <span className="note-text">{ticket.notes}</span>
+                              <span className="note-text">{truncateWords(ticket.notes, 4)}</span>
                             </div>
                           )}
                         </div>
                       </td>
 
                       {/* Priority */}
-                      <td>
+                      <td style={{ textAlign: 'center' }}>
                         {ticket.status === 'Closed' ? (
                           <span className="priority-badge closed">Closed</span>
                         ) : (
@@ -585,22 +622,20 @@ const TicketsScreen = () => {
                         </span>
                         {ticket.assignedTo && ticket.assignedTo !== 'Unassigned' && (
                           <span className="ticket-assigned-sub" title={`Assigned to: ${ticket.assignedTo}`}>
-                            {ticket.assignedTo}
+                            <User size={10} style={{ display: 'inline', marginRight: '3px', verticalAlign: 'middle' }} />
+                            <span>{ticket.assignedTo}</span>
                           </span>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          className="btn-ticket-view"
-                          onClick={() => handleOpenDetails(ticket)}
-                          title="View Ticket Details &amp; Configure"
-                        >
-                          <Eye size={14} />
-                          <span>Details</span>
-                        </button>
+                      <td className="catalog-center-cell" style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        <div className="catalog-inline-actions" style={{ display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center' }}>
+                          <AnimatedViewButton
+                            onClick={() => handleOpenDetails(ticket)}
+                            title="View ticket details & audit logs"
+                          />
+                        </div>
                       </td>
                     </tr>
                   );
@@ -624,17 +659,27 @@ const TicketsScreen = () => {
         )}
       </section>
 
-      {/* Details Side-Drawer/Modal */}
-      {selectedTicket && (
+      {/* Details Side-Drawer/Modal (Mounted to document.body to prevent sidebar/topbar overlap) */}
+      {selectedTicket && createPortal(
         <div className="ticket-modal-backdrop" onClick={() => !saving && setSelectedTicket(null)}>
           <div className="ticket-modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="modal-title-area">
                 <div className="modal-header-icon-wrap">
-                  <Ticket size={22} color="#1268a5" />
+                  <Ticket size={20} color="#1268a5" />
                 </div>
                 <div>
-                  <h2>Ticket {selectedTicket.ticketNo} Details</h2>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: '#0f172a' }}>
+                      Ticket {selectedTicket.ticketNo} Details
+                    </h2>
+                    <span className={statusMeta[selectedTicket.status]?.className || 'status-pill open'}>
+                      {selectedTicket.status}
+                    </span>
+                    <span className={priorityMeta[selectedTicket.priority]?.className || 'priority-badge medium'}>
+                      {selectedTicket.priority} Priority
+                    </span>
+                  </div>
                   <span className="modal-subtitle">
                     Created on {formatDateTimeToDMY(selectedTicket.createdAt)}
                   </span>
@@ -645,92 +690,88 @@ const TicketsScreen = () => {
                 className="modal-close-btn" 
                 onClick={() => setSelectedTicket(null)}
                 disabled={saving}
-                title="Close Drawer (Esc)"
+                title="Close (Esc)"
               >
                 <X size={18} />
               </button>
             </div>
 
             <div className="modal-body">
-              {/* Modal Grid: Left (Customer & Issue & Order info) and Right (Admin Actions) */}
-              <div className="modal-grid-layout">
-                <div className="modal-left-column">
-                  {/* Customer Info Card */}
+              <div className="modal-columns-grid">
+                {/* Left Column: Customer Info & Issue Details */}
+                <div className="modal-col-details">
+                  {/* Customer Profile & Channel Metadata */}
                   <div className="detail-section-card">
-                    <h3>Customer Profile</h3>
-                    <div className="customer-info-box">
+                    <div className="detail-section-header">
+                      <User size={15} className="section-header-icon" />
+                      <h3>Customer Profile</h3>
+                    </div>
+                    <div className="customer-info-grid">
                       <div className="info-item">
-                        <User size={16} className="text-muted" />
-                        <div>
-                          <span>Customer Name</span>
-                          <strong>{selectedTicket.customer || 'Unknown'}</strong>
-                        </div>
+                        <span className="info-label">Customer Name</span>
+                        <strong className="info-value">{selectedTicket.customer || 'Unknown'}</strong>
                       </div>
                       <div className="info-item">
-                        <Mail size={16} className="text-muted" />
-                        <div>
-                          <span>Email Address</span>
-                          <strong>{selectedTicket.email || 'N/A'}</strong>
-                        </div>
+                        <span className="info-label">Email Address</span>
+                        <strong className="info-value" title={selectedTicket.email}>{selectedTicket.email || 'N/A'}</strong>
                       </div>
                       <div className="info-item">
-                        <Phone size={16} className="text-muted" />
-                        <div>
-                          <span>Phone Number</span>
-                          <strong>{selectedTicket.phone || 'N/A'}</strong>
+                        <span className="info-label">Phone Number</span>
+                        <strong className="info-value">
+                          {formatPhoneNumber(selectedTicket.phone)}
                           {selectedTicket.phone && !/^[6-9]\d{9}$/.test(selectedTicket.phone.replace(/[\s\-\+]/g, '').replace(/^91/, '')) && (
                             <span className="phone-warning-tag">⚠️ Invalid Format</span>
+                          )}
+                        </strong>
+                      </div>
+                      <div className="info-item">
+                        <span className="info-label">Channel Source</span>
+                        <div style={{ marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          <span className={`ticket-tag ${selectedTicket.type}`}>
+                            {selectedTicket.type === 'order_related' ? '📦 Order Support' : selectedTicket.type === 'chatbot' ? '💬 Chatbot Assistant' : '📋 General Enquiry'}
+                          </span>
+                          {selectedTicket.type === 'order_related' && selectedTicket.orderId && selectedTicket.orderId !== 'N/A' && (
+                            <span className="ticket-tag order-link">
+                              Ref: {formatOrderId(selectedTicket.orderId)}
+                            </span>
                           )}
                         </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Ticket Details & Issue Description */}
+                  {/* Issue Description Card */}
                   <div className="detail-section-card">
-                    <h3>Issue Description</h3>
-
-                    {/* Metadata Row */}
-                    <div className="ticket-meta-tags-row">
-                      <span className={`ticket-tag ${selectedTicket.type}`}>
-                        {selectedTicket.type === 'order_related' ? '📦 Order Related' : selectedTicket.type === 'chatbot' ? '💬 Chatbot Raised' : '📋 General Enquiry'}
-                      </span>
-                      {selectedTicket.type === 'order_related' && selectedTicket.orderId && selectedTicket.orderId !== 'N/A' && (
-                        <span className="ticket-tag order-link">
-                          🔗 Order Ref: {formatOrderId(selectedTicket.orderId)}
-                        </span>
-                      )}
-                      <span className="ticket-tag timestamp">
-                        🕒 Raised: {formatDateTimeToDMY(selectedTicket.createdAt)}
-                      </span>
+                    <div className="detail-section-header">
+                      <FileText size={15} className="section-header-icon" />
+                      <h3>Issue Description</h3>
                     </div>
-
-                    {/* Issue Description Box */}
                     <div className="issue-desc-box">
                       <p>{selectedTicket.issue || 'No detailed issue description recorded.'}</p>
                     </div>
-
-                    {/* Fallback note if issue is vague */}
                     {(selectedTicket.issue === 'No Description' || selectedTicket.issue === 'Order Dispute' || selectedTicket.issue === 'Chatbot Handover Request' || (selectedTicket.issue && selectedTicket.issue.length < 20)) && (
                       <div className="issue-alert-hint">
                         <span>⚠️</span>
                         <span>
-                          <strong>Note:</strong> The issue description is brief. 
+                          <strong>Notice:</strong> The issue description is brief. 
                           {selectedTicket.type === 'chatbot' && selectedTicket.chatHistory?.length > 0
                             ? ' Review the Chatbot Transcript Logs below for full context.'
                             : selectedTicket.type === 'order_related' && selectedTicket.orderId !== 'N/A'
                               ? ` Check the Linked Order ${formatOrderId(selectedTicket.orderId)} details below.`
-                              : ' Consider contacting the customer for further clarification.'
+                              : ' Consider contacting the customer directly.'
                           }
                         </span>
                       </div>
                     )}
                   </div>
 
-                  {/* Order Link Details (If Order Related) */}
+                  {/* Linked Order (if Order Related) */}
                   {selectedTicket.type === 'order_related' && (
                     <div className="detail-section-card">
-                      <h3>Linked Order Information</h3>
+                      <div className="detail-section-header">
+                        <ShoppingBag size={15} className="section-header-icon" />
+                        <h3>Linked Order Information</h3>
+                      </div>
                       {linkedOrder ? (
                         <div className="linked-order-box">
                           <div className="order-summary-row">
@@ -745,7 +786,7 @@ const TicketsScreen = () => {
                               </strong>
                             </div>
                             <div>
-                              <span>Total Value</span>
+                              <span>Total Amount</span>
                               <strong>{formatCurrency(linkedOrder.totalAmount || linkedOrder.total)}</strong>
                             </div>
                           </div>
@@ -755,7 +796,7 @@ const TicketsScreen = () => {
                             <ul>
                               {Array.isArray(linkedOrder.items) && linkedOrder.items.map((item, idx) => (
                                 <li key={idx} className="item-row">
-                                  <ShoppingBag size={14} style={{ marginRight: '6px', flexShrink: 0 }} />
+                                  <ShoppingBag size={13} style={{ marginRight: '6px', flexShrink: 0, color: '#1268a5' }} />
                                   <span>{item.name || item.productName} (x{item.quantity || item.qty})</span>
                                   <strong>{formatCurrency(item.unitPrice || item.price)}</strong>
                                 </li>
@@ -765,7 +806,7 @@ const TicketsScreen = () => {
                         </div>
                       ) : (
                         <div className="linked-order-notfound">
-                          <ShoppingBag size={20} className="warning-icon" />
+                          <ShoppingBag size={18} className="warning-icon" />
                           <div>
                             <strong>Order {formatOrderId(selectedTicket.orderId)} not found in Admin Ledger</strong>
                             <span>Please verify if this is a custom order or legacy transaction.</span>
@@ -775,10 +816,13 @@ const TicketsScreen = () => {
                     </div>
                   )}
 
-                  {/* Chatbot conversation logs (If Chatbot Type) */}
+                  {/* Chatbot Transcript Logs (if Chatbot) */}
                   {selectedTicket.type === 'chatbot' && (
                     <div className="detail-section-card">
-                      <h3>Chatbot Transcript Logs</h3>
+                      <div className="detail-section-header">
+                        <MessageSquare size={15} className="section-header-icon" />
+                        <h3>Chatbot Transcript Logs</h3>
+                      </div>
                       {selectedTicket.chatHistory && selectedTicket.chatHistory.length > 0 ? (
                         <div className="chatbot-transcript-container">
                           {selectedTicket.chatHistory.map((chat, idx) => (
@@ -794,7 +838,7 @@ const TicketsScreen = () => {
                         </div>
                       ) : (
                         <div className="linked-order-notfound">
-                          <HelpCircle size={20} className="warning-icon" />
+                          <HelpCircle size={18} className="warning-icon" />
                           <div>
                             <strong>No chat logs recorded</strong>
                             <span>Ticket was raised via quick prompt.</span>
@@ -805,13 +849,44 @@ const TicketsScreen = () => {
                   )}
                 </div>
 
-                <div className="modal-right-column">
-                  {/* Admin Configuration Actions */}
+                {/* Right Column: Ticket Management & Internal Audit Form */}
+                <div className="modal-col-actions">
                   <form onSubmit={handleSaveChanges} className="admin-actions-card">
-                    <h3>Configure &amp; Update Ticket</h3>
-                    
+                    <div className="detail-section-header">
+                      <Sparkles size={15} className="section-header-icon" />
+                      <h3>Ticket Management &amp; Audit</h3>
+                    </div>
+
+                    <div className="form-row-2col">
+                      <div className="form-group">
+                        <label>Ticket Status</label>
+                        <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
+                          <option value="Open">Open</option>
+                          <option value="In Progress">In Progress</option>
+                          <option value="Resolved">Resolved</option>
+                          <option value="Closed">Closed</option>
+                        </select>
+                      </div>
+
+                      <div className="form-group">
+                        <label>Priority</label>
+                        {editStatus === 'Closed' ? (
+                          <div className="priority-locked-notice">
+                            <span>🔒</span> Closed (N/A)
+                          </div>
+                        ) : (
+                          <select value={editPriority} onChange={(e) => setEditPriority(e.target.value)}>
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                            <option value="Critical">Critical</option>
+                          </select>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="form-group">
-                      <label>Assigned Support Agent</label>
+                      <label>Assigned Support Agent / Team</label>
                       <input
                         type="text"
                         value={editAssignedTo}
@@ -821,44 +896,20 @@ const TicketsScreen = () => {
                     </div>
 
                     <div className="form-group">
-                      <label>Update Priority</label>
-                      {editStatus === 'Closed' ? (
-                        <div className="priority-locked-notice">
-                          <span>🔒</span> N/A — Closed Ticket (No Active Priority)
-                        </div>
-                      ) : (
-                        <select value={editPriority} onChange={(e) => setEditPriority(e.target.value)}>
-                          <option value="Low">Low</option>
-                          <option value="Medium">Medium</option>
-                          <option value="High">High</option>
-                          <option value="Critical">Critical</option>
-                        </select>
-                      )}
-                    </div>
-
-                    <div className="form-group">
-                      <label>Ticket Status</label>
-                      <select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
-                        <option value="Open">Open</option>
-                        <option value="In Progress">In Progress</option>
-                        <option value="Resolved">Resolved</option>
-                        <option value="Closed">Closed</option>
-                      </select>
-                    </div>
-
-                    <div className="form-group">
                       <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span>Internal Audit Notes</span>
                         {editStatus !== selectedTicket.status && (
-                          <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>* Note Required</span>
+                          <span style={{ color: '#ef4444', fontSize: '11px', fontWeight: 'bold' }}>* Required</span>
                         )}
                       </label>
                       <textarea
                         value={editNotes}
                         onChange={(e) => setEditNotes(e.target.value)}
                         placeholder="Provide details or reasons for status change..."
-                        rows={4}
+                        rows={2}
                         style={{
+                          height: '52px',
+                          resize: 'none',
                           border: (editStatus !== selectedTicket.status && !editNotes.trim()) ? '1px solid #ef4444' : '1px solid #cbd5e1'
                         }}
                       />
@@ -869,22 +920,33 @@ const TicketsScreen = () => {
                       )}
                     </div>
 
-                    <button type="submit" className="save-action-btn" disabled={saving}>
-                      {saving ? (
-                        <>
-                          <RefreshCw size={15} className="animate-spin" />
-                          <span>Saving Changes...</span>
-                        </>
-                      ) : (
-                        <span>Update Ticket Configuration</span>
-                      )}
-                    </button>
+                    <div className="modal-actions-footer">
+                      <button
+                        type="button"
+                        className="modal-cancel-btn"
+                        onClick={() => setSelectedTicket(null)}
+                        disabled={saving}
+                      >
+                        Cancel
+                      </button>
+                      <button type="submit" className="save-action-btn" disabled={saving}>
+                        {saving ? (
+                          <>
+                            <RefreshCw size={14} className="animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : (
+                          <span>Save Updates</span>
+                        )}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

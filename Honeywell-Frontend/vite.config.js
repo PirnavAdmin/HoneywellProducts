@@ -32,14 +32,20 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:5119',       
+        target: 'https://drab-smoking-unstaffed.ngrok-free.dev',       
         changeOrigin: true,
         secure: false,
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
       },
       '/uploads': {
-        target: 'http://127.0.0.1:5119',
+        target: 'https://drab-smoking-unstaffed.ngrok-free.dev',
         changeOrigin: true,
         secure: false,
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
       },
     },
   },

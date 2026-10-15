@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, RefreshCw, Save } from 'lucide-react';
+import { X, RefreshCw, Save, Building2, MapPin, UserCheck, Truck, FileText } from 'lucide-react';
 import { validateGstin } from '../../utils/gstinValidation';
+import './Distributors.css';
 
 const emptyForm = {
   name: '',
@@ -140,425 +141,365 @@ export default function DistributorFormModal({
   };
 
   const modalContent = (
-    <div
-      onClick={() => !isSubmitting && onClose()}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100vw',
-        height: '100vh',
-        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 999999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        boxSizing: 'border-box'
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: '#ffffff',
-          borderRadius: '14px',
-          maxWidth: '780px',
-          width: '100%',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-          border: '1px solid #e2e8f0',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
+    <div className="distributor-modal-overlay" onClick={() => !isSubmitting && onClose()}>
+      <div className="distributor-modal-card distributor-form-card" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '18px 24px',
-          borderBottom: '1px solid #e2e8f0',
-          backgroundColor: '#ffffff'
-        }}>
-          <div>
-            <span style={{ fontSize: '11px', color: '#1268a5', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
-              {isEdit ? `Edit Distributor #${distributor.id}` : 'Create New Distributor'}
-            </span>
-            <h2 style={{ margin: '4px 0 0', fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>
-              {isEdit ? formData.name || 'Update Distributor' : 'Add New Dealer / Distributor'}
+        <div className="distributor-modal-header">
+          <div className="distributor-header-info">
+            <div className="distributor-kicker">
+              {isEdit ? `Edit Distributor Profile #${distributor.id}` : 'New Distributor Registration'}
+            </div>
+            <h2 className="distributor-modal-title">
+              {isEdit ? (formData.name || 'Update Distributor') : 'Register New Dealer / Distributor'}
             </h2>
+            <span className="distributor-subtitle">
+              Manage corporate details, regional coverage, commercial terms, and contact credentials
+            </span>
           </div>
           <button
             type="button"
+            className="distributor-modal-close"
             disabled={isSubmitting}
             onClick={onClose}
-            style={{
-              width: '32px',
-              height: '32px',
-              backgroundColor: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              color: '#64748b',
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
+            title="Close dialog"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
-        {/* Form Body - Scrollable */}
-        <form onSubmit={handleSubmit} style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            {/* Company Name */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Company / Distributor Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                className="catalog-input"
-                style={{ width: '100%', borderColor: errors.name ? '#dc2626' : undefined }}
-                placeholder="e.g. Matrix Security Systems Pvt Ltd"
-                value={formData.name}
-                onChange={handleChange}
-              />
-              {errors.name && <small style={{ color: '#dc2626', fontSize: '11.5px' }}>{errors.name}</small>}
-            </div>
-
-            {/* Partner Type */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Partner Type *
-              </label>
-              <select
-                name="partnerType"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                value={formData.partnerType}
-                onChange={handleChange}
-              >
-                {partnerTypeOptions.map((opt) => (
-                  <option key={opt} value={opt}>{opt}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Badge Text */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Badge Text
-              </label>
-              <input
-                type="text"
-                name="badgeText"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="e.g. Master Hub, Official Verified"
-                value={formData.badgeText}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Region */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Region *
-              </label>
-              <select
-                name="region"
-                className="catalog-input"
-                style={{ width: '100%', borderColor: errors.region ? '#dc2626' : undefined }}
-                value={formData.region}
-                onChange={handleChange}
-              >
-                {regionOptions.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
-              </select>
-              {errors.region && <small style={{ color: '#dc2626', fontSize: '11.5px' }}>{errors.region}</small>}
-            </div>
-
-            {/* Territory / City */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                City / Territory *
-              </label>
-              <input
-                type="text"
-                name="territory"
-                className="catalog-input"
-                style={{ width: '100%', borderColor: errors.territory ? '#dc2626' : undefined }}
-                placeholder="e.g. New Delhi & NCR"
-                value={formData.territory}
-                onChange={handleChange}
-              />
-              {errors.territory && <small style={{ color: '#dc2626', fontSize: '11.5px' }}>{errors.territory}</small>}
-            </div>
-
-            {/* Coverage Locations / State */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Coverage States / Locations
-              </label>
-              <input
-                type="text"
-                name="coverageLocations"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="e.g. Delhi NCR, Haryana, Punjab"
-                value={formData.coverageLocations}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* GSTIN */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                GSTIN Number
-              </label>
-              <input
-                type="text"
-                name="gstin"
-                maxLength="15"
-                className="catalog-input"
-                style={{ width: '100%', borderColor: errors.gstin ? '#dc2626' : undefined }}
-                placeholder="15-character GSTIN"
-                value={formData.gstin}
-                onChange={handleChange}
-              />
-              {errors.gstin && <small style={{ color: '#dc2626', fontSize: '11.5px' }}>{errors.gstin}</small>}
-            </div>
-
-            {/* Contact Person */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Contact Person *
-              </label>
-              <input
-                type="text"
-                name="contactPerson"
-                className="catalog-input"
-                style={{ width: '100%', borderColor: errors.contactPerson ? '#dc2626' : undefined }}
-                placeholder="e.g. Rajesh Malhotra"
-                value={formData.contactPerson}
-                onChange={handleChange}
-              />
-              {errors.contactPerson && <small style={{ color: '#dc2626', fontSize: '11.5px' }}>{errors.contactPerson}</small>}
-            </div>
-
-            {/* Contact Title / Designation */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Contact Title / Designation
-              </label>
-              <input
-                type="text"
-                name="contactTitle"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="e.g. Channel Director"
-                value={formData.contactTitle}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Phone / Mobile *
-              </label>
-              <input
-                type="text"
-                name="phone"
-                className="catalog-input"
-                style={{ width: '100%', borderColor: errors.phone ? '#dc2626' : undefined }}
-                placeholder="+91 98112 34567"
-                value={formData.phone}
-                onChange={handleChange}
-              />
-              {errors.phone && <small style={{ color: '#dc2626', fontSize: '11.5px' }}>{errors.phone}</small>}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                className="catalog-input"
-                style={{ width: '100%', borderColor: errors.email ? '#dc2626' : undefined }}
-                placeholder="contact@distributor.com"
-                value={formData.email}
-                onChange={handleChange}
-              />
-              {errors.email && <small style={{ color: '#dc2626', fontSize: '11.5px' }}>{errors.email}</small>}
-            </div>
-
-            {/* Address */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Full Operational Address
-              </label>
-              <input
-                type="text"
-                name="address"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="Plot 42, Industrial Area Phase-III, New Delhi 110020"
-                value={formData.address}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Product Categories */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Product Categories / Product Lines (Comma Separated)
-              </label>
-              <input
-                type="text"
-                name="productCategories"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="CCTV Video Surveillance, 4G Solar Cameras, Enterprise NVR Storage, Access Control"
-                value={formData.productCategories}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Dispatch SLA */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Dispatch SLA
-              </label>
-              <input
-                type="text"
-                name="dispatchSla"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="Same-day / 24h Express"
-                value={formData.dispatchSla}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Buffer Capacity */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Buffer Warehouse Capacity
-              </label>
-              <input
-                type="text"
-                name="bufferCapacity"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="50,000+ Units Buffer"
-                value={formData.bufferCapacity}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Commercial Terms */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Commercial / Payment Terms
-              </label>
-              <input
-                type="text"
-                name="commercialTerms"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="Commercial Credit & Wholesale Net 30"
-                value={formData.commercialTerms}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Rating / Track Record */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Performance Rating
-              </label>
-              <input
-                type="text"
-                name="rating"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="4.9/5 (180+ Orders)"
-                value={formData.rating}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Display Order */}
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Display Order (Sequence)
-              </label>
-              <input
-                type="number"
-                name="displayOrder"
-                className="catalog-input"
-                style={{ width: '100%' }}
-                placeholder="0"
-                value={formData.displayOrder}
-                onChange={handleChange}
-              />
-            </div>
-
-            {/* Status & Verification Checkboxes */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '20px', marginTop: '10px' }}>
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+        {/* Compact Form Body */}
+        <form onSubmit={handleSubmit} className="distributor-form">
+          {/* Section 1: Corporate & Classification */}
+          <div className="distributor-form-section">
+            <h4 className="distributor-form-section-title">
+              <Building2 size={13} style={{ color: '#1268a5' }} />
+              Corporate &amp; Classification
+            </h4>
+            <div className="distributor-form-grid-2">
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">
+                  Company / Distributor Name <span className="req">*</span>
+                </label>
                 <input
-                  type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
+                  type="text"
+                  name="name"
+                  className={`distributor-form-input ${errors.name ? 'has-error' : ''}`}
+                  placeholder="e.g. Matrix Security Systems Pvt Ltd"
+                  value={formData.name}
                   onChange={handleChange}
                 />
-                Active Record
-              </label>
+                {errors.name && <span className="distributor-form-error">{errors.name}</span>}
+              </div>
 
-              <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#334155' }}>
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">
+                  Partner Type / Tier <span className="req">*</span>
+                </label>
+                <select
+                  name="partnerType"
+                  className="distributor-form-select"
+                  value={formData.partnerType}
+                  onChange={handleChange}
+                >
+                  {partnerTypeOptions.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Badge Text / Highlight</label>
                 <input
-                  type="checkbox"
-                  name="isVerified"
-                  checked={formData.isVerified}
+                  type="text"
+                  name="badgeText"
+                  className="distributor-form-input"
+                  placeholder="e.g. Master Hub, Official Verified"
+                  value={formData.badgeText}
                   onChange={handleChange}
                 />
-                Verified Status
-              </label>
-            </div>
+              </div>
 
-            {/* Description */}
-            <div style={{ gridColumn: '1 / -1' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                Business Profile Description
-              </label>
-              <textarea
-                rows={3}
-                name="description"
-                className="catalog-input"
-                style={{ width: '100%', resize: 'vertical' }}
-                placeholder="Premier authorized master distributor catering to enterprise systems integrators and regional retail dealers..."
-                value={formData.description}
-                onChange={handleChange}
-              />
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">GSTIN / Tax ID Number</label>
+                <input
+                  type="text"
+                  name="gstin"
+                  maxLength="15"
+                  className={`distributor-form-input ${errors.gstin ? 'has-error' : ''}`}
+                  placeholder="15-character GSTIN (e.g. 07AAAAA0000A1Z5)"
+                  value={formData.gstin}
+                  onChange={handleChange}
+                />
+                {errors.gstin && <span className="distributor-form-error">{errors.gstin}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Territory & Operational Coverage */}
+          <div className="distributor-form-section">
+            <h4 className="distributor-form-section-title">
+              <MapPin size={13} style={{ color: '#1268a5' }} />
+              Territory &amp; Operational Coverage
+            </h4>
+            <div className="distributor-form-grid-2">
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">
+                  Region <span className="req">*</span>
+                </label>
+                <select
+                  name="region"
+                  className={`distributor-form-select ${errors.region ? 'has-error' : ''}`}
+                  value={formData.region}
+                  onChange={handleChange}
+                >
+                  {regionOptions.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+                {errors.region && <span className="distributor-form-error">{errors.region}</span>}
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">
+                  City / Base Territory <span className="req">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="territory"
+                  className={`distributor-form-input ${errors.territory ? 'has-error' : ''}`}
+                  placeholder="e.g. New Delhi & NCR"
+                  value={formData.territory}
+                  onChange={handleChange}
+                />
+                {errors.territory && <span className="distributor-form-error">{errors.territory}</span>}
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Coverage States / Locations</label>
+                <input
+                  type="text"
+                  name="coverageLocations"
+                  className="distributor-form-input"
+                  placeholder="e.g. Delhi NCR, Haryana, Punjab, UP West"
+                  value={formData.coverageLocations}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Full Operational / Warehouse Address</label>
+                <input
+                  type="text"
+                  name="address"
+                  className="distributor-form-input"
+                  placeholder="Plot 42, Industrial Area Phase-III, New Delhi 110020"
+                  value={formData.address}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Primary Contact Details */}
+          <div className="distributor-form-section">
+            <h4 className="distributor-form-section-title">
+              <UserCheck size={13} style={{ color: '#1268a5' }} />
+              Primary Contact Details
+            </h4>
+            <div className="distributor-form-grid-2">
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">
+                  Contact Person <span className="req">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="contactPerson"
+                  className={`distributor-form-input ${errors.contactPerson ? 'has-error' : ''}`}
+                  placeholder="e.g. Rajesh Malhotra"
+                  value={formData.contactPerson}
+                  onChange={handleChange}
+                />
+                {errors.contactPerson && <span className="distributor-form-error">{errors.contactPerson}</span>}
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Contact Title / Designation</label>
+                <input
+                  type="text"
+                  name="contactTitle"
+                  className="distributor-form-input"
+                  placeholder="e.g. Channel Director / Regional Head"
+                  value={formData.contactTitle}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">
+                  Phone / Mobile <span className="req">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="phone"
+                  className={`distributor-form-input ${errors.phone ? 'has-error' : ''}`}
+                  placeholder="+91 98112 34567"
+                  value={formData.phone}
+                  onChange={handleChange}
+                />
+                {errors.phone && <span className="distributor-form-error">{errors.phone}</span>}
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">
+                  Email Address <span className="req">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  className={`distributor-form-input ${errors.email ? 'has-error' : ''}`}
+                  placeholder="contact@distributor.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+                {errors.email && <span className="distributor-form-error">{errors.email}</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Commercial & Operations Specs */}
+          <div className="distributor-form-section">
+            <h4 className="distributor-form-section-title">
+              <Truck size={13} style={{ color: '#1268a5' }} />
+              Commercial &amp; Operations Specs
+            </h4>
+            <div className="distributor-form-grid-3">
+              <div className="distributor-form-group col-span-2">
+                <label className="distributor-form-label">Product Categories / Lines (Comma Separated)</label>
+                <input
+                  type="text"
+                  name="productCategories"
+                  className="distributor-form-input"
+                  placeholder="CCTV Surveillance, 4G Solar Cameras, NVR Storage, Access Control"
+                  value={formData.productCategories}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Dispatch SLA</label>
+                <input
+                  type="text"
+                  name="dispatchSla"
+                  className="distributor-form-input"
+                  placeholder="Same-day / 24-48h Express"
+                  value={formData.dispatchSla}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Buffer Capacity</label>
+                <input
+                  type="text"
+                  name="bufferCapacity"
+                  className="distributor-form-input"
+                  placeholder="25,000+ Units Buffer Hub"
+                  value={formData.bufferCapacity}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Commercial Terms</label>
+                <input
+                  type="text"
+                  name="commercialTerms"
+                  className="distributor-form-input"
+                  placeholder="Net 30 Commercial Credit"
+                  value={formData.commercialTerms}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Performance Rating</label>
+                <input
+                  type="text"
+                  name="rating"
+                  className="distributor-form-input"
+                  placeholder="4.9/5 (180+ Orders)"
+                  value={formData.rating}
+                  onChange={handleChange}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 5: Profile Description & Status Flags */}
+          <div className="distributor-form-section">
+            <h4 className="distributor-form-section-title">
+              <FileText size={13} style={{ color: '#1268a5' }} />
+              Profile Description &amp; Verification Flags
+            </h4>
+            <div className="distributor-form-grid-2" style={{ alignItems: 'center' }}>
+              <div className="distributor-form-group">
+                <label className="distributor-form-label">Business Profile Description</label>
+                <textarea
+                  rows={2}
+                  name="description"
+                  className="distributor-form-textarea"
+                  placeholder="Premier authorized master distributor catering to enterprise systems integrators..."
+                  value={formData.description}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="distributor-form-group" style={{ gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <label className="distributor-form-label" style={{ marginBottom: 0 }}>
+                    Sequence / Display Order:
+                  </label>
+                  <input
+                    type="number"
+                    name="displayOrder"
+                    className="distributor-form-input"
+                    style={{ width: '80px', height: '28px' }}
+                    placeholder="0"
+                    value={formData.displayOrder}
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="distributor-checkbox-row">
+                  <label className="distributor-checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="isActive"
+                      checked={formData.isActive}
+                      onChange={handleChange}
+                    />
+                    Active Record
+                  </label>
+
+                  <label className="distributor-checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="isVerified"
+                      checked={formData.isVerified}
+                      onChange={handleChange}
+                    />
+                    Verified Partner
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 
           {/* Footer Actions */}
-          <div style={{ marginTop: '20px', padding: '14px 0 0', display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid #e2e8f0' }}>
+          <div className="distributor-modal-footer" style={{ padding: '10px 0 0', background: 'transparent' }}>
             <button
               type="button"
-              className="catalog-btn"
+              className="btn-distributor-secondary"
               disabled={isSubmitting}
               onClick={onClose}
             >
@@ -566,16 +507,16 @@ export default function DistributorFormModal({
             </button>
             <button
               type="submit"
-              className="catalog-btn catalog-btn--primary"
+              className="btn-distributor-primary"
               disabled={isSubmitting}
             >
               {isSubmitting ? (
                 <>
-                  <RefreshCw size={15} className="spin" /> Saving...
+                  <RefreshCw size={14} className="spin" /> Saving...
                 </>
               ) : (
                 <>
-                  <Save size={15} /> {isEdit ? 'Update Distributor' : 'Create Distributor'}
+                  <Save size={14} /> {isEdit ? 'Update Distributor' : 'Create Distributor'}
                 </>
               )}
             </button>

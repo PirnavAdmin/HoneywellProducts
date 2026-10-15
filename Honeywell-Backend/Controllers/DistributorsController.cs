@@ -331,6 +331,7 @@ namespace Honeywell.Controllers
         [HttpGet("admin/all")]
         public async Task<IActionResult> GetAllAdmin([FromQuery] string? search, [FromQuery] string? region)
         {
+            await EnsureTableCreatedAsync();
             var query = _context.Distributors.AsNoTracking().AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(region))

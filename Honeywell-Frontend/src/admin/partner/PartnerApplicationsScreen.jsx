@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, Eye, RefreshCw, Building, User, Mail, Phone, MapPin, 
   CheckCircle, Clock, X, Shield, FileText, Calendar 
 } from 'lucide-react';
 import { partnerService } from '../../services/partnerService';
 import '../catalog/adminModule.css';
+import './PartnerApplicationsScreen.css';
 
 const statusConfig = {
   Pending: { label: 'Pending Review', class: 'pending', color: '#d97706', bg: '#fef3c7' },
@@ -258,92 +260,157 @@ export default function PartnerApplicationsScreen() {
       </section>
 
       {/* Application Details Modal */}
-      {isDetailOpen && selectedApp && (
-        <div className="catalog-modal-overlay" onClick={() => setIsDetailOpen(false)}>
-          <div className="catalog-modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '620px' }}>
-            <div className="catalog-modal-header">
-              <div>
-                <span style={{ fontSize: '12px', color: '#1268a5', fontWeight: '700', textTransform: 'uppercase' }}>
-                  Partner Application #{selectedApp.id}
-                </span>
-                <h2 style={{ margin: '4px 0 0', fontSize: '20px' }}>{selectedApp.companyName}</h2>
+      {isDetailOpen && selectedApp && createPortal(
+        <div className="partner-modal-overlay" onClick={() => setIsDetailOpen(false)}>
+          <div className="partner-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="partner-modal-header">
+              <div className="partner-header-info">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <h2>Application #{selectedApp.id} — {selectedApp.companyName}</h2>
+                  <span 
+                    className="partner-status-pill"
+                    style={{
+                      color: (statusConfig[selectedApp.status] || statusConfig.Pending).color,
+                      backgroundColor: (statusConfig[selectedApp.status] || statusConfig.Pending).bg
+                    }}
+                  >
+                    {(statusConfig[selectedApp.status] || statusConfig.Pending).label}
+                  </span>
+                  <span className="partner-type-pill">
+                    {selectedApp.businessType || 'Partner'}
+                  </span>
+                </div>
+                <span className="partner-subtitle">Submitted on {formatDate(selectedApp.createdAt)}</span>
               </div>
               <button 
                 type="button" 
-                className="catalog-modal-close" 
+                className="partner-modal-close" 
                 onClick={() => setIsDetailOpen(false)}
+                title="Close dialog"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Info Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', background: '#f8fafc', padding: '16px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>Contact Person</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>{selectedApp.contactPerson || '—'}</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>Partner Type</span>
-                  <span style={{ fontSize: '14px', color: '#1268a5', fontWeight: '600' }}>{selectedApp.businessType || '—'}</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>Mobile Number</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a' }}>{selectedApp.mobile || '—'}</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>Email Address</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a' }}>{selectedApp.email || '—'}</span>
-                </div>
-                {selectedApp.gstin && (
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>GSTIN</span>
-                    <span style={{ fontSize: '14px', color: '#0f172a', fontWeight: '600' }}>{selectedApp.gstin}</span>
+            <div className="partner-modal-body">
+              <div className="partner-modal-grid">
+                {/* Left Column: Company & Contact Information + Registered Address */}
+                <div className="partner-col-info">
+                  <div className="partner-section-card">
+                    <h4 className="partner-section-title">
+                      <Building size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Company &amp; Contact Details
+                    </h4>
+                    <div className="partner-info-grid">
+                      <div className="partner-info-item">
+                        <span className="partner-info-label">Company Name</span>
+                        <span className="partner-info-value"><strong>{selectedApp.companyName || '—'}</strong></span>
+                      </div>
+                      <div className="partner-info-item">
+                        <span className="partner-info-label">Contact Person</span>
+                        <span className="partner-info-value">{selectedApp.contactPerson || '—'}</span>
+                      </div>
+                      <div className="partner-info-item">
+                        <span className="partner-info-label">Mobile Number</span>
+                        <span className="partner-info-value">
+                          {selectedApp.mobile ? (
+                            <a href={`tel:${selectedApp.mobile}`} className="partner-info-link">
+                              <Phone size={11} /> {selectedApp.mobile}
+                            </a>
+                          ) : '—'}
+                        </span>
+                      </div>
+                      <div className="partner-info-item">
+                        <span className="partner-info-label">Email Address</span>
+                        <span className="partner-info-value">
+                          {selectedApp.email ? (
+                            <a href={`mailto:${selectedApp.email}`} className="partner-info-link" title={selectedApp.email}>
+                              <Mail size={11} /> {selectedApp.email}
+                            </a>
+                          ) : '—'}
+                        </span>
+                      </div>
+                      <div className="partner-info-item">
+                        <span className="partner-info-label">GSTIN / Tax ID</span>
+                        <span className="partner-info-value">{selectedApp.gstin || 'Not Provided'}</span>
+                      </div>
+                      <div className="partner-info-item">
+                        <span className="partner-info-label">Business Experience</span>
+                        <span className="partner-info-value">{selectedApp.yearsInBusiness || 'Not Specified'}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                {selectedApp.yearsInBusiness && (
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>Experience in Business</span>
-                    <span style={{ fontSize: '14px', color: '#0f172a' }}>{selectedApp.yearsInBusiness}</span>
-                  </div>
-                )}
-                <div style={{ gridColumn: '1 / -1' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', fontWeight: '700', display: 'block' }}>Address / Location</span>
-                  <span style={{ fontSize: '14px', color: '#0f172a' }}>
-                    {[selectedApp.address, selectedApp.city, selectedApp.state].filter(Boolean).join(', ') || '—'}
-                  </span>
-                </div>
-              </div>
 
-              {/* Description */}
-              {selectedApp.description && (
-                <div>
-                  <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '700', display: 'block', marginBottom: '6px' }}>Business Background & Description</span>
-                  <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '12px', borderRadius: '6px', fontSize: '14px', color: '#334155', lineHeight: '1.5', whiteSpace: 'pre-wrap' }}>
-                    {selectedApp.description}
+                  {/* Registered Address & Location */}
+                  <div className="partner-section-card">
+                    <h4 className="partner-section-title">
+                      <MapPin size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Registered Address &amp; Location
+                    </h4>
+                    <div className="partner-info-grid">
+                      <div className="partner-info-item full-width">
+                        <span className="partner-info-label">Office Address</span>
+                        <span className="partner-info-value" title={selectedApp.address || '—'}>
+                          {selectedApp.address || '—'}
+                        </span>
+                      </div>
+                      <div className="partner-info-item">
+                        <span className="partner-info-label">City</span>
+                        <span className="partner-info-value">{selectedApp.city || '—'}</span>
+                      </div>
+                      <div className="partner-info-item">
+                        <span className="partner-info-label">State / Region</span>
+                        <span className="partner-info-value">{selectedApp.state || '—'}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              )}
 
-              {/* Terms Agreement & Date */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', color: '#64748b', borderTop: '1px solid #e2e8f0', pt: '12px', paddingTop: '12px' }}>
-                <span>Agreed to Terms: <strong style={{ color: selectedApp.agreedToTerms ? '#16a34a' : '#dc2626' }}>{selectedApp.agreedToTerms ? 'Yes' : 'No'}</strong></span>
-                <span>Submitted: {formatDate(selectedApp.createdAt)}</span>
+                {/* Right Column: Business Background & Description */}
+                <div className="partner-col-message">
+                  <div className="partner-section-card full-height">
+                    <h4 className="partner-section-title">
+                      <FileText size={13} style={{ marginRight: '6px', color: '#1268a5' }} />
+                      Business Background &amp; Goals
+                    </h4>
+                    <div className="partner-desc-box">
+                      {selectedApp.description || 'No background description provided by applicant.'}
+                    </div>
+
+                    <div className="partner-meta-row">
+                      <span>
+                        Terms Agreement:{' '}
+                        <span className={`partner-terms-badge ${selectedApp.agreedToTerms ? 'accepted' : 'declined'}`}>
+                          {selectedApp.agreedToTerms ? (
+                            <>
+                              <CheckCircle size={11} /> Accepted
+                            </>
+                          ) : (
+                            <>
+                              <X size={11} /> Declined
+                            </>
+                          )}
+                        </span>
+                      </span>
+                      <span>Submitted: <strong>{formatDate(selectedApp.createdAt)}</strong></span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="catalog-modal-footer" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'flex-end', background: '#f8fafc' }}>
+            <div className="partner-modal-footer">
               <button 
                 type="button" 
-                className="catalog-btn catalog-btn--primary" 
+                className="btn-partner-secondary" 
                 onClick={() => setIsDetailOpen(false)}
               >
-                Close Details
+                Close
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
