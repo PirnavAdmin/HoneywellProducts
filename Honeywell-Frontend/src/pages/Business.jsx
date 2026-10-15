@@ -21,7 +21,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { usePageBanner } from '../hooks/usePageBanner';
 
 import { validateGstin } from '../utils/gstinValidation';
-
+import { validateName, validateEmail, validatePhone } from '../utils/validators';
 import businessImage from '../assets/images/capital-park2.jpg';
  
 const pathways = [
@@ -103,27 +103,45 @@ export default function Business() {
   };
  
   const validate = () => {
-
     const next = {};
-
-    ['companyName', 'contactPerson', 'address', 'city', 'state', 'businessType', 'yearsInBusiness'].forEach((key) => {
-
+    ['companyName', 'address', 'city', 'state', 'businessType', 'yearsInBusiness'].forEach((key) => {
       if (!form[key] || !form[key].trim()) next[key] = 'This field is required.';
-
     });
 
-    const gstinErr = validateGstin(form.gstin);
+    const contactPersonRes = validateName(form.contactPerson, 'Contact person');
+    if (!contactPersonRes.isValid) next.contactPerson = contactPersonRes.message;
 
+    const gstinErr = validateGstin(form.gstin);
     if (gstinErr) next.gstin = gstinErr;
 
-    if (!form.mobile || !/^[6-9]\d{9}$/.test(form.mobile.trim())) next.mobile = 'Enter a valid 10-digit Indian mobile number.';
+    const mobileRes = validatePhone(form.mobile);
+    if (!mobileRes.isValid) next.mobile = mobileRes.message;
 
-    if (!form.email || !/^\S+@\S+\.\S+$/.test(form.email.trim())) next.email = 'Enter a valid email address.';
+    const emailRes = validateEmail(form.email);
+    if (!emailRes.isValid) next.email = emailRes.message;
 
     setErrors(next);
-
     return Object.keys(next).length === 0;
+  };
 
+  const handleBlur = (name) => {
+    const val = form[name];
+    let err = '';
+    if (['companyName', 'address', 'city', 'state', 'businessType', 'yearsInBusiness'].includes(name)) {
+      if (!val || !val.trim()) err = 'This field is required.';
+    } else if (name === 'contactPerson') {
+      const res = validateName(val, 'Contact person');
+      if (!res.isValid) err = res.message;
+    } else if (name === 'gstin') {
+      err = validateGstin(val) || '';
+    } else if (name === 'mobile') {
+      const res = validatePhone(val);
+      if (!res.isValid) err = res.message;
+    } else if (name === 'email') {
+      const res = validateEmail(val);
+      if (!res.isValid) err = res.message;
+    }
+    setErrors((prev) => ({ ...prev, [name]: err }));
   };
  
   const submit = async (event) => {
@@ -359,70 +377,49 @@ export default function Business() {
 
                           value={form[name]}
 
-                          onChange={(event) =>
-
-                            setForm((current) => ({ ...current, [name]: event.target.value }))
-
-                          }
->
-<option value="">Select business type</option>
-
-                          {[...pathways.map((item) => item.title), 'Franchise / Business Opportunity', 'Other'].map(
-
-                            (item) => (
-<option key={item}>{item}</option>
-
-                            )
-
-                          )}
-</select>
-
-                      ) : name === 'description' ? (
-<textarea
-
-                          name={name}
-
-                          rows={3}
-
-                          placeholder="Provide details about your business, infrastructure, product requirements or partnership goals..."
-
-                          value={form[name]}
-
-                          onChange={(event) =>
-
-                            setForm((current) => ({ ...current, [name]: event.target.value }))
-
-                          }
-
-                        />
-
-                      ) : (
-<input
-
-                          name={name}
-
-                          type={name === 'email' ? 'email' : 'text'}
-
-                          inputMode={name === 'mobile' ? 'numeric' : undefined}
-
-                          maxLength={name === 'mobile' ? 10 : name === 'gstin' ? 15 : undefined}
-
-                          placeholder={name === 'gstin' ? 'Enter 15-character GSTIN' : undefined}
-
-                          value={form[name]}
-
                           onChange={(event) => {
-
-                            let val = event.target.value;
-
-                            if (name === 'gstin') val = val.toUpperCase();
-
+                            const val = event.target.value;
                             setForm((current) => ({ ...current, [name]: val }));
-
+                            if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
                           }}
-
+                          onBlur={() => handleBlur(name)}
+                        >
+                          <option value="">Select business type</option>
+                          {[...pathways.map((item) => item.title), 'Franchise / Business Opportunity', 'Other'].map(
+                            (item) => (
+                              <option key={item}>{item}</option>
+                            )
+                          )}
+                        </select>
+                      ) : name === 'description' ? (
+                        <textarea
+                          name={name}
+                          rows={3}
+                          placeholder="Provide details about your business, infrastructure, product requirements or partnership goals..."
+                          value={form[name]}
+                          onChange={(event) => {
+                            const val = event.target.value;
+                            setForm((current) => ({ ...current, [name]: val }));
+                            if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+                          }}
+                          onBlur={() => handleBlur(name)}
                         />
-
+                      ) : (
+                        <input
+                          name={name}
+                          type={name === 'email' ? 'email' : 'text'}
+                          inputMode={name === 'mobile' ? 'numeric' : undefined}
+                          maxLength={name === 'mobile' ? 10 : name === 'gstin' ? 15 : undefined}
+                          placeholder={name === 'gstin' ? 'Enter 15-character GSTIN' : undefined}
+                          value={form[name]}
+                          onChange={(event) => {
+                            let val = event.target.value;
+                            if (name === 'gstin') val = val.toUpperCase();
+                            setForm((current) => ({ ...current, [name]: val }));
+                            if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+                          }}
+                          onBlur={() => handleBlur(name)}
+                        />
                       )}
 
                       {errors[name] && <small>{errors[name]}</small>}
