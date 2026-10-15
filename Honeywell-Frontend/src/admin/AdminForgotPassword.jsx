@@ -1,32 +1,39 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Eye, EyeOff } from 'lucide-react';
 import { adminAuthApi } from './api/adminAuthApi';
+import { validateEmail, validatePassword, validateConfirmPassword } from '../utils/validators';
 import adminPortalImage from '../assets/images/products-hero.png';
 import './AdminForgotPassword.css';
 
 const AdminForgotPassword = () => {
-  const [email, setEmail]                     = useState('');
-  const [newPassword, setNewPassword]         = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isLoading, setIsLoading]             = useState(false);
-  const [error, setError]                     = useState('');
+  const [email, setEmail]                             = useState('');
+  const [newPassword, setNewPassword]                 = useState('');
+  const [confirmPassword, setConfirmPassword]         = useState('');
+  const [showNewPassword, setShowNewPassword]         = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading]                     = useState(false);
+  const [error, setError]                             = useState('');
   const navigate = useNavigate();
 
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!email) {
-      setError('Please enter your registered admin email.');
+    const emailErr = validateEmail(email, 'Admin email');
+    if (emailErr) {
+      setError(emailErr);
       return;
     }
-    if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters.');
+    const passwordErr = validatePassword(newPassword, 'New password');
+    if (passwordErr) {
+      setError(passwordErr);
       return;
     }
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match!');
+    const confirmErr = validateConfirmPassword(newPassword, confirmPassword, 'Confirm password');
+    if (confirmErr) {
+      setError(confirmErr);
       return;
     }
 
@@ -83,30 +90,66 @@ const AdminForgotPassword = () => {
 
           <div className="admin-form-container">
             <form onSubmit={handleResetPassword}>
-              <input
-                type="email"
-                className="admin-premium-input"
-                placeholder="ENTER ADMIN EMAIL"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <input
-                type="password"
-                className="admin-premium-input"
-                placeholder="ENTER NEW PASSWORD"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-              <input
-                type="password"
-                className="admin-premium-input"
-                placeholder="CONFIRM NEW PASSWORD"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
+              <div className="admin-field-group">
+                <label className="admin-field-label">Email Address *</label>
+                <input
+                  type="email"
+                  className="admin-premium-input"
+                  placeholder="ENTER ADMIN EMAIL"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="admin-field-group">
+                <label className="admin-field-label">New Password *</label>
+                <div className="admin-input-wrap">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    className="admin-premium-input has-eye-btn"
+                    placeholder="ENTER NEW PASSWORD"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="admin-password-toggle-btn"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                    title={showNewPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                  >
+                    {showNewPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="admin-field-group">
+                <label className="admin-field-label">Confirm New Password *</label>
+                <div className="admin-input-wrap">
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    className="admin-premium-input has-eye-btn"
+                    placeholder="CONFIRM NEW PASSWORD"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="admin-password-toggle-btn"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    title={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                  </button>
+                </div>
+              </div>
+
               <motion.button
                 whileHover={{ scale: 1.02, translateY: -2 }}
                 whileTap={{ scale: 0.98 }}
