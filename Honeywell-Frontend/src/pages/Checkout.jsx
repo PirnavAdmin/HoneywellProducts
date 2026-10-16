@@ -179,20 +179,20 @@ export default function Checkout() {
   // Submit Main Payment Flow
   const handlePaymentSubmit = async (event) => {
     event.preventDefault();
-    const nameRes = validateName(customerName, 'Customer name');
-    if (!nameRes.isValid) {
-      setPaymentMessage({ type: 'error', text: nameRes.message });
+    const nameErr = validateName(customerName, 'Customer name');
+    if (nameErr) {
+      setPaymentMessage({ type: 'error', text: nameErr });
       return;
     }
-    const phoneRes = validatePhone(mobile);
-    if (!phoneRes.isValid) {
-      setPaymentMessage({ type: 'error', text: phoneRes.message });
+    const phoneErr = validatePhone(mobile);
+    if (phoneErr) {
+      setPaymentMessage({ type: 'error', text: phoneErr });
       return;
     }
     if (email) {
-      const emailRes = validateEmail(email);
-      if (!emailRes.isValid) {
-        setPaymentMessage({ type: 'error', text: emailRes.message });
+      const emailErr = validateEmail(email);
+      if (emailErr) {
+        setPaymentMessage({ type: 'error', text: emailErr });
         return;
       }
     }

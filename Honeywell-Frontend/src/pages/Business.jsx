@@ -108,17 +108,17 @@ export default function Business() {
       if (!form[key] || !form[key].trim()) next[key] = 'This field is required.';
     });
 
-    const contactPersonRes = validateName(form.contactPerson, 'Contact person');
-    if (!contactPersonRes.isValid) next.contactPerson = contactPersonRes.message;
+    const contactPersonErr = validateName(form.contactPerson, 'Contact person');
+    if (contactPersonErr) next.contactPerson = contactPersonErr;
 
     const gstinErr = validateGstin(form.gstin);
     if (gstinErr) next.gstin = gstinErr;
 
-    const mobileRes = validatePhone(form.mobile);
-    if (!mobileRes.isValid) next.mobile = mobileRes.message;
+    const mobileErr = validatePhone(form.mobile);
+    if (mobileErr) next.mobile = mobileErr;
 
-    const emailRes = validateEmail(form.email);
-    if (!emailRes.isValid) next.email = emailRes.message;
+    const emailErr = validateEmail(form.email);
+    if (emailErr) next.email = emailErr;
 
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -130,16 +130,13 @@ export default function Business() {
     if (['companyName', 'address', 'city', 'state', 'businessType', 'yearsInBusiness'].includes(name)) {
       if (!val || !val.trim()) err = 'This field is required.';
     } else if (name === 'contactPerson') {
-      const res = validateName(val, 'Contact person');
-      if (!res.isValid) err = res.message;
+      err = validateName(val, 'Contact person');
     } else if (name === 'gstin') {
       err = validateGstin(val) || '';
     } else if (name === 'mobile') {
-      const res = validatePhone(val);
-      if (!res.isValid) err = res.message;
+      err = validatePhone(val);
     } else if (name === 'email') {
-      const res = validateEmail(val);
-      if (!res.isValid) err = res.message;
+      err = validateEmail(val);
     }
     setErrors((prev) => ({ ...prev, [name]: err }));
   };

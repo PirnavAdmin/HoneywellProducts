@@ -3,8 +3,8 @@
  * Comprehensive, dynamic, strict validation rules for Email, Password, Name, Mobile, and Employee ID.
  */
 
-// Strict RFC 5322-compliant email regex ensuring valid domain structure and TLD of at least 2 chars
-export const STRICT_EMAIL_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,})+$/;
+// Strict RFC 5322-compliant email regex ensuring valid domain structure and TLD of 2-10 chars
+export const STRICT_EMAIL_REGEX = /^[a-zA-Z0-9](?:[a-zA-Z0-9._%+-]*[a-zA-Z0-9])?@[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?(?:\.[a-zA-Z]{2,10})+$/;
 
 // Standard Indian mobile number regex (10 digits starting with 6, 7, 8, or 9)
 export const MOBILE_REGEX = /^[6-9]\d{9}$/;
@@ -47,14 +47,38 @@ export const validateName = (name, fieldLabel = 'Full Name') => {
   return '';
 };
 
+// Recognized common valid TLDs
+export const COMMON_VALID_TLDS = new Set([
+  'com', 'org', 'net', 'edu', 'gov', 'mil', 'int', 'info', 'biz', 'name', 'pro',
+  'in', 'co', 'io', 'ai', 'me', 'tv', 'cc', 'us', 'uk', 'ca', 'au', 'de', 'fr',
+  'jp', 'cn', 'ru', 'br', 'za', 'mx', 'ch', 'se', 'nl', 'es', 'it', 'eu', 'sg',
+  'nz', 'app', 'dev', 'tech', 'online', 'store', 'site', 'club', 'global', 'agency',
+  'cloud', 'digital', 'design', 'email', 'expert', 'group', 'media', 'network',
+  'services', 'solutions', 'support', 'systems', 'team', 'today', 'website', 'world',
+  'zone', 'live', 'life', 'space', 'asia', 'mobi', 'tel', 'travel', 'jobs', 'aero',
+  'coop', 'museum', 'corp', 'internal', 'local', 'honeywell'
+]);
+
+// Known email providers and their exact valid domain suffixes
+export const POPULAR_PROVIDERS = {
+  gmail: ['gmail.com'],
+  yahoo: ['yahoo.com', 'yahoo.in', 'yahoo.co.in', 'yahoo.co.uk', 'ymail.com'],
+  outlook: ['outlook.com', 'outlook.in', 'hotmail.com', 'live.com', 'msn.com'],
+  hotmail: ['hotmail.com', 'hotmail.co.uk', 'hotmail.fr', 'live.com'],
+  icloud: ['icloud.com', 'me.com', 'mac.com']
+};
+
 /**
  * Validates email address with strict format, TLD, and anti-garbage checks
- * Rejects invalid formats like 'gjghgjjfhhfhddhdhgfhdd', 'jkhhkkhkh@ggghjghkh,com', etc.
+ * Rejects invalid formats like 'xyz@gmail.commmmmmmmmmmmmm', 'jkhhkkhkh@ggghjghkh,com', etc.
  */
 export const validateEmail = (email, fieldLabel = 'Email address') => {
   const val = (email ?? '').trim();
   if (!val) {
     return `${fieldLabel} is required.`;
+  }
+  if (val.length > 254) {
+    return `${fieldLabel} is too long (maximum 254 characters).`;
   }
   if (val.includes(' ')) {
     return `${fieldLabel} cannot contain spaces.`;
@@ -73,20 +97,83 @@ export const validateEmail = (email, fieldLabel = 'Email address') => {
   if (!localPart) {
     return `The username portion before '@' is missing.`;
   }
+  if (localPart.length > 64) {
+    return `The username portion before '@' cannot exceed 64 characters.`;
+  }
   if (!domainPart) {
     return `The domain portion after '@' is missing (e.g. honeywell.com).`;
   }
   if (val.includes('..')) {
     return `${fieldLabel} cannot contain consecutive dots ('..').`;
   }
+  if (localPart.startsWith('.') || localPart.endsWith('.')) {
+    return `The username portion before '@' cannot start or end with a dot.`;
+  }
+  if (localPart.startsWith('-') || localPart.endsWith('-')) {
+    return `The username portion before '@' cannot start or end with a hyphen.`;
+  }
+
+  // Reject local part repetitive characters (e.g. aaaaaaaa@...)
+  if (/^(.)\1{5,}$/.test(localPart)) {
+    return `The username portion before '@' contains invalid repetitive characters.`;
+  }
+
   if (!domainPart.includes('.')) {
     return `The domain portion must include a valid extension like .com, .in, or .org.`;
   }
+
   const domainParts = domainPart.split('.');
-  const tld = domainParts[domainParts.length - 1];
-  if (!tld || tld.length < 2 || !/^[a-zA-Z]+$/.test(tld)) {
-    return `The domain extension (TLD) must be at least 2 letters (e.g. .com, .org, .net, .in).`;
+  const tld = domainParts[domainParts.length - 1].toLowerCase();
+
+  // TLD must be purely alphabetic, between 2 and 10 characters
+  if (!/^[a-zA-Z]{2,10}$/.test(tld)) {
+    return `The domain extension (.${tld}) is invalid. Extension must be 2 to 10 letters (e.g. .com, .org, .in).`;
   }
+
+  // Reject repetitive characters in TLD (e.g. .commmmmm, .coooom, .aaa)
+  if (/(.)\1{2,}/i.test(tld)) {
+    return `The domain extension (.${tld}) is invalid and contains repetitive letters. Did you mean .com?`;
+  }
+
+  // Common typo extensions for .com
+  const typoComExtensions = ['comm', 'commm', 'coom', 'con', 'cpm', 'xom', 'vom', 'comn', 'coi', 'coim'];
+  if (typoComExtensions.includes(tld)) {
+    return `The domain extension '.${tld}' appears to be a typo for '.com'. Please verify your email.`;
+  }
+
+  // Check domain labels (each sub-part of domain)
+  for (let i = 0; i < domainParts.length; i++) {
+    const part = domainParts[i];
+    if (!part) {
+      return `Domain cannot have empty segments between dots.`;
+    }
+    if (part.startsWith('-') || part.endsWith('-')) {
+      return `Domain segments cannot start or end with a hyphen.`;
+    }
+    if (!/^[a-zA-Z0-9-]+$/.test(part)) {
+      return `Domain contains invalid characters. Only letters, numbers, and hyphens are allowed.`;
+    }
+    // Check for repetitive characters in domain name (e.g. gmaaaail or ggghjghkh)
+    if (/(.)\1{3,}/i.test(part)) {
+      return `Domain contains unnatural repetitive characters (${part}).`;
+    }
+  }
+
+  // Strict check on popular domains
+  const sld = domainParts.length >= 2 ? domainParts[domainParts.length - 2].toLowerCase() : '';
+  const fullDomain = domainPart.toLowerCase();
+
+  if (POPULAR_PROVIDERS[sld]) {
+    const allowedDomains = POPULAR_PROVIDERS[sld];
+    if (!allowedDomains.includes(fullDomain)) {
+      return `Invalid email domain '@${domainPart}'. Did you mean '@${allowedDomains[0]}'?`;
+    }
+  }
+
+  if (tld.length > 6 && !COMMON_VALID_TLDS.has(tld)) {
+    return `The domain extension '.${tld}' is not recognized. Please use a valid domain extension.`;
+  }
+
   if (!STRICT_EMAIL_REGEX.test(val)) {
     return `Please enter a valid ${fieldLabel.toLowerCase()} (e.g. name@honeywell.com).`;
   }

@@ -123,14 +123,14 @@ export default function Contact() {
  
   const validate = () => {
     const next = {};
-    const nameRes = validateName(form.name, 'Name');
-    if (!nameRes.isValid) next.name = nameRes.message;
+    const nameErr = validateName(form.name, 'Name');
+    if (nameErr) next.name = nameErr;
 
-    const phoneRes = validatePhone(form.mobile);
-    if (!phoneRes.isValid) next.mobile = phoneRes.message;
+    const phoneErr = validatePhone(form.mobile);
+    if (phoneErr) next.mobile = phoneErr;
 
-    const emailRes = validateEmail(form.email);
-    if (!emailRes.isValid) next.email = emailRes.message;
+    const emailErr = validateEmail(form.email);
+    if (emailErr) next.email = emailErr;
 
     if (!form.enquiryType) next.enquiryType = 'Select an enquiry type.';
     if (!form.message.trim()) next.message = 'Please enter your message.';
@@ -143,14 +143,11 @@ export default function Contact() {
     const { name, value } = e.target;
     let err = '';
     if (name === 'name') {
-      const res = validateName(value, 'Name');
-      if (!res.isValid) err = res.message;
+      err = validateName(value, 'Name');
     } else if (name === 'mobile') {
-      const res = validatePhone(value);
-      if (!res.isValid) err = res.message;
+      err = validatePhone(value);
     } else if (name === 'email') {
-      const res = validateEmail(value);
-      if (!res.isValid) err = res.message;
+      err = validateEmail(value);
     } else if (name === 'enquiryType') {
       if (!value) err = 'Select an enquiry type.';
     } else if (name === 'message') {

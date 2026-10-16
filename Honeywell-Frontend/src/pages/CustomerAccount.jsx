@@ -133,14 +133,14 @@ export default function CustomerAccount() {
       setChangePasswordMsg({ type: 'error', text: 'Current password is required.' });
       return;
     }
-    const newPassRes = validatePassword(newPasswordInput);
-    if (!newPassRes.isValid) {
-      setChangePasswordMsg({ type: 'error', text: newPassRes.message });
+    const newPassErr = validatePassword(newPasswordInput);
+    if (newPassErr) {
+      setChangePasswordMsg({ type: 'error', text: newPassErr });
       return;
     }
-    const confirmRes = validateConfirmPassword(newPasswordInput, confirmNewPasswordInput);
-    if (!confirmRes.isValid) {
-      setChangePasswordMsg({ type: 'error', text: confirmRes.message });
+    const confirmErr = validateConfirmPassword(newPasswordInput, confirmNewPasswordInput);
+    if (confirmErr) {
+      setChangePasswordMsg({ type: 'error', text: confirmErr });
       return;
     }
     setChangePasswordLoading(true);
@@ -322,24 +322,24 @@ export default function CustomerAccount() {
   // Handle Save All Profile Details
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    const nameRes = validateName(editName, 'Full name');
-    if (!nameRes.isValid) {
-      setSaveSuccessMsg({ type: 'error', text: nameRes.message });
+    const nameErr = validateName(editName, 'Full name');
+    if (nameErr) {
+      setSaveSuccessMsg({ type: 'error', text: nameErr });
       return;
     }
 
     if (editEmail) {
-      const emailRes = validateEmail(editEmail);
-      if (!emailRes.isValid) {
-        setSaveSuccessMsg({ type: 'error', text: emailRes.message });
+      const emailErr = validateEmail(editEmail);
+      if (emailErr) {
+        setSaveSuccessMsg({ type: 'error', text: emailErr });
         return;
       }
     }
 
     if (editPhone) {
-      const phoneRes = validatePhone(editPhone);
-      if (!phoneRes.isValid) {
-        setSaveSuccessMsg({ type: 'error', text: phoneRes.message });
+      const phoneErr = validatePhone(editPhone);
+      if (phoneErr) {
+        setSaveSuccessMsg({ type: 'error', text: phoneErr });
         return;
       }
     }
@@ -484,14 +484,12 @@ export default function CustomerAccount() {
     let errorMsg = '';
 
     if (name === 'email') {
-      const res = validateEmailOrPhone(value);
-      if (!res.isValid) errorMsg = res.message;
+      errorMsg = validateEmailOrPhone(value);
     }
 
     if (name === 'password') {
       if (authMode === 'register') {
-        const res = validatePassword(value);
-        if (!res.isValid) errorMsg = res.message;
+        errorMsg = validatePassword(value);
       } else {
         if (!value) {
           errorMsg = 'Password is required.';
@@ -500,13 +498,11 @@ export default function CustomerAccount() {
     }
 
     if (name === 'confirmPassword' && authMode === 'register') {
-      const res = validateConfirmPassword(inputPassword, value);
-      if (!res.isValid) errorMsg = res.message;
+      errorMsg = validateConfirmPassword(inputPassword, value);
     }
 
     if (name === 'fullName' && authMode === 'register') {
-      const res = validateName(value, 'Full name');
-      if (!res.isValid) errorMsg = res.message;
+      errorMsg = validateName(value, 'Full name');
     }
 
     return errorMsg;
@@ -596,9 +592,9 @@ export default function CustomerAccount() {
   };
 
   const handleForgotPassword = async () => {
-    const emailRes = validateEmail(inputEmail);
-    if (!emailRes.isValid) {
-      setErrors((prev) => ({ ...prev, email: emailRes.message }));
+    const emailErr = validateEmail(inputEmail);
+    if (emailErr) {
+      setErrors((prev) => ({ ...prev, email: emailErr }));
       setTouched((prev) => ({ ...prev, email: true }));
       return;
     }
