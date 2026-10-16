@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { forgotPassword as forgotPasswordApi } from '../../services/customerApi';
-import { validateEmailOrPhone, validatePassword, validateConfirmPassword, validateName } from '../../utils/validators';
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSuccess }) {
   const [authMode, setAuthMode] = useState(initialMode);
@@ -61,19 +60,48 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
 
   // Validation helper
   const validateField = (name, value) => {
+    let errorMsg = '';
+    const trimmedVal = value ? value.trim() : '';
+
     if (name === 'email') {
-      return validateEmailOrPhone(value, 'Email or mobile number');
+      if (!trimmedVal) {
+        errorMsg = 'Email address or mobile number is required.';
+      } else {
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedVal);
+        const isMobile = /^\d{10}$/.test(trimmedVal.replace(/[\s\-\(\)]/g, ''));
+        if (!isEmail && !isMobile) {
+          errorMsg = 'Please enter a valid email address or 10-digit mobile number.';
+        } else if (trimmedVal.length > 254) {
+          errorMsg = 'Value is too long.';
+        }
+      }
     }
+
     if (name === 'password') {
-      return validatePassword(value, 'Password');
+      if (!value) {
+        errorMsg = 'Password is required.';
+      } else if (value.length < 6) {
+        errorMsg = 'Password must be at least 6 characters.';
+      }
     }
+
     if (name === 'confirmPassword' && authMode === 'register') {
-      return validateConfirmPassword(inputPassword, value, 'Confirm password');
+      if (!value) {
+        errorMsg = 'Please confirm your password.';
+      } else if (value !== inputPassword) {
+        errorMsg = 'Passwords do not match.';
+      }
     }
+
     if (name === 'fullName' && authMode === 'register') {
-      return validateName(value, 'Full name');
+      if (!trimmedVal) {
+        errorMsg = 'Full name is required.';
+      } else if (trimmedVal.length < 2) {
+        errorMsg = 'Please enter your full name.';
+      }
     }
-    return '';
+
+    return errorMsg;
   };
 
   const handleBlur = (field) => {
@@ -318,11 +346,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
                     type="button"
                     className="password-toggle-btn"
                     onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? 'Hide password' : 'Show password'}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    tabIndex={-1}
                   >
-                    {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
                 {errors.password && (
@@ -353,11 +379,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
                       type="button"
                       className="password-toggle-btn"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      title={showConfirmPassword ? 'Hide password' : 'Show password'}
                       aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                      tabIndex={-1}
                     >
-                      {showConfirmPassword ? <Eye size={18} /> : <EyeOff size={18} />}
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                   {errors.confirmPassword && (

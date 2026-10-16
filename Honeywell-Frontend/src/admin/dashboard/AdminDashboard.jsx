@@ -72,11 +72,13 @@ const statusIconMap = {
   Cancelled: XCircle,
   Packed: Package,
   Dispatched: Truck,
+  Shipped: Truck,
 };
 
 const PaymentStatusBadge = ({ paymentStatus, isCancelled }) => {
   const rawPs = paymentStatus || 'Pending';
-  let ps = isCancelled && (rawPs === 'Pending' || rawPs === 'Unpaid') ? 'Payment Not Applicable' : rawPs;
+  const rawUpper = String(rawPs).trim().toUpperCase();
+  let ps = isCancelled && (rawUpper === 'PENDING' || rawUpper === 'UNPAID') ? 'Payment Not Applicable' : rawPs;
   if (ps === 'Verified Paid' || ps === 'Paid' || ps === 'Success' || ps === 'Paid Verified') {
     ps = 'Verified';
   }
@@ -113,7 +115,7 @@ const PaymentStatusBadge = ({ paymentStatus, isCancelled }) => {
 
 const statusClassName = (status) => {
   const s = (status || 'Pending').toLowerCase().replace(/\s+/g, '-');
-  if (s === 'cancelled') return 'canceled';
+  if (s === 'cancelled' || s === 'canceled') return 'canceled';
   return s;
 };
 
@@ -177,19 +179,40 @@ const AdminDashboard = () => {
 
   // Compute key summary statistics
   const metrics = useMemo(() => {
+    const isCancelled = (st) => {
+      const s = String(st || '').trim().toUpperCase();
+      return s === 'CANCELLED' || s === 'CANCELED';
+    };
+
+    const isActive = (st) => {
+      const s = String(st || '').trim().toUpperCase();
+      return s === 'PROCESSING' || s === 'PACKED' || s === 'DISPATCHED' || s === 'SHIPPED' || s === 'CONFIRMED' || s === 'PLACED';
+    };
+
+    const isCompleted = (st) => {
+      const s = String(st || '').trim().toUpperCase();
+      return s === 'COMPLETED' || s === 'DELIVERED';
+    };
+
     const totalSalesVal = orders
-      .filter(o => o.status !== 'Canceled' && o.status !== 'Cancelled')
+      .filter(o => !isCancelled(o.status))
       .reduce((sum, o) => {
         const cleanAmount = o.totalAmount ? Number(String(o.totalAmount).replace(/[^0-9.-]+/g, "")) : 0;
         return sum + cleanAmount;
       }, 0);
 
-    const activeOrdersCount = orders.filter(o => o.status === 'Processing' || o.status === 'Packed' || o.status === 'Dispatched').length;
-    const lowStockCount = products.filter(p => p.status === 'Low Stock' || p.status === 'Out of Stock').length;
-    const newSuppliersCount = suppliers.filter(s => s.status === 'Pending' || s.status === 'New').length;
+    const activeOrdersCount = orders.filter(o => isActive(o.status)).length;
+    const lowStockCount = products.filter(p => {
+      const s = String(p.status || '').trim().toLowerCase();
+      return s === 'low stock' || s === 'out of stock';
+    }).length;
+    const newSuppliersCount = suppliers.filter(s => {
+      const st = String(s.status || '').trim().toLowerCase();
+      return st === 'pending' || st === 'new' || st === 'review';
+    }).length;
 
-    const completedOrders = orders.filter(o => o.status === 'Completed' || o.status === 'Delivered').length;
-    const totalNonCanceled = orders.filter(o => o.status !== 'Canceled' && o.status !== 'Cancelled').length;
+    const completedOrders = orders.filter(o => isCompleted(o.status)).length;
+    const totalNonCanceled = orders.filter(o => !isCancelled(o.status)).length;
     const fulfillmentRate = totalNonCanceled > 0 ? Math.round((completedOrders / totalNonCanceled) * 100) : 0;
 
     return {
@@ -205,7 +228,10 @@ const AdminDashboard = () => {
   }, [orders, products, suppliers]);
 
   const lowStockProducts = useMemo(() => {
-    return products.filter(p => p.status === 'Low Stock' || p.status === 'Out of Stock');
+    return products.filter(p => {
+      const s = String(p.status || '').trim().toLowerCase();
+      return s === 'low stock' || s === 'out of stock';
+    });
   }, [products]);
 
   // Sales series data for chart
@@ -215,10 +241,12 @@ const AdminDashboard = () => {
     }
     const dailySalesMap = {};
     orders.forEach(o => {
-      if (o.status === 'Canceled' || o.status === 'Cancelled') return;
+      const s = String(o.status || '').trim().toUpperCase();
+      if (s === 'CANCELLED' || s === 'CANCELED') return;
       const date = o.orderDate ? new Date(o.orderDate) : new Date();
       const label = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
-      dailySalesMap[label] = (dailySalesMap[label] || 0) + (Number(o.totalAmount) || 0);
+      const cleanAmount = o.totalAmount ? Number(String(o.totalAmount).replace(/[^0-9.-]+/g, "")) : 0;
+      dailySalesMap[label] = (dailySalesMap[label] || 0) + cleanAmount;
     });
 
     const series = Object.entries(dailySalesMap).map(([name, value]) => ({ name, value }));
@@ -230,15 +258,17 @@ const AdminDashboard = () => {
     if (orders.length === 0) {
       return [];
     }
-    const counts = { Pending: 0, Processing: 0, Completed: 0, Canceled: 0 };
+    const counts = { Pending: 0, Processing: 0, Dispatched: 0, Completed: 0, Canceled: 0 };
     orders.forEach(o => {
-      let st = o.status || 'Pending';
-      if (st === 'Cancelled') st = 'Canceled';
-      if (counts[st] !== undefined) counts[st]++;
+      const s = String(o.status || 'Pending').trim().toUpperCase();
+      if (s === 'CANCELLED' || s === 'CANCELED') counts.Canceled++;
+      else if (s === 'COMPLETED' || s === 'DELIVERED') counts.Completed++;
+      else if (s === 'DISPATCHED' || s === 'SHIPPED') counts.Dispatched++;
+      else if (s === 'PROCESSING' || s === 'PACKED' || s === 'CONFIRMED' || s === 'PLACED') counts.Processing++;
       else counts.Pending++;
     });
 
-    const colors = { Pending: '#f59e0b', Processing: '#0284c7', Completed: '#10b981', Canceled: '#ef4444' };
+    const colors = { Pending: '#f59e0b', Processing: '#0284c7', Dispatched: '#6366f1', Completed: '#10b981', Canceled: '#ef4444' };
     return Object.entries(counts)
       .map(([name, value]) => ({ name, value, color: colors[name] }))
       .filter(item => item.value > 0);
@@ -314,7 +344,9 @@ const AdminDashboard = () => {
     if (metrics.newSuppliersCount > 0) {
       list.push({ type: 'info', text: `${metrics.newSuppliersCount} supplier applications are pending verification review` });
     }
-    const pendingVerificationOrders = orders.filter(o => o.paymentStatus === 'Pending Verification').length;
+    const pendingVerificationOrders = orders.filter(o => 
+      ['PENDING VERIFICATION', 'PENDINGVERIFICATION'].includes(String(o.paymentStatus || '').trim().toUpperCase())
+    ).length;
     if (pendingVerificationOrders > 0) {
       list.push({ type: 'warning', text: `${pendingVerificationOrders} orders require manual payment receipt UTR verification` });
     }
@@ -421,7 +453,7 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        <div className="kpi-card" onClick={() => navigate('/admin/suppliers/new')} role="button" tabIndex={0}>
+        <div className="kpi-card" onClick={() => navigate('/admin/suppliers/list')} role="button" tabIndex={0}>
           <div className="kpi-header">
             <div className="kpi-icon-box kpi-icon-purple">
               <Users size={18} />
@@ -695,10 +727,12 @@ const AdminDashboard = () => {
             <tbody>
               {orders.length > 0 ? (
                 orders.slice(0, 5).map((order) => {
-                  const StatusIcon = statusIconMap[order.status] || Clock3;
+                  const statusKey = String(order.status || 'Pending').trim();
+                  const StatusIcon = statusIconMap[statusKey] || statusIconMap[statusKey.charAt(0).toUpperCase() + statusKey.slice(1).toLowerCase()] || Clock3;
                   const rawDate = order.dateBooked || order.orderDate || order.date;
-                  const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '31 Aug 2026';
+                  const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
                   const customerInitials = order.customerName ? order.customerName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'NA';
+                  const isOrderCancelled = ['CANCELLED', 'CANCELED'].includes(String(order.status || '').trim().toUpperCase());
 
                   return (
                     <tr key={order.id || order.orderId} onClick={() => navigate('/admin/orders/list', { state: { selectedOrderId: order.id || order.orderId } })}>
@@ -716,7 +750,7 @@ const AdminDashboard = () => {
                         </div>
                       </td>
                       <td>
-                        <PaymentStatusBadge paymentStatus={order.paymentStatus} isCancelled={order.status === 'Cancelled' || order.status === 'Canceled'} />
+                        <PaymentStatusBadge paymentStatus={order.paymentStatus} isCancelled={isOrderCancelled} />
                       </td>
                       <td className="date-cell">{dateStr}</td>
                       <td className="amount-cell">{formatCurrency(order.totalAmount)}</td>

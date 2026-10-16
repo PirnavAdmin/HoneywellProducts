@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -18,7 +18,7 @@ import {
 import '../catalog/adminModule.css';
 import { AnimatedViewButton, AnimatedEditButton, OutlookDeleteButton, Pagination } from '../components/ActionButtons';
 import SuppliersPopup from './SuppliersPopup';
-import { fetchSuppliers, deleteSupplier } from './suppliersApi';
+import { fetchSuppliers, deleteSupplier, updateSupplierStatus, updateSupplier } from './suppliersApi';
 
 export const supplierCategories = [
   'CCTV',
@@ -41,9 +41,14 @@ const supplierStatusMeta = {
 };
 
 const SupplierStatusBadge = ({ status }) => {
-  const meta = supplierStatusMeta[status] || (
-    String(status || '').toLowerCase().includes('reject') ? supplierStatusMeta.Rejected : supplierStatusMeta.Pending
+  const normalizedKey = supplierStatusMeta[status] ? status : (
+    String(status || '').toLowerCase().includes('reject') ? 'Rejected' : 
+    String(status || '').toLowerCase().includes('inact') ? 'Inactive' : 
+    String(status || '').toLowerCase().includes('rev') ? 'Review' : 
+    String(status || '').toLowerCase().includes('veri') ? 'Verified' : 
+    String(status || '').toLowerCase().includes('appr') ? 'Approved' : 'Pending'
   );
+  const meta = supplierStatusMeta[normalizedKey] || supplierStatusMeta.Pending;
   const Icon = meta.icon;
 
   return (
@@ -69,6 +74,7 @@ const SupplierStatusBadge = ({ status }) => {
 };
 
 const SuppliersList = () => {
+  const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
 
@@ -84,7 +90,14 @@ const SuppliersList = () => {
   const loadSuppliers = async () => {
     try {
       const data = await fetchSuppliers();
-      setSuppliersList(data || []);
+      setSuppliersList(prev => {
+        if (!data || !data.length) return prev;
+        if (location.state?.updatedSupplier) {
+          const updated = location.state.updatedSupplier;
+          return data.map(item => String(item.id) === String(updated.id) ? { ...item, ...updated } : item);
+        }
+        return data;
+      });
     } catch (err) {
       console.error('Failed to fetch suppliers from API:', err);
       setSuppliersList([]);
@@ -92,8 +105,36 @@ const SuppliersList = () => {
   };
 
   useEffect(() => {
+    if (location.state?.updatedSupplier) {
+      const updated = location.state.updatedSupplier;
+      setSuppliersList(prev => {
+        const idx = prev.findIndex(s => String(s.id) === String(updated.id));
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...updated };
+          return next;
+        }
+        return [updated, ...prev];
+      });
+      window.history.replaceState({}, document.title);
+    }
     loadSuppliers();
-  }, []);
+  }, [location.key]);
+
+  const handleStatusChange = async (id, newStatus) => {
+    setSuppliersList(prev => prev.map(s => String(s.id) === String(id) ? { ...s, status: newStatus } : s));
+    if (activePopupSupplier && String(activePopupSupplier.id) === String(id)) {
+      setActivePopupSupplier(prev => ({ ...prev, status: newStatus }));
+    }
+
+    try {
+      await updateSupplierStatus(id, newStatus);
+    } catch (err) {
+      console.error('Failed to update status on server:', err);
+      alert('Failed to update status on server: ' + (err.message || 'Unknown error'));
+      loadSuppliers();
+    }
+  };
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this supplier?')) return;

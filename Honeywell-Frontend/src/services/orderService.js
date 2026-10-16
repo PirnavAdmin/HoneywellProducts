@@ -31,8 +31,23 @@ export const mapOrderFromApi = (item) => {
     return isNaN(num) ? 0 : num;
   };
 
+  const normalizeStatus = (status) => {
+    if (!status) return 'Pending';
+    const s = String(status).trim().toUpperCase();
+    if (s === 'CANCELLED' || s === 'CANCELED') return 'Cancelled';
+    if (s === 'COMPLETED' || s === 'DELIVERED') return 'Completed';
+    if (s === 'DISPATCHED' || s === 'SHIPPED') return 'Dispatched';
+    if (s === 'PACKED') return 'Packed';
+    if (s === 'PROCESSING') return 'Processing';
+    if (s === 'CONFIRMED' || s === 'PLACED') return 'Confirmed';
+    if (s === 'ON HOLD' || s === 'ONHOLD') return 'On Hold';
+    if (s === 'PENDING') return 'Pending';
+    return String(status).charAt(0).toUpperCase() + String(status).slice(1).toLowerCase();
+  };
+
   const finalAmount = parseVal(item.finalAmount ?? item.totalAmount ?? item.total ?? item.amount ?? 0);
   const rawStatus = item.status || item.fulfillment || item.orderStatus || 'Pending';
+  const cleanStatus = normalizeStatus(rawStatus);
   const rawPayStatus = item.paymentStatus || item.payStatus || 'Pending';
   const isCancelled = ['CANCELLED', 'CANCELED'].includes(String(rawStatus).trim().toUpperCase());
   const pmLower = String(item.paymentMethod || item.paymentMode || '').toLowerCase();
@@ -61,8 +76,8 @@ export const mapOrderFromApi = (item) => {
     finalAmount: finalAmount,
     totalAmount: finalAmount,
     total: finalAmount,
-    status: rawStatus,
-    fulfillment: item.fulfillment || rawStatus,
+    status: cleanStatus,
+    fulfillment: cleanStatus,
     paymentStatus: resolvedPayStatus,
     paymentMethod: item.paymentMethod || item.paymentMode || 'UPI',
     items,

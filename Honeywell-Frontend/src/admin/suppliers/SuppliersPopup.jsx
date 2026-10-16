@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Mail, Phone, MapPin, Truck, DollarSign, Award, FileText, CheckCircle2, Clock, XCircle, Building2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { X, Mail, Phone, MapPin, Truck, DollarSign, Award, FileText, CheckCircle2, Clock, XCircle, Building2, Edit } from 'lucide-react';
 import { formatSupplierCurrency } from './SuppliersList';
 
 const getStatusBadge = (status) => {
@@ -195,7 +196,7 @@ const SuppliersPopup = ({ supplier, onClose }) => {
                 </span>
               </div>
               <div>
-                <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block', marginBottom: '2px' }}>Onboarding Status</span>
+                <span style={{ color: '#94a3b8', fontSize: '10px', display: 'block', marginBottom: '4px' }}>Onboarding Status</span>
                 {getStatusBadge(supplier.status)}
               </div>
             </div>
@@ -221,8 +222,32 @@ const SuppliersPopup = ({ supplier, onClose }) => {
           </div>
         </div>
 
-        {/* Modal Bottom Row: Close Button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '6px', borderTop: '1px solid #f1f5f9' }}>
+        {/* Modal Bottom Row: Edit Profile & Close Button */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+          <Link
+            to={`/admin/suppliers/edit/${supplier.id}`}
+            onClick={onClose}
+            style={{
+              padding: '6px 14px',
+              backgroundColor: '#f8fafc',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              color: '#334155',
+              fontWeight: 700,
+              fontSize: '12px',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'background 0.15s ease'
+            }}
+            onMouseOver={(e) => (e.currentTarget.style.backgroundColor = '#e2e8f0')}
+            onMouseOut={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+          >
+            <Edit size={13} />
+            <span>Edit Full Profile</span>
+          </Link>
+
           <button 
             type="button"
             onClick={onClose} 

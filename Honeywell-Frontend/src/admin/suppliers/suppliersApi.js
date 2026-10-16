@@ -92,14 +92,28 @@ export const mapSupplierFromApi = (raw = {}) => {
 
 // GET /api/Suppliers
 export const fetchSuppliers = async () => {
-  const response = await api.get('/api/Suppliers');
+  const response = await api.get('/api/Suppliers', {
+    params: { _t: Date.now() },
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    }
+  });
   return unwrapList(response).map(mapSupplierFromApi);
 };
 
 // GET /api/Suppliers/{id}
 export const fetchSupplier = async (id) => {
   try {
-    const response = await api.get(`/api/Suppliers/${id}`);
+    const response = await api.get(`/api/Suppliers/${id}`, {
+      params: { _t: Date.now() },
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
+    });
     return mapSupplierFromApi(unwrapItem(response));
   } catch (err) {
     const all = await fetchSuppliers();
@@ -138,7 +152,9 @@ export const createSupplier = async (supplierData) => {
     rating: Number(supplierData.rating ?? 4.5),
     activePo: Number(supplierData.activePo ?? 0),
     monthlySpend: Number(supplierData.monthlySpend ?? 0),
-    isActive: supplierData.isActive !== false
+    isActive: supplierData.isActive !== undefined 
+      ? Boolean(supplierData.isActive) 
+      : (supplierData.status !== 'Inactive' && supplierData.status !== 'Rejected')
   };
   
   const response = await api.post('/api/Suppliers', payload);
@@ -175,10 +191,17 @@ export const updateSupplier = async (id, supplierData) => {
     rating: Number(supplierData.rating ?? 4.5),
     activePo: Number(supplierData.activePo ?? 0),
     monthlySpend: Number(supplierData.monthlySpend ?? 0),
-    isActive: supplierData.isActive !== false
+    isActive: supplierData.isActive !== undefined 
+      ? Boolean(supplierData.isActive) 
+      : (supplierData.status !== 'Inactive' && supplierData.status !== 'Rejected')
   };
 
-  const response = await api.put(`/api/Suppliers/${id}`, payload);
+  const response = await api.put(`/api/Suppliers/${id}`, payload, {
+    headers: {
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
+    }
+  });
   if (response.status === 204 || !response.data) {
     return mapSupplierFromApi(payload);
   }
@@ -209,13 +232,26 @@ export const registerSupplier = async (formData) => {
   return response?.data || mapSupplierFromApi(unwrapItem(response));
 };
 
-// PUT /api/Suppliers/{id}/status (Review Approvals/Rejections)
+// PUT /api/Suppliers/{id}/status (Review Approvals/Rejections/Status Updates)
 export const updateSupplierStatus = async (id, status) => {
-  const response = await api.put(`/api/Suppliers/${id}/status`, { status }, {
-    params: { status }
-  });
-  if (response.status === 204 || !response.data) {
-    return { id, status };
+  try {
+    const response = await api.put(`/api/Suppliers/${id}/status`, { status }, {
+      params: { status, _t: Date.now() },
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
+    if (response.status === 204 || !response.data) {
+      return { id, status };
+    }
+    return mapSupplierFromApi(unwrapItem(response));
+  } catch (err) {
+    // Fallback: update directly via PUT /api/Suppliers/{id}
+    const existing = await fetchSupplier(id);
+    if (existing) {
+      return await updateSupplier(id, { ...existing, status });
+    }
+    throw err;
   }
-  return mapSupplierFromApi(unwrapItem(response));
 };

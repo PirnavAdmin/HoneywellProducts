@@ -3,7 +3,6 @@
  * 
  * Enforces dynamic permissions for Honeywell Admin & Staff modules.
  * Strictly avoids hardcoded role overrides or static fallback grants.
- * Canonicalizes permission keys against the 25 official backend database modules.
  */
 
 export const normalizePermissionName = (name) => {
@@ -12,243 +11,51 @@ export const normalizePermissionName = (name) => {
     .toLowerCase()
     .replace(/[-_&/]/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    .replace(/s$/, ''); // singularize (e.g. orders -> order, categories -> categorie)
 };
 
-// Canonical list of the 25 official modules supported by Honeywell backend
-export const CANONICAL_MODULE_KEYS = {
-  DASHBOARD: 'dashboard',
-  CATALOG: 'catalog',
-  CUSTOMERS: 'customers',
-  STAFF: 'staff',
-  REPORTS: 'reports',
-  GROWTH_JOURNEY: 'growth journey',
-  TICKETS: 'tickets',
-  ENQUIRIES: 'enquiries',
-  CONTACT_FORM: 'contact form',
-  BULK_QUOTES: 'bulk quotes',
-  PARTNER_APPLICATIONS: 'partner applications',
-  DEALERS_DISTRIBUTORS: 'dealers & distributors',
-  ORDERS_AND_SALES: 'orders & sales',
-  INVOICES: 'invoices',
-  STOCK_UPDATES: 'stock updates',
-  MARKETING: 'marketing',
-  BRANDS: 'brands',
-  BLOGS: 'blogs',
-  TESTIMONIALS: 'testimonials',
-  SETTINGS: 'settings',
-  SUPPLIERS: 'suppliers',
-  PAYMENT_SETTINGS: 'payment settings',
-  COINS_CONVERTER: 'coins converter',
-  CALL_HISTORY: 'call history'
+// Aliases mapping for cross-matching module names from DB, Swagger, and frontend routes
+export const MODULE_ALIASES = {
+  'dashboard': ['dashboard'],
+  'catalog': [
+    'catalog', 'category', 'categorie', 'product', 'description', 
+    'image categorizer', 'subcategory', 'subcategorie'
+  ],
+  'customer': ['customer', 'call history'],
+  'call history': ['call history', 'customer'],
+  'staff': ['staff', 'employee', 'user'],
+  'report': ['report', 'analytic'],
+  'growth journey': ['growth journey'],
+  'ticket': ['ticket', 'support ticket'],
+  'enquiry': ['enquiry', 'inquiry'],
+  'contact form': ['contact form', 'contact submission', 'contact'],
+  'contact submission': ['contact form', 'contact submission', 'contact'],
+  'bulk quote': ['bulk quote', 'quote'],
+  'quote': ['bulk quote', 'quote'],
+  'partner application': ['partner application'],
+  'dealer distributor': ['dealer distributor', 'dealers distributor', 'distributor', 'dealer'],
+  'distributor': ['dealer distributor', 'dealers distributor', 'distributor', 'dealer'],
+  'order sale': [
+    'order sale', 'orders sale', 'order', 'sale', 
+    'purchase indent', 'purchase order', 'return', 'sales return'
+  ],
+  'order': [
+    'order sale', 'orders sale', 'order', 'sale', 
+    'purchase indent', 'purchase order', 'return', 'sales return'
+  ],
+  'invoice': ['invoice'],
+  'stock update': ['stock update', 'stockupdate', 'stock'],
+  'stockupdate': ['stock update', 'stockupdate', 'stock'],
+  'marketing': ['marketing', 'banner', 'solution', 'offer', 'coupon'],
+  'brand': ['brand'],
+  'blog': ['blog'],
+  'testimonial': ['testimonial'],
+  'setting': ['setting', 'contact card', 'footer', 'about', 'toc', 'table of content'],
+  'supplier': ['supplier'],
+  'coin converter': ['coin converter', 'coins converter', 'coin'],
+  'payment setting': ['payment setting', 'payment'],
 };
-
-// Exact dictionary mapping variants/synonyms to canonical module keys
-export const CANONICAL_MAPPING = {
-  // 1. Dashboard
-  'dashboard': 'dashboard',
-
-  // 2. Catalog
-  'catalog': 'catalog',
-  'categories': 'catalog',
-  'category': 'catalog',
-  'categorie': 'catalog',
-  'subcategories': 'catalog',
-  'subcategory': 'catalog',
-  'subcategorie': 'catalog',
-  'products': 'catalog',
-  'product': 'catalog',
-  'products-form': 'catalog',
-  'products form': 'catalog',
-  'product-features': 'catalog',
-  'product features': 'catalog',
-  'product-reviews': 'catalog',
-  'product reviews': 'catalog',
-  'descriptions': 'catalog',
-  'description': 'catalog',
-  'image categorizer': 'catalog',
-
-  // 3. Customers
-  'customers': 'customers',
-  'customer': 'customers',
-
-  // 4. Staff
-  'staff': 'staff',
-  'employee': 'staff',
-  'employees': 'staff',
-  'user': 'staff',
-  'users': 'staff',
-
-  // 5. Reports
-  'reports': 'reports',
-  'report': 'reports',
-  'analytics': 'reports',
-  'analytic': 'reports',
-
-  // 6. Growth Journey
-  'growth journey': 'growth journey',
-  'growth journeys': 'growth journey',
-  'growth-journey': 'growth journey',
-  'growthjourney': 'growth journey',
-
-  // 7. Tickets
-  'tickets': 'tickets',
-  'ticket': 'tickets',
-  'support ticket': 'tickets',
-  'support tickets': 'tickets',
-
-  // 8. Enquiries
-  'enquiries': 'enquiries',
-  'enquiry': 'enquiries',
-  'inquiries': 'enquiries',
-  'inquiry': 'enquiries',
-
-  // 9. Contact Form
-  'contact form': 'contact form',
-  'contact forms': 'contact form',
-  'contact submissions': 'contact form',
-  'contact submission': 'contact form',
-  'contact-submissions': 'contact form',
-  'contact': 'contact form',
-
-  // 10. Bulk Quotes
-  'bulk quotes': 'bulk quotes',
-  'bulk quote': 'bulk quotes',
-  'quotes': 'bulk quotes',
-  'quote': 'bulk quotes',
-
-  // 11. Partner Applications
-  'partner applications': 'partner applications',
-  'partner application': 'partner applications',
-  'partner-applications': 'partner applications',
-  'partner': 'partner applications',
-  'partners': 'partner applications',
-
-  // 12. Dealers & Distributors
-  'dealers & distributors': 'dealers & distributors',
-  'dealers and distributors': 'dealers & distributors',
-  'dealers distributors': 'dealers & distributors',
-  'dealer distributor': 'dealers & distributors',
-  'distributors': 'dealers & distributors',
-  'distributor': 'dealers & distributors',
-  'dealers': 'dealers & distributors',
-  'dealer': 'dealers & distributors',
-
-  // 13 & 14. Orders & Sales
-  'orders & sales': 'orders & sales',
-  'orders and sales': 'orders & sales',
-  'orders sales': 'orders & sales',
-  'order sale': 'orders & sales',
-  'orders': 'orders & sales',
-  'order': 'orders & sales',
-  'sales': 'orders & sales',
-  'sale': 'orders & sales',
-  'purchase indent': 'orders & sales',
-  'purchase-indent': 'orders & sales',
-  'purchase orders': 'orders & sales',
-  'purchase order': 'orders & sales',
-  'purchase-orders': 'orders & sales',
-  'returns': 'orders & sales',
-  'return': 'orders & sales',
-  'sales returns': 'orders & sales',
-  'sales return': 'orders & sales',
-  'sales-returns': 'orders & sales',
-
-  // 15. Invoices
-  'invoices': 'invoices',
-  'invoice': 'invoices',
-
-  // 16. Stock Updates
-  'stockupdates': 'stock updates',
-  'stock update': 'stock updates',
-  'stock updates': 'stock updates',
-  'stock-updates': 'stock updates',
-  'stock': 'stock updates',
-
-  // 17. Marketing
-  'marketing': 'marketing',
-  'banners': 'marketing',
-  'banner': 'marketing',
-  'solutions': 'marketing',
-  'solution': 'marketing',
-  'offers': 'marketing',
-  'offer': 'marketing',
-  'coupons': 'marketing',
-  'coupon': 'marketing',
-
-  // 18. Brands
-  'brands': 'brands',
-  'brand': 'brands',
-
-  // 19. Blogs
-  'blogs': 'blogs',
-  'blog': 'blogs',
-
-  // 20. Testimonials
-  'testimonials': 'testimonials',
-  'testimonial': 'testimonials',
-
-  // 21. Settings (STRICT - isolated from Payment Settings)
-  'settings': 'settings',
-  'setting': 'settings',
-  'footer': 'settings',
-  'about': 'settings',
-  'about us': 'settings',
-  'about-us': 'settings',
-  'toc': 'settings',
-  'table of content': 'settings',
-  'table of contents': 'settings',
-  'contact card': 'settings',
-  'contact-card': 'settings',
-
-  // 22. Suppliers
-  'suppliers': 'suppliers',
-  'supplier': 'suppliers',
-
-  // 23. Payment Settings (STRICT - isolated from Settings)
-  'payment settings': 'payment settings',
-  'payment setting': 'payment settings',
-  'payments': 'payment settings',
-  'payment': 'payment settings',
-  'gateways': 'payment settings',
-  'gateway': 'payment settings',
-
-  // 24. Coins Converter
-  'coins converter': 'coins converter',
-  'coin converter': 'coins converter',
-  'coins': 'coins converter',
-  'coin': 'coins converter',
-
-  // 25. Call History (STRICT - isolated from Customers)
-  'call history': 'call history',
-  'call-history': 'call history',
-  'call logs': 'call history',
-  'call log': 'call history'
-};
-
-/**
- * Resolves any module name, route segment, or database permission string to its canonical module key.
- */
-export const getCanonicalModule = (name) => {
-  if (!name || typeof name !== 'string') return '';
-  const normalized = normalizePermissionName(name);
-
-  // 1. Direct dictionary match
-  if (CANONICAL_MAPPING[normalized]) {
-    return CANONICAL_MAPPING[normalized];
-  }
-
-  // 2. Singularized check
-  const singular = normalized.replace(/s$/, '');
-  if (CANONICAL_MAPPING[singular]) {
-    return CANONICAL_MAPPING[singular];
-  }
-
-  return normalized;
-};
-
-// Aliases mapping for backward compatibility if referenced
-export const MODULE_ALIASES = CANONICAL_MAPPING;
 
 // Primary route associated with each module for navigation redirection
 export const MODULE_PRIMARY_ROUTES = {
@@ -261,12 +68,17 @@ export const MODULE_PRIMARY_ROUTES = {
   'tickets': '/admin/tickets',
   'enquiries': '/admin/enquiries',
   'contact form': '/admin/contact-submissions',
+  'contact-submissions': '/admin/contact-submissions',
   'bulk quotes': '/admin/quotes',
+  'quotes': '/admin/quotes',
   'partner applications': '/admin/partner-applications',
   'dealers & distributors': '/admin/distributors',
+  'distributors': '/admin/distributors',
   'orders & sales': '/admin/orders/list',
+  'orders': '/admin/orders/list',
   'invoices': '/admin/invoice',
   'stock updates': '/admin/stock-updates',
+  'stockupdates': '/admin/stock-updates',
   'marketing': '/admin/marketing/banners',
   'brands': '/admin/brands/list',
   'blogs': '/admin/blogs/list',
@@ -275,10 +87,9 @@ export const MODULE_PRIMARY_ROUTES = {
   'suppliers': '/admin/suppliers/list',
   'coins converter': '/admin/coins',
   'payment settings': '/admin/payments',
-  'call history': '/admin/call-history'
 };
 
-// Given an admin route pathname, determine which logical canonical module it belongs to
+// Given an admin route pathname, determine which logical module it belongs to
 export const getModuleForPathname = (pathname) => {
   if (!pathname || typeof pathname !== 'string') return '';
   const clean = pathname.replace(/^\/admin\/?/, '').split('?')[0].split('#')[0];
@@ -297,12 +108,8 @@ export const getModuleForPathname = (pathname) => {
     return 'catalog';
   }
 
-  if (['customers', 'customer'].includes(segment)) {
+  if (['customers', 'customer', 'call-history'].includes(segment)) {
     return 'customers';
-  }
-
-  if (['call-history'].includes(segment)) {
-    return 'call history';
   }
 
   if (['staff'].includes(segment)) {
@@ -325,7 +132,7 @@ export const getModuleForPathname = (pathname) => {
     return 'enquiries';
   }
 
-  if (['contact-submissions'].includes(segment)) {
+  if (['contact-submissions', 'contact-card'].includes(segment)) {
     return 'contact form';
   }
 
@@ -369,7 +176,7 @@ export const getModuleForPathname = (pathname) => {
     return 'testimonials';
   }
 
-  if (['settings', 'footer', 'about', 'about-us', 'toc', 'contact-card'].includes(segment)) {
+  if (['settings', 'footer', 'about', 'about-us', 'toc'].includes(segment)) {
     return 'settings';
   }
 
@@ -385,14 +192,13 @@ export const getModuleForPathname = (pathname) => {
     return 'payment settings';
   }
 
-  return getCanonicalModule(segment);
+  return segment;
 };
 
 /**
  * Check if the current user has access to a specific module.
  * Admin users with verified admin authType have administrative access.
  * Staff users (including Manager, Advisory, Sales, etc.) ONLY have access to explicitly granted permissions.
- * Matches canonical target strictly against the user's canonicalized permissions.
  */
 export const hasModuleAccess = (moduleName, userPermissions = [], userRole = '', authType = '') => {
   if (!moduleName) return true;
@@ -413,11 +219,12 @@ export const hasModuleAccess = (moduleName, userPermissions = [], userRole = '',
     return false;
   }
 
-  const canonTarget = getCanonicalModule(moduleName);
-  if (!canonTarget) return false;
+  const normTarget = normalizePermissionName(moduleName);
+  const targets = MODULE_ALIASES[normTarget] || [normTarget];
 
   return userPermissions.some(perm => {
-    return getCanonicalModule(perm) === canonTarget;
+    const normPerm = normalizePermissionName(perm);
+    return targets.some(target => normPerm === target || normPerm.includes(target) || target.includes(normPerm));
   });
 };
 
@@ -453,9 +260,11 @@ export const getFirstAuthorizedRoute = (userPermissions = [], userRole = '', aut
 
   // Otherwise, find the route for the first permitted module
   for (const perm of userPermissions) {
-    const canonPerm = getCanonicalModule(perm);
-    if (canonPerm && MODULE_PRIMARY_ROUTES[canonPerm]) {
-      return MODULE_PRIMARY_ROUTES[canonPerm];
+    const norm = normalizePermissionName(perm);
+    for (const [modKey, route] of Object.entries(MODULE_PRIMARY_ROUTES)) {
+      if (hasModuleAccess(modKey, [norm], userRole, authType)) {
+        return route;
+      }
     }
   }
 
@@ -529,3 +338,4 @@ export const clearUserSession = () => {
   localStorage.removeItem('authType');
   localStorage.removeItem('authApiVersion');
 };
+

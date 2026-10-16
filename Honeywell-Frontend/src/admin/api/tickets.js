@@ -25,7 +25,7 @@ const mapServerTicketToFrontend = (st) => {
 
   return {
     id: stId,
-    ticketNo: st.ticketId || `TCK-${stId}`,
+    ticketNo: (st.ticketId && st.ticketId.trim()) ? st.ticketId.trim() : (stId ? `TCK-${String(stId).padStart(4, '0')}` : 'TCK-0001'),
     customer: st.name || st.customerName || 'Customer',
     email: st.email || '',
     phone: st.phone || '',

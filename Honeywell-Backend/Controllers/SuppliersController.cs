@@ -146,8 +146,18 @@ namespace Honeywell.Controllers
                 request.Status.Equals("Verified", StringComparison.OrdinalIgnoreCase) || 
                 request.Status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
             {
-                targetStatus = "Approved";
+                targetStatus = "Verified";
                 supplier.IsActive = true;
+            }
+            else if (request.Status.Equals("Pending", StringComparison.OrdinalIgnoreCase) ||
+                     request.Status.Equals("Review", StringComparison.OrdinalIgnoreCase))
+            {
+                targetStatus = request.Status;
+            }
+            else if (request.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase))
+            {
+                targetStatus = "Inactive";
+                supplier.IsActive = false;
             }
             else
             {

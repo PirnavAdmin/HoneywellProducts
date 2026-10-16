@@ -64,7 +64,7 @@ const SuppliersForm = () => {
   };
 
   const completionScore = useMemo(() => {
-    const requiredFields = ['name', 'contactPerson', 'email', 'phone', 'city', 'address', 'productLines'];
+    const requiredFields = ['name', 'contactPerson', 'email', 'phone', 'city', 'address'];
     const completed = requiredFields.filter((field) => isValidFieldValue(supplier[field])).length;
     return Math.round((completed / requiredFields.length) * 100);
   }, [supplier]);
@@ -77,11 +77,11 @@ const SuppliersForm = () => {
   const handleSubmit = async (event) => {
     if (event && event.preventDefault) event.preventDefault();
 
-    const requiredFields = ['name', 'contactPerson', 'email', 'phone', 'city', 'address', 'productLines'];
+    const requiredFields = ['name', 'contactPerson', 'email', 'phone', 'city', 'address'];
     const hasInvalidRequired = requiredFields.some((field) => !isValidFieldValue(supplier[field]));
 
     if (hasInvalidRequired) {
-      setToastMessage('Please fill in all required fields (asterisk fields cannot be left blank or "Not specified").');
+      setToastMessage('Please fill in all required fields (asterisk fields cannot be left blank).');
       setToastType('warning');
       return;
     }
@@ -96,21 +96,33 @@ const SuppliersForm = () => {
     
     setIsSaving(true);
     try {
+      let saved = supplier;
       if (id) {
-        await updateSupplier(id, supplier);
+        saved = await updateSupplier(id, supplier);
         setToastMessage(`${supplier.name} has been updated.`);
       } else {
-        await createSupplier(supplier);
+        saved = await createSupplier(supplier);
         setToastMessage(`${supplier.name} has been submitted for onboarding review.`);
       }
       setToastType('success');
       
+      const payloadToSend = {
+        ...supplier,
+        id: String(id || saved?.id || ''),
+        status: supplier.status || 'Pending'
+      };
+
       setTimeout(() => {
-        navigate('/admin/suppliers/list');
-      }, 1200);
+        navigate('/admin/suppliers/list', {
+          state: {
+            updatedSupplier: payloadToSend,
+            timestamp: Date.now()
+          }
+        });
+      }, 700);
     } catch (err) {
       console.error('Failed to save supplier:', err);
-      setToastMessage('Failed to save supplier details: ' + err.message);
+      setToastMessage('Failed to save supplier details: ' + (err.message || 'Unknown error'));
       setToastType('warning');
       setIsSaving(false);
     }

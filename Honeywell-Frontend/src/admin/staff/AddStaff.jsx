@@ -43,14 +43,6 @@ import {
   assignStaffPermissions
 } from '../../services/staffApi';
 import { Toast } from "../components/Toast";
-import { 
-  validateName, 
-  validateEmail, 
-  validatePhone, 
-  validateEmployeeId, 
-  validatePassword, 
-  validateConfirmPassword 
-} from '../../utils/validators';
 import './AddStaff.css';
 
 // Excluded modules that do not exist in the active admin console sidebar
@@ -497,32 +489,42 @@ function AddStaff() {
   const validateForm = () => {
     let newErrors = {};
 
-    const firstNameErr = validateName(formData.firstName, 'First name');
-    if (firstNameErr) newErrors.firstName = firstNameErr;
+    const requiredKeys = ["firstName", "lastName", "email", "mobile", "employeeId", "role"];
+    requiredKeys.forEach((key) => {
+      if (!formData[key] || formData[key].toString().trim() === "") {
+        newErrors[key] = "Required field";
+      }
+    });
 
-    const lastNameErr = validateName(formData.lastName, 'Last name');
-    if (lastNameErr) newErrors.lastName = lastNameErr;
-
-    const emailErr = validateEmail(formData.email, 'Staff email');
-    if (emailErr) newErrors.email = emailErr;
-
-    const mobileErr = validatePhone(formData.mobile, 'Mobile number');
-    if (mobileErr) newErrors.mobile = mobileErr;
-
-    const employeeIdErr = validateEmployeeId(formData.employeeId, 'Employee ID');
-    if (employeeIdErr) newErrors.employeeId = employeeIdErr;
-
-    if (!formData.role || !formData.role.toString().trim()) {
-      newErrors.role = "Role is required";
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Invalid email format";
     }
 
-    const passwordRequired = !isEditing || (formData.password && formData.password.trim() !== "") || (formData.confirmPassword && formData.confirmPassword.trim() !== "");
-    if (passwordRequired) {
-      const passwordErr = validatePassword(formData.password, 'Password');
-      if (passwordErr) newErrors.password = passwordErr;
+    if (formData.mobile) {
+      const cleanMobile = formData.mobile.replace(/\D/g, "");
+      if (cleanMobile.length !== 10) {
+        newErrors.mobile = "Mobile number must be exactly 10 digits";
+      } else if (!/^[6-9]\d{9}$/.test(cleanMobile)) {
+        newErrors.mobile = "Must start with 6, 7, 8, or 9 (e.g. 9876543210)";
+      } else if (/^(\d)\1{9}$/.test(cleanMobile)) {
+        newErrors.mobile = "Mobile number cannot be repetitive digits";
+      }
+    }
 
-      const confirmErr = validateConfirmPassword(formData.password, formData.confirmPassword, 'Confirm password');
-      if (confirmErr) newErrors.confirmPassword = confirmErr;
+    const passwordRequired = !isEditing || formData.password !== "" || formData.confirmPassword !== "";
+    if (passwordRequired) {
+      if (!formData.password) {
+        newErrors.password = "Required field";
+      } else {
+        const passRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{7,}$/;
+        if (!passRegex.test(formData.password)) {
+          newErrors.password = "Min 7 chars, 1 uppercase, 1 digit, 1 symbol";
+        }
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        newErrors.confirmPassword = "Passwords do not match";
+      }
     }
 
     const hasPermission = Object.values(permissions).some((p) => p === true);
@@ -883,7 +885,7 @@ function AddStaff() {
                   title={showPassword ? "Hide password" : "Show password"}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword ? <Eye size={17} /> : <EyeOff size={17} />}
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
               {errors.password && <span className="field-error-msg">{errors.password}</span>}
@@ -920,7 +922,7 @@ function AddStaff() {
                   title={showConfirmPassword ? "Hide password" : "Show password"}
                   aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                 >
-                  {showConfirmPassword ? <Eye size={17} /> : <EyeOff size={17} />}
+                  {showConfirmPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
               {errors.confirmPassword && <span className="field-error-msg">{errors.confirmPassword}</span>}

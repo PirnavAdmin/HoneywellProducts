@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, User, Key, MapPin, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Save, User, Key, MapPin } from 'lucide-react';
 import { adminAuthApi } from '../api/adminAuthApi';
 import { Toast } from '../components/Toast';
-import { validateName, validateEmail, validatePhone, validatePassword, validateConfirmPassword } from '../../utils/validators';
 import './AdminAccountSettings.css';
 
 const AdminAccountSettings = () => {
@@ -11,8 +10,6 @@ const AdminAccountSettings = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
   const [isSaving, setIsSaving] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -53,23 +50,22 @@ const AdminAccountSettings = () => {
 
   const validate = () => {
     let errs = {};
-    const nameErr = validateName(formData.name, 'Full name');
-    if (nameErr) errs.name = nameErr;
-
-    const emailErr = validateEmail(formData.email, 'Admin email');
-    if (emailErr) errs.email = emailErr;
-
-    const mobileErr = validatePhone(formData.mobile, 'Mobile number');
-    if (mobileErr) errs.mobile = mobileErr;
-
+    if (!formData.name.trim()) errs.name = 'Full name is required';
+    if (!formData.email.trim()) errs.email = 'Email address is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) errs.email = 'Enter a valid email address';
+    const cleanMobile = formData.mobile.replace(/\D/g, "");
+    if (!cleanMobile) errs.mobile = 'Mobile number is required';
+    else if (cleanMobile.length !== 10) errs.mobile = 'Must be exactly 10 digits';
+    else if (!/^[6-9]\d{9}$/.test(cleanMobile)) errs.mobile = 'Must start with 6, 7, 8, or 9';
     if (!formData.address.trim()) errs.address = 'Address is required';
 
     if (formData.newPassword) {
-      const pwdErr = validatePassword(formData.newPassword, 'New password');
-      if (pwdErr) errs.newPassword = pwdErr;
-
-      const confirmErr = validateConfirmPassword(formData.newPassword, formData.confirmPassword, 'Confirm password');
-      if (confirmErr) errs.confirmPassword = confirmErr;
+      if (formData.newPassword.length < 6) {
+        errs.newPassword = 'Password must be at least 6 characters';
+      }
+      if (formData.newPassword !== formData.confirmPassword) {
+        errs.confirmPassword = 'Passwords do not match';
+      }
     }
 
     setErrors(errs);
@@ -245,51 +241,25 @@ const AdminAccountSettings = () => {
             <div className="form-grid">
               <div className="form-field">
                 <label>New Password</label>
-                <div className="password-input-wrapper">
-                  <input 
-                    type={showNewPassword ? 'text' : 'password'} 
-                    name="newPassword" 
-                    value={formData.newPassword} 
-                    onChange={handleChange}
-                    placeholder="Enter new password"
-                    style={{ paddingRight: '38px', width: '100%', boxSizing: 'border-box' }}
-                  />
-                  <button
-                    type="button"
-                    className="settings-eye-toggle-btn"
-                    onClick={() => setShowNewPassword((prev) => !prev)}
-                    title={showNewPassword ? 'Hide password' : 'Show password'}
-                    aria-label={showNewPassword ? 'Hide password' : 'Show password'}
-                    tabIndex={-1}
-                  >
-                    {showNewPassword ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
-                </div>
+                <input 
+                  type="password" 
+                  name="newPassword" 
+                  value={formData.newPassword} 
+                  onChange={handleChange}
+                  placeholder="Enter new password"
+                />
                 {errors.newPassword && <span className="field-error">{errors.newPassword}</span>}
               </div>
 
               <div className="form-field">
                 <label>Confirm New Password</label>
-                <div className="password-input-wrapper">
-                  <input 
-                    type={showConfirmPassword ? 'text' : 'password'} 
-                    name="confirmPassword" 
-                    value={formData.confirmPassword} 
-                    onChange={handleChange}
-                    placeholder="Confirm new password"
-                    style={{ paddingRight: '38px', width: '100%', boxSizing: 'border-box' }}
-                  />
-                  <button
-                    type="button"
-                    className="settings-eye-toggle-btn"
-                    onClick={() => setShowConfirmPassword((prev) => !prev)}
-                    title={showConfirmPassword ? 'Hide password' : 'Show password'}
-                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
-                    tabIndex={-1}
-                  >
-                    {showConfirmPassword ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
-                </div>
+                <input 
+                  type="password" 
+                  name="confirmPassword" 
+                  value={formData.confirmPassword} 
+                  onChange={handleChange}
+                  placeholder="Confirm new password"
+                />
                 {errors.confirmPassword && <span className="field-error">{errors.confirmPassword}</span>}
               </div>
             </div>

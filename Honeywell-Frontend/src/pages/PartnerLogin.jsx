@@ -1,39 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, Handshake, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, Handshake, AlertCircle } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import { partnerService } from '../services/partnerService';
-import { validateEmail, validatePassword } from '../utils/validators';
 import heroImage from '../assets/images/capital-park2.jpg';
 
 export default function PartnerLogin() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    const mailErr = validateEmail(email, 'Partner email');
-    const pwdErr = validatePassword(password, 'Password');
-
-    setEmailError(mailErr);
-    setPasswordError(pwdErr);
-
-    if (mailErr || pwdErr) return;
+    if (!email || !password) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const res = await partnerService.login({ email: email.trim(), password });
+      const res = await partnerService.login({ email, password });
       if (res && (res.token || res.success || res.id)) {
         localStorage.setItem('partnerToken', res.token || 'partner-session-token');
-        localStorage.setItem('partnerEmail', email.trim());
+        localStorage.setItem('partnerEmail', email);
         navigate('/partner/dashboard');
       } else {
         setError(res?.message || 'Partner login failed. Please verify credentials.');
@@ -70,9 +60,9 @@ export default function PartnerLogin() {
               </div>
             )}
 
-            <form onSubmit={handleLogin} className="auth-form" noValidate>
+            <form onSubmit={handleLogin} className="auth-form">
               <div className="form-group">
-                <label htmlFor="partner-email">Partner Email Address *</label>
+                <label htmlFor="partner-email">Partner Email Address</label>
                 <div className="input-with-icon">
                   <Mail size={16} />
                   <input
@@ -81,55 +71,24 @@ export default function PartnerLogin() {
                     required
                     placeholder="partner@company.com"
                     value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (emailError) setEmailError(validateEmail(e.target.value, 'Partner email'));
-                    }}
-                    onBlur={() => setEmailError(validateEmail(email, 'Partner email'))}
-                    className={emailError ? 'input-error' : ''}
+                    onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
-                {emailError && (
-                  <div className="field-error-msg" style={{ color: '#dc2626', fontSize: '11.5px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <AlertCircle size={13} /> <span>{emailError}</span>
-                  </div>
-                )}
               </div>
 
               <div className="form-group">
-                <label htmlFor="partner-password">Password *</label>
-                <div className="input-with-icon" style={{ position: 'relative' }}>
+                <label htmlFor="partner-password">Password</label>
+                <div className="input-with-icon">
                   <Lock size={16} />
                   <input
                     id="partner-password"
-                    type={showPassword ? 'text' : 'password'}
+                    type="password"
                     required
                     placeholder="••••••••"
                     value={password}
-                    onChange={(e) => {
-                      setPassword(e.target.value);
-                      if (passwordError) setPasswordError(validatePassword(e.target.value, 'Password'));
-                    }}
-                    onBlur={() => setPasswordError(validatePassword(password, 'Password'))}
-                    style={{ paddingRight: '40px' }}
-                    className={passwordError ? 'input-error' : ''}
+                    onChange={(e) => setPassword(e.target.value)}
                   />
-                  <button
-                    type="button"
-                    className="password-toggle-btn"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
                 </div>
-                {passwordError && (
-                  <div className="field-error-msg" style={{ color: '#dc2626', fontSize: '11.5px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <AlertCircle size={13} /> <span>{passwordError}</span>
-                  </div>
-                )}
               </div>
 
               <button type="submit" className="button button-full" disabled={loading}>

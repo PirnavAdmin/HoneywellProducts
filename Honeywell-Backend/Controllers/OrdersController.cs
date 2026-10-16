@@ -251,6 +251,7 @@ namespace Honeywell.Controllers
                     DiscountAmount = o.DiscountAmount,
                     ShippingFee = o.ShippingFee,
                     GstAmount = o.GstAmount,
+                    Status = o.Status,
                     Fulfillment = o.Status.ToUpper(),
                     Items = o.Items
                 };

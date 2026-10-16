@@ -6275,8 +6275,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
-.password-toggle-btn,
-.signin-eye-btn {
+.password-toggle-btn {
   position: absolute;
   right: 8px;
   top: 50%;
@@ -6291,12 +6290,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  z-index: 5;
   transition: all 0.15s ease;
 }
 
-.password-toggle-btn:hover,
-.signin-eye-btn:hover {
+.password-toggle-btn:hover {
   color: #0284c7;
   background: #f1f5f9;
 }
