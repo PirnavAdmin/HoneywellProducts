@@ -6092,7 +6092,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15), transparent 70%);
+  background: url('../assets/images/smart-technology-trends.png') center/cover no-repeat;
   opacity: 0.15;
   mix-blend-mode: overlay;
   pointer-events: none;
@@ -6275,7 +6275,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
-.password-toggle-btn {
+.password-toggle-btn,
+.signin-eye-btn {
   position: absolute;
   right: 8px;
   top: 50%;
@@ -6290,10 +6291,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   align-items: center;
   justify-content: center;
   border-radius: 6px;
+  z-index: 5;
   transition: all 0.15s ease;
 }
 
-.password-toggle-btn:hover {
+.password-toggle-btn:hover,
+.signin-eye-btn:hover {
   color: #0284c7;
   background: #f1f5f9;
 }

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, LockKeyhole, CreditCard, QrCode, ShieldCheck, Check, AlertCircle, Upload, Info, Tag, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, LockKeyhole, CreditCard, QrCode, ShieldCheck, Check, AlertCircle, Upload, Info, Tag, X, Eye, EyeOff } from 'lucide-react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useSettings } from '../context/SettingsContext';
@@ -22,6 +22,7 @@ import { couponService } from '../services/couponService';
 import { orderService } from '../services/orderService';
 import { useAuth } from '../context/AuthContext';
 import { getAddresses } from '../services/customerApi';
+import { validateName, validateEmail, validatePhone } from '../utils/validators';
 
 const formatPrice = (price) => `₹${price.toLocaleString('en-IN')}`;
 
@@ -97,6 +98,7 @@ export default function Checkout() {
   const [bankName, setBankName] = useState('HDFC Bank');
   const [nbUsername, setNbUsername] = useState('');
   const [nbPassword, setNbPassword] = useState('');
+  const [showNbPassword, setShowNbPassword] = useState(false);
   const [nbOtp, setNbOtp] = useState('');
   const [nbStep, setNbStep] = useState('login'); // 'login' | 'otp'
 
@@ -177,6 +179,23 @@ export default function Checkout() {
   // Submit Main Payment Flow
   const handlePaymentSubmit = async (event) => {
     event.preventDefault();
+    const nameRes = validateName(customerName, 'Customer name');
+    if (!nameRes.isValid) {
+      setPaymentMessage({ type: 'error', text: nameRes.message });
+      return;
+    }
+    const phoneRes = validatePhone(mobile);
+    if (!phoneRes.isValid) {
+      setPaymentMessage({ type: 'error', text: phoneRes.message });
+      return;
+    }
+    if (email) {
+      const emailRes = validateEmail(email);
+      if (!emailRes.isValid) {
+        setPaymentMessage({ type: 'error', text: emailRes.message });
+        return;
+      }
+    }
     setSubmitting(true);
     setPaymentMessage({ type: 'info', text: 'Processing payment request...' });
 
@@ -737,7 +756,38 @@ export default function Checkout() {
                         </div>
                         <div>
                           <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Password *</label>
-                          <input required type="password" value={nbPassword} onChange={(e) => setNbPassword(e.target.value)} placeholder="Password" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                            <input 
+                              required 
+                              type={showNbPassword ? 'text' : 'password'} 
+                              value={nbPassword} 
+                              onChange={(e) => setNbPassword(e.target.value)} 
+                              placeholder="Password" 
+                              style={{ width: '100%', padding: '8px 38px 8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} 
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNbPassword(!showNbPassword)}
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                background: 'none',
+                                border: 'none',
+                                cursor: 'pointer',
+                                color: '#64748b',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: '4px'
+                              }}
+                              title={showNbPassword ? 'Hide password' : 'Show password'}
+                              aria-label={showNbPassword ? 'Hide password' : 'Show password'}
+                              tabIndex={-1}
+                            >
+                              {showNbPassword ? <Eye size={16} /> : <EyeOff size={16} />}
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ) : (
