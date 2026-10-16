@@ -97,6 +97,7 @@ const createEmptyProduct = () => ({
     dimensions: '',
     powerSource: '',
     material: '',
+    coverage: '',
     coverageUsage: '',
   },
   keyFeatures: [''],
@@ -144,6 +145,7 @@ const normalizeProduct = (product) => {
     powerSource: rawSpecs.powerSource || product.powerSource || '',
     material: rawSpecs.material || product.material || '',
     coverage: rawSpecs.coverage || rawSpecs.coverageUsage || product.coverageUsage || product.coverage || '',
+    coverageUsage: rawSpecs.coverage || rawSpecs.coverageUsage || product.coverageUsage || product.coverage || '',
   };
 
   const currentStock = String(product.stock ?? product.stockQuantity ?? '');
@@ -160,6 +162,8 @@ const normalizeProduct = (product) => {
     sku: product.sku || '',
     brand: product.brand || 'Honeywell',
     supplier: product.supplier || product.manufacturer || '',
+    categoryId: String(product.categoryId ?? ''),
+    subcategoryId: String(product.subcategoryId ?? ''),
     mrp: String(product.mrp || product.price || ''),
     price: String(product.price || product.sellingPrice || ''),
     discountType: product.discountType || 'none',
@@ -733,6 +737,7 @@ const ProductsForm = () => {
 
     const preparedProduct = {
       ...formData,
+      id: productId || formData.id || formData.productId,
       price: sellingPrice,
       mrp: Number(formData.mrp) || sellingPrice,
       discountValue: Number(formData.discountValue) || 0,
@@ -741,15 +746,24 @@ const ProductsForm = () => {
       stock: Number(formData.stock) || 0,
       reorderLevel: formData.reorderLevel !== '' && formData.reorderLevel !== undefined && !isNaN(Number(formData.reorderLevel)) ? Number(formData.reorderLevel) : 10,
       costPrice: formData.costPrice !== '' && formData.costPrice !== undefined && !isNaN(Number(formData.costPrice)) ? Number(formData.costPrice) : 0,
-      shortDesc: formData.shortDescription,
-      longDesc: formData.productDetails,
-      description: formData.shortDescription,
-      weight: formData.specifications.weight,
-      keyFeatures: formData.keyFeatures.filter((feature) => feature.trim()),
-      reviews: formData.reviews.filter((review) => review.customer || review.comment),
+      status: formData.status || computeStockStatus(Number(formData.stock) || 0, formData.reorderLevel !== '' && formData.reorderLevel !== undefined && !isNaN(Number(formData.reorderLevel)) ? Number(formData.reorderLevel) : 10),
+      shortDescription: formData.shortDescription || '',
+      shortDesc: formData.shortDescription || '',
+      description: formData.shortDescription || '',
+      productDetails: formData.productDetails || '',
+      longDesc: formData.productDetails || '',
+      packageIncludes: formData.packageIncludes || '',
+      specifications: {
+        ...formData.specifications,
+        coverage: formData.specifications?.coverage || formData.specifications?.coverageUsage || '',
+        coverageUsage: formData.specifications?.coverage || formData.specifications?.coverageUsage || '',
+      },
+      weight: formData.specifications?.weight || '',
+      keyFeatures: (formData.keyFeatures || []).filter((feature) => feature && feature.trim()),
+      reviews: (formData.reviews || []).filter((review) => review && (review.customer || review.comment)),
       deletedReviewIds,
       ratingBreakdown: Object.fromEntries(
-        Object.entries(formData.ratingBreakdown).map(([rating, value]) => [rating, Number(value) || 0])
+        Object.entries(formData.ratingBreakdown || {}).map(([rating, value]) => [rating, Number(value) || 0])
       ),
     };
 
@@ -770,7 +784,7 @@ const ProductsForm = () => {
       setTimeout(() => {
         setIsSaved(false);
         navigate('/admin/catalog/products');
-      }, 1500);
+      }, 1000);
       return savedProduct;
     } catch (error) {
       console.error("API Error Response:", error.response?.data);

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Check, Filter, Plus, Search, X, AlertTriangle } from 'lucide-react';
 import { getCategoryName, getSubcategoryName } from './catalogStore';
-import { deleteProduct as deleteProductApi, fetchCategories, fetchProducts, fetchSubcategories, searchProducts } from './productsApi';
+import { deleteProduct as deleteProductApi, fetchCategories, fetchProducts, fetchSubcategories, searchProducts, computeStockStatus } from './productsApi';
 import { OutlookDeleteButton, AnimatedEditButton, Pagination } from '../components/ActionButtons';
 import './adminModule.css';
 
@@ -98,7 +98,25 @@ const ProductsList = () => {
   useEffect(() => {
     let isMounted = true;
     loadAll(isMounted);
-    return () => { isMounted = false; };
+
+    const handleUpdate = (e) => {
+      if (!isMounted) return;
+      const updated = e?.detail;
+      if (updated && updated.id) {
+        setProducts((current) =>
+          current.map((p) => (String(p.id) === String(updated.id) ? { ...p, ...updated } : p))
+        );
+      }
+      loadAll(true);
+    };
+    window.addEventListener('catalog-updated', handleUpdate);
+    window.addEventListener('product-updated', handleUpdate);
+
+    return () => { 
+      isMounted = false; 
+      window.removeEventListener('catalog-updated', handleUpdate);
+      window.removeEventListener('product-updated', handleUpdate);
+    };
   }, [loadAll]);
 
   // Client-side instant filter by search + category + status
@@ -116,8 +134,9 @@ const ProductsList = () => {
 
         const matchesCategory =
           selectedCategoryId === 'All' || String(product.categoryId) === String(selectedCategoryId);
+        const currentStatus = product.status || computeStockStatus(product.stock, product.reorderLevel);
         const matchesStatus =
-          selectedStatus === 'All' || product.status === selectedStatus;
+          selectedStatus === 'All' || currentStatus === selectedStatus;
         return matchesSearch && matchesCategory && matchesStatus;
       })
       .sort((a, b) => Number(b.id) - Number(a.id));
@@ -347,7 +366,8 @@ const ProductsList = () => {
                   const mrpNum = parsePriceNumber(product.mrp);
                   const isDiscounted = mrpNum > priceNum;
                   const discountStr = getDiscountLabel(product);
-                  const statusStyle = getStatusBadgeStyle(product.status);
+                  const currentStatus = product.status || computeStockStatus(product.stock, product.reorderLevel);
+                  const statusStyle = getStatusBadgeStyle(currentStatus);
 
                   return (
                     <tr key={product.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -374,12 +394,12 @@ const ProductsList = () => {
 
                       {/* Category */}
                       <td style={{ padding: '10px 16px', color: '#334155' }}>
-                        {getCategoryName(categories, product.categoryId) || '—'}
+                        {getCategoryName(categories, product.categoryId) || product.category || '—'}
                       </td>
 
                       {/* Subcategory */}
                       <td style={{ padding: '10px 16px', color: '#64748b' }}>
-                        {getSubcategoryName(subcategories, product.subcategoryId) || '—'}
+                        {getSubcategoryName(subcategories, product.subcategoryId) || product.productType || '—'}
                       </td>
 
                       {/* Price / MRP */}
@@ -423,7 +443,7 @@ const ProductsList = () => {
 
                       {/* Stock */}
                       <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: '600', color: '#334155' }}>
-                        <div>{product.stock || 0}</div>
+                        <div>{product.stock ?? 0}</div>
                         <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', marginTop: '2px' }} title="Reorder Level">
                           Reorder: {product.reorderLevel ?? 10}
                         </div>
@@ -444,8 +464,8 @@ const ProductsList = () => {
                             whiteSpace: 'nowrap',
                           }}
                         >
-                          {product.status === 'In Stock' && <Check size={11} />}
-                          {product.status}
+                          {currentStatus === 'In Stock' && <Check size={11} />}
+                          {currentStatus}
                         </span>
                       </td>
 

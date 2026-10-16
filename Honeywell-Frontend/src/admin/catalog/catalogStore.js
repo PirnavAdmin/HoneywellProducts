@@ -131,9 +131,9 @@ export const upsertProduct = (product) => {
 };
 
 export const getCategoryName = (categories, categoryId) =>
-  categories.find((category) => category.id === categoryId)?.name || 'Unassigned';
+  categories?.find((category) => String(category.id) === String(categoryId))?.name || '';
 
 export const getSubcategoryName = (subcategories, subcategoryId) =>
-  subcategories.find((subcategory) => subcategory.id === subcategoryId)?.name || 'Unassigned';
+  subcategories?.find((subcategory) => String(subcategory.id) === String(subcategoryId))?.name || '';
 
 

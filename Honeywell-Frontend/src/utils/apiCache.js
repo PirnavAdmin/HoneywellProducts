@@ -79,11 +79,17 @@ class ApiCacheStore {
   invalidate(pattern) {
     if (!pattern) {
       this.cache.clear();
+      this.pendingPromises.clear();
       return;
     }
     for (const key of this.cache.keys()) {
       if (key.includes(pattern)) {
         this.cache.delete(key);
+      }
+    }
+    for (const key of this.pendingPromises.keys()) {
+      if (key.includes(pattern)) {
+        this.pendingPromises.delete(key);
       }
     }
   }

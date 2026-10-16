@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { jsPDF } from 'jspdf';
 import {
   Area,
   AreaChart,
@@ -50,17 +51,6 @@ const formatCurrency = (value) => {
   return `INR ${isNaN(num) ? '0' : numberFormatter.format(num)}`;
 };
 
-const buildCsv = (rows) =>
-  rows
-    .map((row) =>
-      row
-        .map((cell) => {
-          const value = String(cell ?? '');
-          return `"${value.replace(/"/g, '""')}"`;
-        })
-        .join(',')
-    )
-    .join('\n');
 
 const statusIconMap = {
   Pending: Clock3,
@@ -142,6 +132,7 @@ const AdminDashboard = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [staffCount, setStaffCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   const loadDashboardData = async () => {
     setLoading(true);
@@ -356,34 +347,291 @@ const AdminDashboard = () => {
     return list;
   }, [metrics, orders]);
 
-  // CSV Exporter
-  const handleExport = () => {
-    const rows = [
-      ['Dashboard Summary Export', '', ''],
-      ['Export Date', new Date().toLocaleDateString(), ''],
-      [],
-      ['Performance Metrics', 'Value', 'Context'],
-      ['Total Revenue', formatCurrency(metrics.totalSales), 'Excluding canceled orders'],
-      ['Total Orders', metrics.totalOrders, 'Total logged purchases'],
-      ['Catalog Products', metrics.productsCount, `Across ${categories.length || 1} categories`],
-      ['Staff Directory', staffCount, 'Authorized console users'],
-      [],
-      ['Operations Snapshot', 'Count', 'Context'],
-      ['Active Orders', metrics.activeOrdersCount, 'Awaiting fulfillment pack'],
-      ['Stock Alerts', metrics.lowStockCount, 'Items below reorder levels'],
-      ['New Suppliers', metrics.newSuppliersCount, 'Applications in verification'],
-      ['Fulfillment Rate', `${metrics.fulfillmentRate}%`, 'Orders successfully completed']
-    ];
+  // PDF Exporter (Generates Comprehensive Dashboard Executive Report)
+  const handleExportPDF = () => {
+    try {
+      setExporting(true);
 
-    const blob = new Blob([buildCsv(rows)], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `honeywell-dashboard-report.csv`;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 14;
+      const contentWidth = pageWidth - margin * 2;
+      let y = margin;
+
+      // ── Header Banner (Honeywell Brand Blue) ──
+      doc.setFillColor(18, 104, 165);
+      doc.roundedRect(margin, y, contentWidth, 24, 2, 2, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('HONEYWELL STOREFRONT MANAGEMENT CONSOLE', margin + 6, y + 8);
+
+      doc.setFontSize(9.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text('EXECUTIVE DASHBOARD SUMMARY & OPERATIONS REPORT', margin + 6, y + 14.5);
+
+      doc.setFontSize(7.5);
+      const genDateStr = new Date().toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      doc.text(`Live Storefront Snapshot  |  Generated: ${genDateStr}  |  Confidential`, margin + 6, y + 20);
+
+      y += 30;
+
+      // ── Section 1: Executive KPI Cards Grid (2 Rows x 4 Columns) ──
+      const kpis = [
+        { label: 'TOTAL REVENUE', value: formatCurrency(metrics.totalSales) },
+        { label: 'TOTAL ORDERS', value: `${metrics.totalOrders} Orders` },
+        { label: 'ACTIVE ORDERS', value: `${metrics.activeOrdersCount} Active` },
+        { label: 'FULFILLMENT RATE', value: `${metrics.fulfillmentRate}%` },
+        { label: 'CATALOG PRODUCTS', value: `${metrics.productsCount} Items` },
+        { label: 'STOCK ALERTS', value: `${metrics.lowStockCount} Products` },
+        { label: 'SUPPLIERS', value: `${metrics.suppliersCount} Accounts` },
+        { label: 'STAFF MEMBERS', value: `${staffCount} Users` }
+      ];
+
+      const cardGap = 3;
+      const cardWidth = (contentWidth - 3 * cardGap) / 4;
+      const cardHeight = 15;
+
+      kpis.forEach((kpi, idx) => {
+        const row = Math.floor(idx / 4);
+        const col = idx % 4;
+        const cx = margin + col * (cardWidth + cardGap);
+        const cy = y + row * (cardHeight + cardGap);
+
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(cx, cy, cardWidth, cardHeight, 1.5, 1.5, 'FD');
+
+        doc.setFontSize(6.5);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(100, 116, 139);
+        doc.text(kpi.label, cx + 3.5, cy + 5);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(15, 23, 42);
+        doc.text(String(kpi.value), cx + 3.5, cy + 11.5);
+      });
+
+      y += 2 * cardHeight + cardGap + 8;
+
+      // ── Section 2: Recent Orders Ledger ──
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Recent Orders Fulfillment Pipeline', margin, y);
+      y += 5;
+
+      const orderHeaders = ['Order ID', 'Status', 'Customer', 'Payment Status', 'Date', 'Amount'];
+      const orderColWidths = [26, 26, 46, 34, 25, 25];
+
+      const drawOrdersHeader = () => {
+        doc.setFillColor(241, 245, 249);
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(margin, y, contentWidth, 7, 'FD');
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(51, 65, 85);
+
+        let curX = margin + 2;
+        orderHeaders.forEach((h, idx) => {
+          doc.text(h, curX, y + 4.8);
+          curX += orderColWidths[idx];
+        });
+        y += 7;
+      };
+
+      drawOrdersHeader();
+
+      const ordersToDisplay = orders.slice(0, 8);
+      if (ordersToDisplay.length === 0) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        doc.text('No orders registered in the system.', margin + 4, y + 5);
+        y += 9;
+      } else {
+        ordersToDisplay.forEach((o, rowIdx) => {
+          if (y + 6 > pageHeight - margin - 12) {
+            doc.addPage();
+            y = margin + 6;
+            drawOrdersHeader();
+          }
+
+          if (rowIdx % 2 === 1) {
+            doc.setFillColor(248, 250, 252);
+            doc.rect(margin, y, contentWidth, 6, 'F');
+          }
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(30, 41, 59);
+
+          const rawDate = o.dateBooked || o.orderDate || o.date;
+          const dateStr = rawDate ? new Date(rawDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+          const rowData = [
+            `#${o.id || o.orderId || 'N/A'}`,
+            String(o.status || 'Pending').slice(0, 16),
+            String(o.customerName || 'Customer').slice(0, 24),
+            String(o.paymentStatus || 'Pending').slice(0, 20),
+            dateStr,
+            formatCurrency(o.totalAmount || 0)
+          ];
+
+          let curX = margin + 2;
+          rowData.forEach((val, idx) => {
+            doc.text(String(val), curX, y + 4.2);
+            curX += orderColWidths[idx];
+          });
+          y += 6;
+        });
+        y += 6;
+      }
+
+      // ── Section 3: Stock Inventory Alerts ──
+      if (y + 25 > pageHeight - margin - 12) {
+        doc.addPage();
+        y = margin + 6;
+      }
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Inventory Alerts & Low Stock Items', margin, y);
+      y += 5;
+
+      const stockHeaders = ['Product Name', 'SKU', 'Supplier', 'Stock', 'Reorder', 'Deficit', 'Severity'];
+      const stockColWidths = [52, 26, 38, 18, 18, 15, 15];
+
+      const drawStockHeader = () => {
+        doc.setFillColor(241, 245, 249);
+        doc.setDrawColor(203, 213, 225);
+        doc.rect(margin, y, contentWidth, 7, 'FD');
+
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(51, 65, 85);
+
+        let curX = margin + 2;
+        stockHeaders.forEach((h, idx) => {
+          doc.text(h, curX, y + 4.8);
+          curX += stockColWidths[idx];
+        });
+        y += 7;
+      };
+
+      drawStockHeader();
+
+      if (lowStockProducts.length === 0) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7);
+        doc.setTextColor(148, 163, 184);
+        doc.text('All products are well-stocked. No active stock alerts.', margin + 4, y + 5);
+        y += 9;
+      } else {
+        lowStockProducts.slice(0, 8).forEach((prod, rowIdx) => {
+          if (y + 6 > pageHeight - margin - 12) {
+            doc.addPage();
+            y = margin + 6;
+            drawStockHeader();
+          }
+
+          if (rowIdx % 2 === 1) {
+            doc.setFillColor(248, 250, 252);
+            doc.rect(margin, y, contentWidth, 6, 'F');
+          }
+
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(7);
+          doc.setTextColor(30, 41, 59);
+
+          const stock = Number(prod.stock) || 0;
+          const reorder = Number(prod.reorderLevel) || 0;
+          const deficit = Math.max(0, reorder - stock);
+          let severity = 'Medium';
+          if (stock === 0) severity = 'Critical';
+          else if (stock <= reorder * 0.3) severity = 'High';
+
+          const rowData = [
+            String(prod.name || 'Product').slice(0, 30),
+            String(prod.sku || 'N/A').slice(0, 14),
+            String(prod.supplier || 'Honeywell Supplies').slice(0, 22),
+            `${stock}`,
+            `${reorder}`,
+            `${deficit}`,
+            severity
+          ];
+
+          let curX = margin + 2;
+          rowData.forEach((val, idx) => {
+            doc.text(String(val), curX, y + 4.2);
+            curX += stockColWidths[idx];
+          });
+          y += 6;
+        });
+        y += 6;
+      }
+
+      // ── Section 4: Operational System Insights ──
+      if (y + 20 > pageHeight - margin - 12) {
+        doc.addPage();
+        y = margin + 6;
+      }
+
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text('Operational System Insights', margin, y);
+      y += 5;
+
+      systemInsights.slice(0, 4).forEach((insight) => {
+        if (y + 5 > pageHeight - margin - 12) {
+          doc.addPage();
+          y = margin + 6;
+        }
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(71, 85, 105);
+        doc.text(`* ${insight.text}`, margin + 3, y + 3.8);
+        y += 5;
+      });
+
+      // ── Running Footers with Page Numbers ──
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          `Honeywell Storefront Management Console • Executive Dashboard Report • Page ${i} of ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 8,
+          { align: 'center' }
+        );
+      }
+
+      const fileName = `honeywell-dashboard-report-${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(fileName);
+    } catch (err) {
+      console.error('Failed to generate PDF report:', err);
+    } finally {
+      setExporting(false);
+    }
   };
 
   if (loading) {
@@ -416,9 +664,15 @@ const AdminDashboard = () => {
             <RefreshCw size={14} aria-hidden="true" />
             <span>Refresh</span>
           </button>
-          <button type="button" className="export-button" onClick={handleExport}>
+          <button
+            type="button"
+            className="export-button"
+            onClick={handleExportPDF}
+            disabled={exporting}
+            title="Export PDF Report"
+          >
             <Download size={14} aria-hidden="true" />
-            <span>Export CSV Report</span>
+            <span>{exporting ? 'Generating PDF...' : 'Export PDF Report'}</span>
           </button>
         </div>
       </section>

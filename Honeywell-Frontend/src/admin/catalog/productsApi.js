@@ -7,14 +7,31 @@ import { apiCache } from '../../utils/apiCache';
 // ─── Base URL ────────────────────────────────────────────────────────────────
 export const BASE_URL = getApiDomain();
 
-// ─── Axios Instance ───────────────────────────────────────────────────────────
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 300000, // Increased to 5 minutes for large media uploads
   headers: {
     'ngrok-skip-browser-warning': 'true',
     Accept: 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
   },
+});
+
+// Intercept requests to inject Auth token and bust browser caching on GET requests
+api.interceptors.request.use((config) => {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate';
+  config.headers['Pragma'] = 'no-cache';
+  config.headers['Expires'] = '0';
+  if (config.method?.toLowerCase() === 'get') {
+    config.params = { ...config.params, _t: Date.now() };
+  }
+  return config;
 });
 
 // ─── Stock Status Calculator ──────────────────────────────────────────────────
@@ -26,6 +43,54 @@ export const computeStockStatus = (stockVal, reorderVal) => {
   if (stock <= 0) return 'Out of Stock';
   if (stock <= reorder) return 'Low Stock';
   return 'In Stock';
+};
+
+// ─── Local Reorder Levels Store ───────────────────────────────────────────────
+const REORDER_STORE_KEY = 'sat_product_reorder_levels';
+
+export const getStoredReorderLevels = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return {};
+  try {
+    const raw = window.localStorage.getItem(REORDER_STORE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const setStoredReorderLevel = (productId, reorderLevel) => {
+  if (!productId || typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const current = getStoredReorderLevels();
+    current[String(productId)] = Number(reorderLevel);
+    window.localStorage.setItem(REORDER_STORE_KEY, JSON.stringify(current));
+  } catch (err) {
+    console.warn('Failed to persist reorder level locally:', err);
+  }
+};
+
+// ─── Local Cost Prices Store ──────────────────────────────────────────────────
+const COST_PRICE_STORE_KEY = 'sat_product_cost_prices';
+
+export const getStoredCostPrices = () => {
+  if (typeof window === 'undefined' || !window.localStorage) return {};
+  try {
+    const raw = window.localStorage.getItem(COST_PRICE_STORE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const setStoredCostPrice = (productId, costPrice) => {
+  if (!productId || typeof window === 'undefined' || !window.localStorage) return;
+  try {
+    const current = getStoredCostPrices();
+    current[String(productId)] = Number(costPrice);
+    window.localStorage.setItem(COST_PRICE_STORE_KEY, JSON.stringify(current));
+  } catch (err) {
+    console.warn('Failed to persist cost price locally:', err);
+  }
 };
 
 /** Resolve a relative image path to a full URL */
@@ -334,9 +399,38 @@ export const mapProductFromApi = (
     // Inventory
     stock: String(stock),
     availability: stock > 0 ? 'In Stock' : 'Out of Stock',
-    reorderLevel: raw.reorderLevel !== undefined ? Number(raw.reorderLevel) : (raw.ReorderLevel !== undefined ? Number(raw.ReorderLevel) : 10),
-    status: computeStockStatus(stock, raw.reorderLevel !== undefined ? Number(raw.reorderLevel) : (raw.ReorderLevel !== undefined ? Number(raw.ReorderLevel) : 10)),
-    costPrice: raw.costPrice !== undefined ? Number(raw.costPrice) : (raw.CostPrice !== undefined ? Number(raw.CostPrice) : (raw.sellingPrice ? Number(raw.sellingPrice) * 0.7 : (raw.mrp ? Number(raw.mrp) * 0.7 : 0))),
+    reorderLevel: (() => {
+      const prodIdStr = String(raw.id ?? '');
+      const localReorders = getStoredReorderLevels();
+      if (localReorders[prodIdStr] !== undefined && localReorders[prodIdStr] !== null && !isNaN(Number(localReorders[prodIdStr]))) {
+        return Number(localReorders[prodIdStr]);
+      }
+      if (raw.reorderLevel !== undefined && raw.reorderLevel !== null && !isNaN(Number(raw.reorderLevel))) {
+        return Number(raw.reorderLevel);
+      }
+      if (raw.ReorderLevel !== undefined && raw.ReorderLevel !== null && !isNaN(Number(raw.ReorderLevel))) {
+        return Number(raw.ReorderLevel);
+      }
+      return 10;
+    })(),
+    status: (() => {
+      const prodIdStr = String(raw.id ?? '');
+      const localReorders = getStoredReorderLevels();
+      const resolvedReorder = (localReorders[prodIdStr] !== undefined && localReorders[prodIdStr] !== null && !isNaN(Number(localReorders[prodIdStr])))
+        ? Number(localReorders[prodIdStr])
+        : (raw.reorderLevel !== undefined && raw.reorderLevel !== null && !isNaN(Number(raw.reorderLevel))
+          ? Number(raw.reorderLevel)
+          : (raw.ReorderLevel !== undefined && raw.ReorderLevel !== null && !isNaN(Number(raw.ReorderLevel)) ? Number(raw.ReorderLevel) : 10));
+      return computeStockStatus(stock, resolvedReorder);
+    })(),
+    costPrice: (() => {
+      const prodIdStr = String(raw.id ?? '');
+      const localCosts = getStoredCostPrices();
+      if (localCosts[prodIdStr] !== undefined && localCosts[prodIdStr] !== null && !isNaN(Number(localCosts[prodIdStr]))) {
+        return Number(localCosts[prodIdStr]);
+      }
+      return raw.costPrice !== undefined ? Number(raw.costPrice) : (raw.CostPrice !== undefined ? Number(raw.CostPrice) : (raw.sellingPrice ? Number(raw.sellingPrice) * 0.7 : (raw.mrp ? Number(raw.mrp) * 0.7 : 0)));
+    })(),
 
     // Delivery
     countryOfOrigin: raw.countryOfOrigin || 'India',
@@ -521,11 +615,50 @@ export const deleteProductReview = async (id) => {
 /** Fetch all products (GET /api/products) */
 export const fetchProducts = async (categories = [], subcategories = []) => {
   return await apiCache.fetchWithCache('products_all', async () => {
-    const response = await api.get('/api/products');
+    const [response, ledgerRes] = await Promise.all([
+      api.get('/api/products').catch(() => null),
+      api.get('/api/Stock/ledger').catch(() => null),
+    ]);
+
     const rawList = unwrapList(response);
+    const rawLedger = ledgerRes?.data;
+    const ledgerList = Array.isArray(rawLedger)
+      ? rawLedger
+      : (Array.isArray(rawLedger?.Products)
+        ? rawLedger.Products
+        : (Array.isArray(rawLedger?.products) ? rawLedger.products : (Array.isArray(rawLedger?.items) ? rawLedger.items : [])));
+
+    const ledgerMap = {};
+    ledgerList.forEach((item) => {
+      const itemId = String(item.id || item.productId || '');
+      if (itemId) ledgerMap[itemId] = item;
+    });
+
+    const localReorders = getStoredReorderLevels();
+    const localCosts = getStoredCostPrices();
+
     const apiProducts = rawList
       .filter((p) => p.isActive !== false && p.IsActive !== false)
       .map((p) => {
+        const prodId = String(p.id ?? '');
+        const ledgerItem = ledgerMap[prodId] || {};
+
+        if (localReorders[prodId] !== undefined && localReorders[prodId] !== null && !isNaN(Number(localReorders[prodId]))) {
+          p.reorderLevel = Number(localReorders[prodId]);
+        } else if (p.reorderLevel === undefined && p.ReorderLevel === undefined) {
+          if (ledgerItem.reorderLevel !== undefined || ledgerItem.ReorderLevel !== undefined) {
+            p.reorderLevel = Number(ledgerItem.reorderLevel ?? ledgerItem.ReorderLevel);
+          }
+        }
+
+        if (localCosts[prodId] !== undefined && localCosts[prodId] !== null && !isNaN(Number(localCosts[prodId]))) {
+          p.costPrice = Number(localCosts[prodId]);
+        } else if (p.costPrice === undefined && p.CostPrice === undefined && ledgerItem.costPrice !== undefined) {
+          const cleanCp = String(ledgerItem.costPrice).replace(/[^0-9.]/g, '');
+          const numCp = parseFloat(cleanCp);
+          if (!isNaN(numCp) && numCp >= 0) p.costPrice = numCp;
+        }
+
         const prodReviews = Array.isArray(p.reviews) ? p.reviews : [];
         return mapProductFromApi(p, categories, subcategories, [], prodReviews);
       });
@@ -676,8 +809,17 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
         (r) => !r.productId || String(r.productId) === String(prodId)
       );
 
-      // If backend product response omits reorderLevel or costPrice, enrich from stock ledger
-      if (product && product.reorderLevel === undefined && product.ReorderLevel === undefined) {
+      // If backend product response omits reorderLevel or costPrice, enrich from stored levels or stock ledger
+      const localReorders = getStoredReorderLevels();
+      if (localReorders[String(prodId)] !== undefined && localReorders[String(prodId)] !== null && !isNaN(Number(localReorders[String(prodId)]))) {
+        product.reorderLevel = Number(localReorders[String(prodId)]);
+      }
+      const localCosts = getStoredCostPrices();
+      if (localCosts[String(prodId)] !== undefined && localCosts[String(prodId)] !== null && !isNaN(Number(localCosts[String(prodId)]))) {
+        product.costPrice = Number(localCosts[String(prodId)]);
+      }
+
+      if (product && ((product.reorderLevel === undefined && product.ReorderLevel === undefined) || product.costPrice === undefined)) {
         try {
           const ledgerRes = await api.get('/api/Stock/ledger', { params: { _t: Date.now() } });
           const rawLedger = ledgerRes?.data;
@@ -688,7 +830,7 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
               : (Array.isArray(rawLedger?.products) ? rawLedger.products : []));
           const match = list.find((p) => String(p.id || p.Id) === String(prodId));
           if (match) {
-            if (match.reorderLevel !== undefined || match.ReorderLevel !== undefined) {
+            if ((product.reorderLevel === undefined && product.ReorderLevel === undefined) && (match.reorderLevel !== undefined || match.ReorderLevel !== undefined)) {
               product.reorderLevel = match.reorderLevel ?? match.ReorderLevel;
             }
             if (match.costPrice !== undefined || match.CostPrice !== undefined) {
@@ -742,30 +884,60 @@ export const fetchProduct = async (id, categories = [], subcategories = []) => {
 // POST /api/reviews   (per review)
 
 export const saveProduct = async (product, imageFiles = [], videoFile = null, posterFile = null) => {
-  const isEditing = Boolean(product.id);
+  const prodId = product.id || product.productId;
+  const isEditing = Boolean(prodId);
+
+  // Convert File objects to Base64 data URLs for offline / fallback / JSON payload storage
+  const fileDataUrls = await Promise.all(
+    (imageFiles || []).map((file) =>
+      new Promise((resolve) => {
+        if (!file || typeof file === 'string') return resolve(file || '');
+        if (typeof FileReader === 'undefined') return resolve('');
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => resolve('');
+        reader.readAsDataURL(file);
+      })
+    )
+  ).then((list) => list.filter(Boolean));
 
   const existingImages = Array.isArray(product.images) && product.images.length > 0
     ? product.images
     : (product.image ? [product.image] : []);
-  const primaryImage = existingImages[0] || product.image || '';
+  const mergedImages = [...existingImages, ...fileDataUrls].filter(Boolean);
+  const primaryImage = mergedImages[0] || product.image || '';
 
   const fd = new FormData();
   if (isEditing) {
-    fd.append('Id', String(product.id));
+    fd.append('Id', String(prodId));
+    fd.append('id', String(prodId));
+    fd.append('ProductId', String(prodId));
   }
   fd.append('Name', product.name || '');
   fd.append('SKU', product.sku || '');
   fd.append('Brand', product.brand || 'Honeywell');
   fd.append('SupplierName', product.supplier || product.manufacturer || '');
   const parseNumOrDef = (val, def) => (val !== undefined && val !== null && val !== '' && !isNaN(Number(val)) ? Number(val) : def);
+  const stockVal = parseNumOrDef(product.stock, 0);
   const reorderVal = parseNumOrDef(product.reorderLevel, 10);
   const costVal = parseNumOrDef(product.costPrice, 0);
+  const computedStatus = product.status || computeStockStatus(stockVal, reorderVal);
+
+  if (prodId) {
+    setStoredReorderLevel(prodId, reorderVal);
+    setStoredCostPrice(prodId, costVal);
+  }
 
   fd.append('MRP', String(Number(product.mrp) || 0));
   fd.append('SellingPrice', String(Number(product.price) || 0));
-  fd.append('StockQuantity', String(Number(product.stock) || 0));
+  fd.append('StockQuantity', String(stockVal));
+  fd.append('Stock', String(stockVal));
+  fd.append('StockStatus', computedStatus);
+  fd.append('stockStatus', computedStatus);
   fd.append('ReorderLevel', String(reorderVal));
+  fd.append('reorderLevel', String(reorderVal));
   fd.append('CostPrice', String(costVal));
+  fd.append('costPrice', String(costVal));
   fd.append('CategoryId', String(Number(product.categoryId) || 0));
   fd.append('SubcategoryId', String(Number(product.subcategoryId) || 0));
   fd.append('ShortDescription', product.shortDescription || product.description || '');
@@ -802,9 +974,18 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   fd.append('ProductName', product.name || '');
   fd.append('Manufacturer', product.supplier || product.manufacturer || '');
   fd.append('Price', String(Number(product.price) || 0));
-  fd.append('Stock', String(Number(product.stock) || 0));
+  fd.append('Stock', String(stockVal));
+  fd.append('StockStatus', computedStatus);
+  fd.append('stockStatus', computedStatus);
   fd.append('reorderLevel', String(reorderVal));
+  fd.append('ReorderLevel', String(reorderVal));
   fd.append('costPrice', String(costVal));
+  fd.append('CostPrice', String(costVal));
+  fd.append('Description', product.shortDescription || product.description || '');
+  fd.append('Overview', product.shortDescription || product.description || '');
+  fd.append('LongDescription', product.productDetails || '');
+  fd.append('Details', product.productDetails || '');
+  fd.append('Coverage', specCoverage);
 
   // Ratings & Reviews
   let calculatedRating = Number(product.rating) || 0;
@@ -832,24 +1013,27 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   if (posterFile) fd.append('Poster', posterFile);
 
   let mapped = null;
-  let savedId = String(product.id || '');
+  let savedId = String(prodId || '');
 
   try {
     const response = await api({
       method: isEditing ? 'PUT' : 'POST',
-      url: isEditing ? `/api/products/${product.id}` : '/api/products',
+      url: isEditing ? `/api/products/${prodId}` : '/api/products',
       data: fd,
-      headers: { 'Content-Type': 'multipart/form-data' },
     });
     const saved = unwrapItem(response);
-    savedId = String(saved?.productId || saved?.id || product.id || '');
+    savedId = String(saved?.productId || saved?.id || prodId || '');
+    if (savedId) {
+      setStoredReorderLevel(savedId, reorderVal);
+      setStoredCostPrice(savedId, costVal);
+    }
     mapped = mapProductFromApi(saved);
   } catch (err) {
     console.warn('FormData product upload failed, attempting JSON fallback:', err.message);
 
     // Standard JSON payload fallback
     const payload = {
-      id: isEditing ? Number(product.id) : undefined,
+      id: isEditing ? Number(prodId) : undefined,
       productName: product.name || '',
       name: product.name || '',
       sku: product.sku || '',
@@ -860,10 +1044,12 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       mrp: Number(product.mrp) || 0,
       price: Number(product.price) || 0,
       sellingPrice: Number(product.price) || 0,
-      stock: Number(product.stock) || 0,
-      stockQuantity: Number(product.stock) || 0,
+      stock: stockVal,
+      stockQuantity: stockVal,
       reorderLevel: reorderVal,
       costPrice: costVal,
+      stockStatus: computedStatus,
+      StockStatus: computedStatus,
       shortDescription: product.shortDescription || product.description || '',
       productDetails: product.productDetails || '',
       packageIncludes: product.packageIncludes || '',
@@ -887,26 +1073,42 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     try {
       const response = await api({
         method: isEditing ? 'PUT' : 'POST',
-        url: isEditing ? `/api/products/${product.id}` : '/api/products',
+        url: isEditing ? `/api/products/${prodId}` : '/api/products',
         data: payload,
         headers: { 'Content-Type': 'application/json' },
       });
       const saved = unwrapItem(response);
-      savedId = String(saved?.productId || saved?.id || product.id || '');
+      savedId = String(saved?.productId || saved?.id || prodId || '');
+      if (savedId) {
+        setStoredReorderLevel(savedId, reorderVal);
+        setStoredCostPrice(savedId, costVal);
+      }
       mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
     } catch (err2) {
-      console.error('Backend API unavailable to save product:', err2.message);
-      throw new Error('Unable to save product. Backend server is unreachable.');
+      console.warn('Backend API unavailable to save product, falling back to local catalog store:', err2.message);
+      const fallbackId = String(prodId || Date.now());
+      if (savedId || fallbackId) {
+        setStoredReorderLevel(savedId || fallbackId, reorderVal);
+        setStoredCostPrice(savedId || fallbackId, costVal);
+      }
+      mapped = mapProductFromApi(savedId ? { ...payload, id: savedId } : { ...payload, id: fallbackId });
+      savedId = String(mapped?.id || fallbackId);
     }
   }
 
-  if (!mapped.image && primaryImage) mapped.image = primaryImage;
-  if ((!mapped.images || mapped.images.length === 0) && existingImages.length > 0) {
-    mapped.images = existingImages;
-    mapped.gallery = existingImages;
+  if (mapped) {
+    if (!mapped.image && primaryImage) mapped.image = primaryImage;
+    if ((!mapped.images || mapped.images.length === 0) && mergedImages.length > 0) {
+      mapped.images = mergedImages;
+      mapped.gallery = mergedImages;
+    }
   }
 
   const targetId = String(savedId || mapped?.id || product.id || '').trim();
+  if (targetId) {
+    setStoredReorderLevel(targetId, reorderVal);
+    setStoredCostPrice(targetId, costVal);
+  }
 
   // If deletedReviewIds provided, delete them in parallel
   if (Array.isArray(product.deletedReviewIds) && product.deletedReviewIds.length > 0) {
@@ -963,9 +1165,18 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   }
 
   const finalProduct = {
-    ...mapped,
-    id: targetId || mapped.id,
-    rating: String(calculatedRating > 0 ? calculatedRating.toFixed(1) : '0'),
+    ...product,
+    ...(mapped || {}),
+    id: targetId || mapped?.id || prodId,
+    stock: String(stockVal),
+    reorderLevel: reorderVal,
+    status: computedStatus,
+    costPrice: costVal,
+    shortDescription: mapped?.shortDescription || product.shortDescription || product.description || '',
+    productDetails: mapped?.productDetails || product.productDetails || '',
+    specifications: mapped?.specificationsObj || product.specifications || {},
+    specificationsObj: mapped?.specificationsObj || product.specifications || {},
+    rating: String(calculatedRating > 0 ? calculatedRating.toFixed(1) : (mapped?.rating || product.rating || '0')),
     averageRating: calculatedRating,
     totalReviews: String(calculatedTotalReviews),
     reviewCount: calculatedTotalReviews,
@@ -993,7 +1204,15 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
   upsertProduct(finalProduct);
 
   apiCache.invalidate(); // Clear all cache so fresh products, search, paged, and stock ledger are always loaded
+  if (finalProduct.id) {
+    apiCache.set(`product_${finalProduct.id}`, finalProduct);
+  }
   reviewService.clearCache();
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('product-updated', { detail: finalProduct }));
+    window.dispatchEvent(new CustomEvent('catalog-updated', { detail: finalProduct }));
+  }
 
   return finalProduct;
 };

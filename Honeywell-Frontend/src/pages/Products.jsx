@@ -340,7 +340,16 @@ export default function Products() {
 
 
   useEffect(() => {
-    loadData();
+    loadData();
+    const handleUpdate = () => {
+      loadData();
+    };
+    window.addEventListener("catalog-updated", handleUpdate);
+    window.addEventListener("product-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("catalog-updated", handleUpdate);
+      window.removeEventListener("product-updated", handleUpdate);
+    };
   }, []);
 
 
