@@ -7,7 +7,6 @@ import {
 import PageHero from '../components/common/PageHero';
 import { productService } from '../services/productService';
 import { generateProductPdf } from '../utils/pdfGenerator';
-import heroImage from '../assets/images/smart-technology-trends.png';
 
 // Helper to extract category name from product — handles both string and object shapes
 const getCategoryName = (product) => {
@@ -255,7 +254,6 @@ export default function DownloadsCenter() {
         eyebrow="DOCUMENTATION &amp; RESOURCES"
         title="Downloads &amp; Document Center"
         description="Access official datasheets, installation manuals, product brochures, and certifications for Honeywell security products."
-        image={heroImage}
       />
 
       <section className="section">

@@ -8,7 +8,7 @@ export const mapSolutionFromApi = (raw = {}) => {
   const rawImage = raw.imageUrl || raw.image || raw.mediaUrl || raw.ImageUrl || raw.Image || '';
   const isInvalidImage = !rawImage || rawImage.includes('placeholder.png') || rawImage.includes('placeholder');
   const appId = String(raw.id || raw.solutionId || 'home').toLowerCase();
-  const fallbackImage = solutionPortfolioImages[appId] || applicationImages[appId] || applicationImages['home'] || '/assets/images/smart-technology-trends.png';
+  const fallbackImage = solutionPortfolioImages[appId] || applicationImages[appId] || applicationImages['home'] || '';
 
   const finalImg = isInvalidImage ? fallbackImage : (rawImage.startsWith('data:') ? rawImage : resolveMediaUrl(rawImage));
 

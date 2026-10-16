@@ -1,5 +1,5 @@
 // DEMO EDITORIAL CONTENT - Replace with client approved insights.
-const securityImage = new URL('../assets/images/smart-technology-trends.png', import.meta.url).href;
+const securityImage = new URL('../assets/images/smart-security-sustainable-future.png', import.meta.url).href;
 const solarImage = new URL('../assets/images/smart-security-sustainable-future.png', import.meta.url).href;
 
 export const marketTrends = [

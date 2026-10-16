@@ -9,14 +9,12 @@ import { SOLUTION_PILLARS } from '../data/solutionsData';
 import { solutionService } from '../services/solutionService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { usePageBanner } from '../hooks/usePageBanner';
-import heroImage from '../assets/images/smart-technology-trends.png';
  
 export default function Solutions() {
    const { banner } = usePageBanner(
     'Solutions',
     'Protect What Matters',
-    'Start with your environment, then explore suitable product categories with our sales team.',
-    heroImage
+    'Start with your environment, then explore suitable product categories with our sales team.'
   );
  
   useDocumentTitle('Security Solutions', 'Explore solution starting points for homes, offices, retail, warehouses, factories and outdoor sites.');

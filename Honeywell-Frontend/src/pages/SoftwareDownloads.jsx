@@ -22,7 +22,6 @@ import {
 import PageHero from '../components/common/PageHero';
 import { softwareService } from '../services/softwareService';
 import { productService } from '../services/productService';
-import heroImage from '../assets/images/smart-technology-trends.png';
 
 const SOFTWARE_TYPES = [
   'Software',
@@ -191,7 +190,6 @@ export default function SoftwareDownloads() {
         eyebrow="SOFTWARE &amp; DOWNLOADS"
         title="Software &amp; Downloads"
         description="Find software, firmware, tools and applications for your Honeywell products."
-        image={heroImage}
       />
 
       <section className="section" style={{ paddingTop: '32px', paddingBottom: '64px' }}>

@@ -4,7 +4,7 @@ import { categoryImages, productImages } from './imageLibrary';
 // DEMO PRODUCT DATA - Replace with client verified specifications
 const cameraImage = new URL('../assets/images/products-hero.png', import.meta.url).href;
 const solarImage = new URL('../assets/images/smart-security-sustainable-future.png', import.meta.url).href;
-const networkImage = new URL('../assets/images/smart-technology-trends.png', import.meta.url).href;
+const networkImage = new URL('../assets/images/smart-security-solutions.jpg', import.meta.url).href;
 
 const base = {
   model: 'Model to be confirmed',

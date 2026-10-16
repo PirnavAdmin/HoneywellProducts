@@ -383,7 +383,7 @@ export default function SolutionsManager() {
                           }}
                           onError={(e) => {
                             e.target.onerror = null;
-                            e.target.src = '/assets/images/smart-technology-trends.png';
+                            e.target.style.display = 'none';
                           }}
                         />
                       ) : (
@@ -637,7 +637,7 @@ export default function SolutionsManager() {
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = '/assets/images/smart-technology-trends.png';
+                          e.target.style.display = 'none';
                         }}
                       />
                     ) : (

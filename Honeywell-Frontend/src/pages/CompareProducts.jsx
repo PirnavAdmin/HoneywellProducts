@@ -5,7 +5,6 @@ import PageHero from '../components/common/PageHero';
 import { productService } from '../services/productService';
 import { useUI } from '../context/UIContext';
 import { useSettings } from '../context/SettingsContext';
-import heroImage from '../assets/images/smart-technology-trends.png';
 
 export default function CompareProducts() {
   const [compareIds, setCompareIds] = useState(() => {
@@ -94,7 +93,6 @@ export default function CompareProducts() {
         eyebrow="PRODUCT COMPARISON"
         title="Side-by-Side Product Comparison"
         description="Compare technical specifications, features, and details side-by-side to select the ideal hardware."
-        image={heroImage}
       />
 
       <section className="section">

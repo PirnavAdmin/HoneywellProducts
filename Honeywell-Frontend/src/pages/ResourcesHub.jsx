@@ -10,14 +10,12 @@ import { usePageBanner } from '../hooks/usePageBanner';
 import { softwareService } from '../services/softwareService';
 import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
 import { getSupportConfig } from '../services/settingsApi';
-import heroImage from '../assets/images/smart-technology-trends.png';
 
 export default function ResourcesHub() {
   const { banner } = usePageBanner(
     'Resources',
     'Honeywell Resources & Learning Hub',
-    'Technical whitepapers, case studies, video guides, software downloads, and security articles.',
-    heroImage
+    'Technical whitepapers, case studies, video guides, software downloads, and security articles.'
   );
 
   // ── State for all 3 APIs ──

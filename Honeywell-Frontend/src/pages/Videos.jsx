@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { PlaySquare, Play, X, Search, Loader2, AlertCircle, Clock, Tag, Film } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import { API_BASE_URL } from '../services/api';
-import heroImage from '../assets/images/smart-technology-trends.png';
 
 const VIDEO_HEADERS = {
   'ngrok-skip-browser-warning': 'true',
@@ -21,7 +20,7 @@ async function fetchVideos(category) {
 const CATEGORIES = ['All', 'Product Demos', 'Installation', 'Tutorials'];
 
 const resolveThumbnail = (url) => {
-  if (!url) return heroImage;
+  if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
   const cleanBase = (API_BASE_URL || '').replace(/\/$/, '');
   const cleanPath = url.startsWith('/') ? url : `/${url}`;
@@ -73,7 +72,6 @@ export default function Videos() {
         eyebrow="VIDEO CENTER"
         title="Video &amp; Demonstration Center"
         description="Watch official Honeywell product walkthroughs, installation tutorials, and AI feature guides."
-        image={heroImage}
       />
 
       <section className="section">
@@ -169,7 +167,7 @@ export default function Videos() {
                         style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }}
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = heroImage;
+                          e.target.style.display = 'none';
                         }}
                       />
                       <div className="play-overlay" style={{

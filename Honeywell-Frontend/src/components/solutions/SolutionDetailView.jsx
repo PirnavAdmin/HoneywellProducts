@@ -9,7 +9,6 @@ import { INDUSTRY_VERTICALS } from '../../data/industryData';
 import { applications } from '../../data/solutions';
 import { productService } from '../../services/productService';
 import { useUI } from '../../context/UIContext';
-import heroImage from '../../assets/images/smart-technology-trends.png';
 
 export default function SolutionDetailView({ activeSolutionId = 'security-surveillance', onSelectSolution }) {
   const pillar = SOLUTION_PILLARS[activeSolutionId] || SOLUTION_PILLARS['security-surveillance'];
@@ -257,11 +256,11 @@ export default function SolutionDetailView({ activeSolutionId = 'security-survei
               .map((application) => (
                 <Link key={application.id} to={`/solutions?application=${application.id}`} className="application-card">
                   <img
-                    src={application.image || heroImage}
+                    src={application.image || ''}
                     alt={`${application.name} security application`}
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = heroImage;
+                      e.target.style.display = 'none';
                     }}
                   />
                   <div>

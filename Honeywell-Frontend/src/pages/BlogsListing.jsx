@@ -5,7 +5,6 @@ import {
 } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
-import heroImage from '../assets/images/smart-technology-trends.png';
 
 export default function BlogsListing() {
   const [blogs, setBlogs] = useState([]);
@@ -71,7 +70,6 @@ export default function BlogsListing() {
         eyebrow="BLOG &amp; ARTICLES"
         title="Blog &amp; Technical Articles"
         description="Read the latest industry insights on CCTV surveillance, solar integration, smart security, and Honeywell product news."
-        image={heroImage}
       />
 
       <section className="section">

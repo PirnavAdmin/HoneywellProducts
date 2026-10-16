@@ -116,7 +116,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: url('../../assets/images/smart-technology-trends.png') center/cover no-repeat;
+  background: radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.15), transparent 70%);
   opacity: 0.15;
   mix-blend-mode: overlay;
   pointer-events: none;
