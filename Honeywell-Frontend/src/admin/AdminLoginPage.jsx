@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, AlertCircle, X } from 'lucide-react';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { adminAuthApi } from './api/adminAuthApi';
 import { staffLogin, getStaffPermissions } from '../services/staffApi';
 import {
   clearUserSession,
+  cleanupLegacyLocalStorage,
   extractPermissionsFromUser,
   getFirstAuthorizedRoute,
-  parseJwtPayload
+  parseJwtPayload,
+  setStoredAdminSession
 } from '../utils/rbac';
 import { validateEmail, validatePassword as validateStrictPassword, validateEmployeeId } from '../utils/validators';
 import adminPortalImage from '../assets/images/products-hero.png';
@@ -48,6 +50,16 @@ const AdminLoginPage = () => {
   const [passwordTouched, setPasswordTouched] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Clear any existing session or legacy storage on arriving at login screen
+  useEffect(() => {
+    clearUserSession();
+    cleanupLegacyLocalStorage();
+    if (location.state?.message) {
+      setError(location.state.message);
+    }
+  }, [location.state]);
 
   // Completely lock page scrollbar and scrolling behaviour while on login screen
   useEffect(() => {
@@ -196,22 +208,28 @@ const AdminLoginPage = () => {
           }
         }
 
-        localStorage.setItem('isAdmin', 'true');
-        if (token) localStorage.setItem('adminToken', token);
-        localStorage.setItem('adminEmail', staffData?.email || identifier.trim());
-        localStorage.setItem('adminName', name);
-        localStorage.setItem('adminRole', role);
-        localStorage.setItem('authType', 'staff');
-        localStorage.setItem('adminPermissions', JSON.stringify(permissions));
-
-        // Dynamically redirect to the user's first authorized module (e.g. /admin/catalog/categories)
-        const landingRoute = getFirstAuthorizedRoute(permissions, role, 'staff');
-        if (landingRoute) {
-          navigate(landingRoute);
-        } else {
-          // If no permissions are assigned, navigate to /admin/dashboard where AdminLayout presents Access Denied
-          navigate('/admin/dashboard');
+        const staffEmail = (staffData?.email || (isEmail ? identifier.trim() : '')).trim().toLowerCase();
+        if (!staffEmail) {
+          setError('No registered email address found for this staff member to send the verification OTP.');
+          return;
         }
+
+        // Trigger real 2-Factor OTP generation on the backend for Staff
+        console.log('Triggering real backend OTP for staff member:', staffEmail);
+        await adminAuthApi.resendOtp(staffEmail);
+
+        // Mandatory 2-Factor Authentication: Route staff member to OTP verification
+        navigate('/admin/verify-otp', {
+          state: {
+            email: staffEmail,
+            name: name,
+            role: role,
+            permissions: permissions,
+            staffData: staffData,
+            authType: 'staff',
+            fromLogin: true
+          }
+        });
         return;
       }
 
@@ -219,65 +237,7 @@ const AdminLoginPage = () => {
       console.log('Sending real API login request for admin:', identifier.trim());
       const response = await adminAuthApi.login(identifier, password);
 
-      // Check if token returned directly
-      const token = response?.token || response?.accessToken || response?.Token || response?.data?.token;
-
-      if (token) {
-        const tokenPayload = parseJwtPayload(token);
-        const tokenRole = (
-          tokenPayload?.role || 
-          tokenPayload?.['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || 
-          tokenPayload?.Role || 
-          response?.role || 
-          response?.user?.role ||
-          ''
-        ).toLowerCase().trim();
-
-        let profile = null;
-        try {
-          localStorage.setItem('adminToken', token);
-          const profileData = await adminAuthApi.getProfile();
-          profile = profileData?.profile || profileData?.data || profileData?.value || profileData;
-        } catch (pErr) {
-          console.warn('Admin profile fetch failed:', pErr.message);
-        }
-
-        const profileEmail = (profile?.email || '').toLowerCase().trim();
-        const loginEmail = identifier.toLowerCase().trim();
-        const profileRole = (profile?.role || profile?.Role || '').toLowerCase().trim();
-
-        const isGenuineAdmin = (
-          (profileEmail && profileEmail === loginEmail && ['admin', 'superadmin', 'super admin', 'administrator'].includes(profileRole)) ||
-          ['admin', 'superadmin', 'super admin', 'administrator'].includes(tokenRole)
-        );
-
-        if (!isGenuineAdmin) {
-          clearUserSession();
-          setError('Access Denied: This account is registered as Staff. Please select the STAFF tab to sign in.');
-          return;
-        }
-
-        let adminName = profile?.fullName || `${profile?.firstName || ''} ${profile?.lastName || ''}`.trim() || identifier.split('@')[0];
-        let adminRole = profileRole || tokenRole || 'admin';
-        let adminPermissions = extractPermissionsFromUser(profile);
-        if (adminPermissions.length === 0) {
-          adminPermissions = ['all'];
-        }
-
-        localStorage.setItem('isAdmin', 'true');
-        localStorage.setItem('adminToken', token);
-        localStorage.setItem('adminEmail', loginEmail);
-        localStorage.setItem('adminName', adminName);
-        localStorage.setItem('adminRole', adminRole);
-        localStorage.setItem('authType', 'admin');
-        localStorage.setItem('adminPermissions', JSON.stringify(adminPermissions));
-
-        const landingRoute = getFirstAuthorizedRoute(adminPermissions, adminRole, 'admin');
-        navigate(landingRoute || '/admin/dashboard');
-        return;
-      }
-
-      // Backend succeeded and requires OTP verification
+      // Mandatory 2-Factor Authentication: Route admin to OTP verification
       navigate('/admin/verify-otp', {
         state: {
           email: identifier.trim(),
@@ -287,6 +247,7 @@ const AdminLoginPage = () => {
           authType: 'admin'
         }
       });
+      return;
     } catch (err) {
       console.error('Real Login Error:', err);
       setError(getLoginErrorMessage(err));

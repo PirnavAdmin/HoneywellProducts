@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import './AdminMenuBar.css';
 
-import { hasModuleAccess } from '../utils/rbac';
+import { hasModuleAccess, getStoredAdminItem } from '../utils/rbac';
 
 const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   const location = useLocation();
@@ -33,8 +33,8 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   });
 
   useEffect(() => {
-    const storedAuthType = (localStorage.getItem('authType') || (localStorage.getItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
-    let role = (localStorage.getItem('adminRole') || 'staff').toLowerCase();
+    const storedAuthType = (getStoredAdminItem('authType') || (getStoredAdminItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
+    let role = (getStoredAdminItem('adminRole') || 'staff').toLowerCase();
     if (role === 'super admin' || role === 'superadmin') {
       role = 'admin';
     }
@@ -42,7 +42,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     setAuthType(storedAuthType);
 
     try {
-      const perms = localStorage.getItem('adminPermissions');
+      const perms = getStoredAdminItem('adminPermissions');
       if (perms) {
         setUserPermissions(JSON.parse(perms));
       } else {

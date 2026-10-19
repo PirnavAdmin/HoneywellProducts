@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getApiDomain, resolveMediaUrl } from '../utils/apiConfig';
 import { apiCache } from '../utils/apiCache';
+import { getAdminToken } from '../utils/rbac';
 
 const HEADERS = {
   'ngrok-skip-browser-warning': 'true',
@@ -8,7 +9,7 @@ const HEADERS = {
 };
 
 const getAuthHeaders = (isMultipart = false) => {
-  const token = localStorage.getItem('adminToken');
+  const token = getAdminToken();
   const headers = {
     ...HEADERS,
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})

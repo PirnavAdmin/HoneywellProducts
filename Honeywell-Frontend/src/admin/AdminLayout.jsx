@@ -4,11 +4,21 @@ import { ShieldAlert, AlertTriangle } from 'lucide-react';
 import AdminTopBar from './AdminTopBar';
 import AdminMenuBar from './AdminMenuBar';
 import { Toast } from './components/Toast';
-import { isPathAuthorized, getFirstAuthorizedRoute, clearUserSession } from '../utils/rbac';
+import { 
+  isPathAuthorized, 
+  getFirstAuthorizedRoute, 
+  clearUserSession, 
+  getStoredAdminItem, 
+  getAdminToken, 
+  isTokenValid 
+} from '../utils/rbac';
 import './AdminLayout.css';
 
 const AdminLayout = () => {
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
+  const token = getAdminToken();
+  const isAdmin = getStoredAdminItem('isAdmin') === 'true';
+  const isValidSession = Boolean(isAdmin && token && isTokenValid(token));
+
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const location = useLocation();
   const navigate = useNavigate();
@@ -23,16 +33,78 @@ const AdminLayout = () => {
     document.title = 'HONEYWELL PRODUCTS | SMART TECHNOLOGY. STRONGER PROTECTION';
   }, [location.pathname]);
 
-  const authType = (localStorage.getItem('authType') || (localStorage.getItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
-  let userRole = (localStorage.getItem('adminRole') || 'staff').toLowerCase();
+  // Dynamic 30-minute Inactivity Auto-Lock
+  useEffect(() => {
+    if (!isValidSession) return;
+
+    const INACTIVITY_LIMIT_MS = 30 * 60 * 1000; // 30 minutes
+
+    const performInactivityLogout = () => {
+      clearUserSession();
+      setGlobalToast({
+        message: "Your session has expired after 30 minutes of inactivity. Please log in again.",
+        type: "warning"
+      });
+      setTimeout(() => {
+        navigate('/admin/login', { 
+          replace: true, 
+          state: { reason: 'inactivity', message: 'Session expired due to inactivity. Please sign in again.' } 
+        });
+      }, 1000);
+    };
+
+    let timer = setTimeout(performInactivityLogout, INACTIVITY_LIMIT_MS);
+
+    let lastRecord = Date.now();
+    sessionStorage.setItem('adminLastActivity', String(lastRecord));
+
+    const resetTimer = () => {
+      const now = Date.now();
+      if (now - lastRecord > 1000) {
+        lastRecord = now;
+        sessionStorage.setItem('adminLastActivity', String(now));
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(performInactivityLogout, INACTIVITY_LIMIT_MS);
+      }
+    };
+
+    // Check on visibility/focus in case computer was suspended or tab was backgrounded
+    const checkOnFocus = () => {
+      const storedLast = parseInt(sessionStorage.getItem('adminLastActivity') || '0', 10);
+      if (storedLast && Date.now() - storedLast >= INACTIVITY_LIMIT_MS) {
+        performInactivityLogout();
+      } else {
+        resetTimer();
+      }
+    };
+
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart', 'click'];
+    activityEvents.forEach((evt) => {
+      window.addEventListener(evt, resetTimer, { passive: true });
+    });
+    window.addEventListener('visibilitychange', checkOnFocus);
+    window.addEventListener('focus', checkOnFocus);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      activityEvents.forEach((evt) => {
+        window.removeEventListener(evt, resetTimer);
+      });
+      window.removeEventListener('visibilitychange', checkOnFocus);
+      window.removeEventListener('focus', checkOnFocus);
+    };
+  }, [isValidSession, navigate]);
+
+  const authType = (getStoredAdminItem('authType') || (getStoredAdminItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
+  let userRole = (getStoredAdminItem('adminRole') || 'staff').toLowerCase();
   if (userRole === 'super admin' || userRole === 'superadmin') {
     userRole = 'admin';
   }
 
-  // Load actual permissions from localStorage without static fallbacks
+  // Load actual permissions from dynamic session storage without static fallbacks
   let userPermissions = [];
   try {
-    const raw = localStorage.getItem('adminPermissions');
+    const raw = getStoredAdminItem('adminPermissions');
     if (raw) {
       userPermissions = JSON.parse(raw);
     }
@@ -74,8 +146,9 @@ const AdminLayout = () => {
     };
   }, [userRole]);
 
-  if (!isAdmin) {
-    return <Navigate to="/admin/login" />;
+  if (!isValidSession) {
+    clearUserSession();
+    return <Navigate to="/admin/login" replace />;
   }
 
   // Verify route authorization using strict RBAC engine

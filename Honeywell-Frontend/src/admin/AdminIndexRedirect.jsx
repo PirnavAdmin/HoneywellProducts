@@ -1,22 +1,32 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { getFirstAuthorizedRoute } from '../utils/rbac';
+import { 
+  getFirstAuthorizedRoute, 
+  getStoredAdminItem, 
+  getAdminToken, 
+  isTokenValid, 
+  clearUserSession 
+} from '../utils/rbac';
 
 const AdminIndexRedirect = () => {
-  const isAdmin = localStorage.getItem('isAdmin') === 'true';
-  if (!isAdmin) {
+  const token = getAdminToken();
+  const isAdmin = getStoredAdminItem('isAdmin') === 'true';
+  const isValidSession = Boolean(isAdmin && token && isTokenValid(token));
+
+  if (!isValidSession) {
+    clearUserSession();
     return <Navigate to="/admin/login" replace />;
   }
 
-  const authType = (localStorage.getItem('authType') || (localStorage.getItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
-  let userRole = (localStorage.getItem('adminRole') || 'staff').toLowerCase();
+  const authType = (getStoredAdminItem('authType') || (getStoredAdminItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
+  let userRole = (getStoredAdminItem('adminRole') || 'staff').toLowerCase();
   if (userRole === 'super admin' || userRole === 'superadmin') {
     userRole = 'admin';
   }
 
   let userPermissions = [];
   try {
-    const raw = localStorage.getItem('adminPermissions');
+    const raw = getStoredAdminItem('adminPermissions');
     if (raw) {
       userPermissions = JSON.parse(raw);
     }

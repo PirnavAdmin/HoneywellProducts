@@ -1,4 +1,5 @@
 import { getApiDomain } from '../utils/apiConfig';
+import { getAdminToken } from '../utils/rbac';
 
 const getBaseUrl = () => {
   const domain = getApiDomain();
@@ -12,7 +13,7 @@ const getHeaders = (customHeaders = {}) => {
     'Content-Type': 'application/json',
     ...customHeaders,
   };
-  const token = localStorage.getItem('adminToken');
+  const token = getAdminToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }

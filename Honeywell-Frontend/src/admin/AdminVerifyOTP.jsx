@@ -2,11 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { adminAuthApi } from './api/adminAuthApi';
+import { getStaffPermissions } from '../services/staffApi';
 import { 
   extractPermissionsFromUser, 
   getFirstAuthorizedRoute, 
   clearUserSession, 
-  parseJwtPayload 
+  parseJwtPayload,
+  setStoredAdminSession 
 } from '../utils/rbac';
 import adminPortalImage from '../assets/images/products-hero.png';
 import './AdminVerifyOTP.css';
@@ -73,7 +75,14 @@ const AdminVerifyOTP = () => {
   const inputRefs = useRef([]);
   const navigate  = useNavigate();
   const location  = useLocation();
-  const { newPassword, email, fromLogin, loginWarning } = location.state || {};
+  const { newPassword, email, fromLogin, loginWarning, authType } = location.state || {};
+
+  /* ─── Protect direct access without credentials ─── */
+  useEffect(() => {
+    if (!email) {
+      navigate('/admin/login', { replace: true, state: { message: 'Please enter your credentials to initiate OTP verification.' } });
+    }
+  }, [email, navigate]);
 
   /* ─── OTP-entry countdown ─── */
   useEffect(() => {
@@ -184,7 +193,7 @@ const AdminVerifyOTP = () => {
       // Fetch admin profile to verify genuine Administrator account
       let profile = null;
       try {
-        if (token) localStorage.setItem('adminToken', token);
+        if (token) sessionStorage.setItem('adminToken', token);
         const profileRes = await adminAuthApi.getProfile();
         profile = profileRes?.profile || profileRes?.data || profileRes?.value || profileRes;
       } catch (pErr) {
@@ -204,6 +213,43 @@ const AdminVerifyOTP = () => {
       );
 
       if (fromLogin) {
+        if (authType === 'staff') {
+          // Dynamic Staff 2-Factor Authentication Completion
+          const staffData = location.state?.staffData || {};
+          const staffRole = (tokenRole || location.state?.role || staffData?.role || 'staff').toLowerCase().trim();
+          const staffName = location.state?.name || staffData?.name || `${staffData?.firstName || ''} ${staffData?.lastName || ''}`.trim() || getNameFromAuthPayload(response) || getDisplayNameFromEmail(email);
+          let permissions = location.state?.permissions || extractPermissionsFromUser(staffData);
+
+          if (permissions.length === 0) {
+            try {
+              if (token) sessionStorage.setItem('adminToken', token);
+              const staffId = staffData?.id ?? staffData?.Id ?? staffData?.staffId ?? staffData?.StaffId;
+              if (staffId) {
+                const permRes = await getStaffPermissions(staffId);
+                const fetched = extractPermissionsFromUser(permRes);
+                if (fetched.length > 0) permissions = fetched;
+              }
+            } catch (pErr) {
+              console.warn('Could not fetch staff permissions:', pErr.message);
+            }
+          }
+
+          setStoredAdminSession({
+            token: token,
+            email: loginEmail,
+            name: staffName,
+            role: staffRole,
+            authType: 'staff',
+            permissions: permissions,
+            apiVersion: 'staff'
+          });
+
+          const landingRoute = getFirstAuthorizedRoute(permissions, staffRole, 'staff');
+          navigate(landingRoute || '/admin/dashboard');
+          return;
+        }
+
+        // Genuine Admin OTP Verification
         if (!isGenuineAdmin) {
           clearUserSession();
           setError('Access Denied: This account is registered as Staff. Please return to login and select the STAFF tab to sign in.');
@@ -217,17 +263,22 @@ const AdminVerifyOTP = () => {
           permissions = ['all'];
         }
 
-        localStorage.setItem('isAdmin', 'true');
-        localStorage.setItem('adminEmail', loginEmail);
-        localStorage.setItem('adminName', name);
-        localStorage.setItem('adminRole', role);
-        localStorage.setItem('authType', 'admin');
-        localStorage.setItem('adminPermissions', JSON.stringify(permissions));
+        setStoredAdminSession({
+          token: token,
+          email: loginEmail,
+          name: name,
+          role: role,
+          authType: 'admin',
+          permissions: permissions,
+          apiVersion: 'new'
+        });
 
         const landingRoute = getFirstAuthorizedRoute(permissions, role, 'admin');
         navigate(landingRoute || '/admin/dashboard');
+        return;
       } else {
         navigate('/admin/login', { state: { message: 'Password reset successfully. Please log in.' } });
+        return;
       }
     } catch (err) {
       console.error('Verify OTP Error:', err);
@@ -266,7 +317,7 @@ const AdminVerifyOTP = () => {
           </div>
 
           <h2>VERIFY YOUR OTP.</h2>
-          <p>Enter the 6-digit code sent to your registered email address.</p>
+          <p>Enter the 6-digit code sent to {email ? <strong style={{ color: '#00529B' }}>{email}</strong> : 'your registered email address'}.</p>
 
           {/* OTP Expiry Countdown */}
           <div className="otp-entry-timer" style={{ color: timerColor }}>

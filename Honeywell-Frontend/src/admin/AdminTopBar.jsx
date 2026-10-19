@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import NotificationsDropdown from './components/NotificationsDropdown';
 import { getApiDomain } from '../utils/apiConfig';
-import { clearUserSession } from '../utils/rbac';
+import { clearUserSession, getStoredAdminItem, getAdminToken } from '../utils/rbac';
 import './AdminTopBar.css';
 
 const maskEmail = (email) => {
@@ -34,13 +34,13 @@ const AdminTopBar = ({ onToggleSidebar, sidebarExpanded }) => {
   // Dropdown States
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
-  // Read actual admin login details
-  const [adminEmail, setAdminEmail] = useState(() => localStorage.getItem('adminEmail') || '');
-  const [adminName, setAdminName] = useState(() => localStorage.getItem('adminName') || 'Admin');
+  // Read actual admin login details dynamically from session storage
+  const [adminEmail, setAdminEmail] = useState(() => getStoredAdminItem('adminEmail') || '');
+  const [adminName, setAdminName] = useState(() => getStoredAdminItem('adminName') || 'Admin');
 
   useEffect(() => {
-    const storedEmail = localStorage.getItem('adminEmail');
-    const storedName = localStorage.getItem('adminName');
+    const storedEmail = getStoredAdminItem('adminEmail');
+    const storedName = getStoredAdminItem('adminName');
     if (storedEmail) setAdminEmail(storedEmail);
     if (storedName) setAdminName(storedName);
   }, []);
@@ -63,8 +63,8 @@ const AdminTopBar = ({ onToggleSidebar, sidebarExpanded }) => {
   }, []);
 
   const handleLogout = async () => {
-    const token = localStorage.getItem('adminToken');
-    const apiVersion = localStorage.getItem('authApiVersion');
+    const token = getAdminToken();
+    const apiVersion = getStoredAdminItem('authApiVersion');
     
     if (apiVersion === 'new' && token) {
       try {

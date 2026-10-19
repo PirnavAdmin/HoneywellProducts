@@ -1,4 +1,5 @@
 import { apiRequest } from './api';
+import { getAdminToken } from '../utils/rbac';
 
 /**
  * Maps raw backend distributor object to clean frontend data model
@@ -85,7 +86,7 @@ export const mapDistributorToApi = (form) => {
  * Gets authentication headers for admin endpoints
  */
 function getAuthHeaders() {
-  const token = localStorage.getItem('adminToken');
+  const token = getAdminToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

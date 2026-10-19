@@ -1,8 +1,9 @@
 import { getApiDomain } from '../utils/apiConfig';
 import { apiCache } from '../utils/apiCache';
+import { getAdminToken } from '../utils/rbac';
 
 const getHeaders = () => {
-  const token = localStorage.getItem('adminToken');
+  const token = getAdminToken();
   const headers = {
     'ngrok-skip-browser-warning': 'true',
     'Accept': 'application/json',

@@ -1,9 +1,10 @@
 import { getApiDomain } from '../utils/apiConfig';
+import { getAdminToken } from '../utils/rbac';
 
 const BASE_URL = `${getApiDomain()}/api/OrderSuccess`;
 
 const getHeaders = () => {
-  const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+  const token = localStorage.getItem('token') || getAdminToken();
   return {
     'ngrok-skip-browser-warning': 'true',
     'Accept': 'application/json',

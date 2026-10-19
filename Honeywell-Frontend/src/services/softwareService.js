@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { getApiDomain } from '../utils/apiConfig';
 import { apiCache } from '../utils/apiCache';
+import { getAdminToken } from '../utils/rbac';
 
 const BASE_URL = getApiDomain();
 
@@ -15,7 +16,7 @@ const api = axios.create({
 
 // Interceptor to inject Authorization header if admin token exists
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('adminToken');
+  const token = getAdminToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

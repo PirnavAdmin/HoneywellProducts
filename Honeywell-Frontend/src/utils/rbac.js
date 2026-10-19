@@ -517,9 +517,85 @@ export const parseJwtPayload = (token) => {
 };
 
 /**
- * Clear all authentication and permission state from localStorage to ensure strict session isolation.
+ * Dynamically check if a JWT token is valid and unexpired based on real cryptographic claims.
  */
-export const clearUserSession = () => {
+export const isTokenValid = (token) => {
+  if (!token || typeof token !== 'string') return false;
+  const payload = parseJwtPayload(token);
+  if (!payload) return false;
+  
+  // payload.exp is standard Unix timestamp (in seconds)
+  if (typeof payload.exp === 'number') {
+    const expiryMs = payload.exp * 1000;
+    if (Date.now() >= expiryMs) {
+      return false;
+    }
+  }
+  return true;
+};
+
+/**
+ * Check if token is expired.
+ */
+export const isTokenExpired = (token) => {
+  return !isTokenValid(token);
+};
+
+/**
+ * Retrieve the active admin/staff token dynamically.
+ * Prioritizes sessionStorage (scoped to active tab/session) and cleans legacy persistent storage.
+ */
+export const getAdminToken = () => {
+  const sessionToken = sessionStorage.getItem('adminToken');
+  if (sessionToken) {
+    if (isTokenValid(sessionToken)) {
+      return sessionToken;
+    }
+    // Expired token in session
+    clearUserSession();
+    return '';
+  }
+  return '';
+};
+
+/**
+ * Retrieve stored admin attribute from dynamic sessionStorage.
+ */
+export const getStoredAdminItem = (key) => {
+  return sessionStorage.getItem(key);
+};
+
+/**
+ * Set all authenticated admin session variables strictly in sessionStorage.
+ * Automatically purges any legacy keys from localStorage to prevent persistent leaks across reboots.
+ */
+export const setStoredAdminSession = ({
+  token = '',
+  email = '',
+  name = '',
+  role = '',
+  authType = '',
+  permissions = [],
+  apiVersion = ''
+}) => {
+  sessionStorage.setItem('isAdmin', 'true');
+  if (token) sessionStorage.setItem('adminToken', token);
+  if (email) sessionStorage.setItem('adminEmail', email);
+  if (name) sessionStorage.setItem('adminName', name);
+  if (role) sessionStorage.setItem('adminRole', role);
+  if (authType) sessionStorage.setItem('authType', authType);
+  if (permissions) sessionStorage.setItem('adminPermissions', JSON.stringify(permissions));
+  if (apiVersion) sessionStorage.setItem('authApiVersion', apiVersion);
+  sessionStorage.setItem('adminLastActivity', String(Date.now()));
+
+  // Strict cleanup: wipe any legacy persistent keys from localStorage
+  cleanupLegacyLocalStorage();
+};
+
+/**
+ * Wipe any legacy keys from localStorage to prevent persistent leaks.
+ */
+export const cleanupLegacyLocalStorage = () => {
   localStorage.removeItem('isAdmin');
   localStorage.removeItem('adminToken');
   localStorage.removeItem('adminEmail');
@@ -528,4 +604,24 @@ export const clearUserSession = () => {
   localStorage.removeItem('adminPermissions');
   localStorage.removeItem('authType');
   localStorage.removeItem('authApiVersion');
+  localStorage.removeItem('adminLastActivity');
 };
+
+/**
+ * Clear all authentication and permission state from both sessionStorage and localStorage
+ * to ensure strict session isolation and immediate sign-out.
+ */
+export const clearUserSession = () => {
+  sessionStorage.removeItem('isAdmin');
+  sessionStorage.removeItem('adminToken');
+  sessionStorage.removeItem('adminEmail');
+  sessionStorage.removeItem('adminName');
+  sessionStorage.removeItem('adminRole');
+  sessionStorage.removeItem('adminPermissions');
+  sessionStorage.removeItem('authType');
+  sessionStorage.removeItem('authApiVersion');
+  sessionStorage.removeItem('adminLastActivity');
+
+  cleanupLegacyLocalStorage();
+};
+
