@@ -81,13 +81,21 @@ export default function Home() {
     ])
       .then(([prods, cats, subs, sols, blogs]) => {
         if (isMounted) {
-          const sortedCats = (Array.isArray(cats) ? cats : []).slice().sort((a, b) => {
+          const activeCats = (Array.isArray(cats) ? cats : []).filter(
+            (c) => c.status !== 'Inactive' && c.isActive !== false
+          );
+          const sortedCats = activeCats.slice().sort((a, b) => {
             const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
             const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
-            if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
-              if (orderA === 0) return 1;
-              if (orderB === 0) return -1;
-              return orderA - orderB;
+            const hasA = !isNaN(orderA) && orderA > 0;
+            const hasB = !isNaN(orderB) && orderB > 0;
+
+            if (hasA && hasB) {
+              if (orderA !== orderB) return orderA - orderB;
+            } else if (hasA) {
+              return -1;
+            } else if (hasB) {
+              return 1;
             }
             return (Number(a.id) || 0) - (Number(b.id) || 0);
           });

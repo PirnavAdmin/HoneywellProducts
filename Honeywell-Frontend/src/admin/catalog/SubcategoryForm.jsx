@@ -50,8 +50,11 @@ const SubcategoryForm = () => {
           ...emptySubcategory,
           ...current,
           ...(existingSubcategory || {}),
+          status: existingSubcategory?.status || (existingSubcategory?.isActive === false ? 'Inactive' : 'Active') || 'Active',
           categoryId: existingSubcategory?.categoryId || preselectedCategoryId || loadedCategories[0]?.id || '',
-          displayOrder: existingSubcategory ? String(existingSubcategory.displayOrder || '') : current.displayOrder,
+          displayOrder: existingSubcategory && existingSubcategory.displayOrder !== undefined && existingSubcategory.displayOrder !== null && existingSubcategory.displayOrder !== ''
+            ? String(existingSubcategory.displayOrder)
+            : current.displayOrder,
           imageFile: null,
         }));
       } catch (apiError) {
@@ -101,8 +104,15 @@ const SubcategoryForm = () => {
     setIsSaving(true);
 
     try {
+      const displayOrderVal = formData.displayOrder !== '' && formData.displayOrder !== null && !isNaN(Number(formData.displayOrder))
+        ? Number(formData.displayOrder)
+        : 0;
+
       const saved = await saveSubcategoryApi({
         ...formData,
+        displayOrder: displayOrderVal,
+        isActive: formData.status !== 'Inactive',
+        status: formData.status,
         slug: formData.slug || slugify(formData.name),
       });
 
@@ -222,10 +232,10 @@ const SubcategoryForm = () => {
                 id="subcategory-order"
                 name="displayOrder"
                 type="number"
-                min="1"
+                min="0"
                 value={formData.displayOrder}
                 onChange={handleInputChange}
-                placeholder="1"
+                placeholder="0"
                 style={{ padding: '6px 10px', fontSize: '13px' }}
               />
             </div>

@@ -10,6 +10,7 @@ namespace Honeywell.DTOs
         public string Brand { get; set; }
         public string Manufacturer { get; set; }
         public decimal MRP { get; set; }
+        public decimal? BasePrice { get; set; }
         public int Stock { get; set; }
         public int? ReorderLevel { get; set; }
         public decimal? CostPrice { get; set; }

@@ -44,7 +44,9 @@ const Category = () => {
         setFormData({
           ...emptyCategory,
           ...existingCategory,
-          displayOrder: String(existingCategory.displayOrder || ''),
+          displayOrder: existingCategory.displayOrder !== undefined && existingCategory.displayOrder !== null
+            ? String(existingCategory.displayOrder)
+            : '',
           imageFile: null,
         });
       } catch (apiError) {
@@ -196,7 +198,7 @@ const Category = () => {
             <div className="catalog-form-grid catalog-form-grid--three" style={{ gap: '16px' }}>
               <div className="catalog-field">
                 <label htmlFor="category-order" style={{ fontSize: '12px', fontWeight: '600' }}>Display Order</label>
-                <input id="category-order" name="displayOrder" type="number" min="1" value={formData.displayOrder} onChange={handleInputChange} placeholder="1" style={{ padding: '6px 10px', fontSize: '13px' }} />
+                <input id="category-order" name="displayOrder" type="number" min="0" value={formData.displayOrder} onChange={handleInputChange} placeholder="0" style={{ padding: '6px 10px', fontSize: '13px' }} />
               </div>
               <div className="catalog-field">
                 <label htmlFor="category-status" style={{ fontSize: '12px', fontWeight: '600' }}>Status</label>

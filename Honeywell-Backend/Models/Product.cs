@@ -40,6 +40,7 @@ namespace Honeywell.Models
         public int OneStar { get; set; }
 
         public decimal MRP { get; set; }
+        public decimal BasePrice { get; set; }
         public int Stock { get; set; }
 
         public string? DiscountType { get; set; }

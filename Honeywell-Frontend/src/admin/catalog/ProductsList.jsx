@@ -80,9 +80,9 @@ const ProductsList = () => {
     setErrorMessage('');
     try {
       const [cats, subcats, apiProducts] = await Promise.all([
-        fetchCategories().catch(() => []),
-        fetchSubcategories().catch(() => []),
-        fetchProducts().catch(() => [])
+        fetchCategories(true).catch(() => []),
+        fetchSubcategories(true).catch(() => []),
+        fetchProducts(true).catch(() => [])
       ]);
       if (!isMounted) return;
       setCategories(cats);
@@ -103,9 +103,14 @@ const ProductsList = () => {
       if (!isMounted) return;
       const updated = e?.detail;
       if (updated && updated.id) {
-        setProducts((current) =>
-          current.map((p) => (String(p.id) === String(updated.id) ? { ...p, ...updated } : p))
-        );
+        setProducts((current) => {
+          const exists = current.some((p) => String(p.id) === String(updated.id));
+          if (exists) {
+            return current.map((p) => (String(p.id) === String(updated.id) ? { ...p, ...updated } : p));
+          } else {
+            return [updated, ...current];
+          }
+        });
       }
       loadAll(true);
     };

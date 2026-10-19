@@ -34,8 +34,8 @@ const SubcategoriesList = () => {
         setError('');
 
         const [loadedCategories, rawSubcategories, loadedProducts] = await Promise.all([
-          fetchCategories(),
-          fetchSubcategories().catch(() => []),
+          fetchCategories(true),
+          fetchSubcategories(true).catch(() => []),
           fetchProducts().catch(() => [])
         ]);
 
@@ -92,8 +92,17 @@ const SubcategoriesList = () => {
       .sort((a, b) => {
         const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
         const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
-        if (orderA !== orderB) return orderA - orderB;
-        return Number(a.id) - Number(b.id);
+        const hasA = !isNaN(orderA) && orderA > 0;
+        const hasB = !isNaN(orderB) && orderB > 0;
+
+        if (hasA && hasB) {
+          if (orderA !== orderB) return orderA - orderB;
+        } else if (hasA) {
+          return -1;
+        } else if (hasB) {
+          return 1;
+        }
+        return (Number(a.id) || 0) - (Number(b.id) || 0);
       });
   }, [subcategories, searchTerm, categories, selectedCategoryId]);
 
@@ -106,9 +115,12 @@ const SubcategoriesList = () => {
     const subcategory = subcategories.find((item) => item.id === id);
     if (!subcategory) return;
 
+    const nextStatus = subcategory.status === 'Active' ? 'Inactive' : 'Active';
+    const nextIsActive = nextStatus === 'Active';
     const updatedSubcategory = {
       ...subcategory,
-      status: subcategory.status === 'Active' ? 'Inactive' : 'Active',
+      status: nextStatus,
+      isActive: nextIsActive,
     };
     const previousSubcategories = subcategories;
     setSubcategories((current) => current.map((item) => (item.id === id ? updatedSubcategory : item)));
@@ -192,6 +204,7 @@ const SubcategoriesList = () => {
               <tr style={{ background: '#f8fafc' }}>
                 <th style={{ padding: '10px 16px' }}>ID</th>
                 <th style={{ padding: '10px 16px' }}>Subcategory Name</th>
+                <th style={{ padding: '10px 16px' }}>Display Order</th>
                 <th style={{ padding: '10px 16px' }}>Slug</th>
                 <th style={{ padding: '10px 16px' }}>Description</th>
                 <th style={{ padding: '10px 16px' }}>Status</th>
@@ -201,7 +214,7 @@ const SubcategoriesList = () => {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan="6" className="catalog-center-cell" style={{ padding: '32px' }}>
+                  <td colSpan="7" className="catalog-center-cell" style={{ padding: '32px' }}>
                     Loading subcategories...
                   </td>
                 </tr>
@@ -213,6 +226,9 @@ const SubcategoriesList = () => {
                   </td>
                   <td style={{ padding: '10px 16px', fontWeight: '600', color: '#1e293b' }}>
                     {subcategory.name}
+                  </td>
+                  <td style={{ padding: '10px 16px', fontWeight: '700', color: '#1268a5' }}>
+                    {subcategory.displayOrder ?? 0}
                   </td>
                   <td className="catalog-path" style={{ padding: '10px 16px', color: '#2563eb' }}>
                     {subcategory.slug}
@@ -249,7 +265,7 @@ const SubcategoriesList = () => {
               ))}
               {!isLoading && !filteredSubcategories.length && (
                 <tr>
-                  <td colSpan="6" className="catalog-center-cell" style={{ padding: '32px', color: '#64748b' }}>
+                  <td colSpan="7" className="catalog-center-cell" style={{ padding: '32px', color: '#64748b' }}>
                     No subcategories match your filters.
                   </td>
                 </tr>

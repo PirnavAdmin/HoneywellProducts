@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getApiDomain, resolveMediaUrl } from '../../utils/apiConfig';
-import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore, defaultProducts } from './catalogStore';
+import { getProducts, getCategories, upsertProduct, saveProducts, deleteProductFromStore, defaultProducts, getCategoryMetadataOverrides, getSubcategoryMetadataOverrides } from './catalogStore';
 import { apiCache } from '../../utils/apiCache';
 
 
@@ -121,36 +121,86 @@ const unwrapItem = (response) => {
 // ─── Mappers ──────────────────────────────────────────────────────────────────
 
 /** Map a raw category object from the API to our frontend shape */
-export const mapCategoryFromApi = (raw = {}) => ({
-  id: String(raw.id ?? ''),
-  name: raw.categoryName || raw.name || '',
-  slug: raw.slug || '',
-  description: raw.description || '',
-  status: raw.isActive === false ? 'Inactive' : 'Active',
-  displayOrder: Number(raw.displayOrder ?? raw.display_order ?? 0),
-  metaTitle: raw.metaTitle || `${raw.categoryName || raw.name || ''} | Honeywell`,
-  metaDescription: raw.metaDescription || raw.description || '',
-  image: resolveImageUrl(raw.imageUrl || raw.image || ''),
-  imageUrl: raw.imageUrl || '',
-  subCategories: raw.subCategories || raw.subcategories || [],
-  products: raw.products || [],
-  code: raw.categoryCode || String(raw.id || ''),
-});
+export const mapCategoryFromApi = (raw = {}) => {
+  const catId = String(raw.id ?? '');
+  const overrides = getCategoryMetadataOverrides();
+  const override = catId ? overrides[catId] : null;
+
+  let isInactive;
+  if (override && (override.status !== undefined || override.isActive !== undefined)) {
+    isInactive = override.status === 'Inactive' || override.isActive === false;
+  } else {
+    isInactive = raw.isActive === false || raw.status === 'Inactive' || raw.Status === 'Inactive';
+  }
+
+  let displayOrder;
+  if (override && override.displayOrder !== undefined && override.displayOrder !== null && !isNaN(Number(override.displayOrder))) {
+    displayOrder = Number(override.displayOrder);
+  } else {
+    displayOrder = Number(raw.displayOrder ?? raw.DisplayOrder ?? raw.display_order ?? 0);
+  }
+
+  return {
+    id: catId,
+    name: raw.categoryName || raw.name || '',
+    slug: raw.slug || '',
+    description: raw.description || '',
+    status: isInactive ? 'Inactive' : 'Active',
+    isActive: !isInactive,
+    displayOrder: displayOrder,
+    metaTitle: raw.metaTitle || `${raw.categoryName || raw.name || ''} | Honeywell`,
+    metaDescription: raw.metaDescription || raw.description || '',
+    image: resolveImageUrl(raw.imageUrl || raw.image || ''),
+    imageUrl: raw.imageUrl || '',
+    subCategories: raw.subCategories || raw.subcategories || [],
+    products: raw.products || [],
+    code: raw.categoryCode || String(raw.id || ''),
+  };
+};
 
 /** Map a raw subcategory object from the API to our frontend shape */
-export const mapSubcategoryFromApi = (raw = {}) => ({
-  id: String(raw.id ?? ''),
-  categoryId: String(raw.categoryId ?? ''),
-  name: raw.subcategoryName || raw.name || '',
-  slug: raw.slug || '',
-  description: raw.description || '',
-  status: raw.isActive === false ? 'Inactive' : 'Active',
-  displayOrder: raw.displayOrder ?? '',
-  image: resolveImageUrl(raw.imageUrl || raw.image || ''),
-  imageUrl: raw.imageUrl || '',
-  categoryName: raw.categoryName || raw.category?.categoryName || '',
-  products: raw.products || [],
-});
+export const mapSubcategoryFromApi = (raw = {}) => {
+  const subId = String(raw.id ?? raw.subcategoryId ?? raw.SubcategoryId ?? raw.Id ?? '');
+  const overrides = getSubcategoryMetadataOverrides();
+  const override = subId ? overrides[subId] : null;
+
+  let isInactive;
+  if (override && (override.status !== undefined || override.isActive !== undefined)) {
+    isInactive = override.status === 'Inactive' || override.isActive === false;
+  } else {
+    const rawIsActive = raw.isActive ?? raw.IsActive;
+    const rawStatus = raw.status ?? raw.Status;
+    isInactive =
+      rawIsActive === false ||
+      rawStatus === 'Inactive' ||
+      rawStatus === false;
+  }
+
+  let displayOrder;
+  if (override && override.displayOrder !== undefined && override.displayOrder !== null && !isNaN(Number(override.displayOrder))) {
+    displayOrder = Number(override.displayOrder);
+  } else {
+    const rawOrder = raw.displayOrder ?? raw.DisplayOrder ?? raw.display_order;
+    displayOrder = rawOrder !== undefined && rawOrder !== null && rawOrder !== '' && !isNaN(Number(rawOrder))
+      ? Number(rawOrder)
+      : 0;
+  }
+
+  return {
+    id: subId,
+    categoryId: String(raw.categoryId ?? raw.CategoryId ?? ''),
+    name: raw.subcategoryName || raw.name || raw.Name || '',
+    slug: raw.slug || raw.Slug || '',
+    description: raw.description || raw.Description || '',
+    status: isInactive ? 'Inactive' : 'Active',
+    isActive: !isInactive,
+    displayOrder: displayOrder,
+    image: resolveImageUrl(raw.imageUrl || raw.image || ''),
+    imageUrl: raw.imageUrl || '',
+    categoryName: raw.categoryName || raw.category?.categoryName || '',
+    products: raw.products || [],
+  };
+};
 
 /**
  * Map a raw product object from the API to the frontend shape expected by
@@ -494,31 +544,57 @@ export const mapProductFromApi = (
 // ─── Categories ───────────────────────────────────────────────────────────────
 // GET /api/Category
 
-export const fetchCategories = async () => {
+export const fetchCategories = async (forceRefresh = false) => {
+  if (forceRefresh) {
+    apiCache.clear();
+  }
   return await apiCache.fetchWithCache('categories_all', async () => {
     const response = await api.get('/api/Category');
     const cats = unwrapList(response).map(mapCategoryFromApi);
     return cats.sort((a, b) => {
       const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
       const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
-      if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
-        if (orderA === 0) return 1;
-        if (orderB === 0) return -1;
-        return orderA - orderB;
+      const hasA = !isNaN(orderA) && orderA > 0;
+      const hasB = !isNaN(orderB) && orderB > 0;
+
+      if (hasA && hasB) {
+        if (orderA !== orderB) return orderA - orderB;
+      } else if (hasA) {
+        return -1;
+      } else if (hasB) {
+        return 1;
       }
       return (Number(a.id) || 0) - (Number(b.id) || 0);
     });
-  }, 10 * 60 * 1000);
+  }, forceRefresh ? 0 : 60 * 1000);
 };
 
 // ─── Subcategories ────────────────────────────────────────────────────────────
 // GET /api/Subcategory
 
-export const fetchSubcategories = async () => {
+export const fetchSubcategories = async (forceRefresh = false) => {
+  if (forceRefresh) {
+    apiCache.invalidate('subcategories_all');
+  }
   return await apiCache.fetchWithCache('subcategories_all', async () => {
     const response = await api.get('/api/Subcategory');
-    return unwrapList(response).map(mapSubcategoryFromApi);
-  }, 10 * 60 * 1000);
+    const subs = unwrapList(response).map(mapSubcategoryFromApi);
+    return subs.sort((a, b) => {
+      const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
+      const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
+      const hasA = !isNaN(orderA) && orderA > 0;
+      const hasB = !isNaN(orderB) && orderB > 0;
+
+      if (hasA && hasB) {
+        if (orderA !== orderB) return orderA - orderB;
+      } else if (hasA) {
+        return -1;
+      } else if (hasB) {
+        return 1;
+      }
+      return (Number(a.id) || 0) - (Number(b.id) || 0);
+    });
+  }, forceRefresh ? 0 : 60 * 1000);
 };
 
 
@@ -613,7 +689,28 @@ export const deleteProductReview = async (id) => {
 // GET /api/products/related/{productId}
 
 /** Fetch all products (GET /api/products) */
-export const fetchProducts = async (categories = [], subcategories = []) => {
+export const fetchProducts = async (arg1 = false, arg2 = [], arg3 = []) => {
+  let forceRefresh = false;
+  let categories = [];
+  let subcategories = [];
+
+  if (typeof arg1 === 'boolean') {
+    forceRefresh = arg1;
+    categories = Array.isArray(arg2) ? arg2 : [];
+    subcategories = Array.isArray(arg3) ? arg3 : [];
+  } else if (Array.isArray(arg1)) {
+    categories = arg1;
+    subcategories = Array.isArray(arg2) ? arg2 : [];
+    forceRefresh = typeof arg3 === 'boolean' ? arg3 : false;
+  }
+
+  if (forceRefresh) {
+    apiCache.invalidate('products');
+    apiCache.invalidate('product');
+    apiCache.invalidate('paged');
+    apiCache.invalidate('search');
+  }
+
   return await apiCache.fetchWithCache('products_all', async () => {
     const [response, ledgerRes] = await Promise.all([
       api.get('/api/products').catch(() => null),
@@ -663,7 +760,7 @@ export const fetchProducts = async (categories = [], subcategories = []) => {
         return mapProductFromApi(p, categories, subcategories, [], prodReviews);
       });
     return apiProducts;
-  }, 5 * 60 * 1000);
+  }, forceRefresh ? 0 : 60 * 1000);
 };
 
 /** Search products by keyword (GET /api/products/search?keyword=) */
@@ -928,8 +1025,11 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     setStoredCostPrice(prodId, costVal);
   }
 
+  const effectiveBasePrice = String(Number(product.basePrice) || Number(product.price) || Number(product.mrp) || 0);
   fd.append('MRP', String(Number(product.mrp) || 0));
   fd.append('SellingPrice', String(Number(product.price) || 0));
+  fd.append('BasePrice', effectiveBasePrice);
+  fd.append('basePrice', effectiveBasePrice);
   fd.append('StockQuantity', String(stockVal));
   fd.append('Stock', String(stockVal));
   fd.append('StockStatus', computedStatus);
@@ -1044,6 +1144,8 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       mrp: Number(product.mrp) || 0,
       price: Number(product.price) || 0,
       sellingPrice: Number(product.price) || 0,
+      basePrice: Number(product.basePrice) || Number(product.price) || Number(product.mrp) || 0,
+      BasePrice: Number(product.basePrice) || Number(product.price) || Number(product.mrp) || 0,
       stock: stockVal,
       stockQuantity: stockVal,
       reorderLevel: reorderVal,
@@ -1085,14 +1187,8 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
       }
       mapped = mapProductFromApi(saved?.productId ? { ...payload, id: saved.productId } : saved);
     } catch (err2) {
-      console.warn('Backend API unavailable to save product, falling back to local catalog store:', err2.message);
-      const fallbackId = String(prodId || Date.now());
-      if (savedId || fallbackId) {
-        setStoredReorderLevel(savedId || fallbackId, reorderVal);
-        setStoredCostPrice(savedId || fallbackId, costVal);
-      }
-      mapped = mapProductFromApi(savedId ? { ...payload, id: savedId } : { ...payload, id: fallbackId });
-      savedId = String(mapped?.id || fallbackId);
+      console.error('Backend API failed to save product:', err2);
+      throw err2;
     }
   }
 

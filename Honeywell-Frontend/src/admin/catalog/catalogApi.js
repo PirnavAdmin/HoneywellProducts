@@ -10,7 +10,13 @@ import {
   upsertProduct,
   cleanCategoryName,
   slugify,
-  deleteCategoryFromStore
+  deleteCategoryFromStore,
+  getCategoryMetadataOverrides,
+  saveCategoryMetadataOverride,
+  removeCategoryMetadataOverride,
+  getSubcategoryMetadataOverrides,
+  saveSubcategoryMetadataOverride,
+  removeSubcategoryMetadataOverride
 } from './catalogStore';
 
 // ─── Base URL ────────────────────────────────────────────────────────────────
@@ -83,13 +89,43 @@ export const mapCategoryFromApi = (raw = {}) => {
     }
   }
 
+  const categoryIdStr = String(raw.id ?? raw.categoryId ?? '');
+  const overrides = getCategoryMetadataOverrides();
+  const override = categoryIdStr ? overrides[categoryIdStr] : null;
+
+  let isInactive;
+  if (override && (override.status !== undefined || override.isActive !== undefined)) {
+    isInactive = override.status === 'Inactive' || override.isActive === false;
+  } else {
+    const rawIsActive = raw.isActive ?? raw.IsActive;
+    const rawStatus = raw.status ?? raw.Status;
+    isInactive =
+      rawIsActive === false ||
+      rawIsActive === 'false' ||
+      rawIsActive === 0 ||
+      rawIsActive === '0' ||
+      rawStatus === 'Inactive' ||
+      rawStatus === 'inactive';
+  }
+
+  let displayOrder;
+  if (override && override.displayOrder !== undefined && override.displayOrder !== null && !isNaN(Number(override.displayOrder))) {
+    displayOrder = Number(override.displayOrder);
+  } else {
+    const rawOrder = raw.displayOrder ?? raw.DisplayOrder ?? raw.display_order ?? raw.order ?? raw.Order;
+    displayOrder = rawOrder !== undefined && rawOrder !== null && rawOrder !== '' && !isNaN(Number(rawOrder))
+      ? Number(rawOrder)
+      : 0;
+  }
+
   return {
-    id: String(raw.id ?? raw.categoryId ?? ''),
+    id: categoryIdStr,
     name: cleanName,
     slug: rawSlug || slugify(cleanName),
     description: raw.description || '',
-    status: raw.isActive === false ? 'Inactive' : 'Active',
-    displayOrder: Number(raw.displayOrder ?? raw.display_order ?? 0),
+    status: isInactive ? 'Inactive' : 'Active',
+    isActive: !isInactive,
+    displayOrder: displayOrder,
     metaTitle: raw.metaTitle || `${cleanName} | Honeywell`,
     metaDescription: raw.metaDescription || raw.description || '',
     image: resolveImageUrl(raw.imageUrl || raw.image),
@@ -100,19 +136,48 @@ export const mapCategoryFromApi = (raw = {}) => {
   };
 };
 
-export const mapSubcategoryFromApi = (raw = {}) => ({
-  id: String(raw.id ?? raw.subcategoryId ?? ''),
-  categoryId: String(raw.categoryId ?? ''),
-  name: raw.name || raw.subcategoryName || '',
-  slug: raw.slug || '',
-  description: raw.description || '',
-  status: raw.isActive === false ? 'Inactive' : 'Active',
-  displayOrder: raw.displayOrder ?? '',
-  image: resolveImageUrl(raw.imageUrl || raw.image),
-  imageUrl: raw.imageUrl || '',
-  categoryName: raw.categoryName || '',
-  products: raw.products || [],
-});
+export const mapSubcategoryFromApi = (raw = {}) => {
+  const subId = String(raw.id ?? raw.subcategoryId ?? raw.SubcategoryId ?? raw.Id ?? '');
+  const overrides = getSubcategoryMetadataOverrides();
+  const override = subId ? overrides[subId] : null;
+
+  let isInactive;
+  if (override && (override.status !== undefined || override.isActive !== undefined)) {
+    isInactive = override.status === 'Inactive' || override.isActive === false;
+  } else {
+    const rawIsActive = raw.isActive ?? raw.IsActive;
+    const rawStatus = raw.status ?? raw.Status;
+    isInactive =
+      rawIsActive === false ||
+      rawStatus === 'Inactive' ||
+      rawStatus === false;
+  }
+
+  let displayOrder;
+  if (override && override.displayOrder !== undefined && override.displayOrder !== null && !isNaN(Number(override.displayOrder))) {
+    displayOrder = Number(override.displayOrder);
+  } else {
+    const rawOrder = raw.displayOrder ?? raw.DisplayOrder ?? raw.display_order;
+    displayOrder = rawOrder !== undefined && rawOrder !== null && rawOrder !== '' && !isNaN(Number(rawOrder))
+      ? Number(rawOrder)
+      : 0;
+  }
+
+  return {
+    id: subId,
+    categoryId: String(raw.categoryId ?? raw.CategoryId ?? ''),
+    name: raw.name || raw.subcategoryName || raw.subcategory_name || raw.Name || '',
+    slug: raw.slug || raw.Slug || '',
+    description: raw.description || raw.Description || '',
+    status: isInactive ? 'Inactive' : 'Active',
+    isActive: !isInactive,
+    displayOrder: displayOrder,
+    image: resolveImageUrl(raw.imageUrl || raw.image),
+    imageUrl: raw.imageUrl || '',
+    categoryName: raw.categoryName || '',
+    products: raw.products || [],
+  };
+};
 
 export const mapProductFromApi = (raw = {}, categories = [], subcategories = []) => {
   const subcategoryId = String(raw.subcategoryId ?? raw.subCategoryId ?? '');
@@ -228,10 +293,15 @@ export const sortCategoriesByDisplayOrder = (categories = []) => {
     const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
     const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
 
-    if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
-      if (orderA === 0) return 1;
-      if (orderB === 0) return -1;
-      return orderA - orderB;
+    const hasA = !isNaN(orderA) && orderA > 0;
+    const hasB = !isNaN(orderB) && orderB > 0;
+
+    if (hasA && hasB) {
+      if (orderA !== orderB) return orderA - orderB;
+    } else if (hasA) {
+      return -1;
+    } else if (hasB) {
+      return 1;
     }
     return (Number(a.id) || 0) - (Number(b.id) || 0);
   });
@@ -239,7 +309,10 @@ export const sortCategoriesByDisplayOrder = (categories = []) => {
 
 // ─── Category API ─────────────────────────────────────────────────────────────
 
-export const fetchCategories = async () => {
+export const fetchCategories = async (forceRefresh = false) => {
+  if (forceRefresh) {
+    apiCache.clear();
+  }
   return await apiCache.fetchWithCache('categories_all', async () => {
     try {
       const response = await api.get('/api/Category');
@@ -249,7 +322,7 @@ export const fetchCategories = async () => {
       console.error('API error fetching categories:', err.message);
       throw new Error('Unable to connect to backend server or fetch categories.');
     }
-  }, 10 * 60 * 1000);
+  }, forceRefresh ? 0 : 60 * 1000);
 };
 
 export const fetchCategory = async (id) => {
@@ -271,6 +344,23 @@ export const saveCategory = async (category) => {
   const cleanName = cleanCategoryName(category.name);
   const cleanSlug = category.slug ? slugify(category.slug) : slugify(cleanName);
 
+  const isActive = category.status !== undefined
+    ? (category.status === 'Active' || category.status === true || category.status === 'true' || category.status === 1)
+    : (category.isActive !== undefined ? (category.isActive === true || category.isActive === 'true' || category.isActive === 1) : true);
+
+  const displayOrderVal = category.displayOrder !== undefined && category.displayOrder !== null && category.displayOrder !== '' && !isNaN(Number(category.displayOrder))
+    ? Number(category.displayOrder)
+    : 0;
+
+  const catId = category.id ? String(category.id) : '';
+  if (catId) {
+    saveCategoryMetadataOverride(catId, {
+      displayOrder: displayOrderVal,
+      status: isActive ? 'Active' : 'Inactive',
+      isActive: isActive,
+    });
+  }
+
   const fd = new FormData();
   if (isEditing) {
     fd.append('Id', String(category.id));
@@ -278,8 +368,12 @@ export const saveCategory = async (category) => {
   fd.append('Name', cleanName);
   fd.append('Description', category.description || '');
   fd.append('Slug', cleanSlug);
-  fd.append('DisplayOrder', category.displayOrder !== undefined && category.displayOrder !== null && category.displayOrder !== '' ? String(category.displayOrder) : '0');
-  fd.append('IsActive', category.status === 'Active' ? 'true' : 'false');
+  fd.append('DisplayOrder', String(displayOrderVal));
+  fd.append('displayOrder', String(displayOrderVal));
+  fd.append('IsActive', isActive ? 'true' : 'false');
+  fd.append('isActive', isActive ? 'true' : 'false');
+  fd.append('Status', isActive ? 'Active' : 'Inactive');
+  fd.append('status', isActive ? 'Active' : 'Inactive');
   fd.append('MetaTitle', category.metaTitle || `${cleanName} | Honeywell`);
   fd.append('MetaDescription', category.metaDescription || category.description || '');
 
@@ -290,6 +384,7 @@ export const saveCategory = async (category) => {
   }
 
   const categoryImage = category.image || category.imageUrl || '';
+  let saved = null;
 
   try {
     const response = await api({
@@ -298,70 +393,74 @@ export const saveCategory = async (category) => {
       data: fd,
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-
-    const saved = unwrapItem(response);
-    const mapped = mapCategoryFromApi(saved);
-    if (!mapped.image && categoryImage) {
-      mapped.image = categoryImage;
-      mapped.imageUrl = categoryImage;
-    }
-    apiCache.invalidate('cat');
-    apiCache.invalidate('category');
-    apiCache.invalidate('categories');
-    upsertCategory(mapped);
-    return mapped;
+    saved = unwrapItem(response);
   } catch (err) {
     console.warn('FormData category request failed, attempting JSON payload fallback:', err.message);
+    const payload = {
+      id: isEditing ? Number(category.id) || category.id : undefined,
+      name: cleanName,
+      description: category.description || '',
+      slug: cleanSlug,
+      displayOrder: displayOrderVal,
+      isActive: isActive,
+      status: isActive ? 'Active' : 'Inactive',
+      metaTitle: category.metaTitle || `${cleanName} | Honeywell`,
+      metaDescription: category.metaDescription || category.description || '',
+      imageUrl: categoryImage,
+      image: categoryImage,
+    };
+
+    try {
+      const response = await api({
+        method: isEditing ? 'PUT' : 'POST',
+        url: isEditing ? `/api/Category/${category.id}` : '/api/Category',
+        data: payload,
+        headers: { 'Content-Type': 'application/json' },
+      });
+      saved = unwrapItem(response);
+    } catch (fallbackErr) {
+      console.warn('Backend API JSON fallback failed:', fallbackErr.message);
+    }
   }
 
-  // Standard JSON payload fallback
-  const payload = {
-    id: isEditing ? Number(category.id) || category.id : undefined,
+  const mapped = saved ? mapCategoryFromApi(saved) : {
+    id: catId || String(Date.now()),
     name: cleanName,
-    description: category.description || '',
     slug: cleanSlug,
-    displayOrder: Number(category.displayOrder || 0),
-    isActive: category.status === 'Active',
+    description: category.description || '',
     metaTitle: category.metaTitle || `${cleanName} | Honeywell`,
     metaDescription: category.metaDescription || category.description || '',
-    imageUrl: categoryImage,
     image: categoryImage,
+    imageUrl: categoryImage,
   };
 
-  try {
-    const response = await api({
-      method: isEditing ? 'PUT' : 'POST',
-      url: isEditing ? `/api/Category/${category.id}` : '/api/Category',
-      data: payload,
-      headers: { 'Content-Type': 'application/json' },
-    });
-
-    const saved = unwrapItem(response);
-    const mapped = mapCategoryFromApi(saved);
-    if (!mapped.image && categoryImage) {
-      mapped.image = categoryImage;
-      mapped.imageUrl = categoryImage;
-    }
-    apiCache.invalidate('cat');
-    apiCache.invalidate('category');
-    apiCache.invalidate('categories');
-    upsertCategory(mapped);
-    return mapped;
-  } catch (err) {
-    console.error('Backend API unavailable to save category:', err.message);
-    throw new Error('Unable to save category. Backend server is unreachable.');
+  mapped.displayOrder = displayOrderVal;
+  mapped.status = isActive ? 'Active' : 'Inactive';
+  mapped.isActive = isActive;
+  if (!mapped.image && categoryImage) {
+    mapped.image = categoryImage;
+    mapped.imageUrl = categoryImage;
   }
+
+  saveCategoryMetadataOverride(mapped.id, {
+    displayOrder: displayOrderVal,
+    status: mapped.status,
+    isActive: isActive,
+  });
+
+  apiCache.clear();
+  upsertCategory(mapped);
+  return mapped;
 };
 
 export const deleteCategory = async (id) => {
   try {
     await api.delete(`/api/Category/${id}`);
-    apiCache.invalidate('cat');
-    apiCache.invalidate('category');
-    apiCache.invalidate('categories');
   } catch (err) {
     console.warn(`DELETE /api/Category/${id} failed:`, err.message);
   }
+  removeCategoryMetadataOverride(id);
+  apiCache.clear();
   deleteCategoryFromStore(id);
 };
 
@@ -374,8 +473,8 @@ import {
   deleteSubcategory as deleteSubcategoryApi,
 } from './subcategoriesApi';
 
-export const fetchSubcategories = async () => {
-  return await fetchSubcategoriesApi();
+export const fetchSubcategories = async (forceRefresh = false) => {
+  return await fetchSubcategoriesApi(forceRefresh);
 };
 
 export const fetchSubcategory = async (id) => {

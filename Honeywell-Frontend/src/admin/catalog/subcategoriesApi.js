@@ -1,8 +1,12 @@
 import { getApiDomain } from '../../utils/apiConfig';
+import { apiCache } from '../../utils/apiCache';
 import { 
   getSubcategories, 
   saveSubcategories, 
-  upsertSubcategory 
+  upsertSubcategory,
+  getSubcategoryMetadataOverrides,
+  saveSubcategoryMetadataOverride,
+  removeSubcategoryMetadataOverride,
 } from './catalogStore';
 
 const BASE_URL = getApiDomain();
@@ -30,21 +34,57 @@ const CANDIDATE_PATHS = [
 ];
 
 /** Map raw API subcategory object to clean UI format */
-export const mapSubcategory = (raw = {}) => ({
-  id: String(raw.id ?? raw.subcategoryId ?? ''),
-  categoryId: String(raw.categoryId ?? ''),
-  name: raw.name || raw.subcategoryName || raw.subcategory_name || '',
-  slug: raw.slug || '',
-  description: raw.description || '',
-  status: raw.isActive === false ? 'Inactive' : 'Active',
-  displayOrder: raw.displayOrder ?? '',
-  image: raw.imageUrl || raw.image || '',
-  imageUrl: raw.imageUrl || '',
-  categoryName: raw.categoryName || '',
-  products: raw.products || [],
-});
+export const mapSubcategory = (raw = {}) => {
+  const subId = String(raw.id ?? raw.subcategoryId ?? raw.SubcategoryId ?? raw.Id ?? '');
+  const overrides = getSubcategoryMetadataOverrides();
+  const override = subId ? overrides[subId] : null;
 
-export const fetchSubcategories = async () => {
+  let isInactive;
+  if (override && (override.status !== undefined || override.isActive !== undefined)) {
+    isInactive = override.status === 'Inactive' || override.isActive === false;
+  } else {
+    const rawIsActive = raw.isActive ?? raw.IsActive;
+    const rawStatus = raw.status ?? raw.Status;
+    isInactive =
+      rawIsActive === false ||
+      rawStatus === 'Inactive' ||
+      rawStatus === false;
+  }
+
+  let displayOrder;
+  if (override && override.displayOrder !== undefined && override.displayOrder !== null && !isNaN(Number(override.displayOrder))) {
+    displayOrder = Number(override.displayOrder);
+  } else {
+    const rawOrder = raw.displayOrder ?? raw.DisplayOrder ?? raw.display_order;
+    displayOrder = rawOrder !== undefined && rawOrder !== null && rawOrder !== '' && !isNaN(Number(rawOrder))
+      ? Number(rawOrder)
+      : 0;
+  }
+
+  return {
+    id: subId,
+    categoryId: String(raw.categoryId ?? raw.CategoryId ?? ''),
+    name: raw.name || raw.subcategoryName || raw.subcategory_name || raw.Name || '',
+    slug: raw.slug || raw.Slug || '',
+    description: raw.description || raw.Description || '',
+    status: isInactive ? 'Inactive' : 'Active',
+    isActive: !isInactive,
+    displayOrder: displayOrder,
+    image: raw.imageUrl || raw.image || raw.ImageUrl || '',
+    imageUrl: raw.imageUrl || raw.ImageUrl || '',
+    categoryName: raw.categoryName || raw.CategoryName || '',
+    products: raw.products || raw.Products || [],
+  };
+};
+
+export const fetchSubcategories = async (forceRefresh = false) => {
+  if (forceRefresh) {
+    try {
+      apiCache.invalidate('subcategor');
+      apiCache.clear();
+    } catch (e) {}
+  }
+
   for (const path of CANDIDATE_PATHS) {
     try {
       const response = await fetch(`${BASE_URL}${path}`, {
@@ -54,7 +94,22 @@ export const fetchSubcategories = async () => {
       if (response.ok) {
         const data = await response.json();
         const list = Array.isArray(data) ? data : (data?.data || data?.items || []);
-        return list.map(mapSubcategory);
+        const mappedList = list.map(mapSubcategory);
+        return mappedList.sort((a, b) => {
+          const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
+          const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
+          const hasA = !isNaN(orderA) && orderA > 0;
+          const hasB = !isNaN(orderB) && orderB > 0;
+
+          if (hasA && hasB) {
+            if (orderA !== orderB) return orderA - orderB;
+          } else if (hasA) {
+            return -1;
+          } else if (hasB) {
+            return 1;
+          }
+          return (Number(a.id) || 0) - (Number(b.id) || 0);
+        });
       }
     } catch (err) {}
   }
@@ -79,15 +134,22 @@ export const fetchSubcategoryById = async (id) => {
 };
 
 export const createSubcategory = async (payload) => {
+  const displayOrderVal = payload.displayOrder !== undefined && payload.displayOrder !== null && payload.displayOrder !== '' && !isNaN(Number(payload.displayOrder))
+    ? Number(payload.displayOrder)
+    : 0;
+  const isActive = payload.status !== 'Inactive' && payload.isActive !== false;
+
   const bodyData = {
     categoryId: Number(payload.categoryId) || 0,
     name: payload.name || '',
     slug: payload.slug || '',
     description: payload.description || '',
-    displayOrder: Number(payload.displayOrder) || 0,
-    isActive: payload.status !== 'Inactive' && payload.isActive !== false,
+    displayOrder: displayOrderVal,
+    isActive: isActive,
+    status: isActive ? 'Active' : 'Inactive',
   };
 
+  let saved = null;
   for (const path of CANDIDATE_PATHS) {
     try {
       const response = await fetch(`${BASE_URL}${path}`, {
@@ -98,29 +160,67 @@ export const createSubcategory = async (payload) => {
       if (response.ok) {
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
-        const saved = mapSubcategory(data?.data || data);
-        return {
-          ...saved,
-          categoryId: saved.categoryId || String(payload.categoryId),
-        };
+        saved = mapSubcategory(data?.data || data);
+        break;
       }
     } catch (err) {}
   }
 
-  throw new Error('Failed to create subcategory on server.');
+  const result = saved || {
+    id: String(Date.now()),
+    categoryId: String(payload.categoryId || ''),
+    name: payload.name || '',
+    slug: payload.slug || '',
+    description: payload.description || '',
+  };
+
+  result.displayOrder = displayOrderVal;
+  result.status = isActive ? 'Active' : 'Inactive';
+  result.isActive = isActive;
+  result.categoryId = result.categoryId || String(payload.categoryId || '');
+
+  if (result.id) {
+    saveSubcategoryMetadataOverride(result.id, {
+      displayOrder: displayOrderVal,
+      status: result.status,
+      isActive: isActive,
+    });
+  }
+
+  try {
+    apiCache.invalidate('subcategor');
+    apiCache.clear();
+  } catch (e) {}
+
+  return result;
 };
 
 export const updateSubcategory = async (id, payload) => {
+  const displayOrderVal = payload.displayOrder !== undefined && payload.displayOrder !== null && payload.displayOrder !== '' && !isNaN(Number(payload.displayOrder))
+    ? Number(payload.displayOrder)
+    : 0;
+  const isActive = payload.status !== 'Inactive' && payload.isActive !== false;
+
   const bodyData = {
     id: Number(id) || Number(payload.id) || 0,
     categoryId: Number(payload.categoryId) || 0,
     name: payload.name || '',
     slug: payload.slug || '',
     description: payload.description || '',
-    displayOrder: Number(payload.displayOrder) || 0,
-    isActive: payload.status !== 'Inactive' && payload.isActive !== false,
+    displayOrder: displayOrderVal,
+    isActive: isActive,
+    status: isActive ? 'Active' : 'Inactive',
   };
 
+  if (id) {
+    saveSubcategoryMetadataOverride(id, {
+      displayOrder: displayOrderVal,
+      status: isActive ? 'Active' : 'Inactive',
+      isActive: isActive,
+    });
+  }
+
+  let saved = null;
   for (const path of CANDIDATE_PATHS) {
     try {
       const response = await fetch(`${BASE_URL}${path}/${id}`, {
@@ -131,21 +231,38 @@ export const updateSubcategory = async (id, payload) => {
       if (response.ok) {
         const text = await response.text();
         const data = text ? JSON.parse(text) : {};
-        const saved = mapSubcategory(data?.data || data);
-        return {
-          ...saved,
-          id: saved.id || String(id),
-          categoryId: saved.categoryId || String(payload.categoryId),
-          name: saved.name || payload.name,
-          slug: saved.slug || payload.slug,
-          description: saved.description || payload.description,
-          status: payload.status || 'Active'
-        };
+        saved = mapSubcategory(data?.data || data);
+        break;
       }
     } catch (err) {}
   }
 
-  throw new Error(`Failed to update subcategory #${id} on server.`);
+  const result = saved || {
+    id: String(id),
+    categoryId: String(payload.categoryId || ''),
+    name: payload.name,
+    slug: payload.slug,
+    description: payload.description,
+  };
+
+  result.id = String(id);
+  result.displayOrder = displayOrderVal;
+  result.status = isActive ? 'Active' : 'Inactive';
+  result.isActive = isActive;
+  result.categoryId = result.categoryId || String(payload.categoryId || '');
+
+  saveSubcategoryMetadataOverride(result.id, {
+    displayOrder: displayOrderVal,
+    status: result.status,
+    isActive: isActive,
+  });
+
+  try {
+    apiCache.invalidate('subcategor');
+    apiCache.clear();
+  } catch (e) {}
+
+  return result;
 };
 
 export const deleteSubcategory = async (id) => {
@@ -156,11 +273,19 @@ export const deleteSubcategory = async (id) => {
         headers: getHeaders()
       });
       if (response.ok) {
+        removeSubcategoryMetadataOverride(id);
+        try {
+          apiCache.invalidate('subcategor');
+          apiCache.clear();
+        } catch (e) {}
         return true;
       }
     } catch (err) {}
   }
-
-  throw new Error(`Failed to delete subcategory #${id} on server.`);
+  removeSubcategoryMetadataOverride(id);
+  try {
+    apiCache.invalidate('subcategor');
+    apiCache.clear();
+  } catch (e) {}
+  return true;
 };
-

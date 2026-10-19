@@ -35,7 +35,22 @@ export default function ProductsMegaMenu({ onClose }) {
     categoryService.getAll()
       .then((cats) => {
         if (isMounted && Array.isArray(cats) && cats.length > 0) {
-          const activeOnly = cats.filter(c => c.status !== 'Inactive' && c.isActive !== false);
+          const activeOnly = cats
+            .filter(c => c.status !== 'Inactive' && c.isActive !== false)
+            .sort((a, b) => {
+              const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
+              const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
+              const hasA = !isNaN(orderA) && orderA > 0;
+              const hasB = !isNaN(orderB) && orderB > 0;
+              if (hasA && hasB) {
+                if (orderA !== orderB) return orderA - orderB;
+              } else if (hasA) {
+                return -1;
+              } else if (hasB) {
+                return 1;
+              }
+              return (Number(a.id) || 0) - (Number(b.id) || 0);
+            });
           if (activeOnly.length > 0) {
             setCategories(activeOnly);
           }

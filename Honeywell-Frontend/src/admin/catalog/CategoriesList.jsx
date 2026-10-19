@@ -27,7 +27,7 @@ const CategoriesList = () => {
         setError('');
 
         const [loadedCategories, loadedProducts] = await Promise.all([
-          fetchCategories(),
+          fetchCategories(true),
           fetchProducts().catch(() => [])
         ]);
 
@@ -81,12 +81,16 @@ const CategoriesList = () => {
       .sort((a, b) => {
         const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
         const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
-        if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
-          if (orderA === 0) return 1;
-          if (orderB === 0) return -1;
-          return orderA - orderB;
+        const hasA = !isNaN(orderA) && orderA > 0;
+        const hasB = !isNaN(orderB) && orderB > 0;
+        if (hasA && hasB) {
+          if (orderA !== orderB) return orderA - orderB;
+        } else if (hasA) {
+          return -1;
+        } else if (hasB) {
+          return 1;
         }
-        return Number(a.id) - Number(b.id);
+        return (Number(a.id) || 0) - (Number(b.id) || 0);
       });
   }, [categories, searchTerm]);
 
@@ -101,7 +105,7 @@ const CategoriesList = () => {
     if (!category) return;
 
     const newStatus = category.status === 'Active' ? 'Inactive' : 'Active';
-    const updatedCategory = { ...category, status: newStatus };
+    const updatedCategory = { ...category, status: newStatus, isActive: newStatus === 'Active' };
     const previousCategories = categories;
 
     // Optimistic update
@@ -111,10 +115,8 @@ const CategoriesList = () => {
     setError('');
 
     try {
-      await saveCategory(updatedCategory);
-      // Use our locally-computed status as source of truth — server response
-      // may omit isActive in some API versions, causing a false flip-back.
-      setCategories((current) => current.map((item) => (item.id === id ? updatedCategory : item)));
+      const saved = await saveCategory(updatedCategory);
+      setCategories((current) => current.map((item) => (item.id === id ? { ...updatedCategory, ...(saved || {}), status: newStatus, isActive: newStatus === 'Active' } : item)));
       setStatusMessage(`"${category.name}" marked as ${newStatus}.`);
       setTimeout(() => setStatusMessage(''), 3000);
     } catch (apiError) {
@@ -214,7 +216,7 @@ const CategoriesList = () => {
                     {category.name}
                   </td>
                   <td style={{ padding: '10px 16px', fontWeight: '700', color: '#1268a5' }}>
-                    {category.displayOrder || 0}
+                    {category.displayOrder ?? 0}
                   </td>
                   <td className="catalog-path" style={{ padding: '10px 16px', color: '#2563eb' }}>
                     {category.slug}

@@ -16,6 +16,9 @@ namespace Honeywell.Models
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
+        
+        [NotMapped]
+        public int DisplayOrder { get; set; } = 0;
 
         [NotMapped]
         public string Slug => string.IsNullOrEmpty(Name) ? string.Empty : Name.ToLower()

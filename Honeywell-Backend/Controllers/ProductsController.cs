@@ -354,6 +354,9 @@ namespace Honeywell.Controllers
             var mrpStr = GetFormVal("MRP", "mrp", "originalPrice", "regularPrice", "marketPrice");
             if (decimal.TryParse(mrpStr, out var parsedMrp) && parsedMrp > 0) dto.MRP = parsedMrp;
 
+            var basePriceStr = GetFormVal("BasePrice", "basePrice", "base_price");
+            if (decimal.TryParse(basePriceStr, out var parsedBasePrice) && parsedBasePrice > 0) dto.BasePrice = parsedBasePrice;
+
             var priceStr = GetFormVal("SellingPrice", "sellingPrice", "Price", "price", "productPrice", "offerPrice");
             if (decimal.TryParse(priceStr, out var parsedPrice) && parsedPrice > 0) dto.SellingPrice = parsedPrice;
 
@@ -505,6 +508,9 @@ namespace Honeywell.Controllers
 
                 var mrp = GetDecVal("MRP", "mrp", "originalPrice", "regularPrice", "marketPrice");
                 if (mrp.HasValue && mrp.Value > 0) dto.MRP = mrp.Value;
+
+                var basePrice = GetDecVal("BasePrice", "basePrice", "base_price");
+                if (basePrice.HasValue && basePrice.Value > 0) dto.BasePrice = basePrice.Value;
 
                 var price = GetDecVal("SellingPrice", "sellingPrice", "Price", "price", "productPrice", "offerPrice");
                 if (price.HasValue && price.Value > 0) dto.SellingPrice = price.Value;
@@ -1008,6 +1014,10 @@ namespace Honeywell.Controllers
                 oneStar = reviewsList.Count(r => r.Rating == 1);
             }
 
+            var effectiveBasePrice = dto.BasePrice.HasValue && dto.BasePrice.Value > 0
+                ? dto.BasePrice.Value
+                : (dto.SellingPrice > 0 ? dto.SellingPrice : (dto.MRP > 0 ? dto.MRP : 0));
+
             var product = new Product
             {
                 ProductName = string.IsNullOrWhiteSpace(dto.ProductName) ? "New Product" : dto.ProductName,
@@ -1015,6 +1025,7 @@ namespace Honeywell.Controllers
                 Brand = dto.Brand,
                 Manufacturer = dto.Manufacturer,
                 MRP = dto.MRP,
+                BasePrice = effectiveBasePrice,
                 Stock = dto.Stock,
                 ReorderLevel = dto.ReorderLevel.HasValue && dto.ReorderLevel.Value >= 0 ? dto.ReorderLevel.Value : 30,
                 CostPrice = dto.CostPrice ?? 0m,
@@ -1197,6 +1208,9 @@ namespace Honeywell.Controllers
             if (!string.IsNullOrWhiteSpace(dto.Manufacturer)) product.Manufacturer = dto.Manufacturer;
             if (dto.MRP > 0) product.MRP = dto.MRP;
             if (dto.SellingPrice > 0) product.SellingPrice = dto.SellingPrice;
+            if (dto.BasePrice.HasValue && dto.BasePrice.Value > 0) product.BasePrice = dto.BasePrice.Value;
+            else if (dto.SellingPrice > 0) product.BasePrice = dto.SellingPrice;
+            else if (dto.MRP > 0) product.BasePrice = dto.MRP;
             if (dto.Stock >= 0) product.Stock = dto.Stock;
             if (dto.ReorderLevel.HasValue && dto.ReorderLevel.Value >= 0) product.ReorderLevel = dto.ReorderLevel.Value;
             if (dto.CostPrice.HasValue && dto.CostPrice.Value >= 0) product.CostPrice = dto.CostPrice.Value;

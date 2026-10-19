@@ -216,6 +216,9 @@ namespace Honeywell.Data
                 .Property(p => p.MRP)
                 .HasPrecision(18, 2);
             modelBuilder.Entity<Product>()
+                .Property(p => p.BasePrice)
+                .HasPrecision(18, 2);
+            modelBuilder.Entity<Product>()
                 .Property(p => p.DiscountAmount)
                 .HasPrecision(18, 2);
             modelBuilder.Entity<Product>()

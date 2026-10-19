@@ -11,6 +11,7 @@ namespace Honeywell.DTOs.Catalog
         public string Manufacturer { get; set; } = string.Empty;
 
         public decimal MRP { get; set; }
+        public decimal? BasePrice { get; set; }
         public int Stock { get; set; }
         public int? ReorderLevel { get; set; }
         public decimal? CostPrice { get; set; }

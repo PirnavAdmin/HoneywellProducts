@@ -15,6 +15,78 @@ const MOCK_IDS = new Set([
   '1', '2', '3', '5', '6', '7'
 ]);
 
+const isStorageAvailable = () => typeof window !== 'undefined' && Boolean(window.localStorage);
+
+const CATEGORY_META_OVERRIDES_KEY = 'sat_category_metadata_overrides';
+
+export const getCategoryMetadataOverrides = () => {
+  if (!isStorageAvailable()) return {};
+  try {
+    const raw = window.localStorage.getItem(CATEGORY_META_OVERRIDES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const saveCategoryMetadataOverride = (id, meta = {}) => {
+  if (!id || !isStorageAvailable()) return;
+  try {
+    const current = getCategoryMetadataOverrides();
+    current[String(id)] = {
+      ...(current[String(id)] || {}),
+      ...meta,
+    };
+    window.localStorage.setItem(CATEGORY_META_OVERRIDES_KEY, JSON.stringify(current));
+  } catch (err) {
+    console.warn('Failed to persist category metadata override:', err);
+  }
+};
+
+export const removeCategoryMetadataOverride = (id) => {
+  if (!id || !isStorageAvailable()) return;
+  try {
+    const current = getCategoryMetadataOverrides();
+    delete current[String(id)];
+    window.localStorage.setItem(CATEGORY_META_OVERRIDES_KEY, JSON.stringify(current));
+  } catch (err) {}
+};
+
+const SUBCATEGORY_META_OVERRIDES_KEY = 'sat_subcategory_metadata_overrides';
+
+export const getSubcategoryMetadataOverrides = () => {
+  if (!isStorageAvailable()) return {};
+  try {
+    const raw = window.localStorage.getItem(SUBCATEGORY_META_OVERRIDES_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
+
+export const saveSubcategoryMetadataOverride = (id, meta = {}) => {
+  if (!id || !isStorageAvailable()) return;
+  try {
+    const current = getSubcategoryMetadataOverrides();
+    current[String(id)] = {
+      ...(current[String(id)] || {}),
+      ...meta,
+    };
+    window.localStorage.setItem(SUBCATEGORY_META_OVERRIDES_KEY, JSON.stringify(current));
+  } catch (err) {
+    console.warn('Failed to persist subcategory metadata override:', err);
+  }
+};
+
+export const removeSubcategoryMetadataOverride = (id) => {
+  if (!id || !isStorageAvailable()) return;
+  try {
+    const current = getSubcategoryMetadataOverrides();
+    delete current[String(id)];
+    window.localStorage.setItem(SUBCATEGORY_META_OVERRIDES_KEY, JSON.stringify(current));
+  } catch (err) {}
+};
+
 const readList = (key, fallback) => {
   if (!isStorageAvailable()) return fallback;
 

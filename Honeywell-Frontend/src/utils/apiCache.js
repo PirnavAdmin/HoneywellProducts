@@ -93,6 +93,12 @@ class ApiCacheStore {
       }
     }
   }
+
+  /** Clear entire in-memory cache */
+  clear() {
+    this.cache.clear();
+    this.pendingPromises.clear();
+  }
 }
 
 export const apiCache = new ApiCacheStore();

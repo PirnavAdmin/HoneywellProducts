@@ -37,6 +37,11 @@ namespace Honeywell.Controllers
                     .Include(s => s.Category)
                     .ToListAsync();
 
+                subcategories = subcategories
+                    .OrderBy(s => s.DisplayOrder)
+                    .ThenBy(s => s.Id)
+                    .ToList();
+
                 var cacheOptions = new MemoryCacheEntryOptions()
                     .SetAbsoluteExpiration(TimeSpan.FromMinutes(15))
                     .SetSlidingExpiration(TimeSpan.FromMinutes(5));
@@ -73,12 +78,23 @@ namespace Honeywell.Controllers
                 return BadRequest(new { Message = "Invalid Category ID." });
             }
 
+            bool resolvedActive = true;
+            if (request.IsActive.HasValue)
+            {
+                resolvedActive = request.IsActive.Value;
+            }
+            else if (!string.IsNullOrEmpty(request.Status))
+            {
+                resolvedActive = !request.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase);
+            }
+
             var subcategory = new Subcategory
             {
                 CategoryId = request.CategoryId,
                 Name = request.Name,
                 Description = request.Description,
-                IsActive = true
+                IsActive = resolvedActive,
+                DisplayOrder = request.DisplayOrder ?? 0
             };
 
             _context.Subcategories.Add(subcategory);
@@ -107,10 +123,24 @@ namespace Honeywell.Controllers
             subcategory.Name = request.Name;
             subcategory.Description = request.Description;
 
+            if (request.IsActive.HasValue)
+            {
+                subcategory.IsActive = request.IsActive.Value;
+            }
+            else if (!string.IsNullOrEmpty(request.Status))
+            {
+                subcategory.IsActive = !request.Status.Equals("Inactive", StringComparison.OrdinalIgnoreCase);
+            }
+
+            if (request.DisplayOrder.HasValue)
+            {
+                subcategory.DisplayOrder = request.DisplayOrder.Value;
+            }
+
             await _context.SaveChangesAsync();
             _cache.Remove(SubcategoriesCacheKey);
 
-            return NoContent();
+            return Ok(subcategory);
         }
 
         [HttpDelete("{id}")]

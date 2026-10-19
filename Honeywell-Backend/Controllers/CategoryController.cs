@@ -114,11 +114,44 @@ namespace Honeywell.Controllers
                 var imgUrl = GetFormValue(form, "ImageUrl");
                 if (string.IsNullOrEmpty(imgUrl)) imgUrl = GetFormValue(form, "image");
 
+                int? parsedDisplayOrder = null;
+                var orderStr = GetFormValue(form, "DisplayOrder");
+                if (string.IsNullOrEmpty(orderStr)) orderStr = GetFormValue(form, "displayOrder");
+                if (string.IsNullOrEmpty(orderStr)) orderStr = GetFormValue(form, "display_order");
+                if (string.IsNullOrEmpty(orderStr)) orderStr = GetFormValue(form, "order");
+                if (!string.IsNullOrEmpty(orderStr) && int.TryParse(orderStr, out int orderVal))
+                {
+                    parsedDisplayOrder = orderVal;
+                }
+
+                bool? parsedIsActive = null;
+                var statusStr = GetFormValue(form, "IsActive");
+                if (string.IsNullOrEmpty(statusStr)) statusStr = GetFormValue(form, "isActive");
+                if (string.IsNullOrEmpty(statusStr)) statusStr = GetFormValue(form, "status");
+                if (string.IsNullOrEmpty(statusStr)) statusStr = GetFormValue(form, "Status");
+                if (!string.IsNullOrEmpty(statusStr))
+                {
+                    if (bool.TryParse(statusStr, out bool bVal))
+                    {
+                        parsedIsActive = bVal;
+                    }
+                    else if (statusStr.Equals("Active", StringComparison.OrdinalIgnoreCase) || statusStr == "1")
+                    {
+                        parsedIsActive = true;
+                    }
+                    else if (statusStr.Equals("Inactive", StringComparison.OrdinalIgnoreCase) || statusStr == "0")
+                    {
+                        parsedIsActive = false;
+                    }
+                }
+
                 return new CategoryUpsertRequest
                 {
                     Id = parsedId,
                     Name = name,
                     Description = desc,
+                    DisplayOrder = parsedDisplayOrder,
+                    IsActive = parsedIsActive,
                     ImageUrl = imgUrl,
                     ImageFile = GetFormFile(form, "ImageFile") ?? GetFormFile(form, "image") ?? GetFormFile(form, "file") ?? form.Files.FirstOrDefault()
                 };
@@ -165,11 +198,38 @@ namespace Honeywell.Controllers
                         parsedId = idVal;
                     }
 
+                    int? parsedDisplayOrder = null;
+                    var orderStr = GetVal("DisplayOrder", "displayOrder", "display_order", "order");
+                    if (!string.IsNullOrEmpty(orderStr) && int.TryParse(orderStr, out int orderVal))
+                    {
+                        parsedDisplayOrder = orderVal;
+                    }
+
+                    bool? parsedIsActive = null;
+                    var statusStr = GetVal("IsActive", "isActive", "status", "Status");
+                    if (!string.IsNullOrEmpty(statusStr))
+                    {
+                        if (bool.TryParse(statusStr, out bool bVal))
+                        {
+                            parsedIsActive = bVal;
+                        }
+                        else if (statusStr.Equals("Active", StringComparison.OrdinalIgnoreCase) || statusStr == "1")
+                        {
+                            parsedIsActive = true;
+                        }
+                        else if (statusStr.Equals("Inactive", StringComparison.OrdinalIgnoreCase) || statusStr == "0")
+                        {
+                            parsedIsActive = false;
+                        }
+                    }
+
                     return new CategoryUpsertRequest
                     {
                         Id = parsedId,
                         Name = GetVal("Name", "categoryName", "CategoryName", "category_name", "category"),
                         Description = GetVal("Description", "categoryDescription", "category_description", "description"),
+                        DisplayOrder = parsedDisplayOrder,
+                        IsActive = parsedIsActive,
                         ImageUrl = GetVal("ImageUrl", "image")
                     };
                 }
@@ -190,6 +250,8 @@ namespace Honeywell.Controllers
                 categories = await _context.Categories
                     .AsNoTracking()
                     .Include(c => c.Subcategories)
+                    .OrderBy(c => c.DisplayOrder)
+                    .ThenBy(c => c.Id)
                     .ToListAsync();
 
                 var cacheOptions = new MemoryCacheEntryOptions()
@@ -271,7 +333,8 @@ namespace Honeywell.Controllers
 
             category.Name = request.Name.Trim();
             category.Description = request.Description ?? string.Empty;
-            category.IsActive = true;
+            category.IsActive = request.IsActive ?? true;
+            category.DisplayOrder = request.DisplayOrder ?? 0;
 
             if (!string.IsNullOrEmpty(finalImageUrl))
             {
@@ -301,6 +364,16 @@ namespace Honeywell.Controllers
             }
 
             category.Description = request.Description ?? category.Description;
+
+            if (request.IsActive.HasValue)
+            {
+                category.IsActive = request.IsActive.Value;
+            }
+
+            if (request.DisplayOrder.HasValue)
+            {
+                category.DisplayOrder = request.DisplayOrder.Value;
+            }
 
             var uploadedUrl = await SaveUploadedFileAsync(request.ImageFile);
             var finalImageUrl = uploadedUrl ?? (!string.IsNullOrEmpty(request.ImageUrl) ? request.ImageUrl : null);
