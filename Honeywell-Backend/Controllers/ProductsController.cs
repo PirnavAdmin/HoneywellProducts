@@ -120,6 +120,7 @@ namespace Honeywell.Controllers
                 subcategoryId = p.SubcategoryId,
                 subcategoryName = p.Subcategory?.Name ?? string.Empty,
                 subcategory = subcategoryDto,
+                basePrice = p.BasePrice,
                 mrp = p.MRP,
                 sellingPrice = p.SellingPrice ?? p.MRP,
                 price = p.SellingPrice ?? p.MRP,
@@ -887,7 +888,7 @@ namespace Honeywell.Controllers
             // Fallback for SubcategoryId
             if (dto.SubcategoryId <= 0)
             {
-                var firstSub = await _context.Subcategories.FirstOrDefaultAsync(s => s.CategoryId == dto.CategoryId) 
+                var firstSub = await _context.Subcategories.FirstOrDefaultAsync(s => s.CategoryId == dto.CategoryId)
                                ?? await _context.Subcategories.FirstOrDefaultAsync();
                 if (firstSub != null) dto.SubcategoryId = firstSub.Id;
             }
@@ -896,7 +897,7 @@ namespace Honeywell.Controllers
                 bool subcategoryExists = await _context.Subcategories.AnyAsync(s => s.Id == dto.SubcategoryId);
                 if (!subcategoryExists)
                 {
-                    var firstSub = await _context.Subcategories.FirstOrDefaultAsync(s => s.CategoryId == dto.CategoryId) 
+                    var firstSub = await _context.Subcategories.FirstOrDefaultAsync(s => s.CategoryId == dto.CategoryId)
                                    ?? await _context.Subcategories.FirstOrDefaultAsync();
                     if (firstSub != null) dto.SubcategoryId = firstSub.Id;
                 }
@@ -1206,7 +1207,11 @@ namespace Honeywell.Controllers
             if (!string.IsNullOrWhiteSpace(dto.SKU)) product.SKU = dto.SKU;
             if (!string.IsNullOrWhiteSpace(dto.Brand)) product.Brand = dto.Brand;
             if (!string.IsNullOrWhiteSpace(dto.Manufacturer)) product.Manufacturer = dto.Manufacturer;
-            if (dto.MRP > 0) product.MRP = dto.MRP;
+            if (dto.MRP > 0)
+            {
+                product.MRP = dto.MRP;
+                product.BasePrice = dto.MRP; // Keep BasePrice populated when MRP is updated
+            }
             if (dto.SellingPrice > 0) product.SellingPrice = dto.SellingPrice;
             if (dto.BasePrice.HasValue && dto.BasePrice.Value > 0) product.BasePrice = dto.BasePrice.Value;
             else if (dto.SellingPrice > 0) product.BasePrice = dto.SellingPrice;

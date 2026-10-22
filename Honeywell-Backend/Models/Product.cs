@@ -1,3 +1,5 @@
+
+using System;
 using System.Collections.Generic;
 
 namespace Honeywell.Models
@@ -29,18 +31,20 @@ namespace Honeywell.Models
         public string? CoverageUsage { get; set; }
         public string? Specifications { get; set; }
 
+        // Product rating details
         public decimal AverageRating { get; set; }
         public int TotalReviews { get; set; }
 
-        // Star rating breakdown (set manually or auto-recalculated from reviews)
+        // Star rating breakdown
         public int FiveStar { get; set; }
         public int FourStar { get; set; }
         public int ThreeStar { get; set; }
         public int TwoStar { get; set; }
         public int OneStar { get; set; }
 
-        public decimal MRP { get; set; }
+        // Pricing details
         public decimal BasePrice { get; set; }
+        public decimal MRP { get; set; }
         public int Stock { get; set; }
 
         public string? DiscountType { get; set; }
@@ -50,13 +54,16 @@ namespace Honeywell.Models
 
         public string StockStatus { get; set; } = string.Empty;
 
-        // Stock Ledger fields
+        // Stock ledger fields
         public int ReorderLevel { get; set; } = 30;
         public decimal CostPrice { get; set; }
+
         public string? SupplierName { get; set; } = string.Empty;
         public string? Trend30Day { get; set; } = "+10%";
-        public System.DateTime LastUpdated { get; set; } = System.DateTime.UtcNow;
 
+        public DateTime LastUpdated { get; set; } = DateTime.UtcNow;
+
+        // Country and delivery details
         public string? CountryOfOrigin { get; set; }
         public bool CODAvailability { get; set; }
 
@@ -65,6 +72,7 @@ namespace Honeywell.Models
 
         public bool IsActive { get; set; } = true;
 
+        // Related entities
         public List<ProductImage> Images { get; set; } = new();
         public List<ProductVideo> Videos { get; set; } = new();
         public List<ProductFeature> Features { get; set; } = new();

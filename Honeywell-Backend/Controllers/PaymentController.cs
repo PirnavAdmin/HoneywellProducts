@@ -21,91 +21,6 @@ namespace Honeywell.Controllers
             _context = context;
         }
 
-        private static bool _paymentSchemaEnsured = false;
-        private async Task EnsurePaymentConfigsSchemaAsync()
-        {
-            if (_paymentSchemaEnsured) return;
-            try
-            {
-                var conn = _context.Database.GetDbConnection();
-                bool wasClosed = conn.State != System.Data.ConnectionState.Open;
-                if (wasClosed) await conn.OpenAsync();
-                try
-                {
-                    using var cmd = conn.CreateCommand();
-                    cmd.CommandText = @"
-                        CREATE TABLE IF NOT EXISTS `BankDetailsConfigs` (
-                            `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                            `IfscCode` VARCHAR(100) NOT NULL DEFAULT 'HDFC0000123',
-                            `BankName` VARCHAR(200) NOT NULL DEFAULT 'HDFC Bank',
-                            `Branch` VARCHAR(200) NOT NULL DEFAULT 'Cyber City Branch',
-                            `AccountNumber` VARCHAR(100) NOT NULL DEFAULT '50200088991122',
-                            `AccountHolderName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products & Solutions Pvt Ltd',
-                            `UpdatedAt` DATETIME NOT NULL DEFAULT NOW()
-                        );";
-                    try { await cmd.ExecuteNonQueryAsync(); } catch { }
-
-                    string[] bankAlters = new[]
-                    {
-                        "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `AccountHolderName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products & Solutions Pvt Ltd';",
-                        "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `IfscCode` VARCHAR(100) NOT NULL DEFAULT 'HDFC0000123';",
-                        "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `BankName` VARCHAR(200) NOT NULL DEFAULT 'HDFC Bank';",
-                        "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `Branch` VARCHAR(200) NOT NULL DEFAULT 'Cyber City Branch';",
-                        "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `AccountNumber` VARCHAR(100) NOT NULL DEFAULT '50200088991122';",
-                        "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `UpdatedAt` DATETIME NOT NULL DEFAULT NOW();",
-                        "ALTER TABLE `bankdetailsconfigs` ADD COLUMN `AccountHolderName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products & Solutions Pvt Ltd';",
-                        "ALTER TABLE `bankdetailsconfigs` ADD COLUMN `UpdatedAt` DATETIME NOT NULL DEFAULT NOW();"
-                    };
-                    foreach (var alter in bankAlters)
-                    {
-                        try { cmd.CommandText = alter; await cmd.ExecuteNonQueryAsync(); } catch { }
-                    }
-
-                    cmd.CommandText = @"
-                        CREATE TABLE IF NOT EXISTS `UpiDetailsConfigs` (
-                            `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                            `MerchantUpiId` VARCHAR(200) NOT NULL DEFAULT 'honeywell@hdfcbank',
-                            `MerchantName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products India',
-                            `BankDisplayName` VARCHAR(200) NOT NULL DEFAULT 'HDFC Bank - Corporate',
-                            `Currency` VARCHAR(50) NOT NULL DEFAULT 'INR',
-                            `UpdatedAt` DATETIME NOT NULL DEFAULT NOW()
-                        );";
-                    try { await cmd.ExecuteNonQueryAsync(); } catch { }
-
-                    string[] upiAlters = new[]
-                    {
-                        "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `MerchantName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products India';",
-                        "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `MerchantUpiId` VARCHAR(200) NOT NULL DEFAULT 'honeywell@hdfcbank';",
-                        "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `BankDisplayName` VARCHAR(200) NOT NULL DEFAULT 'HDFC Bank - Corporate';",
-                        "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `Currency` VARCHAR(50) NOT NULL DEFAULT 'INR';",
-                        "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `UpdatedAt` DATETIME NOT NULL DEFAULT NOW();",
-                        "ALTER TABLE `upidetailsconfigs` ADD COLUMN `MerchantName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products India';",
-                        "ALTER TABLE `upidetailsconfigs` ADD COLUMN `UpdatedAt` DATETIME NOT NULL DEFAULT NOW();"
-                    };
-                    foreach (var alter in upiAlters)
-                    {
-                        try { cmd.CommandText = alter; await cmd.ExecuteNonQueryAsync(); } catch { }
-                    }
-
-                    cmd.CommandText = @"
-                        CREATE TABLE IF NOT EXISTS `QrCodeConfigs` (
-                            `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                            `QrImageUrl` VARCHAR(500) NOT NULL,
-                            `UpdatedAt` DATETIME NOT NULL DEFAULT NOW()
-                        );";
-                    try { await cmd.ExecuteNonQueryAsync(); } catch { }
-
-                    _paymentSchemaEnsured = true;
-                }
-                finally
-                {
-                    if (wasClosed && conn.State == System.Data.ConnectionState.Open)
-                        await conn.CloseAsync();
-                }
-            }
-            catch { }
-        }
-
         public class InitiatePaymentRequest
         {
             public string PaymentMethod { get; set; } // UPI, DebitCard, CreditCard, NetBanking, QRPayment, COD
@@ -170,13 +85,7 @@ namespace Honeywell.Controllers
             string resolvedOrderId = request.OrderId ?? "";
             if (dbOrder != null)
             {
-                decimal sub = dbOrder.TotalAmount;
-                decimal disc = dbOrder.DiscountAmount;
-                decimal taxable = Math.Max(0m, sub - disc);
-                decimal gst = dbOrder.GstAmount > 0m ? dbOrder.GstAmount : Math.Round(taxable * 0.18m);
-                finalAmount = (dbOrder.FinalAmount <= 0m || (sub > 0m && dbOrder.FinalAmount == sub))
-                    ? (taxable + dbOrder.ShippingFee + gst)
-                    : dbOrder.FinalAmount;
+                finalAmount = dbOrder.FinalAmount;
                 resolvedOrderId = dbOrder.OrderNumber;
             }
 
@@ -540,13 +449,7 @@ namespace Honeywell.Controllers
             string orderNumberString = orderId;
             if (dbOrder != null)
             {
-                decimal sub = dbOrder.TotalAmount;
-                decimal disc = dbOrder.DiscountAmount;
-                decimal taxable = Math.Max(0m, sub - disc);
-                decimal gst = dbOrder.GstAmount > 0m ? dbOrder.GstAmount : Math.Round(taxable * 0.18m);
-                finalAmount = (dbOrder.FinalAmount <= 0m || (sub > 0m && dbOrder.FinalAmount == sub))
-                    ? (taxable + dbOrder.ShippingFee + gst)
-                    : dbOrder.FinalAmount;
+                finalAmount = dbOrder.FinalAmount;
                 orderNumberString = dbOrder.OrderNumber;
             }
 
@@ -555,7 +458,7 @@ namespace Honeywell.Controllers
                 (dbOrder != null && o.OrderId == dbOrder.Id.ToString()) || 
                 (dbOrder != null && o.OrderId == dbOrder.OrderNumber));
             
-            decimal resolvedAmount = finalAmount > 0m ? finalAmount : (orderSuccess?.TotalAmount ?? 0m);
+            decimal resolvedAmount = orderSuccess?.TotalAmount ?? finalAmount;
             if (resolvedAmount == 0.0m)
             {
                 resolvedAmount = 2183.0m; // Fallback default amount
@@ -613,43 +516,47 @@ namespace Honeywell.Controllers
         [HttpGet("bank-details")]
         public async Task<IActionResult> GetBankDetails()
         {
-            await EnsurePaymentConfigsSchemaAsync();
             var config = await _context.BankDetailsConfigs.FirstOrDefaultAsync();
             if (config != null)
             {
-                var holder = (config.AccountHolderName ?? "").Trim();
-                var accNum = (config.AccountNumber ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(holder) ||
-                    holder.Contains("agro", StringComparison.OrdinalIgnoreCase) ||
-                    holder.Contains("shyam", StringComparison.OrdinalIgnoreCase) ||
-                    accNum == "123456789012")
+                if (config.AccountHolderName.ToLower().Contains("agro") || config.AccountHolderName.ToLower().Contains("shyam") || config.AccountNumber == "123456789012")
                 {
                     config.AccountHolderName = "Honeywell Products & Solutions Pvt Ltd";
-                    config.BankName = string.IsNullOrWhiteSpace(config.BankName) ? "HDFC Bank" : config.BankName;
-                    config.AccountNumber = (string.IsNullOrWhiteSpace(accNum) || accNum == "123456789012") ? "50200088991122" : accNum;
-                    config.IfscCode = string.IsNullOrWhiteSpace(config.IfscCode) ? "HDFC0000123" : config.IfscCode;
-                    config.Branch = string.IsNullOrWhiteSpace(config.Branch) ? "Cyber City Branch" : config.Branch;
+                    config.BankName = "HDFC Bank";
+                    config.AccountNumber = "50200088991122";
+                    config.IfscCode = "HDFC0000123";
+                    config.Branch = "Cyber City Branch";
                     config.UpdatedAt = DateTime.UtcNow;
-                    try { await _context.SaveChangesAsync(); } catch { }
+                    await _context.SaveChangesAsync();
                 }
 
                 return Ok(new
                 {
-                    accountHolderName = config.AccountHolderName ?? "Honeywell Products & Solutions Pvt Ltd",
-                    bankName = config.BankName ?? "HDFC Bank",
-                    accountNumber = config.AccountNumber ?? "50200088991122",
-                    ifscCode = config.IfscCode ?? "HDFC0000123",
-                    branch = config.Branch ?? "Cyber City Branch"
+                    accountHolderName = config.AccountHolderName,
+                    AccountHolderName = config.AccountHolderName,
+                    bankName = config.BankName,
+                    BankName = config.BankName,
+                    accountNumber = config.AccountNumber,
+                    AccountNumber = config.AccountNumber,
+                    ifscCode = config.IfscCode,
+                    IfscCode = config.IfscCode,
+                    branch = config.Branch,
+                    Branch = config.Branch
                 });
             }
 
             return Ok(new
             {
                 accountHolderName = "Honeywell Products & Solutions Pvt Ltd",
+                AccountHolderName = "Honeywell Products & Solutions Pvt Ltd",
                 bankName = "HDFC Bank",
+                BankName = "HDFC Bank",
                 accountNumber = "50200088991122",
+                AccountNumber = "50200088991122",
                 ifscCode = "HDFC0000123",
-                branch = "Cyber City Branch"
+                IfscCode = "HDFC0000123",
+                branch = "Cyber City Branch",
+                Branch = "Cyber City Branch"
             });
         }
 
@@ -659,7 +566,6 @@ namespace Honeywell.Controllers
         [HttpPost("bank-details")]
         public async Task<IActionResult> UpdateBankDetails([FromBody] BankDetailsRequestDto request)
         {
-            await EnsurePaymentConfigsSchemaAsync();
             if (request == null)
             {
                 return BadRequest(new { Success = false, Message = "Request payload is required." });
@@ -687,10 +593,15 @@ namespace Honeywell.Controllers
                 Data = new
                 {
                     accountHolderName = config.AccountHolderName,
+                    AccountHolderName = config.AccountHolderName,
                     bankName = config.BankName,
+                    BankName = config.BankName,
                     accountNumber = config.AccountNumber,
+                    AccountNumber = config.AccountNumber,
                     ifscCode = config.IfscCode,
-                    branch = config.Branch
+                    IfscCode = config.IfscCode,
+                    branch = config.Branch,
+                    Branch = config.Branch
                 }
             });
         }
@@ -707,40 +618,42 @@ namespace Honeywell.Controllers
         [HttpGet("upi-details")]
         public async Task<IActionResult> GetUpiDetails()
         {
-            await EnsurePaymentConfigsSchemaAsync();
             var config = await _context.UpiDetailsConfigs.FirstOrDefaultAsync();
             if (config != null)
             {
-                var mName = (config.MerchantName ?? "").Trim();
-                var mUpi = (config.MerchantUpiId ?? "").Trim();
-                if (string.IsNullOrWhiteSpace(mName) ||
-                    mName.Contains("agro", StringComparison.OrdinalIgnoreCase) ||
-                    mName.Contains("shyam", StringComparison.OrdinalIgnoreCase) ||
-                    mUpi.Contains("9398649798"))
+                if (config.MerchantName.ToLower().Contains("agro") || config.MerchantName.ToLower().Contains("shyam") || config.MerchantUpiId.Contains("9398649798"))
                 {
                     config.MerchantName = "Honeywell Products India";
-                    config.MerchantUpiId = string.IsNullOrWhiteSpace(mUpi) || mUpi.Contains("9398649798") ? "honeywell@hdfcbank" : mUpi;
-                    config.BankDisplayName = string.IsNullOrWhiteSpace(config.BankDisplayName) ? "HDFC Bank - Corporate" : config.BankDisplayName;
-                    config.Currency = string.IsNullOrWhiteSpace(config.Currency) ? "INR" : config.Currency;
+                    config.MerchantUpiId = "honeywell@hdfcbank";
+                    config.BankDisplayName = "HDFC Bank - Corporate";
+                    config.Currency = "INR";
                     config.UpdatedAt = DateTime.UtcNow;
-                    try { await _context.SaveChangesAsync(); } catch { }
+                    await _context.SaveChangesAsync();
                 }
 
                 return Ok(new
                 {
-                    merchantName = config.MerchantName ?? "Honeywell Products India",
-                    merchantUpiId = config.MerchantUpiId ?? "honeywell@hdfcbank",
-                    bankDisplayName = config.BankDisplayName ?? "HDFC Bank - Corporate",
-                    currency = config.Currency ?? "INR"
+                    merchantName = config.MerchantName,
+                    MerchantName = config.MerchantName,
+                    merchantUpiId = config.MerchantUpiId,
+                    MerchantUpiId = config.MerchantUpiId,
+                    bankDisplayName = config.BankDisplayName,
+                    BankDisplayName = config.BankDisplayName,
+                    currency = config.Currency,
+                    Currency = config.Currency
                 });
             }
 
             return Ok(new
             {
                 merchantName = "Honeywell Products India",
+                MerchantName = "Honeywell Products India",
                 merchantUpiId = "honeywell@hdfcbank",
+                MerchantUpiId = "honeywell@hdfcbank",
                 bankDisplayName = "HDFC Bank - Corporate",
-                currency = "INR"
+                BankDisplayName = "HDFC Bank - Corporate",
+                currency = "INR",
+                Currency = "INR"
             });
         }
 
@@ -750,7 +663,6 @@ namespace Honeywell.Controllers
         [HttpPost("upi-details")]
         public async Task<IActionResult> UpdateUpiDetails([FromBody] UpiDetailsRequestDto request)
         {
-            await EnsurePaymentConfigsSchemaAsync();
             if (request == null)
             {
                 return BadRequest(new { Success = false, Message = "Request payload is required." });
@@ -777,9 +689,13 @@ namespace Honeywell.Controllers
                 Data = new
                 {
                     merchantName = config.MerchantName,
+                    MerchantName = config.MerchantName,
                     merchantUpiId = config.MerchantUpiId,
+                    MerchantUpiId = config.MerchantUpiId,
                     bankDisplayName = config.BankDisplayName,
-                    currency = config.Currency
+                    BankDisplayName = config.BankDisplayName,
+                    currency = config.Currency,
+                    Currency = config.Currency
                 }
             });
         }

@@ -360,74 +360,39 @@ using (var scope = app.Services.CreateScope())
             cmd.ExecuteNonQuery();
         }
 
-        // 3.6 Create and ensure BankDetailsConfigs, UpiDetailsConfigs, and QrCodeConfigs tables
+        // 3.6 Create BankDetailsConfigs, UpiDetailsConfigs, and QrCodeConfigs tables if they do not exist
         using (var cmd = conn.CreateCommand())
         {
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS `BankDetailsConfigs` (
                     `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                    `IfscCode` VARCHAR(100) NOT NULL DEFAULT 'HDFC0000123',
-                    `BankName` VARCHAR(200) NOT NULL DEFAULT 'HDFC Bank',
-                    `Branch` VARCHAR(200) NOT NULL DEFAULT 'Cyber City Branch',
-                    `AccountNumber` VARCHAR(100) NOT NULL DEFAULT '50200088991122',
-                    `AccountHolderName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products & Solutions Pvt Ltd',
-                    `UpdatedAt` DATETIME NOT NULL DEFAULT NOW()
+                    `IfscCode` VARCHAR(100) NOT NULL,
+                    `BankName` VARCHAR(200) NOT NULL,
+                    `Branch` VARCHAR(200) NOT NULL,
+                    `AccountNumber` VARCHAR(100) NOT NULL,
+                    `AccountHolderName` VARCHAR(200) NOT NULL,
+                    `UpdatedAt` DATETIME NOT NULL
                 );";
-            try { cmd.ExecuteNonQuery(); } catch { }
-
-            // Ensure column AccountHolderName exists if table already existed without it
-            string[] bankCols = new[]
-            {
-                "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `AccountHolderName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products & Solutions Pvt Ltd';",
-                "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `IfscCode` VARCHAR(100) NOT NULL DEFAULT 'HDFC0000123';",
-                "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `BankName` VARCHAR(200) NOT NULL DEFAULT 'HDFC Bank';",
-                "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `Branch` VARCHAR(200) NOT NULL DEFAULT 'Cyber City Branch';",
-                "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `AccountNumber` VARCHAR(100) NOT NULL DEFAULT '50200088991122';",
-                "ALTER TABLE `BankDetailsConfigs` ADD COLUMN `UpdatedAt` DATETIME NOT NULL DEFAULT NOW();",
-                // Also for lowercase table if present on Linux
-                "ALTER TABLE `bankdetailsconfigs` ADD COLUMN `AccountHolderName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products & Solutions Pvt Ltd';",
-                "ALTER TABLE `bankdetailsconfigs` ADD COLUMN `UpdatedAt` DATETIME NOT NULL DEFAULT NOW();"
-            };
-            foreach (var alterSql in bankCols)
-            {
-                try { cmd.CommandText = alterSql; cmd.ExecuteNonQuery(); } catch { }
-            }
+            cmd.ExecuteNonQuery();
 
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS `UpiDetailsConfigs` (
                     `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                    `MerchantUpiId` VARCHAR(200) NOT NULL DEFAULT 'honeywell@hdfcbank',
-                    `MerchantName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products India',
-                    `BankDisplayName` VARCHAR(200) NOT NULL DEFAULT 'HDFC Bank - Corporate',
+                    `MerchantUpiId` VARCHAR(200) NOT NULL,
+                    `MerchantName` VARCHAR(200) NOT NULL,
+                    `BankDisplayName` VARCHAR(200) NOT NULL,
                     `Currency` VARCHAR(50) NOT NULL DEFAULT 'INR',
-                    `UpdatedAt` DATETIME NOT NULL DEFAULT NOW()
+                    `UpdatedAt` DATETIME NOT NULL
                 );";
-            try { cmd.ExecuteNonQuery(); } catch { }
-
-            // Ensure column MerchantName exists if table already existed without it
-            string[] upiCols = new[]
-            {
-                "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `MerchantName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products India';",
-                "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `MerchantUpiId` VARCHAR(200) NOT NULL DEFAULT 'honeywell@hdfcbank';",
-                "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `BankDisplayName` VARCHAR(200) NOT NULL DEFAULT 'HDFC Bank - Corporate';",
-                "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `Currency` VARCHAR(50) NOT NULL DEFAULT 'INR';",
-                "ALTER TABLE `UpiDetailsConfigs` ADD COLUMN `UpdatedAt` DATETIME NOT NULL DEFAULT NOW();",
-                // Also for lowercase table if present on Linux
-                "ALTER TABLE `upidetailsconfigs` ADD COLUMN `MerchantName` VARCHAR(200) NOT NULL DEFAULT 'Honeywell Products India';",
-                "ALTER TABLE `upidetailsconfigs` ADD COLUMN `UpdatedAt` DATETIME NOT NULL DEFAULT NOW();"
-            };
-            foreach (var alterSql in upiCols)
-            {
-                try { cmd.CommandText = alterSql; cmd.ExecuteNonQuery(); } catch { }
-            }
+            cmd.ExecuteNonQuery();
 
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS `QrCodeConfigs` (
                     `Id` INT AUTO_INCREMENT PRIMARY KEY,
                     `QrImageUrl` VARCHAR(500) NOT NULL,
-                    `UpdatedAt` DATETIME NOT NULL DEFAULT NOW()
+                    `UpdatedAt` DATETIME NOT NULL
                 );";
-            try { cmd.ExecuteNonQuery(); } catch { }
+            cmd.ExecuteNonQuery();
 
             cmd.CommandText = @"
                 CREATE TABLE IF NOT EXISTS `ProductSoftware` (
@@ -631,70 +596,79 @@ using (var scope = app.Services.CreateScope())
             }
 
             // Auto-seed or update BankDetailsConfigs
-            try
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS `BankDetailsConfigs` (
+                    `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `AccountHolderName` VARCHAR(200) NOT NULL,
+                    `BankName` VARCHAR(150) NOT NULL,
+                    `AccountNumber` VARCHAR(100) NOT NULL,
+                    `IfscCode` VARCHAR(50) NOT NULL,
+                    `Branch` VARCHAR(150) NOT NULL,
+                    `UpdatedAt` DATETIME NOT NULL
+                );";
+            cmd.ExecuteNonQuery();
+
+            cmd.CommandText = "SELECT COUNT(*) FROM `BankDetailsConfigs`;";
+            int bankConfigCount = Convert.ToInt32(cmd.ExecuteScalar());
+            if (bankConfigCount == 0)
             {
-                cmd.CommandText = "SELECT COUNT(*) FROM `BankDetailsConfigs`;";
-                int bankConfigCount = Convert.ToInt32(cmd.ExecuteScalar());
-                if (bankConfigCount == 0)
-                {
-                    cmd.CommandText = @"
-                        INSERT INTO `BankDetailsConfigs` (
-                            `AccountHolderName`, `BankName`, `AccountNumber`, `IfscCode`, `Branch`, `UpdatedAt`
-                        ) VALUES (
-                            'Honeywell Products & Solutions Pvt Ltd', 'HDFC Bank', '50200088991122', 'HDFC0000123', 'Cyber City Branch', NOW()
-                        );";
-                    cmd.ExecuteNonQuery();
-                }
-                else
-                {
-                    cmd.CommandText = @"
-                        UPDATE `BankDetailsConfigs`
-                        SET `AccountHolderName` = 'Honeywell Products & Solutions Pvt Ltd',
-                            `BankName` = 'HDFC Bank',
-                            `AccountNumber` = '50200088991122',
-                            `IfscCode` = 'HDFC0000123',
-                            `Branch` = 'Cyber City Branch',
-                            `UpdatedAt` = NOW()
-                        WHERE LOWER(`AccountHolderName`) LIKE '%agro%' OR LOWER(`AccountHolderName`) LIKE '%shyam%' OR `AccountNumber` = '123456789012';";
-                    cmd.ExecuteNonQuery();
-                }
+                cmd.CommandText = @"
+                    INSERT INTO `BankDetailsConfigs` (
+                        `AccountHolderName`, `BankName`, `AccountNumber`, `IfscCode`, `Branch`, `UpdatedAt`
+                    ) VALUES (
+                        'Honeywell Products & Solutions Pvt Ltd', 'HDFC Bank', '50200088991122', 'HDFC0000123', 'Cyber City Branch', NOW()
+                    );";
+                cmd.ExecuteNonQuery();
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine("BankDetailsConfigs seed notice: " + ex.Message);
+                cmd.CommandText = @"
+                    UPDATE `BankDetailsConfigs`
+                    SET `AccountHolderName` = 'Honeywell Products & Solutions Pvt Ltd',
+                        `BankName` = 'HDFC Bank',
+                        `AccountNumber` = '50200088991122',
+                        `IfscCode` = 'HDFC0000123',
+                        `Branch` = 'Cyber City Branch',
+                        `UpdatedAt` = NOW()
+                    WHERE LOWER(`AccountHolderName`) LIKE '%agro%' OR LOWER(`AccountHolderName`) LIKE '%shyam%' OR `AccountNumber` = '123456789012';";
+                cmd.ExecuteNonQuery();
             }
 
             // Auto-seed or update UpiDetailsConfigs
-            try
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS `UpiDetailsConfigs` (
+                    `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `MerchantName` VARCHAR(200) NOT NULL,
+                    `MerchantUpiId` VARCHAR(150) NOT NULL,
+                    `BankDisplayName` VARCHAR(150) NOT NULL,
+                    `Currency` VARCHAR(10) NOT NULL DEFAULT 'INR',
+                    `UpdatedAt` DATETIME NOT NULL
+                );";
+            cmd.ExecuteNonQuery();
+
+            cmd.CommandText = "SELECT COUNT(*) FROM `UpiDetailsConfigs`;";
+            int upiConfigCount = Convert.ToInt32(cmd.ExecuteScalar());
+            if (upiConfigCount == 0)
             {
-                cmd.CommandText = "SELECT COUNT(*) FROM `UpiDetailsConfigs`;";
-                int upiConfigCount = Convert.ToInt32(cmd.ExecuteScalar());
-                if (upiConfigCount == 0)
-                {
-                    cmd.CommandText = @"
-                        INSERT INTO `UpiDetailsConfigs` (
-                            `MerchantName`, `MerchantUpiId`, `BankDisplayName`, `Currency`, `UpdatedAt`
-                        ) VALUES (
-                            'Honeywell Products India', 'honeywell@hdfcbank', 'HDFC Bank - Corporate', 'INR', NOW()
-                        );";
-                    cmd.ExecuteNonQuery();
-                }
-                else
-                {
-                    cmd.CommandText = @"
-                        UPDATE `UpiDetailsConfigs`
-                        SET `MerchantName` = 'Honeywell Products India',
-                            `MerchantUpiId` = 'honeywell@hdfcbank',
-                            `BankDisplayName` = 'HDFC Bank - Corporate',
-                            `Currency` = 'INR',
-                            `UpdatedAt` = NOW()
-                        WHERE LOWER(`MerchantName`) LIKE '%agro%' OR LOWER(`MerchantName`) LIKE '%shyam%' OR `MerchantUpiId` LIKE '%9398649798%' OR `MerchantUpiId` LIKE '%9177758571%';";
-                    cmd.ExecuteNonQuery();
-                }
+                cmd.CommandText = @"
+                    INSERT INTO `UpiDetailsConfigs` (
+                        `MerchantName`, `MerchantUpiId`, `BankDisplayName`, `Currency`, `UpdatedAt`
+                    ) VALUES (
+                        'Honeywell Products India', 'honeywell@hdfcbank', 'HDFC Bank - Corporate', 'INR', NOW()
+                    );";
+                cmd.ExecuteNonQuery();
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine("UpiDetailsConfigs seed notice: " + ex.Message);
+                cmd.CommandText = @"
+                    UPDATE `UpiDetailsConfigs`
+                    SET `MerchantName` = 'Honeywell Products India',
+                        `MerchantUpiId` = 'honeywell@hdfcbank',
+                        `BankDisplayName` = 'HDFC Bank - Corporate',
+                        `Currency` = 'INR',
+                        `UpdatedAt` = NOW()
+                    WHERE LOWER(`MerchantName`) LIKE '%agro%' OR LOWER(`MerchantName`) LIKE '%shyam%' OR `MerchantUpiId` LIKE '%9398649798%' OR `MerchantUpiId` LIKE '%9177758571%';";
+                cmd.ExecuteNonQuery();
             }
 
             cmd.CommandText = @"
