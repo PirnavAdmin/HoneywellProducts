@@ -435,7 +435,6 @@ const TicketsScreen = () => {
           <div className="tickets-selects-wrap">
             {/* Type Filter */}
             <div className="tickets-select-group">
-              <label>Type:</label>
               <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
                 <option value="All">All Types</option>
                 <option value="order_related">Order Related</option>
@@ -446,7 +445,6 @@ const TicketsScreen = () => {
 
             {/* Status Filter */}
             <div className="tickets-select-group">
-              <label>Status:</label>
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="All">All Statuses</option>
                 <option value="Open">Open</option>
@@ -458,7 +456,6 @@ const TicketsScreen = () => {
 
             {/* Priority Filter */}
             <div className="tickets-select-group">
-              <label>Priority:</label>
               <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
                 <option value="All">All Priorities</option>
                 <option value="Critical">Critical</option>
@@ -468,9 +465,6 @@ const TicketsScreen = () => {
               </select>
             </div>
 
-            <span className="tickets-count-badge">
-              {loading ? 'Loading...' : `Showing ${filteredTickets.length} of ${tickets.length} tickets`}
-            </span>
           </div>
         </div>
 

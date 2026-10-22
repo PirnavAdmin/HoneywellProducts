@@ -464,9 +464,7 @@ export default function EnquiriesScreen() {
             </button>
           )}
 
-          <div className="enquiries-count-tag">
-            <span>{filteredEnquiries.length} {filteredEnquiries.length === 1 ? 'enquiry' : 'enquiries'}</span>
-          </div>
+         
         </div>
       </div>
 

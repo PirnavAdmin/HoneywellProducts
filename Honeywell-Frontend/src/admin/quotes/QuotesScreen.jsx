@@ -446,9 +446,6 @@ export default function QuotesScreen() {
             </button>
           )}
 
-          <div className="quotes-count-tag">
-            <span>{filteredQuotes.length} {filteredQuotes.length === 1 ? 'quote' : 'quotes'}</span>
-          </div>
         </div>
       </div>
 

@@ -468,10 +468,6 @@ export default function ContactSubmissionsScreen() {
               <span>Reset</span>
             </button>
           )}
-
-          <div className="contact-count-tag">
-            <span>{filteredSubmissions.length} {filteredSubmissions.length === 1 ? 'submission' : 'submissions'}</span>
-          </div>
         </div>
       </div>
 
