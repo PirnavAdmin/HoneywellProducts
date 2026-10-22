@@ -22,65 +22,11 @@ namespace Honeywell.Controllers
             _context = context;
         }
 
-        private static bool _customerSchemaEnsured = false;
-        private async Task EnsureCustomerSchemaAsync()
-        {
-            if (_customerSchemaEnsured) return;
-            try
-            {
-                var conn = _context.Database.GetDbConnection();
-                bool wasClosed = conn.State != System.Data.ConnectionState.Open;
-                if (wasClosed) await conn.OpenAsync();
-                try
-                {
-                    var colsToAdd = new[]
-                    {
-                        "ALTER TABLE `Customers` ADD COLUMN `AccountHolderName` VARCHAR(200) NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `BankName` VARCHAR(200) NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `AccountNumber` VARCHAR(100) NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `IfscCode` VARCHAR(50) NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `UpiId` VARCHAR(100) NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `FirstName` VARCHAR(100) NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `LastName` VARCHAR(100) NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `Password` VARCHAR(255) NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `Role` VARCHAR(100) NOT NULL DEFAULT 'CUSTOMER ACCOUNT';",
-                        "ALTER TABLE `Customers` ADD COLUMN `Gender` VARCHAR(50) NOT NULL DEFAULT 'Male';",
-                        "ALTER TABLE `Customers` ADD COLUMN `CompanyOrganization` VARCHAR(200) NOT NULL DEFAULT 'Individual Account';",
-                        "ALTER TABLE `Customers` ADD COLUMN `ShippingAddressJson` TEXT NULL;",
-                        "ALTER TABLE `Customers` ADD COLUMN `BillingAddressJson` TEXT NULL;",
-                        "ALTER TABLE `customers` ADD COLUMN `AccountHolderName` VARCHAR(200) NULL;",
-                        "ALTER TABLE `customers` ADD COLUMN `BankName` VARCHAR(200) NULL;",
-                        "ALTER TABLE `customers` ADD COLUMN `AccountNumber` VARCHAR(100) NULL;",
-                        "ALTER TABLE `customers` ADD COLUMN `IfscCode` VARCHAR(50) NULL;",
-                        "ALTER TABLE `customers` ADD COLUMN `UpiId` VARCHAR(100) NULL;"
-                    };
-                    using var cmd = conn.CreateCommand();
-                    foreach (var alterSql in colsToAdd)
-                    {
-                        try
-                        {
-                            cmd.CommandText = alterSql;
-                            await cmd.ExecuteNonQueryAsync();
-                        }
-                        catch { }
-                    }
-                    _customerSchemaEnsured = true;
-                }
-                finally
-                {
-                    if (wasClosed && conn.State == System.Data.ConnectionState.Open)
-                        await conn.CloseAsync();
-                }
-            }
-            catch { }
-        }
-
         // 1. Sign In Modal (Customer Login)
         // POST: api/Customer/login
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] CustomerLoginDto dto)
         {
-            await EnsureCustomerSchemaAsync();
             if (dto == null || string.IsNullOrWhiteSpace(dto.EmailOrPhone) || string.IsNullOrWhiteSpace(dto.Password))
             {
                 return BadRequest(new { success = false, message = "Email/Mobile and Password are required." });
@@ -183,7 +129,6 @@ namespace Honeywell.Controllers
         [HttpGet("my-profile")]
         public async Task<IActionResult> GetMyProfile([FromQuery] int? customerId, [FromQuery] string? email)
         {
-            await EnsureCustomerSchemaAsync();
             Customer? customer = null;
             if (customerId.HasValue && customerId.Value > 0)
             {
@@ -461,7 +406,6 @@ namespace Honeywell.Controllers
         [HttpGet("bank-details")]
         public async Task<IActionResult> GetBankDetails([FromQuery] int? customerId)
         {
-            await EnsureCustomerSchemaAsync();
             Customer? customer = null;
             if (customerId.HasValue && customerId.Value > 0)
             {
@@ -500,7 +444,6 @@ namespace Honeywell.Controllers
         [HttpPut("bank-details")]
         public async Task<IActionResult> SaveBankDetails([FromBody] SaveBankDetailsDto dto, [FromQuery] int? customerId)
         {
-            await EnsureCustomerSchemaAsync();
             Customer? customer = null;
             if (customerId.HasValue && customerId.Value > 0)
             {
@@ -723,11 +666,6 @@ namespace Honeywell.Controllers
                 } : null;
 
                 var displayStatus = (o.Status ?? "PENDING").ToUpper();
-                var subtotalVal = o.TotalAmount > 0 ? o.TotalAmount : o.Items.Sum(i => i.Subtotal);
-                var taxVal = o.GstAmount > 0 ? o.GstAmount : Math.Round(subtotalVal * 0.18m, 2);
-                var finalVal = (o.FinalAmount > 0 && o.FinalAmount != o.TotalAmount) 
-                    ? o.FinalAmount 
-                    : (subtotalVal + o.ShippingFee + taxVal - o.DiscountAmount);
 
                 return new
                 {
@@ -740,15 +678,8 @@ namespace Honeywell.Controllers
                     statusBadge = displayStatus,
                     paymentStatus = o.PaymentStatus ?? "Pending",
                     paymentMethod = o.PaymentMethod ?? "COD",
-                    subtotal = subtotalVal,
-                    discountAmount = o.DiscountAmount,
-                    shippingFee = o.ShippingFee,
-                    gstAmount = o.GstAmount,
-                    taxAmount = o.GstAmount,
-                    finalAmount = finalVal,
-                    totalAmount = finalVal,
-                    total = finalVal,
-                    totalAmountFormatted = $"₹{finalVal:N0}",
+                    totalAmount = o.TotalAmount > 0 ? o.TotalAmount : o.FinalAmount,
+                    totalAmountFormatted = $"${(o.TotalAmount > 0 ? o.TotalAmount : o.FinalAmount):F2}",
                     totalQuantity = o.Items.Sum(i => i.Quantity),
                     shippingAddress = o.ShippingAddress ?? "",
                     billingAddress = customer?.BillingAddressJson ?? o.ShippingAddress ?? "",
@@ -803,11 +734,6 @@ namespace Honeywell.Controllers
 
             var customer = await _context.Customers.FindAsync(order.CustomerId);
             var displayStatus = (order.Status ?? "PENDING").ToUpper();
-            var subtotalVal = order.TotalAmount > 0 ? order.TotalAmount : order.Items.Sum(i => i.Subtotal);
-            var taxVal = order.GstAmount > 0 ? order.GstAmount : Math.Round(subtotalVal * 0.18m, 2);
-            var finalVal = (order.FinalAmount > 0 && order.FinalAmount != order.TotalAmount) 
-                ? order.FinalAmount 
-                : (subtotalVal + order.ShippingFee + taxVal - order.DiscountAmount);
 
             return Ok(new
             {
@@ -820,15 +746,8 @@ namespace Honeywell.Controllers
                 statusBadge = displayStatus,
                 paymentStatus = order.PaymentStatus ?? "Pending",
                 paymentMethod = order.PaymentMethod ?? "COD",
-                subtotal = subtotalVal,
-                discountAmount = order.DiscountAmount,
-                shippingFee = order.ShippingFee,
-                gstAmount = order.GstAmount,
-                taxAmount = order.GstAmount,
-                finalAmount = finalVal,
-                totalAmount = finalVal,
-                total = finalVal,
-                totalAmountFormatted = $"₹{finalVal:N0}",
+                totalAmount = order.TotalAmount > 0 ? order.TotalAmount : order.FinalAmount,
+                totalAmountFormatted = $"${(order.TotalAmount > 0 ? order.TotalAmount : order.FinalAmount):F2}",
                 shippingAddress = order.ShippingAddress ?? "",
                 billingAddress = customer?.BillingAddressJson ?? order.ShippingAddress ?? "",
                 trackingNumber = order.TrackingNumber ?? "",

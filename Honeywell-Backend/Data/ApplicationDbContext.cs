@@ -1,3 +1,4 @@
+
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Models;
 
@@ -37,7 +38,7 @@ namespace Honeywell.Data
         public DbSet<CoinsSettings> CoinsSettings { get; set; }
         public DbSet<Customer> Customers { get; set; }
 
-        // --- Newly Added from ApplicationDbContext ---
+        // Additional tables
         public DbSet<TestUser> TestUsers { get; set; }
         public DbSet<Banner> Banners { get; set; }
         public DbSet<Blog> Blogs { get; set; }
@@ -76,13 +77,13 @@ namespace Honeywell.Data
         public DbSet<PurchaseOrder> PurchaseOrders { get; set; }
         public DbSet<PurchaseOrderItem> PurchaseOrderItems { get; set; }
 
-        // B2B Partner Portal & Dynamic Settings
+        // B2B Partner Portal and Dynamic Settings
         public DbSet<PartnerUser> PartnerUsers { get; set; }
         public DbSet<SystemConfig> SystemConfigs { get; set; }
         public DbSet<Distributor> Distributors { get; set; }
         public DbSet<PartnerProgram> PartnerPrograms { get; set; }
 
-        // Enquiry & Form Submission Tables
+        // Enquiry and Form Submission tables
         public DbSet<BulkQuoteRequest> BulkQuoteRequests { get; set; }
         public DbSet<ContactUsRequest> ContactUsRequests { get; set; }
         public DbSet<PartnerApplication> PartnerApplications { get; set; }
@@ -90,61 +91,60 @@ namespace Honeywell.Data
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            // ReturnRequest Unique Constraint
+            // ReturnRequest unique constraint
             modelBuilder.Entity<ReturnRequest>()
                 .HasIndex(r => r.OrderItemId)
                 .IsUnique();
 
-            // Wishlist Table
+            // Wishlist table
             modelBuilder.Entity<WishlistItem>(entity =>
             {
                 entity.ToTable("WishlistItems");
-                entity.HasIndex(w => new { w.UserPhone, w.ProductId }).IsUnique();
+
+                entity.HasIndex(w => new
+                {
+                    w.UserPhone,
+                    w.ProductId
+                }).IsUnique();
             });
 
-            // Admin User Table
+            // Existing table names
             modelBuilder.Entity<User>()
                 .ToTable("admin_user");
 
-            // Cart Table
             modelBuilder.Entity<CartItem>()
                 .ToTable("CartItems");
 
-            // Customer Address Table
             modelBuilder.Entity<CustomerAddress>()
                 .ToTable("CustomerAddresses");
 
-            // Order Success Table
             modelBuilder.Entity<OrderSuccess>()
                 .ToTable("order_success");
 
-            // Testimonials Table
             modelBuilder.Entity<Testimonial>()
                 .ToTable("Testimonials");
 
-            // Order Table
             modelBuilder.Entity<Order>()
                 .ToTable("Orders");
 
-            // OrderItem Table
             modelBuilder.Entity<OrderItem>()
                 .ToTable("OrderItems");
 
-            // Customer -> GrowerUser (many-to-one, optional)
+            // Customer -> User (optional)
             modelBuilder.Entity<Customer>()
                 .HasOne(c => c.User)
                 .WithMany()
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
 
-            // Customer -> CustomerAgrarian (1-to-1)
+            // Customer -> CustomerAgrarian (one-to-one)
             modelBuilder.Entity<Customer>()
                 .HasOne(c => c.AgrarianProfile)
                 .WithOne(a => a.Customer)
                 .HasForeignKey<CustomerAgrarian>(a => a.CustomerId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Customer -> CustomerAdvisory (1-to-many)
+            // Customer -> CustomerAdvisory (one-to-many)
             modelBuilder.Entity<Customer>()
                 .HasMany(c => c.Advisories)
                 .WithOne(a => a.Customer)
@@ -158,52 +158,57 @@ namespace Honeywell.Data
                 .HasForeignKey(a => a.StaffId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Customer -> Order (1-to-many)
+            // Customer -> Order
             modelBuilder.Entity<Customer>()
                 .HasMany(c => c.Orders)
                 .WithOne(o => o.Customer)
                 .HasForeignKey(o => o.CustomerId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Order -> OrderItem (1-to-many)
+            // Order -> OrderItem
             modelBuilder.Entity<Order>()
                 .HasMany(o => o.Items)
                 .WithOne(i => i.Order)
                 .HasForeignKey(i => i.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Relationships & Cascade settings
+            // Product -> ProductImage
             modelBuilder.Entity<ProductImage>()
                 .HasOne<Product>()
                 .WithMany(p => p.Images)
                 .HasForeignKey(pi => pi.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Product -> ProductVideo
             modelBuilder.Entity<ProductVideo>()
                 .HasOne<Product>()
                 .WithMany(p => p.Videos)
                 .HasForeignKey(pv => pv.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Product -> ProductFeature
             modelBuilder.Entity<ProductFeature>()
                 .HasOne<Product>()
                 .WithMany(p => p.Features)
                 .HasForeignKey(pf => pf.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // Product -> ProductReview
             modelBuilder.Entity<ProductReview>()
                 .HasOne<Product>()
                 .WithMany(p => p.Reviews)
                 .HasForeignKey(pr => pr.ProductId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // ProductSoftware
             modelBuilder.Entity<ProductSoftware>(entity =>
             {
                 entity.ToTable("ProductSoftware");
+
                 entity.HasOne(s => s.Product)
-                      .WithMany(p => p.SoftwareList)
-                      .HasForeignKey(s => s.ProductId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                    .WithMany(p => p.SoftwareList)
+                    .HasForeignKey(s => s.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasIndex(s => s.ProductId);
                 entity.HasIndex(s => s.Status);
@@ -211,98 +216,131 @@ namespace Honeywell.Data
                 entity.HasIndex(s => s.Platform);
             });
 
-            // Decimal Precision Configurations
-            modelBuilder.Entity<Product>()
-                .Property(p => p.MRP)
-                .HasPrecision(18, 2);
-            modelBuilder.Entity<Product>()
-                .Property(p => p.BasePrice)
-                .HasPrecision(18, 2);
-            modelBuilder.Entity<Product>()
-                .Property(p => p.DiscountAmount)
-                .HasPrecision(18, 2);
-            modelBuilder.Entity<Product>()
-                .Property(p => p.SellingPrice)
-                .HasPrecision(18, 2);
-            modelBuilder.Entity<Product>()
-                .Property(p => p.AverageRating)
-                .HasPrecision(5, 2);
+            // Product table and decimal precision
+            modelBuilder.Entity<Product>(entity =>
+            {
+                entity.ToTable("Products");
 
+                entity.Property(p => p.MRP)
+                    .HasPrecision(18, 2);
+
+                entity.Property(p => p.BasePrice)
+                    .HasPrecision(65, 30);
+
+                entity.Property(p => p.CostPrice)
+                    .HasPrecision(18, 2);
+
+                entity.Property(p => p.DiscountAmount)
+                    .HasPrecision(65, 30);
+
+                entity.Property(p => p.SellingPrice)
+                    .HasPrecision(65, 30);
+
+                entity.Property(p => p.AverageRating)
+                    .HasPrecision(5, 2);
+            });
+
+            // Coupon precision
             modelBuilder.Entity<Coupon>()
                 .Property(c => c.DiscountValue)
                 .HasPrecision(18, 2);
+
             modelBuilder.Entity<Coupon>()
                 .Property(c => c.MinCartValue)
                 .HasPrecision(18, 2);
 
+            // Coins settings precision
             modelBuilder.Entity<CoinsSettings>()
                 .Property(c => c.ConversionRate)
                 .HasPrecision(18, 4);
+
             modelBuilder.Entity<CoinsSettings>()
                 .Property(c => c.EarnRate)
                 .HasPrecision(18, 4);
 
+            // Order precision
             modelBuilder.Entity<Order>()
                 .Property(o => o.TotalAmount)
                 .HasPrecision(18, 2);
+
             modelBuilder.Entity<Order>()
                 .Property(o => o.DiscountAmount)
                 .HasPrecision(18, 2);
+
             modelBuilder.Entity<Order>()
                 .Property(o => o.ShippingFee)
                 .HasPrecision(18, 2);
+
             modelBuilder.Entity<Order>()
                 .Property(o => o.GstAmount)
                 .HasPrecision(18, 2);
+
             modelBuilder.Entity<Order>()
                 .Property(o => o.FinalAmount)
                 .HasPrecision(18, 2);
 
+            // OrderItem precision
             modelBuilder.Entity<OrderItem>()
                 .Property(i => i.Price)
                 .HasPrecision(18, 2);
+
             modelBuilder.Entity<OrderItem>()
                 .Property(i => i.Subtotal)
                 .HasPrecision(18, 2);
 
+            // System settings precision
             modelBuilder.Entity<SystemSettings>()
                 .Property(s => s.GstPercentage)
                 .HasPrecision(18, 2);
+
             modelBuilder.Entity<SystemSettings>()
                 .Property(s => s.FlatShippingFee)
                 .HasPrecision(18, 2);
 
-            // Procurement Precision & Relationships
+            // Purchase Indent
             modelBuilder.Entity<PurchaseIndent>(entity =>
             {
                 entity.ToTable("PurchaseIndents");
-                entity.Property(p => p.TotalEstimatedCost).HasPrecision(18, 2);
+
+                entity.Property(p => p.TotalEstimatedCost)
+                    .HasPrecision(18, 2);
+
                 entity.HasMany(p => p.Items)
-                      .WithOne(i => i.PurchaseIndent)
-                      .HasForeignKey(i => i.PurchaseIndentId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                    .WithOne(i => i.PurchaseIndent)
+                    .HasForeignKey(i => i.PurchaseIndentId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // Purchase Indent Item
             modelBuilder.Entity<PurchaseIndentItem>(entity =>
             {
                 entity.ToTable("PurchaseIndentItems");
-                entity.Property(i => i.EstimatedCost).HasPrecision(18, 2);
+
+                entity.Property(i => i.EstimatedCost)
+                    .HasPrecision(18, 2);
             });
 
+            // Purchase Order
             modelBuilder.Entity<PurchaseOrder>(entity =>
             {
                 entity.ToTable("PurchaseOrders");
-                entity.Property(p => p.TotalAmount).HasPrecision(18, 2);
+
+                entity.Property(p => p.TotalAmount)
+                    .HasPrecision(18, 2);
+
                 entity.HasMany(p => p.Items)
-                      .WithOne(i => i.PurchaseOrder)
-                      .HasForeignKey(i => i.PurchaseOrderId)
-                      .OnDelete(DeleteBehavior.Cascade);
+                    .WithOne(i => i.PurchaseOrder)
+                    .HasForeignKey(i => i.PurchaseOrderId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
+            // Purchase Order Item
             modelBuilder.Entity<PurchaseOrderItem>(entity =>
             {
                 entity.ToTable("PurchaseOrderItems");
-                entity.Property(i => i.UnitPrice).HasPrecision(18, 2);
+
+                entity.Property(i => i.UnitPrice)
+                    .HasPrecision(18, 2);
             });
 
             base.OnModelCreating(modelBuilder);
