@@ -5,6 +5,57 @@ import { useCart } from '../../context/CartContext';
 import { useUI } from '../../context/UIContext';
 import { useSettings } from '../../context/SettingsContext';
 import OptimizedImage from '../common/OptimizedImage';
+import { categoryImages } from '../../data/imageLibrary';
+
+/**
+ * Resolves a tailored fallback image from categoryImages corresponding strictly to
+ * the product's functional category and environment, ensuring broken or missing images
+ * never degrade to a generic corporate logo.
+ */
+export function getProductCategoryFallback(product = {}) {
+  const text = `${product.name || ''} ${product.productType || ''} ${product.subcategory || ''} ${product.subcategoryName || ''} ${product.category || ''} ${product.categoryName || ''}`.toLowerCase();
+
+  if (text.includes('solar') && (text.includes('camera') || text.includes('4g') || text.includes('outdoor'))) {
+    return categoryImages['solar-cameras'];
+  }
+  if (text.includes('solar') || text.includes('photovoltaic') || text.includes('waaree')) {
+    return categoryImages['solar-panels'] || categoryImages['solar-cameras'];
+  }
+  if (text.includes('ptz') || text.includes('speed dome') || text.includes('pt ') || text.includes('pan-tilt') || text.includes('pan tilt')) {
+    return categoryImages['ptz-cameras'];
+  }
+  if (text.includes('dome')) {
+    return categoryImages['dome-cameras'];
+  }
+  if (text.includes('bullet')) {
+    return categoryImages['bullet-cameras'];
+  }
+  if (text.includes('turret')) {
+    return categoryImages['ip-cameras'];
+  }
+  if (text.includes('wifi') || text.includes('wi-fi') || text.includes('wireless')) {
+    return categoryImages['wifi-cameras'];
+  }
+  if (text.includes('4g') || text.includes('cellular') || text.includes('sim')) {
+    return categoryImages['4g-cameras'];
+  }
+  if (text.includes('nvr')) {
+    return categoryImages['nvr'];
+  }
+  if (text.includes('dvr')) {
+    return categoryImages['dvr'];
+  }
+  if (text.includes('storage') || text.includes('hard drive') || text.includes('hdd') || text.includes('ssd')) {
+    return categoryImages['surveillance-storage'];
+  }
+  if (text.includes('network') || text.includes('switch') || text.includes('poe') || text.includes('router')) {
+    return categoryImages['networking'];
+  }
+  if (text.includes('turbo') || text.includes('analog')) {
+    return categoryImages['cctv-cameras'];
+  }
+  return categoryImages['ip-cameras'] || '/honeywell-products-logo.png';
+}
 
 export default function ProductCard({ product, priority = false }) {
   const { addItem } = useCart();
@@ -15,10 +66,14 @@ export default function ProductCard({ product, priority = false }) {
 
   const add = () => { addItem(product); notify(`${product.name} added to cart.`); };
 
+  const categoryFallback = getProductCategoryFallback(product);
   const rawImg = product.image || product.imageUrl || (Array.isArray(product.images) && product.images[0]);
-  const displayImage = (!rawImg || String(rawImg).toLowerCase().includes('placeholder'))
-    ? '/honeywell-products-logo.png'
-    : rawImg;
+  const isBrokenOrMissing = !rawImg || 
+    String(rawImg).toLowerCase().includes('placeholder') ||
+    String(rawImg).includes('0b739155') ||
+    String(rawImg).includes('2ff42c5c');
+
+  const displayImage = isBrokenOrMissing ? categoryFallback : rawImg;
 
   const productSlug = product.slug || product.id || '';
   const cardLink = product.customUrl || `/products/${productSlug}`;
@@ -69,6 +124,7 @@ export default function ProductCard({ product, priority = false }) {
         <OptimizedImage
           src={displayImage}
           alt={product.name}
+          fallbackSrc={categoryFallback}
           loading={priority ? 'eager' : 'lazy'}
           fetchPriority={priority ? 'high' : undefined}
           decoding="async"

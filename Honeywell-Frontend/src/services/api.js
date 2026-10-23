@@ -1,54 +1,81 @@
-// Central API configuration for ASP.NET Core Web API.
-export const DEFAULT_BACKEND_URL = 'https://drab-smoking-unstaffed.ngrok-free.dev';
-// In dev mode, force relative path ('') so requests route through Vite proxy (/api) to eliminate CORS blocks
-export const API_BASE_URL = import.meta.env.DEV 
-  ? '' 
-  : (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_BACKEND_URL);
+
+const DEFAULT_BACKEND_URL =
+  'https://drab-smoking-unstaffed.ngrok-free.dev';
+
+export { DEFAULT_BACKEND_URL };
+
+// Local development uses Vite's /api proxy.
+// Production uses VITE_API_BASE_URL or the configured fallback.
+export const API_BASE_URL = import.meta.env.DEV
+  ? ''
+  : (import.meta.env.VITE_API_BASE_URL || DEFAULT_BACKEND_URL);
 
 export async function apiRequest(path, options = {}) {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  const url = path.startsWith('http') ? path : `${API_BASE_URL}${cleanPath}`;
+
+  const url = /^https?:\/\//i.test(path)
+    ? path
+    : `${API_BASE_URL}${cleanPath}`;
+
   const response = await fetch(url, {
-    cache: 'no-store',
-    headers: { 
-      'ngrok-skip-browser-warning': 'true',
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0',
-      ...options.headers 
-    },
     ...options,
+    cache: 'no-store',
+    headers: {
+      'ngrok-skip-browser-warning': 'true',
+      ...(options.body instanceof FormData
+        ? {}
+        : { 'Content-Type': 'application/json' }),
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+      ...options.headers,
+    },
   });
+
   if (!response.ok) {
     let errorDetail = '';
+
     try {
       const errJson = await response.json();
-      if (errJson) {
-        if (typeof errJson === 'string') errorDetail = errJson;
-        else if (errJson.title) errorDetail = errJson.title;
-        else if (errJson.message) errorDetail = errJson.message;
-        else if (errJson.detail) errorDetail = errJson.detail;
-        else if (errJson.errors && typeof errJson.errors === 'object') {
-          errorDetail = Object.entries(errJson.errors)
-            .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(', ') : errs}`)
-            .join(' | ');
-        }
+
+      if (typeof errJson === 'string') {
+        errorDetail = errJson;
+      } else if (errJson?.title) {
+        errorDetail = errJson.title;
+      } else if (errJson?.message) {
+        errorDetail = errJson.message;
+      } else if (errJson?.detail) {
+        errorDetail = errJson.detail;
+      } else if (errJson?.errors) {
+        errorDetail = Object.entries(errJson.errors)
+          .map(([field, errors]) =>
+            `${field}: ${
+              Array.isArray(errors) ? errors.join(', ') : errors
+            }`
+          )
+          .join(' | ');
       }
     } catch {
-      try {
-        errorDetail = await response.text();
-      } catch {}
+      errorDetail = response.statusText || '';
     }
-    if (response.status === 401) {
-      // Dynamic session purge on backend authentication rejection
+
+    if (response.status === 401 && typeof window !== 'undefined') {
       sessionStorage.removeItem('isAdmin');
       sessionStorage.removeItem('adminToken');
       localStorage.removeItem('isAdmin');
       localStorage.removeItem('adminToken');
     }
-    const cleanMsg = errorDetail ? `API Error (${response.status}): ${errorDetail}` : `API request failed: ${response.status}`;
-    throw new Error(cleanMsg);
+
+    throw new Error(
+      errorDetail
+        ? `API Error (${response.status}): ${errorDetail}`
+        : `API request failed: ${response.status}`
+    );
   }
+
+  if (response.status === 204) {
+    return null;
+  }
+
   return response.json();
 }

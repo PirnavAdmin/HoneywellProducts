@@ -63,7 +63,7 @@ export default function Industries() {
           return matchesCategory || matchesKeyword;
         });
 
-        setProducts(filtered.slice(0, 4));
+        setProducts(filtered.slice(0, 8));
       } catch (err) {
         console.error('Error fetching products for industry:', err);
         if (isMounted) setError('Unable to load recommended industry products.');

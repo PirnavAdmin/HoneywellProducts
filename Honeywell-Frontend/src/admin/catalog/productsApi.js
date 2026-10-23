@@ -142,7 +142,7 @@ export const mapCategoryFromApi = (raw = {}) => {
 
   return {
     id: catId,
-    name: raw.categoryName || raw.name || '',
+    name: (raw.categoryName || raw.name || '').trim(),
     slug: raw.slug || '',
     description: raw.description || '',
     status: isInactive ? 'Inactive' : 'Active',
@@ -189,7 +189,7 @@ export const mapSubcategoryFromApi = (raw = {}) => {
   return {
     id: subId,
     categoryId: String(raw.categoryId ?? raw.CategoryId ?? ''),
-    name: raw.subcategoryName || raw.name || raw.Name || '',
+    name: (raw.subcategoryName || raw.name || raw.Name || '').trim(),
     slug: raw.slug || raw.Slug || '',
     description: raw.description || raw.Description || '',
     status: isInactive ? 'Inactive' : 'Active',
@@ -197,7 +197,7 @@ export const mapSubcategoryFromApi = (raw = {}) => {
     displayOrder: displayOrder,
     image: resolveImageUrl(raw.imageUrl || raw.image || ''),
     imageUrl: raw.imageUrl || '',
-    categoryName: raw.categoryName || raw.category?.categoryName || '',
+    categoryName: (raw.categoryName || raw.category?.categoryName || '').trim(),
     products: raw.products || [],
   };
 };
@@ -391,8 +391,8 @@ export const mapProductFromApi = (
   if (material) specsObj.material = material;
   if (coverage) specsObj.coverage = coverage;
 
-  const categoryName = raw.categoryName || raw.category?.categoryName || raw.category?.name || categories.find(c => String(c.id) === String(categoryId))?.name || 'General';
-  const subcategoryName = raw.subcategoryName || raw.subcategory?.subcategoryName || raw.subcategory?.name || subcategories.find(s => String(s.id) === String(subcategoryId))?.name || 'Security Equipment';
+  const categoryName = (raw.categoryName || raw.category?.categoryName || raw.category?.name || categories.find(c => String(c.id) === String(categoryId))?.name || 'General').trim();
+  const subcategoryName = (raw.subcategoryName || raw.subcategory?.subcategoryName || raw.subcategory?.name || subcategories.find(s => String(s.id) === String(subcategoryId))?.name || 'Security Equipment').trim();
 
   const resolvedName = (
     raw.productName || 
@@ -427,9 +427,12 @@ export const mapProductFromApi = (
     sku: resolvedSku,
     brand: brandName,
     supplier: raw.manufacturer || raw.supplier || '',
-    categoryId: categoryId || (categories[0]?.id ?? ''),
-    subcategoryId: subcategoryId || (subcategories[0]?.id ?? ''),
+    categoryId: String(categoryId || (categories[0]?.id ?? '')),
+    subcategoryId: String(subcategoryId || (subcategories[0]?.id ?? '')),
     category: categoryName,
+    categoryName,
+    subcategory: subcategoryName,
+    subcategoryName,
     productType: subcategoryName,
     model: resolvedSku || brandName || 'GEN-PRO',
 

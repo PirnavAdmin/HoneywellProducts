@@ -114,164 +114,86 @@ const CATEGORY_ALIASES = {
 const checkCategoryMatch = (product, filterCategoryName, categoriesList = [], subcategoriesList = []) => {
   if (!filterCategoryName) return true;
 
-
-
   const targetNorm = normalizeCategory(filterCategoryName);
-  const prodCatNorm = normalizeCategory(product.category);
+  const prodCatNorm = normalizeCategory(product.category || product.categoryName);
   const prodCatId = String(product.categoryId ?? '').trim();
   const prodSubCatId = String(product.subcategoryId ?? '').trim();
-  const prodTypeNorm = normalizeCategory(product.productType || product.subcategory || '');
-  const prodNameNorm = normalizeCategory(product.name || product.productName || '');
 
-
-
-  // 1. Direct match on product category or category ID
+  // 1. Direct match on product category name or category ID
   if (prodCatNorm && prodCatNorm === targetNorm) return true;
   if (prodCatId && prodCatId === targetNorm) return true;
-  if (prodTypeNorm && prodTypeNorm === targetNorm) return true;
-
-
 
   // 2. Check categoriesList for matching category object
   const catObj = categoriesList.find(
-    (c) =>
-      String(c.id) === String(filterCategoryName) ||
-      normalizeCategory(c.name) === targetNorm ||
-      normalizeCategory(c.slug) === targetNorm
+    (c) =>
+      String(c.id) === String(filterCategoryName) ||
+      normalizeCategory(c.name) === targetNorm ||
+      normalizeCategory(c.slug) === targetNorm
   );
-
-
 
   if (catObj) {
-    if (prodCatId && prodCatId === String(catObj.id)) return true;
-    if (prodCatNorm && (prodCatNorm === normalizeCategory(catObj.name) || prodCatNorm === normalizeCategory(catObj.slug))) return true;
-    if (prodSubCatId) {
-      const sub = subcategoriesList.find((s) => String(s.id) === prodSubCatId);
-      if (sub && String(sub.categoryId) === String(catObj.id)) return true;
-    }
+    if (prodCatId && prodCatId === String(catObj.id)) return true;
+    if (prodCatNorm && (prodCatNorm === normalizeCategory(catObj.name) || prodCatNorm === normalizeCategory(catObj.slug))) return true;
+    if (prodSubCatId) {
+      const sub = subcategoriesList.find((s) => String(s.id) === prodSubCatId);
+      if (sub && String(sub.categoryId) === String(catObj.id)) return true;
+    }
   }
 
-
-
-  // 3. Check Subcategory matching (if filterCategoryName was actually a subcategory)
-  const subObj = subcategoriesList.find(
-    (s) =>
-      String(s.id) === String(filterCategoryName) ||
-      normalizeCategory(s.name) === targetNorm ||
-      normalizeCategory(s.slug) === targetNorm
-  );
-  if (subObj) {
-    if (prodSubCatId && prodSubCatId === String(subObj.id)) return true;
-    if (prodTypeNorm && (prodTypeNorm === normalizeCategory(subObj.name) || prodTypeNorm === normalizeCategory(subObj.slug))) return true;
-    if (prodCatId && String(subObj.categoryId) === prodCatId) return true;
-  }
-
-
-
-  // 4. Check Alias Map
+  // 3. Fallback for alias mapping (targetCategories only, no broad keyword matching)
   const slugKey = Object.keys(CATEGORY_ALIASES).find(
-    (k) => normalizeCategory(k) === targetNorm || normalizeCategory(formatCategoryName(k)) === targetNorm
+    (k) => normalizeCategory(k) === targetNorm || normalizeCategory(formatCategoryName(k)) === targetNorm
   );
   if (slugKey) {
-    const alias = CATEGORY_ALIASES[slugKey];
-    if (alias.targetCategories && alias.targetCategories.some(tc => normalizeCategory(tc) === prodCatNorm)) {
-      return true;
-    }
-    if (alias.targetSubcategories && alias.targetSubcategories.some(ts => normalizeCategory(ts) === prodTypeNorm)) {
-      return true;
-    }
-    if (alias.keywords) {
-      const pText = `${product.name} ${product.category} ${product.productType} ${product.description} ${(product.keyFeatures || []).join(' ')}`.toLowerCase();
-      if (alias.keywords.some(kw => pText.includes(kw.toLowerCase()))) {
-        return true;
-      }
-    }
+    const alias = CATEGORY_ALIASES[slugKey];
+    if (alias.targetCategories && alias.targetCategories.some(tc => normalizeCategory(tc) === prodCatNorm)) {
+      return true;
+    }
   }
-
-
-
-  // 5. Broad substring/keyword match fallback on product fields
-  if (targetNorm.length >= 3) {
-    if (prodCatNorm.includes(targetNorm) || targetNorm.includes(prodCatNorm)) return true;
-    if (prodTypeNorm.includes(targetNorm) || targetNorm.includes(prodTypeNorm)) return true;
-    if (prodNameNorm.includes(targetNorm)) return true;
-  }
-
-
 
   return false;
 };
 
-
-
 const checkSubcategoryMatch = (product, filterSubcategoryName, subcategoriesList = []) => {
   if (!filterSubcategoryName) return true;
 
-
-
   const targetNorm = normalizeCategory(filterSubcategoryName);
   const prodSubCatId = String(product.subcategoryId ?? '').trim();
-  const prodTypeNorm = normalizeCategory(product.productType);
+  const prodTypeNorm = normalizeCategory(product.productType || product.subcategory || product.subcategoryName);
   const prodSubcatNorm = normalizeCategory(product.subcategory || product.subcategoryName);
-  const prodNameNorm = normalizeCategory(product.name || product.productName || '');
-
-
 
   // 1. Direct match on productType or subcategoryId
   if (prodSubCatId && prodSubCatId === targetNorm) return true;
   if (prodTypeNorm && prodTypeNorm === targetNorm) return true;
   if (prodSubcatNorm && prodSubcatNorm === targetNorm) return true;
 
-
-
   // 2. Check subcategoriesList for matching subcategory object
   const subObj = subcategoriesList.find(
-    (s) =>
-      String(s.id) === String(filterSubcategoryName) ||
-      normalizeCategory(s.name) === targetNorm ||
-      normalizeCategory(s.slug) === targetNorm
+    (s) =>
+      String(s.id) === String(filterSubcategoryName) ||
+      normalizeCategory(s.name) === targetNorm ||
+      normalizeCategory(s.slug) === targetNorm
   );
-
-
 
   if (subObj) {
-    if (prodSubCatId && prodSubCatId === String(subObj.id)) return true;
-    if (prodTypeNorm && (prodTypeNorm === normalizeCategory(subObj.name) || prodTypeNorm === normalizeCategory(subObj.slug))) return true;
-    if (prodSubcatNorm && (prodSubcatNorm === normalizeCategory(subObj.name) || prodSubcatNorm === normalizeCategory(subObj.slug))) return true;
+    if (prodSubCatId && prodSubCatId === String(subObj.id)) return true;
+    if (prodTypeNorm && (prodTypeNorm === normalizeCategory(subObj.name) || prodTypeNorm === normalizeCategory(subObj.slug))) return true;
+    if (prodSubcatNorm && (prodSubcatNorm === normalizeCategory(subObj.name) || prodSubcatNorm === normalizeCategory(subObj.slug))) return true;
   }
 
-
-
-  // 3. Check Alias Map
+  // 3. Fallback for alias mapping (targetSubcategories only, no broad keyword matching)
   const slugKey = Object.keys(CATEGORY_ALIASES).find(
-    (k) => normalizeCategory(k) === targetNorm || normalizeCategory(formatCategoryName(k)) === targetNorm
+    (k) => normalizeCategory(k) === targetNorm || normalizeCategory(formatCategoryName(k)) === targetNorm
   );
   if (slugKey) {
-    const alias = CATEGORY_ALIASES[slugKey];
-    if (alias.targetSubcategories && alias.targetSubcategories.some(ts => normalizeCategory(ts) === prodTypeNorm)) {
-      return true;
-    }
-    if (alias.keywords) {
-      const pText = `${product.name} ${product.productType} ${product.description}`.toLowerCase();
-      if (alias.keywords.some(kw => pText.includes(kw.toLowerCase()))) {
-        return true;
-      }
-    }
+    const alias = CATEGORY_ALIASES[slugKey];
+    if (alias.targetSubcategories && alias.targetSubcategories.some(ts => normalizeCategory(ts) === prodTypeNorm)) {
+      return true;
+    }
   }
-
-
-
-  // 4. Substring fallback
-  if (targetNorm.length >= 3 && prodNameNorm.includes(targetNorm)) {
-    return true;
-  }
-
-
 
   return false;
 };
-
-
 
 export default function Products() {
 
@@ -312,22 +234,43 @@ export default function Products() {
         productService.getAll().catch(() => []),
       ]);
       const validCats = (Array.isArray(cats) ? cats : []).slice().sort((a, b) => {
-        const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
-        const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
-        if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
-          if (orderA === 0) return 1;
-          if (orderB === 0) return -1;
-          return orderA - orderB;
-        }
-        return (Number(a.id) || 0) - (Number(b.id) || 0);
-      });
-      const validSubcats = Array.isArray(subcats) ? subcats : [];
+      const orderA = Number(a.displayOrder ?? a.display_order ?? 0);
+      const orderB = Number(b.displayOrder ?? b.display_order ?? 0);
+      if (orderA !== orderB && (orderA > 0 || orderB > 0)) {
+        if (orderA === 0) return 1;
+        if (orderB === 0) return -1;
+        return orderA - orderB;
+      }
+      return (Number(a.id) || 0) - (Number(b.id) || 0);
+    }).map((c) => ({ ...c, name: (c.name || '').trim() }));
 
+    const validSubcats = (Array.isArray(subcats) ? subcats : []).map((s) => ({
+      ...s,
+      name: (s.name || '').trim(),
+      categoryName: (s.categoryName || '').trim(),
+    }));
 
+    const rawProds = Array.isArray(prods) ? prods : [];
+    const normalizedProds = rawProds.map((p) => {
+      const cat = validCats.find((c) => String(c.id) === String(p.categoryId));
+      const sub = validSubcats.find((s) => String(s.id) === String(p.subcategoryId));
+      const resolvedCatName = (p.category || p.categoryName || cat?.name || '').trim();
+      const resolvedSubcatName = (p.productType || p.subcategory || p.subcategoryName || sub?.name || '').trim();
+      return {
+        ...p,
+        categoryId: String(p.categoryId || cat?.id || ''),
+        subcategoryId: String(p.subcategoryId || sub?.id || ''),
+        category: resolvedCatName,
+        categoryName: resolvedCatName,
+        productType: resolvedSubcatName,
+        subcategory: resolvedSubcatName,
+        subcategoryName: resolvedSubcatName,
+      };
+    });
 
-      setCategoriesList(validCats);
-      setSubcategoriesList(validSubcats);
-      setProductsList(Array.isArray(prods) ? prods : []);
+    setCategoriesList(validCats);
+    setSubcategoriesList(validSubcats);
+    setProductsList(normalizedProds);
     } catch (err) {
       console.error('Failed to load products/categories/subcategories:', err);
       setError(err.message || 'Unable to connect to products server. Please check backend status.');
@@ -500,190 +443,223 @@ export default function Products() {
 
   // 1. Dynamic Categories from API + real products
   const dynamicCategoryList = useMemo(() => {
-    const apiCatNames = categoriesList
-      .filter((c) => c.status !== 'Inactive')
-      .map((c) => c.name)
-      .filter(Boolean);
-    const prodCatNames = productsList
-      .map((p) => p.category)
-      .filter(Boolean);
-    const combined = [...new Set([...apiCatNames, ...prodCatNames])];
-    return combined.sort((a, b) => a.localeCompare(b));
+    const apiCatNames = categoriesList
+      .filter((c) => c.status !== 'Inactive')
+      .map((c) => (c.name || '').trim())
+      .filter(Boolean);
+    const prodCatNames = productsList
+      .map((p) => (p.category || '').trim())
+      .filter(Boolean);
+    const combined = [...new Set([...apiCatNames, ...prodCatNames])];
+    return combined.sort((a, b) => a.localeCompare(b));
   }, [categoriesList, productsList]);
-
-
 
   // 2. Dynamic Subcategories: when category is selected, ONLY show subcategories under that category
   const availableSubcategories = useMemo(() => {
-    if (filters.category.length > 0) {
-      // Find selected category IDs & names
-      const selectedCatObjects = categoriesList.filter((c) =>
-        filters.category.some((catName) =>
-          normalizeCategory(c.name) === normalizeCategory(catName) || String(c.id) === String(catName)
-        )
-      );
-      const selectedCatIds = selectedCatObjects.map((c) => String(c.id));
+    if (filters.category.length > 0) {
+      // Find selected category IDs & names
+      const selectedCatObjects = categoriesList.filter((c) =>
+        filters.category.some((catName) =>
+          normalizeCategory(c.name) === normalizeCategory(catName) || String(c.id) === String(catName)
+        )
+      );
+      const selectedCatIds = new Set(selectedCatObjects.map((c) => String(c.id)));
+      const selectedCatNorms = new Set(selectedCatObjects.map((c) => normalizeCategory(c.name)));
+      filters.category.forEach((catName) => selectedCatNorms.add(normalizeCategory(catName)));
 
+      // 1) From subcategoriesList: ONLY those matching selected categories
+      const matchingSubcatObjects = subcategoriesList.filter((s) => {
+        if (s.status === 'Inactive') return false;
+        if (selectedCatIds.has(String(s.categoryId))) return true;
+        if (s.categoryName && selectedCatNorms.has(normalizeCategory(s.categoryName))) return true;
+        return false;
+      });
+      const subcatNamesFromApi = matchingSubcatObjects.map((s) => (s.name || '').trim()).filter(Boolean);
 
+      // 2) From products belonging to the selected categories
+      const matchingProducts = productsList.filter((product) =>
+        filters.category.some((catName) => checkCategoryMatch(product, catName, categoriesList, subcategoriesList))
+      );
 
-      // 1) From subcategoriesList: only those matching selected categories
-      const matchingSubcatObjects = subcategoriesList.filter((s) => {
-        if (s.status === 'Inactive') return false;
-        if (selectedCatIds.includes(String(s.categoryId))) return true;
-        if (filters.category.some((catName) => normalizeCategory(s.categoryName) === normalizeCategory(catName))) return true;
-        return false;
-      });
-      const subcatNamesFromApi = matchingSubcatObjects.map((s) => s.name).filter(Boolean);
+      const subcatNamesFromProds = matchingProducts.map((p) => {
+        if (p.subcategoryId) {
+          const sub = subcategoriesList.find((s) => String(s.id) === String(p.subcategoryId));
+          if (sub && (selectedCatIds.has(String(sub.categoryId)) || selectedCatNorms.has(normalizeCategory(sub.categoryName)))) {
+            return (sub.name || '').trim();
+          }
+        }
+        if (p.productType) {
+          const sub = subcategoriesList.find((s) => normalizeCategory(s.name) === normalizeCategory(p.productType));
+          if (sub && (selectedCatIds.has(String(sub.categoryId)) || selectedCatNorms.has(normalizeCategory(sub.categoryName)))) {
+            return (sub.name || '').trim();
+          }
+        }
+        return null;
+      }).filter(Boolean);
 
+      const combined = [...new Set([...subcatNamesFromApi, ...subcatNamesFromProds])];
+      return combined.sort((a, b) => a.localeCompare(b));
+    }
 
-
-      // 2) From products belonging to the selected categories
-      const matchingProducts = productsList.filter((product) =>
-        filters.category.some((catName) => checkCategoryMatch(product, catName, categoriesList, subcategoriesList))
-      );
-      const subcatNamesFromProds = matchingProducts.map((p) => p.productType).filter(Boolean);
-
-
-
-      const combined = [...new Set([...subcatNamesFromApi, ...subcatNamesFromProds])];
-      return combined.sort((a, b) => a.localeCompare(b));
-    }
-
-
-
-    // When no category is selected: show all active subcategories
-    const allApiSubcats = subcategoriesList
-      .filter((s) => s.status !== 'Inactive')
-      .map((s) => s.name)
-      .filter(Boolean);
-    const allProdSubcats = productsList
-      .map((p) => p.productType)
-      .filter(Boolean);
-    const combined = [...new Set([...allApiSubcats, ...allProdSubcats])];
-    return combined.sort((a, b) => a.localeCompare(b));
+    // When no category is selected: show all active subcategories
+    const allApiSubcats = subcategoriesList
+      .filter((s) => s.status !== 'Inactive')
+      .map((s) => (s.name || '').trim())
+      .filter(Boolean);
+    const allProdSubcats = productsList
+      .map((p) => {
+        const sub = subcategoriesList.find((s) => String(s.id) === String(p.subcategoryId));
+        return (sub ? sub.name : p.productType || '')?.trim();
+      })
+      .filter(Boolean);
+    const combined = [...new Set([...allApiSubcats, ...allProdSubcats])];
+    return combined.sort((a, b) => a.localeCompare(b));
   }, [filters.category, categoriesList, subcategoriesList, productsList]);
 
+  // Helper: products filtered by selected category and subcategory
+  const categoryAndSubcategoryFilteredProducts = useMemo(() => {
+    return productsList.filter((product) => {
+      const categoryMatch = !filters.category.length || filters.category.some((name) =>
+        checkCategoryMatch(product, name, categoriesList, subcategoriesList)
+      );
+      const subcategoryMatch = !filters.subcategory.length || filters.subcategory.some((subName) =>
+        checkSubcategoryMatch(product, subName, subcategoriesList)
+      );
+      return categoryMatch && subcategoryMatch;
+    });
+  }, [productsList, filters.category, filters.subcategory, categoriesList, subcategoriesList]);
 
-
-  // 3. Dynamic Installation options from products
+  // 3. Dynamic Installation options from category/subcategory filtered products
   const availableInstallation = useMemo(() => {
-    const options = new Set();
-    productsList.forEach((p) => {
-      if (Array.isArray(p.installation)) {
-        p.installation.forEach((item) => item && options.add(String(item).trim()));
-      } else if (typeof p.installation === 'string' && p.installation.trim()) {
-        options.add(p.installation.trim());
-      }
-    });
-    return [...options].sort((a, b) => a.localeCompare(b));
-  }, [productsList]);
+    const options = new Set();
+    categoryAndSubcategoryFilteredProducts.forEach((p) => {
+      if (Array.isArray(p.installation)) {
+        p.installation.forEach((item) => item && options.add(String(item).trim()));
+      } else if (typeof p.installation === 'string' && p.installation.trim()) {
+        options.add(p.installation.trim());
+      }
+    });
+    return [...options].sort((a, b) => a.localeCompare(b));
+  }, [categoryAndSubcategoryFilteredProducts]);
 
-
-
-  // 4. Dynamic Connectivity options from products
+  // 4. Dynamic Connectivity options from category/subcategory filtered products
   const availableConnectivity = useMemo(() => {
-    const options = new Set();
-    productsList.forEach((p) => {
-      if (Array.isArray(p.connectivity)) {
-        p.connectivity.forEach((item) => item && options.add(String(item).trim()));
-      } else if (typeof p.connectivity === 'string' && p.connectivity.trim()) {
-        options.add(p.connectivity.trim());
-      }
-    });
-    return [...options].sort((a, b) => a.localeCompare(b));
-  }, [productsList]);
+    const options = new Set();
+    categoryAndSubcategoryFilteredProducts.forEach((p) => {
+      if (Array.isArray(p.connectivity)) {
+        p.connectivity.forEach((item) => item && options.add(String(item).trim()));
+      } else if (typeof p.connectivity === 'string' && p.connectivity.trim()) {
+        options.add(p.connectivity.trim());
+      }
+    });
+    return [...options].sort((a, b) => a.localeCompare(b));
+  }, [categoryAndSubcategoryFilteredProducts]);
 
-
-
-  // 5. Dynamic Features options from products
+  // 5. Dynamic Features options from category/subcategory filtered products
   const availableFeatures = useMemo(() => {
-    const options = new Set();
-    productsList.forEach((p) => {
-      const featList = Array.isArray(p.features)
-        ? p.features
-        : Array.isArray(p.keyFeatures)
-        ? p.keyFeatures
-        : Array.isArray(p.highlights)
-        ? p.highlights
-        : [];
-      featList.forEach((item) => {
-        if (typeof item === 'string' && item.trim() && item.length < 35) {
-          options.add(item.trim());
-        }
-      });
-    });
-    return [...options].sort((a, b) => a.localeCompare(b));
-  }, [productsList]);
+    const options = new Set();
+    categoryAndSubcategoryFilteredProducts.forEach((p) => {
+      const featList = Array.isArray(p.features)
+        ? p.features
+        : Array.isArray(p.keyFeatures)
+        ? p.keyFeatures
+        : Array.isArray(p.highlights)
+        ? p.highlights
+        : [];
+      featList.forEach((item) => {
+        const featStr = typeof item === 'string' ? item : (item?.feature || item?.featureName || '');
+        if (typeof featStr === 'string' && featStr.trim() && featStr.length < 50) {
+          options.add(featStr.trim());
+        }
+      });
+    });
+    return [...options].sort((a, b) => a.localeCompare(b));
+  }, [categoryAndSubcategoryFilteredProducts]);
 
+  // Auto-prune stale selected features/installation/connectivity when category/subcategory changes
+  useEffect(() => {
+    setFilters((current) => {
+      let changed = false;
+      const nextFilters = { ...current };
 
+      if (current.features.length > 0 && availableFeatures.length > 0) {
+        const valid = current.features.filter((f) => availableFeatures.includes(f));
+        if (valid.length !== current.features.length) {
+          nextFilters.features = valid;
+          changed = true;
+        }
+      }
+
+      if (current.installation.length > 0 && availableInstallation.length > 0) {
+        const valid = current.installation.filter((i) => availableInstallation.includes(i));
+        if (valid.length !== current.installation.length) {
+          nextFilters.installation = valid;
+          changed = true;
+        }
+      }
+
+      if (current.connectivity.length > 0 && availableConnectivity.length > 0) {
+        const valid = current.connectivity.filter((c) => availableConnectivity.includes(c));
+        if (valid.length !== current.connectivity.length) {
+          nextFilters.connectivity = valid;
+          changed = true;
+        }
+      }
+
+      return changed ? nextFilters : current;
+    });
+  }, [availableFeatures, availableInstallation, availableConnectivity]);
 
   // 6. Filter Groups built dynamically
   const dynamicFilterGroups = useMemo(() => {
-    const groups = [
-      { key: 'category', label: 'Category', items: dynamicCategoryList },
-      { key: 'subcategory', label: 'Sub Category', items: availableSubcategories },
-    ];
-    if (availableInstallation.length > 0) {
-      groups.push({ key: 'installation', label: 'Installation', items: availableInstallation });
-    }
-    if (availableConnectivity.length > 0) {
-      groups.push({ key: 'connectivity', label: 'Connectivity', items: availableConnectivity });
-    }
-    if (availableFeatures.length > 0) {
-      groups.push({ key: 'features', label: 'Features', items: availableFeatures });
-    }
-    return groups;
+    const groups = [
+      { key: 'category', label: 'Category', items: dynamicCategoryList },
+      { key: 'subcategory', label: 'Sub Category', items: availableSubcategories },
+    ];
+    if (availableInstallation.length > 0) {
+      groups.push({ key: 'installation', label: 'Installation', items: availableInstallation });
+    }
+    if (availableConnectivity.length > 0) {
+      groups.push({ key: 'connectivity', label: 'Connectivity', items: availableConnectivity });
+    }
+    if (availableFeatures.length > 0) {
+      groups.push({ key: 'features', label: 'Features', items: availableFeatures });
+    }
+    return groups;
   }, [dynamicCategoryList, availableSubcategories, availableInstallation, availableConnectivity, availableFeatures]);
 
-
-
   const toggle = (key, item) => setFilters((current) => {
-    const currentList = current[key] || [];
-    const nextItems = currentList.includes(item) ? currentList.filter((value) => value !== item) : [...currentList, item];
+    const currentList = current[key] || [];
+    const nextItems = currentList.includes(item) ? currentList.filter((value) => value !== item) : [...currentList, item];
 
+    if (key === 'category') {
+      // When category selection changes, prune subcategories that don't belong to the remaining selected categories
+      if (nextItems.length === 0) {
+        return { ...current, category: nextItems };
+      }
 
+      const selectedCatObjects = categoriesList.filter((c) =>
+        nextItems.some((catName) =>
+          normalizeCategory(c.name) === normalizeCategory(catName) || String(c.id) === String(catName)
+        )
+      );
+      const selectedCatIds = new Set(selectedCatObjects.map((c) => String(c.id)));
+      const selectedCatNorms = new Set(selectedCatObjects.map((c) => normalizeCategory(c.name)));
+      nextItems.forEach((catName) => selectedCatNorms.add(normalizeCategory(catName)));
 
-    if (key === 'category') {
-      // When category selection changes, prune subcategories that don't belong to the remaining selected categories
-      if (nextItems.length === 0) {
-        return { ...current, category: nextItems };
-      }
+      const validSubcats = subcategoriesList
+        .filter((s) =>
+          selectedCatIds.has(String(s.categoryId)) ||
+          (s.categoryName && selectedCatNorms.has(normalizeCategory(s.categoryName)))
+        )
+        .map((s) => (s.name || '').trim());
 
+      const validSet = new Set(validSubcats.map((name) => normalizeCategory(name)));
+      const nextSubcategories = (current.subcategory || []).filter((sub) => validSet.has(normalizeCategory(sub)));
+      return { ...current, category: nextItems, subcategory: nextSubcategories };
+    }
 
-
-      const selectedCatObjects = categoriesList.filter((c) =>
-        nextItems.some((catName) =>
-          normalizeCategory(c.name) === normalizeCategory(catName) || String(c.id) === String(catName)
-        )
-      );
-      const selectedCatIds = selectedCatObjects.map((c) => String(c.id));
-
-
-
-      const validSubcats = subcategoriesList
-        .filter((s) =>
-          selectedCatIds.includes(String(s.categoryId)) ||
-          nextItems.some((catName) => normalizeCategory(s.categoryName) === normalizeCategory(catName))
-        )
-        .map((s) => s.name);
-
-
-
-      const matchingProducts = productsList.filter((product) =>
-        nextItems.some((catName) => checkCategoryMatch(product, catName, categoriesList, subcategoriesList))
-      );
-      const validProdSubcats = matchingProducts.map((p) => p.productType).filter(Boolean);
-      const allValid = new Set([...validSubcats, ...validProdSubcats]);
-
-
-
-      const nextSubcategories = (current.subcategory || []).filter((sub) => allValid.has(sub));
-      return { ...current, category: nextItems, subcategory: nextSubcategories };
-    }
-
-
-
-    return { ...current, [key]: nextItems };
+    return { ...current, [key]: nextItems };
   });
 
 
@@ -729,9 +705,12 @@ export default function Products() {
 
 
       const featureMatch = !filters.features.length || filters.features.some((item) => {
-        const feats = Array.isArray(product.features) ? product.features : Array.isArray(product.keyFeatures) ? product.keyFeatures : Array.isArray(product.highlights) ? product.highlights : [];
-        return feats.some((f) => String(f).toLowerCase().includes(item.toLowerCase()));
-      });
+        const feats = Array.isArray(product.features) ? product.features : Array.isArray(product.keyFeatures) ? product.keyFeatures : Array.isArray(product.highlights) ? product.highlights : [];
+        return feats.some((f) => {
+          const featStr = typeof f === 'string' ? f : (f?.feature || f?.featureName || '');
+          return String(featStr).toLowerCase().includes(item.toLowerCase());
+        });
+      });
 
 
 

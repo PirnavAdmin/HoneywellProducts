@@ -1,53 +1,79 @@
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { sites } from '@openai/sites-vite-plugin';
 import { mkdir, writeFile } from 'node:fs/promises';
 
+const API_PROXY_TARGET =
+  'https://drab-smoking-unstaffed.ngrok-free.dev';
+
+const MEDIA_PROXY_TARGET =
+  'https://honeywellproducts.com';
+
 function staticSiteWorker() {
   return {
     name: 'static-site-worker',
     apply: 'build',
+
     async closeBundle() {
       await mkdir('dist/server', { recursive: true });
-      await writeFile('dist/server/index.js', `export default {
+
+      await writeFile(
+        'dist/server/index.js',
+        `export default {
   async fetch(request, env) {
     const response = await env.ASSETS.fetch(request);
-    if (response.status !== 404 || request.method !== 'GET') return response;
+
+    if (response.status !== 404 || request.method !== 'GET') {
+      return response;
+    }
 
     const url = new URL(request.url);
-    if (url.pathname.includes('.')) return response;
 
-    return env.ASSETS.fetch(new Request(new URL('/index.html', url), request));
+    if (url.pathname.includes('.')) {
+      return response;
+    }
+
+    return env.ASSETS.fetch(
+      new Request(new URL('/index.html', url), request)
+    );
   },
 };
-`);
+`
+      );
     },
   };
 }
 
 export default defineConfig({
-  plugins: [react(), sites(), staticSiteWorker()],
-  server: { 
-    host: '127.0.0.1', 
+  plugins: [
+    react(),
+    sites(),
+    staticSiteWorker(),
+  ],
+
+  server: {
+    host: '127.0.0.1',
     port: 5173,
+
     proxy: {
+      // Backend API requests
       '/api': {
-        target: 'https://drab-smoking-unstaffed.ngrok-free.dev',       
+        target: API_PROXY_TARGET,
         changeOrigin: true,
-        secure: false,
+        secure: true,
         headers: {
           'ngrok-skip-browser-warning': 'true',
         },
       },
+
+      // Blog images, banners, product images,
+      // CEO Corner, Company Overview and other uploads
       '/uploads': {
-        target: 'https://drab-smoking-unstaffed.ngrok-free.dev',
+        target: MEDIA_PROXY_TARGET,
         changeOrigin: true,
-        secure: false,
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-        },
+        secure: true,
       },
     },
   },
 });
-

@@ -5,8 +5,26 @@ export const SOLUTION_PILLARS = {
     id: 'security-surveillance',
     title: 'Security & Surveillance',
     eyebrow: 'HIGH-DEFINITION MONITORING',
-    subtitle: 'Comprehensive IP camera networks, localized recording, and high-capacity storage topology.',
-    description: 'Protect your premises with optical and thermal security cameras engineered for 24/7 continuous surveillance, crystal clear video capture, and high-reliability local storage.',
+    badge: 'Enterprise Architecture Certified',
+    image: categoryImages['ip-cameras'] || categoryImages['cctv-cameras'],
+    subtitle: 'Comprehensive IP camera networks, localized edge recording, and high-capacity storage topology.',
+    description: 'Protect your premises with optical and thermal security cameras engineered for 24/7 continuous surveillance, crystal-clear Ultra-HD video capture, low-latency network transit, and high-reliability local RAID storage.',
+    metrics: [
+      { value: '4K Ultra-HD', label: 'Optical Resolution', sub: 'Up to 3840 × 2160 @ 30fps' },
+      { value: '24/7 / 365', label: 'Continuous Capture', sub: 'Zero-drop frame retention' },
+      { value: '99.99%', label: 'Recording Uptime', sub: 'Redundant RAID 5/6 failover' },
+      { value: 'H.265+', label: 'Smart Compression', sub: 'Up to 75% bandwidth savings' },
+    ],
+    keySpecs: [
+      { label: 'Optical Sensor', value: '1/1.8" Progressive Scan CMOS' },
+      { label: 'Resolution Options', value: '2MP / 4MP / 8MP (4K UHD)' },
+      { label: 'Video Compression', value: 'H.265+ / H.265 / H.264 High Profile' },
+      { label: 'Night Vision Range', value: 'Smart IR & ColorVu up to 60m' },
+      { label: 'Storage Interface', value: 'SATA III (up to 16TB/bay) & RAID 5/6' },
+      { label: 'Network Protocols', value: 'ONVIF Profile S/G/T, RTSP, HTTPS, IPv6' },
+      { label: 'Operating Climate', value: '-30°C to +60°C (-22°F to +140°F)' },
+      { label: 'Ingress Protection', value: 'IP67 Weatherproof & IK10 Vandal-Proof' },
+    ],
     architecture: [
       { step: '01', title: 'Video Capture', desc: 'IP Bullet, Dome & PTZ Security Cameras' },
       { step: '02', title: 'Network Transit', desc: 'PoE Network Switches & Gigabit Infrastructure' },
@@ -19,18 +37,37 @@ export const SOLUTION_PILLARS = {
     environmentSubtitle: 'Select the environment where you need reliable high-definition 24/7 video surveillance.',
     verifiedCapabilities: [
       '24/7 Continuous Ultra-HD Recording',
-      'Infrared & Smart Night Vision',
-      'PoE Power over Ethernet Connectivity',
-      'High-Capacity RAID & NVR Storage Support',
-      'Weatherproof IP66/IP67 Hardware Housing'
+      'Smart IR & ColorVu Low-Light Night Vision',
+      'PoE / PoE+ (IEEE 802.3af/at) Connectivity',
+      'High-Capacity RAID & NVR Storage Arrays',
+      'Weatherproof IP66/IP67 & IK10 Hardware Housing',
+      'Multi-Screen VMS & Remote Live View'
     ],
   },
   'smart-security': {
     id: 'smart-security',
     title: 'Smart Security & AI Analytics',
     eyebrow: 'INTELLIGENT SURVEILLANCE',
-    subtitle: 'AI-driven motion analytics, automated alerts, and target classification.',
-    description: 'Transform passive monitoring into proactive security with intelligent camera analytics. Detect perimeter crossings, classify human vs vehicle motion, and trigger instant security notifications.',
+    badge: 'AI Vision Certified',
+    image: categoryImages['ptz-cameras'] || categoryImages['ip-cameras'],
+    subtitle: 'AI-driven motion analytics, automated active deterrence alerts, and target classification.',
+    description: 'Transform passive monitoring into proactive security with edge-native computer vision. Classify human and vehicular targets with 99%+ accuracy, eliminate false triggers, and dispatch automated audio-visual deterrents in real time.',
+    metrics: [
+      { value: 'Deep Learning', label: 'AI Vision Engine', sub: 'On-edge neural processor' },
+      { value: '< 0.2s', label: 'Inference Latency', sub: 'Instant real-time evaluation' },
+      { value: '99.2%', label: 'Classification Accuracy', sub: 'Human vs. vehicle targets' },
+      { value: 'Zero Cloud', label: 'Edge Autonomy', sub: 'Local on-device analysis' },
+    ],
+    keySpecs: [
+      { label: 'Analytics Engine', value: 'Embedded On-Edge NPU Deep Learning' },
+      { label: 'Target Classification', value: 'Human, Vehicle, Non-Target Filter' },
+      { label: 'Perimeter Rules', value: 'Line Crossing, Intrusion, Region Exit' },
+      { label: 'Active Deterrence', value: 'Strobe Warning Light & 110dB Siren' },
+      { label: 'Metadata Attributes', value: 'Vehicle Color/Type, Face Capture' },
+      { label: 'Integration API', value: 'ONVIF Profile M, Webhooks, REST API' },
+      { label: 'Alert Dispatch', value: 'Mobile Push, VMS Popup, Email, Relay' },
+      { label: 'Audio Interface', value: 'Built-in Mic & Speaker (Two-Way Audio)' },
+    ],
     architecture: [
       { step: '01', title: 'Smart Sensor', desc: 'AI-Enabled IP Cameras & Motion Analytics' },
       { step: '02', title: 'Real-Time Analysis', desc: 'On-Edge Video Analytics Engine' },
@@ -42,18 +79,38 @@ export const SOLUTION_PILLARS = {
     applicationIds: ['office', 'retail-store', 'warehouse', 'factory', 'school', 'hospital'],
     environmentSubtitle: 'Select the environment where intelligent motion detection and automated alerts enhance security.',
     verifiedCapabilities: [
-      'Intrusion & Line-Crossing Detection',
+      'Intrusion & Line-Crossing Perimeter Defense',
       'Human & Vehicle Motion Classification',
-      'Automated Security Push Notifications',
-      'Smart Motion Event Indexing & Quick Search'
+      'Automated Strobe & Audio Active Deterrence',
+      'Smart Motion Event Indexing & Quick Forensic Search',
+      'Face Capture & Perimeter Whitelist Matching',
+      'Edge-Based Analytics with Zero Cloud Dependency'
     ],
   },
   'solar-solutions': {
     id: 'solar-solutions',
     title: 'Solar Solutions & Off-Grid Security',
     eyebrow: 'REMOTE & HYBRID POWERED',
-    subtitle: 'Off-grid solar security camera kits, battery storage, and hybrid solar power setups.',
-    description: 'Deploy 24/7 security monitoring anywhere without grid power dependencies. Ideal for construction sites, farms, industrial perimeters, and remote infrastructure.',
+    badge: '100% Off-Grid Autonomous',
+    image: categoryImages['solar-cameras'] || categoryImages['solar-panels'],
+    subtitle: 'Off-grid solar security camera kits, high-density battery storage, and hybrid solar setups.',
+    description: 'Deploy 24/7 security monitoring anywhere without grid power dependencies or trenching costs. Ideal for construction perimeters, agricultural facilities, remote infrastructure, and highway corridors.',
+    metrics: [
+      { value: '100%', label: 'Off-Grid Power', sub: 'Zero trenching or grid dependence' },
+      { value: 'Up to 7 Days', label: 'Battery Autonomy', sub: 'Continuous operation in overcast' },
+      { value: '4G LTE', label: 'Cellular Uplink', sub: 'High-speed remote video feeds' },
+      { value: '99% MPPT', label: 'Energy Efficiency', sub: 'Fast solar harvest technology' },
+    ],
+    keySpecs: [
+      { label: 'Solar Panel Type', value: 'Monocrystalline A-Grade (Up to 22% Eff.)' },
+      { label: 'Battery Chemistry', value: 'Lithium Iron Phosphate (LiFePO4)' },
+      { label: 'Charge Controller', value: 'Smart MPPT with BMS Multi-Protection' },
+      { label: 'Cellular Connectivity', value: '4G LTE Cat 4 (Global Multi-Band)' },
+      { label: 'Low-Power Mode', value: 'Ultra-low <0.5W standby with PIR wake' },
+      { label: 'Operating Temp', value: '-20°C to +60°C All-Weather Operation' },
+      { label: 'Wind Resistance', value: 'Hurricane-Grade Category 12 Rated' },
+      { label: 'Telemetry Monitoring', value: 'Cloud Battery SOC & Solar Yield Logs' },
+    ],
     architecture: [
       { step: '01', title: 'Solar Generation', desc: 'High-Efficiency Monocrystalline Solar Panels' },
       { step: '02', title: 'Charge Control', desc: 'MPPT Solar Charge Controller System' },
@@ -67,16 +124,36 @@ export const SOLUTION_PILLARS = {
     verifiedCapabilities: [
       'Zero Grid Power Dependency (100% Off-Grid Solar Setup)',
       '4G LTE Cellular & Wireless Video Transmission',
-      'Deep-Cycle Battery Storage Autonomy',
-      'Weatherproof All-Weather Solar Hardware'
+      'Deep-Cycle Lithium Battery Autonomy with BMS',
+      'Weatherproof All-Weather Solar Hardware (-20°C to +60°C)',
+      'Remote Battery Health & Solar Yield Cloud Telemetry',
+      'Smart PIR + Radar Dual Motion Triggered Wake-Up'
     ],
   },
   'integrated-solutions': {
     id: 'integrated-solutions',
     title: 'Integrated Security & Access Control',
     eyebrow: 'UNIFIED ENTERPRISE CONTROL',
+    badge: 'Unified Multi-Node Architecture',
+    image: categoryImages['networking'] || categoryImages['ip-cameras'],
     subtitle: 'Convergence of video surveillance, biometric access control, and centralized management.',
-    description: 'Unify video monitoring, door access control, visitor logs, and perimeter security into a single management platform for complete operational oversight.',
+    description: 'Unify video surveillance, biometric door access, visitor credentials, barrier controls, and emergency roll-call muster into a single pane of glass for enterprise-grade command and compliance.',
+    metrics: [
+      { value: 'Multi-Door', label: 'Central Controllers', sub: 'Scalable from 1 to 256 doors' },
+      { value: '< 0.3s', label: 'Biometric Match', sub: 'High-speed fingerprint & face' },
+      { value: '100k+', label: 'Audit Trail Events', sub: 'Tamper-proof localized storage' },
+      { value: 'AES-256', label: 'Secure Encryption', sub: 'End-to-end credential security' },
+    ],
+    keySpecs: [
+      { label: 'Access Credentials', value: 'RFID / NFC, Biometric Fingerprint, Facial Recognition' },
+      { label: 'Controller Capacity', value: '2-Door / 4-Door / 8-Door Wiegand & OSDP' },
+      { label: 'Interlock Features', value: 'Multi-Door Airlock & Anti-Passback' },
+      { label: 'Life Safety Link', value: 'Automatic Fire Alarm Release Override' },
+      { label: 'Database Support', value: 'Central SQL Server / Enterprise PostgreSQL' },
+      { label: 'Encryption Standard', value: 'AES-256 Encrypted OSDP v2 Communication' },
+      { label: 'Time & Attendance', value: 'Shift Scheduling & Payroll Export Support' },
+      { label: 'VMS Video Linking', value: 'Card Swipe Correlated Video Event Playback' },
+    ],
     architecture: [
       { step: '01', title: 'Access & Camera Sensors', desc: 'Biometric Readers, Door Locks & IP Cameras' },
       { step: '02', title: 'Access Controller', desc: 'Central Access Panel & Door Controllers' },
@@ -88,10 +165,12 @@ export const SOLUTION_PILLARS = {
     applicationIds: ['office', 'hospital', 'factory', 'warehouse', 'school', 'hotel', 'apartment'],
     environmentSubtitle: 'Select the environment requiring unified door access control, visitor tracking, and central audit logs.',
     verifiedCapabilities: [
-      'Biometric & Card Door Access Control',
-      'Unified Video & Access Event Logs',
-      'Multi-Site Enterprise Management',
-      'Centralized Visitor & Contractor Tracking'
+      'Biometric & RFID Card Multi-Factor Door Access',
+      'Correlated Video & Access Swipe Audit Event Logs',
+      'Multi-Site Enterprise Centralized Dashboard',
+      'Automated Visitor & Contractor Badge Issuance',
+      'Emergency Muster & Real-Time Roll Call Reporting',
+      'Global Anti-Passback & Shift Attendance Integration'
     ],
   }
 };
