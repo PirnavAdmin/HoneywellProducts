@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Bell, 
   AlertTriangle, 
@@ -16,7 +16,8 @@ import {
   BookOpen,
   Tag,
   Truck,
-  UserCheck
+  UserCheck,
+  Check
 } from 'lucide-react';
 import { 
   getNotifications, 
@@ -33,8 +34,14 @@ const NotificationsDropdown = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+  const [mutatingIds, setMutatingIds] = useState(new Set());
+  const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
   
   const dropdownRef = useRef(null);
+  const latestRequestIdRef = useRef(0);
+  const isMountedRef = useRef(true);
 
   // Helper to format relative time (e.g., "5 mins ago")
   const formatRelativeTime = (dateString) => {
@@ -143,47 +150,65 @@ const NotificationsDropdown = () => {
   };
 
   // GET /api/Notifications/unread-count
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
+    const reqId = ++latestRequestIdRef.current;
     try {
       const count = await getUnreadCount();
-      setUnreadCount(count || 0);
+      if (!isMountedRef.current || reqId < latestRequestIdRef.current) return;
+      setUnreadCount(typeof count === 'number' ? count : 0);
     } catch (err) {
-      // Ignore background poll errors
+      console.warn('[Notifications] Background unread count check failed:', err);
     }
-  };
-
-  // GET /api/Notifications
-  const fetchNotifications = async (showLoading = true) => {
-    if (showLoading) setLoading(true);
-    setError(null);
-    try {
-      const data = await getNotifications();
-      const sortedData = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
-      setNotifications(sortedData);
-      const count = sortedData.filter(n => !n.isRead).length;
-      setUnreadCount(count);
-    } catch (err) {
-      setNotifications([]);
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
-
-  // Initial load and 30s poll
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
   }, []);
 
-  // Fetch when dropdown opens
+  // GET /api/Notifications
+  const fetchNotifications = useCallback(async (showLoading = true) => {
+    const reqId = ++latestRequestIdRef.current;
+    if (showLoading) setLoading(true);
+    setError(null);
+    setActionError(null);
+
+    try {
+      const [data, freshCount] = await Promise.all([
+        getNotifications(),
+        getUnreadCount()
+      ]);
+
+      if (!isMountedRef.current || reqId < latestRequestIdRef.current) return;
+
+      const sortedData = (data || []).sort((a, b) => (b.id || 0) - (a.id || 0));
+      setNotifications(sortedData);
+      setUnreadCount(typeof freshCount === 'number' ? freshCount : sortedData.filter(n => !n.isRead).length);
+    } catch (err) {
+      if (!isMountedRef.current || reqId < latestRequestIdRef.current) return;
+      setError(err?.message || 'Failed to load notifications from server.');
+    } finally {
+      if (isMountedRef.current && showLoading) {
+        setLoading(false);
+      }
+    }
+  }, []);
+
+  // Track component mounted state & initialize unread count + 30s background poll
+  useEffect(() => {
+    isMountedRef.current = true;
+    fetchUnreadCount();
+
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => {
+      isMountedRef.current = false;
+      clearInterval(interval);
+    };
+  }, [fetchUnreadCount]);
+
+  // Fetch notifications whenever dropdown opens
   useEffect(() => {
     if (isOpen) {
-      fetchNotifications();
+      fetchNotifications(true);
     }
-  }, [isOpen]);
+  }, [isOpen, fetchNotifications]);
 
-  // Click outside detection
+  // Click outside detection to close dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -194,84 +219,200 @@ const NotificationsDropdown = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Handlers
+  // Toggle dropdown
   const handleToggle = () => {
-    setIsOpen(!isOpen);
+    setIsOpen(prev => !prev);
   };
 
   // PUT /api/Notifications/{id}/read
-  const handleMarkAsRead = async (id) => {
+  const handleMarkAsRead = async (id, e) => {
+    if (e) e.stopPropagation();
+    if (mutatingIds.has(id)) return;
+
     const notif = notifications.find(n => n.id === id);
     if (!notif || notif.isRead) return;
 
+    // Advance request counter to invalidate any stale in-flight background polls
+    latestRequestIdRef.current++;
+
+    // Optimistic UI updates
+    setMutatingIds(prev => new Set(prev).add(id));
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
     setUnreadCount(prev => Math.max(0, prev - 1));
+    setActionError(null);
 
     try {
       await markAsRead(id);
+      // Reconcile with authoritative server unread count after confirmed success
+      try {
+        const freshCount = await getUnreadCount();
+        if (isMountedRef.current) {
+          setUnreadCount(freshCount);
+        }
+      } catch {
+        // Keep optimistic count if background query temporarily fails
+      }
     } catch (err) {
-      console.error(`Failed to mark notification ${id} as read:`, err);
-      fetchNotifications(false);
+      // Rollback optimistic state on failure
+      if (isMountedRef.current) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: false } : n));
+        setUnreadCount(prev => prev + 1);
+        setActionError(err?.message || `Failed to mark notification ${id} as read.`);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setMutatingIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
     }
   };
 
   // PUT /api/Notifications/mark-all-read
-  const handleMarkAllRead = async () => {
-    if (unreadCount === 0) return;
+  const handleMarkAllRead = async (e) => {
+    if (e) e.stopPropagation();
+    if (isMarkingAll || unreadCount === 0) return;
 
+    // Advance request counter to invalidate in-flight background requests
+    latestRequestIdRef.current++;
+
+    const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
+
+    setIsMarkingAll(true);
+    setActionError(null);
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
     setUnreadCount(0);
 
     try {
       await markAllAsRead();
+      // Reconcile with server after confirmed success
+      try {
+        const freshCount = await getUnreadCount();
+        if (isMountedRef.current) {
+          setUnreadCount(freshCount);
+        }
+      } catch {
+        // Keep 0 on success
+      }
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
-      fetchNotifications(false);
+      // Rollback on failure
+      if (isMountedRef.current) {
+        setNotifications(previousNotifications);
+        setUnreadCount(previousUnreadCount);
+        setActionError(err?.message || 'Failed to mark all notifications as read.');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsMarkingAll(false);
+      }
     }
   };
 
   // DELETE /api/Notifications/{id}
-  const handleDelete = async (id) => {
-    const notif = notifications.find(n => n.id === id);
-    const wasUnread = notif && !notif.isRead;
+  const handleDelete = async (id, e) => {
+    if (e) e.stopPropagation();
+    if (mutatingIds.has(id)) return;
 
+    const notif = notifications.find(n => n.id === id);
+    if (!notif) return;
+    const wasUnread = !notif.isRead;
+
+    // Advance request counter
+    latestRequestIdRef.current++;
+
+    const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
+
+    setMutatingIds(prev => new Set(prev).add(id));
     setNotifications(prev => prev.filter(n => n.id !== id));
     if (wasUnread) {
       setUnreadCount(prev => Math.max(0, prev - 1));
     }
+    setActionError(null);
 
     try {
       await deleteNotification(id);
+      // Reconcile with server after confirmed success
+      try {
+        const freshCount = await getUnreadCount();
+        if (isMountedRef.current) {
+          setUnreadCount(freshCount);
+        }
+      } catch {
+        // Keep optimistic count
+      }
     } catch (err) {
-      console.error(`Failed to delete notification ${id}:`, err);
-      fetchNotifications(false);
+      // Rollback on failure
+      if (isMountedRef.current) {
+        setNotifications(previousNotifications);
+        setUnreadCount(previousUnreadCount);
+        setActionError(err?.message || `Failed to delete notification ${id}.`);
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setMutatingIds(prev => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
     }
   };
 
   // DELETE /api/Notifications/clear-all
-  const handleClearAll = async () => {
-    if (notifications.length === 0) return;
+  const handleClearAll = async (e) => {
+    if (e) e.stopPropagation();
+    if (isClearingAll || notifications.length === 0) return;
 
+    // Advance request counter
+    latestRequestIdRef.current++;
+
+    const previousNotifications = notifications;
+    const previousUnreadCount = unreadCount;
+
+    setIsClearingAll(true);
+    setActionError(null);
     setNotifications([]);
     setUnreadCount(0);
 
     try {
       await clearAllNotifications();
+      if (isMountedRef.current) {
+        setUnreadCount(0);
+      }
     } catch (err) {
-      console.error('Failed to clear notifications:', err);
-      fetchNotifications(false);
+      // Rollback on failure
+      if (isMountedRef.current) {
+        setNotifications(previousNotifications);
+        setUnreadCount(previousUnreadCount);
+        setActionError(err?.message || 'Failed to clear all notifications.');
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setIsClearingAll(false);
+      }
     }
   };
 
   return (
     <div className="topbar-notifications" ref={dropdownRef}>
       <button 
+        type="button"
         className="notification-bell-btn" 
         onClick={handleToggle} 
         title="Notifications"
+        aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
+        aria-expanded={isOpen}
       >
         <Bell size={18} className="text-gray-700" />
-        {unreadCount > 0 && <span className="bell-badge">{unreadCount}</span>}
+        {unreadCount > 0 && (
+          <span className="bell-badge" aria-label={`${unreadCount} unread notifications`}>
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
       </button>
 
       {isOpen && (
@@ -279,11 +420,50 @@ const NotificationsDropdown = () => {
           <div className="notifications-dropdown-header">
             <h3>Notifications</h3>
             {unreadCount > 0 && (
-              <button className="mark-read-btn" onClick={handleMarkAllRead}>
-                Mark all as read
+              <button 
+                type="button"
+                className="mark-read-btn" 
+                onClick={handleMarkAllRead}
+                disabled={isMarkingAll}
+                title="Mark all notifications as read"
+              >
+                {isMarkingAll ? 'Marking...' : 'Mark all as read'}
               </button>
             )}
           </div>
+
+          {actionError && (
+            <div 
+              style={{
+                padding: '8px 16px',
+                background: '#fee2e2',
+                color: '#b91c1c',
+                fontSize: '11px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderBottom: '1px solid #fecaca'
+              }}
+            >
+              <span>{actionError}</span>
+              <button 
+                type="button"
+                onClick={() => setActionError(null)} 
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#b91c1c',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  padding: '0 4px'
+                }}
+                title="Dismiss"
+              >
+                ×
+              </button>
+            </div>
+          )}
           
           <div className="notifications-dropdown-list">
             {loading ? (
@@ -296,6 +476,7 @@ const NotificationsDropdown = () => {
                 <AlertTriangle className="text-amber-500 mb-2" size={24} />
                 <p style={{ color: '#ef4444' }}>{error}</p>
                 <button 
+                  type="button"
                   onClick={() => fetchNotifications(true)} 
                   style={{
                     marginTop: '8px',
@@ -313,11 +494,24 @@ const NotificationsDropdown = () => {
             ) : notifications.length > 0 ? (
               notifications.map((notif) => {
                 const config = getNotifConfig(notif.type);
+                const isMutating = mutatingIds.has(notif.id);
+
                 return (
                   <div 
                     key={notif.id} 
                     className={`notification-item ${!notif.isRead ? 'unread' : ''}`}
                     onClick={() => handleMarkAsRead(notif.id)}
+                    style={{
+                      opacity: isMutating ? 0.6 : 1,
+                      cursor: notif.isRead ? 'default' : 'pointer'
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        handleMarkAsRead(notif.id);
+                      }
+                    }}
                   >
                     <div className={`notif-icon-wrap ${config.className}`}>
                       {config.icon}
@@ -328,19 +522,33 @@ const NotificationsDropdown = () => {
                       <span className="notif-time">{formatRelativeTime(notif.createdAt)}</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', minWidth: '16px' }}>
-                      {!notif.isRead && <span className="unread-dot" style={{ position: 'static' }}></span>}
+                      {!notif.isRead && (
+                        <button
+                          type="button"
+                          className="unread-dot"
+                          onClick={(e) => handleMarkAsRead(notif.id, e)}
+                          title="Mark as read"
+                          aria-label="Mark as read"
+                          style={{
+                            position: 'static',
+                            cursor: 'pointer',
+                            border: 'none',
+                            padding: 0
+                          }}
+                        />
+                      )}
                       <button 
+                        type="button"
                         className="delete-notif-btn" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(notif.id);
-                        }}
+                        onClick={(e) => handleDelete(notif.id, e)}
                         title="Delete notification"
+                        aria-label="Delete notification"
+                        disabled={isMutating}
                         style={{
                           background: 'none',
                           border: 'none',
                           color: '#cbd5e1',
-                          cursor: 'pointer',
+                          cursor: isMutating ? 'not-allowed' : 'pointer',
                           padding: '2px',
                           borderRadius: '4px',
                           transition: 'color 0.15s, background-color 0.15s',
@@ -349,8 +557,10 @@ const NotificationsDropdown = () => {
                           justifyContent: 'center'
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.color = '#ef4444';
-                          e.currentTarget.style.backgroundColor = '#fee2e2';
+                          if (!isMutating) {
+                            e.currentTarget.style.color = '#ef4444';
+                            e.currentTarget.style.backgroundColor = '#fee2e2';
+                          }
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.color = '#cbd5e1';
@@ -374,8 +584,14 @@ const NotificationsDropdown = () => {
 
           <div className="notifications-dropdown-footer">
             {notifications.length > 0 && (
-              <button className="clear-all-btn" onClick={handleClearAll}>
-                Clear All
+              <button 
+                type="button"
+                className="clear-all-btn" 
+                onClick={handleClearAll}
+                disabled={isClearingAll}
+                title="Clear all notifications"
+              >
+                {isClearingAll ? 'Clearing...' : 'Clear All'}
               </button>
             )}
           </div>

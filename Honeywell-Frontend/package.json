@@ -10,7 +10,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "node --test src/admin/__tests__/notifications.test.js"
   },
   "dependencies": {
     "@openai/sites-vite-plugin": "^0.2.0",

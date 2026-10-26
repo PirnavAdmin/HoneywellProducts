@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -10,6 +10,7 @@ namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public class NotificationsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

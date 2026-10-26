@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -1120,6 +1120,7 @@ app.Use(async (context, next) =>
             !path.Contains("/offers", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/banners", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/banner", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/notification", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/products", StringComparison.OrdinalIgnoreCase))
         {
             context.Response.Headers["Cache-Control"] = "public, max-age=300";
