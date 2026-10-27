@@ -28,6 +28,11 @@ export async function apiRequest(path, options = {}) {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       Pragma: 'no-cache',
       Expires: '0',
+      ...(typeof localStorage !== 'undefined' && localStorage.getItem('adminToken')
+        ? { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+        : (typeof localStorage !== 'undefined' && localStorage.getItem('customerToken')
+          ? { 'Authorization': `Bearer ${localStorage.getItem('customerToken')}` }
+          : {})),
       ...options.headers,
     },
   });

@@ -1,3 +1,5 @@
+using Honeywell.Services.Interfaces;
+using System.Security.Claims;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,10 +18,12 @@ namespace Honeywell.Controllers
     public class CustomerPortalController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IJwtService _jwtService;
 
-        public CustomerPortalController(ApplicationDbContext context)
+        public CustomerPortalController(ApplicationDbContext context, IJwtService jwtService)
         {
             _context = context;
+            _jwtService = jwtService;
         }
 
         // 1. Sign In Modal (Customer Login)
@@ -50,7 +54,7 @@ namespace Honeywell.Controllers
             {
                 success = true,
                 message = "Login successful",
-                token = "mock-jwt-customer-token-" + customer.Id,
+                token = _jwtService.GenerateTokenForCustomer(customer),
                 customer = new
                 {
                     customer.Id,
@@ -114,10 +118,12 @@ namespace Honeywell.Controllers
             _context.Customers.Add(newCustomer);
             await _context.SaveChangesAsync();
 
+            var token = _jwtService.GenerateTokenForCustomer(newCustomer);
             return Ok(new
             {
                 success = true,
                 message = "Account created successfully",
+                token = token,
                 customer = newCustomer
             });
         }
@@ -609,11 +615,16 @@ namespace Honeywell.Controllers
 
             var query = _context.Orders
                 .Include(o => o.Items)
+                .Include(o => o.Customer)
                 .AsQueryable();
 
             if (customer != null)
             {
-                query = query.Where(o => o.CustomerId == customer.Id);
+                var custEmail = customer.Email?.Trim().ToLower();
+                var custPhone = customer.Phone?.Trim();
+                query = query.Where(o => o.CustomerId == customer.Id
+                    || (!string.IsNullOrEmpty(custEmail) && o.Customer != null && o.Customer.Email != null && o.Customer.Email.ToLower() == custEmail)
+                    || (!string.IsNullOrEmpty(custPhone) && o.Customer != null && o.Customer.Phone != null && o.Customer.Phone.Contains(custPhone)));
             }
             else if (customerId.HasValue && customerId.Value > 0)
             {
@@ -671,6 +682,11 @@ namespace Honeywell.Controllers
                 {
                     id = o.Id,
                     orderNumber = string.IsNullOrWhiteSpace(o.OrderNumber) ? $"Order #{o.Id}" : o.OrderNumber,
+                    customerId = o.CustomerId,
+                    email = o.Customer?.Email ?? "",
+                    customerEmail = o.Customer?.Email ?? "",
+                    phone = o.Customer?.Phone ?? "",
+                    customerPhone = o.Customer?.Phone ?? "",
                     orderDate = o.OrderDate,
                     orderDateFormatted = o.OrderDate.ToString("MMM dd, yyyy"),
                     status = displayStatus,
@@ -710,7 +726,7 @@ namespace Honeywell.Controllers
         // GET: api/Customer/orders/1
         [HttpGet("order-details/{orderId}")]
         [HttpGet("orders/{orderId}")]
-        public async Task<IActionResult> GetOrderDetails(string orderId)
+        public async Task<IActionResult> GetOrderDetails(string orderId, [FromQuery] string? email, [FromQuery] string? phone)
         {
             var cleanNum = NormalizeOrderNumber(orderId);
             Order? order = null;
@@ -733,6 +749,40 @@ namespace Honeywell.Controllers
             }
 
             var customer = await _context.Customers.FindAsync(order.CustomerId);
+
+            // Customer Ownership & Authorization Verification (IDOR Protection)
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                bool isAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin") || User.HasClaim("role", "Admin") || User.HasClaim("role", "SuperAdmin");
+                if (!isAdmin)
+                {
+                    string? authCustId = User.FindFirst("customerId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    string? authEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+
+                    bool isOwner = (authCustId != null && order.CustomerId.ToString() == authCustId) ||
+                                   (authEmail != null && customer != null && !string.IsNullOrEmpty(customer.Email) && customer.Email.ToLower() == authEmail.ToLower());
+
+                    if (!isOwner)
+                    {
+                        return StatusCode(StatusCodes.Status403Forbidden, new { success = false, message = "Access denied: you do not own this order." });
+                    }
+                }
+            }
+            else
+            {
+                // Unauthenticated access: require matching email or phone verification
+                var verifyEmail = email?.Trim().ToLower();
+                var verifyPhone = phone?.Trim();
+
+                bool matchesEmail = !string.IsNullOrEmpty(verifyEmail) && customer != null && !string.IsNullOrEmpty(customer.Email) && customer.Email.ToLower() == verifyEmail;
+                bool matchesPhone = !string.IsNullOrEmpty(verifyPhone) && customer != null && !string.IsNullOrEmpty(customer.Phone) && customer.Phone.Contains(verifyPhone);
+
+                if (!matchesEmail && !matchesPhone)
+                {
+                    return Unauthorized(new { success = false, message = "Authentication or customer email/phone verification required to access this order." });
+                }
+            }
+
             var displayStatus = (order.Status ?? "PENDING").ToUpper();
 
             return Ok(new

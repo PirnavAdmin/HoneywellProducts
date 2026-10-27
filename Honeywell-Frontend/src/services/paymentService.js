@@ -137,7 +137,7 @@ export async function getPaymentStatus(transactionId) {
       headers: getHeaders(),
     });
     if (response.status === 404) {
-      return { success: true, transactionId, status: 'Completed', isFallback: true };
+      return { success: false, message: 'Transaction record not found.', status: 404 };
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -150,7 +150,7 @@ export async function getPaymentStatus(transactionId) {
     }
     return data;
   } catch (err) {
-    return { success: true, transactionId, status: 'Completed', message: `Network fallback: ${err.message}` };
+    return { success: false, message: `Network error checking payment status: ${err.message}`, status: 0 };
   }
 }
 
@@ -169,7 +169,7 @@ export async function completePayment(transactionId) {
       body: JSON.stringify({ transactionId: transactionId.trim() }),
     });
     if (response.status === 404) {
-      return { success: true, transactionId, status: 'Completed', isFallback: true };
+      return { success: false, message: 'Transaction record not found.', status: 404 };
     }
     const data = await response.json().catch(() => ({}));
     if (!response.ok) {
@@ -182,7 +182,7 @@ export async function completePayment(transactionId) {
     }
     return data;
   } catch (err) {
-    return { success: true, transactionId, status: 'Completed', message: `Network fallback: ${err.message}` };
+    return { success: false, message: `Network error completing payment: ${err.message}`, status: 0 };
   }
 }
 

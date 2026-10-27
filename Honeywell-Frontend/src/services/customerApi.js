@@ -426,9 +426,15 @@ export async function getMyOrders({ customerId, email, status, search } = {}) {
   return [];
 }
 
-export async function getOrderDetails(orderId) {
+export async function getOrderDetails(orderId, emailOrMobile) {
   try {
-    const res = await fetch(url(`/api/Customer/order-details/${orderId}`), {
+    const params = new URLSearchParams();
+    if (emailOrMobile) {
+      if (emailOrMobile.includes('@')) params.append('email', emailOrMobile);
+      else params.append('phone', emailOrMobile);
+    }
+    const qStr = params.toString() ? `?${params.toString()}` : '';
+    const res = await fetch(url(`/api/Customer/order-details/${orderId}${qStr}`), {
       method: 'GET',
       headers: authHeaders(),
     });

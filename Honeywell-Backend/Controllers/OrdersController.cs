@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,6 +15,22 @@ namespace Honeywell.Controllers
     [Route("api/[controller]")]
     public class OrdersController : ControllerBase
     {
+        private bool IsAdminUser()
+        {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? "";
+                if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("Staff", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private readonly ApplicationDbContext _context;
         private static readonly System.Text.Json.JsonSerializerOptions _jsonOptions = new()
         {
@@ -74,15 +91,23 @@ namespace Honeywell.Controllers
 
             if (customerId.HasValue && customerId.Value > 0)
             {
-                query = query.Where(o => o.CustomerId == customerId.Value);
+                var cust = await _context.Customers.FindAsync(customerId.Value);
+                var custEmail = cust?.Email?.Trim().ToLower();
+                var custPhone = cust?.Phone?.Trim();
+
+                query = query.Where(o => o.CustomerId == customerId.Value
+                    || (!string.IsNullOrEmpty(custEmail) && o.Customer != null && o.Customer.Email != null && o.Customer.Email.ToLower() == custEmail)
+                    || (!string.IsNullOrEmpty(custPhone) && o.Customer != null && o.Customer.Phone != null && o.Customer.Phone.Contains(custPhone)));
             }
             else if (!string.IsNullOrEmpty(email))
             {
-                query = query.Where(o => o.Customer != null && o.Customer.Email.ToLower() == email.ToLower());
+                var targetEmail = email.Trim().ToLower();
+                query = query.Where(o => o.Customer != null && o.Customer.Email != null && o.Customer.Email.ToLower() == targetEmail);
             }
             else if (!string.IsNullOrEmpty(targetPhone))
             {
-                query = query.Where(o => o.Customer != null && o.Customer.Phone.Contains(targetPhone));
+                var clean = targetPhone.Trim();
+                query = query.Where(o => o.Customer != null && o.Customer.Phone != null && o.Customer.Phone.Contains(clean));
             }
 
             var orders = await query.OrderByDescending(o => o.OrderDate).ToListAsync();
@@ -111,6 +136,11 @@ namespace Honeywell.Controllers
             [FromQuery] DateTime? startDate = null,
             [FromQuery] DateTime? endDate = null)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to view order ledger." });
+            }
+
             // 1. Calculate dashboard metrics from the database (all orders)
             var allOrders = await _context.Orders.AsNoTracking().ToListAsync();
             var verifiedRevenue = allOrders
@@ -267,18 +297,73 @@ namespace Honeywell.Controllers
             });
         }
 
-        // GET: api/Orders/5
+        // GET: api/Orders/5 or api/Orders/ORD-20261026-12345
         [HttpGet("{id}")]
-        public async Task<ActionResult<Order>> GetById(int id)
+        public async Task<ActionResult<Order>> GetById(string id)
         {
-            var order = await _context.Orders
-                .Include(o => o.Customer)
-                .Include(o => o.Items)
-                .FirstOrDefaultAsync(o => o.Id == id);
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest(new { Message = "Order identifier is required." });
+            }
+
+            Order? order = null;
+            if (int.TryParse(id, out int numericId))
+            {
+                order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.Id == numericId);
+            }
 
             if (order == null)
             {
-                return NotFound(new { Message = "Order not found." });
+                var cleanId = id.Trim().ToLower();
+                var cleanNum = cleanId.Replace("#", "").Replace("ord-", "");
+                order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.OrderNumber.ToLower() == cleanId ||
+                                              o.OrderNumber.ToLower().Replace("#", "").Replace("ord-", "") == cleanNum);
+            }
+
+            if (order == null)
+            {
+                return NotFound(new { Message = $"Order '{id}' not found." });
+            }
+
+            // Customer Ownership & Authorization Verification (IDOR Protection)
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                if (!IsAdminUser())
+                {
+                    string? authCustId = User.FindFirst("customerId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    string? authEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+
+                    bool isOwner = (authCustId != null && order.CustomerId.ToString() == authCustId) ||
+                                   (authEmail != null && order.Customer != null && !string.IsNullOrEmpty(order.Customer.Email) && order.Customer.Email.ToLower() == authEmail.ToLower());
+
+                    if (!isOwner)
+                    {
+                        return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Access denied: you do not own this order." });
+                    }
+                }
+            }
+            else
+            {
+                // Unauthenticated access: allow alphanumeric OrderNumber (checkout confirmation) or require matching email/phone
+                if (int.TryParse(id, out _))
+                {
+                    var queryEmail = Request.Query["email"].ToString()?.Trim().ToLower();
+                    var queryPhone = Request.Query["phone"].ToString()?.Trim();
+
+                    bool matchesEmail = !string.IsNullOrEmpty(queryEmail) && order.Customer != null && !string.IsNullOrEmpty(order.Customer.Email) && order.Customer.Email.ToLower() == queryEmail;
+                    bool matchesPhone = !string.IsNullOrEmpty(queryPhone) && order.Customer != null && !string.IsNullOrEmpty(order.Customer.Phone) && order.Customer.Phone.Contains(queryPhone);
+
+                    if (!matchesEmail && !matchesPhone)
+                    {
+                        return Unauthorized(new { Message = "Authentication or customer email/phone verification required to access order by numeric ID." });
+                    }
+                }
             }
 
             await PopulateItemImagesAsync(new[] { order });
@@ -331,6 +416,10 @@ namespace Honeywell.Controllers
         [HttpGet("tracking")]
         public async Task<IActionResult> GetTrackingOrders([FromQuery] string? search)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to view tracking orders." });
+            }
             var query = _context.Orders
                 .Include(o => o.Customer)
                 .AsQueryable();
@@ -399,6 +488,10 @@ namespace Honeywell.Controllers
         [HttpPost("tracking/{id}")]
         public async Task<IActionResult> PublishTrackingUpdate(int id, [FromBody] TrackingUpdateRequest request)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to publish tracking updates." });
+            }
             var order = await _context.Orders
                 .Include(o => o.Customer)
                 .FirstOrDefaultAsync(o => o.Id == id);
@@ -471,6 +564,10 @@ namespace Honeywell.Controllers
         [HttpGet("shipping")]
         public async Task<IActionResult> GetShippingOrders([FromQuery] string? search)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to view shipping orders." });
+            }
             var query = _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Items)
@@ -509,6 +606,10 @@ namespace Honeywell.Controllers
         [HttpGet("shipping/{id}")]
         public async Task<IActionResult> GetShippingDetails(int id)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to view shipping details." });
+            }
             var order = await _context.Orders
                 .Include(o => o.Customer)
                 .Include(o => o.Items)
@@ -544,23 +645,65 @@ namespace Honeywell.Controllers
 
         // POST: api/Orders/shipping/{id}/pack
         [HttpPost("shipping/{id}/pack")]
-        public async Task<IActionResult> ConfirmPacked(int id, [FromForm] PackOrderRequest request)
+        public async Task<IActionResult> ConfirmPacked(int id)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to confirm packing." });
+            }
             var order = await _context.Orders.FindAsync(id);
             if (order == null)
             {
                 return NotFound(new { Message = "Order not found." });
             }
 
-            if (string.IsNullOrEmpty(request.PackerName))
+            string packerName = string.Empty;
+            string? photoUrl = null;
+
+            if (Request.HasFormContentType)
+            {
+                var form = await Request.ReadFormAsync();
+                packerName = form["packerName"].ToString();
+                if (string.IsNullOrWhiteSpace(packerName)) packerName = form["PackerName"].ToString();
+                photoUrl = form["packerPhotoUrl"].ToString();
+                if (string.IsNullOrWhiteSpace(photoUrl)) photoUrl = form["PackerPhotoUrl"].ToString();
+
+                if (form.Files.Count > 0)
+                {
+                    var file = form.Files.GetFile("packerPhoto") ?? form.Files.GetFile("PackerPhoto") ?? form.Files[0];
+                    var uploaded = await SaveUploadedFileAsync(file);
+                    if (!string.IsNullOrEmpty(uploaded)) photoUrl = uploaded;
+                }
+            }
+            else
+            {
+                using var reader = new StreamReader(Request.Body);
+                var body = await reader.ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(body))
+                {
+                    try
+                    {
+                        var json = System.Text.Json.JsonDocument.Parse(body).RootElement;
+                        if (json.TryGetProperty("packerName", out var pName) || json.TryGetProperty("PackerName", out pName))
+                        {
+                            packerName = pName.GetString() ?? "";
+                        }
+                        if (json.TryGetProperty("packerPhotoUrl", out var pUrl) || json.TryGetProperty("PackerPhotoUrl", out pUrl))
+                        {
+                            photoUrl = pUrl.GetString();
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(packerName))
             {
                 return BadRequest(new { Message = "Packer Name is required." });
             }
 
-            var photoUrl = await SaveUploadedFileAsync(request.PackerPhoto);
-
             order.Status = "Packed";
-            order.PackerName = request.PackerName;
+            order.PackerName = packerName.Trim();
             if (!string.IsNullOrEmpty(photoUrl))
             {
                 order.PackerPhotoUrl = photoUrl;
@@ -571,7 +714,7 @@ namespace Honeywell.Controllers
             {
                 OrderId = id,
                 Status = "Packed",
-                Description = $"Order package has been successfully packed by {request.PackerName}.",
+                Description = $"Order package has been successfully packed by {order.PackerName}.",
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -589,24 +732,73 @@ namespace Honeywell.Controllers
 
         // POST: api/Orders/shipping/{id}/dispatch
         [HttpPost("shipping/{id}/dispatch")]
-        public async Task<IActionResult> ConfirmDispatched(int id, [FromForm] DispatchOrderRequest request)
+        public async Task<IActionResult> ConfirmDispatched(int id)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to confirm dispatch." });
+            }
             var order = await _context.Orders.FindAsync(id);
             if (order == null)
             {
                 return NotFound(new { Message = "Order not found." });
             }
 
-            if (string.IsNullOrEmpty(request.CarrierName) || string.IsNullOrEmpty(request.TrackingNumber))
+            string carrierName = string.Empty;
+            string trackingNumber = string.Empty;
+            string? photoUrl = null;
+
+            if (Request.HasFormContentType)
+            {
+                var form = await Request.ReadFormAsync();
+                carrierName = form["carrierName"].ToString();
+                if (string.IsNullOrWhiteSpace(carrierName)) carrierName = form["CarrierName"].ToString();
+                trackingNumber = form["trackingNumber"].ToString();
+                if (string.IsNullOrWhiteSpace(trackingNumber)) trackingNumber = form["TrackingNumber"].ToString();
+                photoUrl = form["packagePhotoUrl"].ToString();
+                if (string.IsNullOrWhiteSpace(photoUrl)) photoUrl = form["PackagePhotoUrl"].ToString();
+
+                if (form.Files.Count > 0)
+                {
+                    var file = form.Files.GetFile("packagePhoto") ?? form.Files.GetFile("PackagePhoto") ?? form.Files[0];
+                    var uploaded = await SaveUploadedFileAsync(file);
+                    if (!string.IsNullOrEmpty(uploaded)) photoUrl = uploaded;
+                }
+            }
+            else
+            {
+                using var reader = new StreamReader(Request.Body);
+                var body = await reader.ReadToEndAsync();
+                if (!string.IsNullOrWhiteSpace(body))
+                {
+                    try
+                    {
+                        var json = System.Text.Json.JsonDocument.Parse(body).RootElement;
+                        if (json.TryGetProperty("carrierName", out var cName) || json.TryGetProperty("CarrierName", out cName))
+                        {
+                            carrierName = cName.GetString() ?? "";
+                        }
+                        if (json.TryGetProperty("trackingNumber", out var tNum) || json.TryGetProperty("TrackingNumber", out tNum))
+                        {
+                            trackingNumber = tNum.GetString() ?? "";
+                        }
+                        if (json.TryGetProperty("packagePhotoUrl", out var pUrl) || json.TryGetProperty("PackagePhotoUrl", out pUrl))
+                        {
+                            photoUrl = pUrl.GetString();
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(carrierName) || string.IsNullOrWhiteSpace(trackingNumber))
             {
                 return BadRequest(new { Message = "Carrier Name and Tracking Number are required." });
             }
 
-            var photoUrl = await SaveUploadedFileAsync(request.PackagePhoto);
-
             order.Status = "Dispatched";
-            order.CarrierName = request.CarrierName;
-            order.TrackingNumber = request.TrackingNumber;
+            order.CarrierName = carrierName.Trim();
+            order.TrackingNumber = trackingNumber.Trim();
             if (!string.IsNullOrEmpty(photoUrl))
             {
                 order.PackagePhotoUrl = photoUrl;
@@ -617,7 +809,7 @@ namespace Honeywell.Controllers
             {
                 OrderId = id,
                 Status = "Dispatched",
-                Description = $"Order package has been dispatched via {request.CarrierName} (Tracking ID: {request.TrackingNumber}).",
+                Description = $"Order package has been dispatched via {order.CarrierName} (Tracking ID: {order.TrackingNumber}).",
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -719,226 +911,270 @@ namespace Honeywell.Controllers
                 return BadRequest(new { Message = "At least one order item is required." });
             }
 
-            // Customer Resolution
-            Customer? customer = null;
-            if (request.CustomerId > 0)
+            // Idempotency check: prevent duplicate order creation and inventory deduction on retried submissions
+            if (!string.IsNullOrWhiteSpace(request.OrderNumber))
             {
-                customer = await _context.Customers.FindAsync(request.CustomerId);
+                var existingOrder = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.OrderNumber == request.OrderNumber.Trim());
+                if (existingOrder != null)
+                {
+                    await PopulateItemImagesAsync(new[] { existingOrder });
+                    return Ok(existingOrder);
+                }
             }
 
-            var emailClean = request.Email?.Trim().ToLower();
-            var phoneClean = (request.Mobile ?? request.Phone)?.Trim();
-
-            if (customer == null && !string.IsNullOrEmpty(emailClean))
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync<ActionResult<Order>>(async () =>
             {
-                customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email != null && c.Email.ToLower() == emailClean);
-            }
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                // Customer Resolution
+                Customer? customer = null;
+                if (request.CustomerId > 0)
+                {
+                    customer = await _context.Customers.FindAsync(request.CustomerId);
+                }
 
-            if (customer == null && !string.IsNullOrEmpty(phoneClean))
-            {
-                customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone != null && c.Phone.Contains(phoneClean));
-            }
+                var emailClean = request.Email?.Trim().ToLower();
+                var phoneClean = (request.Mobile ?? request.Phone)?.Trim();
 
-            var resolvedRole = !string.IsNullOrWhiteSpace(request.CustomerType)
-                && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
-                && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase)
-                ? request.CustomerType.Trim()
-                : "Customer Account";
+                if (customer == null && !string.IsNullOrEmpty(emailClean))
+                {
+                    customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email != null && c.Email.ToLower() == emailClean);
+                }
 
-            if (customer == null)
-            {
-                // Auto-create customer if not found
-                var custName = !string.IsNullOrWhiteSpace(request.CustomerName) ? request.CustomerName.Trim() : "Customer";
-                var nameParts = custName.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-                var fName = nameParts.Length > 0 ? nameParts[0] : custName;
-                var lName = nameParts.Length > 1 ? nameParts[1] : "";
+                if (customer == null && !string.IsNullOrEmpty(phoneClean))
+                {
+                    customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone != null && c.Phone.Contains(phoneClean));
+                }
 
-                var fullAddress = request.ShippingAddress;
-                if (string.IsNullOrWhiteSpace(fullAddress))
+                var resolvedRole = !string.IsNullOrWhiteSpace(request.CustomerType)
+                    && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
+                    && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase)
+                    ? request.CustomerType.Trim()
+                    : "Customer Account";
+
+                if (customer == null)
+                {
+                    // Auto-create customer if not found
+                    var custName = !string.IsNullOrWhiteSpace(request.CustomerName) ? request.CustomerName.Trim() : "Customer";
+                    var nameParts = custName.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                    var fName = nameParts.Length > 0 ? nameParts[0] : custName;
+                    var lName = nameParts.Length > 1 ? nameParts[1] : "";
+
+                    var fullAddress = request.ShippingAddress;
+                    if (string.IsNullOrWhiteSpace(fullAddress))
+                    {
+                        var addrParts = new List<string>();
+                        if (!string.IsNullOrWhiteSpace(request.Address)) addrParts.Add(request.Address);
+                        if (!string.IsNullOrWhiteSpace(request.City)) addrParts.Add(request.City);
+                        if (!string.IsNullOrWhiteSpace(request.State)) addrParts.Add(request.State);
+                        if (!string.IsNullOrWhiteSpace(request.PinCode)) addrParts.Add(request.PinCode);
+                        fullAddress = string.Join(", ", addrParts);
+                    }
+
+                    customer = new Customer
+                    {
+                        Name = custName,
+                        FirstName = fName,
+                        LastName = lName,
+                        Email = emailClean ?? "",
+                        Phone = phoneClean ?? "",
+                        Address = fullAddress ?? "",
+                        District = request.City ?? "",
+                        State = request.State ?? "",
+                        JoinDate = DateTime.UtcNow,
+                        Role = resolvedRole,
+                        Status = "Active"
+                    };
+
+                    _context.Customers.Add(customer);
+                    await _context.SaveChangesAsync();
+                }
+                else
+                {
+                    if (!string.IsNullOrWhiteSpace(request.CustomerType)
+                        && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
+                        && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
+                    {
+                        customer.Role = request.CustomerType.Trim();
+                        await _context.SaveChangesAsync();
+                    }
+                    else if (string.IsNullOrWhiteSpace(customer.Role) || customer.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) || customer.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
+                    {
+                        customer.Role = "Customer Account";
+                        await _context.SaveChangesAsync();
+                    }
+                }
+
+                // Load settings
+                var settings = await _context.SystemSettings.FirstOrDefaultAsync() ?? new SystemSettings();
+                var coinsSettings = await _context.CoinsSettings.FirstOrDefaultAsync() ?? new CoinsSettings();
+
+                var order = new Order
+                {
+                    CustomerId = customer.Id,
+                    OrderNumber = !string.IsNullOrWhiteSpace(request.OrderNumber)
+                        ? request.OrderNumber.Trim()
+                        : $"ORD-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(10000, 99999)}",
+                    OrderDate = DateTime.UtcNow,
+                    Status = !string.IsNullOrWhiteSpace(request.Status) ? request.Status.Trim() : "Processing",
+                    PaymentStatus = !string.IsNullOrWhiteSpace(request.PaymentStatus) ? request.PaymentStatus.Trim() : "Pending",
+                    PaymentMethod = !string.IsNullOrWhiteSpace(request.PaymentMethod) ? request.PaymentMethod.Trim() : "Cash on Delivery",
+                    DiscountAmount = request.DiscountAmount ?? 0
+                };
+
+                // Address construction
+                var shippingAddr = request.ShippingAddress;
+                if (string.IsNullOrWhiteSpace(shippingAddr))
                 {
                     var addrParts = new List<string>();
                     if (!string.IsNullOrWhiteSpace(request.Address)) addrParts.Add(request.Address);
                     if (!string.IsNullOrWhiteSpace(request.City)) addrParts.Add(request.City);
                     if (!string.IsNullOrWhiteSpace(request.State)) addrParts.Add(request.State);
                     if (!string.IsNullOrWhiteSpace(request.PinCode)) addrParts.Add(request.PinCode);
-                    fullAddress = string.Join(", ", addrParts);
+                    shippingAddr = string.Join(", ", addrParts);
                 }
+                order.ShippingAddress = shippingAddr ?? customer.Address ?? "";
 
-                customer = new Customer
+                // Validate and calculate items
+                decimal calculatedSubtotal = 0;
+                foreach (var itemReq in request.Items)
                 {
-                    Name = custName,
-                    FirstName = fName,
-                    LastName = lName,
-                    Email = emailClean ?? "",
-                    Phone = phoneClean ?? "",
-                    Address = fullAddress ?? "",
-                    JoinDate = DateTime.UtcNow,
-                    Role = resolvedRole,
-                    Status = "Active"
-                };
-
-                _context.Customers.Add(customer);
-                await _context.SaveChangesAsync();
-            }
-            else
-            {
-                if (!string.IsNullOrWhiteSpace(request.CustomerType)
-                    && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
-                    && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                {
-                    customer.Role = request.CustomerType.Trim();
-                    await _context.SaveChangesAsync();
-                }
-                else if (string.IsNullOrWhiteSpace(customer.Role) || customer.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) || customer.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
-                {
-                    customer.Role = "Customer Account";
-                    await _context.SaveChangesAsync();
-                }
-            }
-
-            // Load settings
-            var settings = await _context.SystemSettings.FirstOrDefaultAsync() ?? new SystemSettings();
-            var coinsSettings = await _context.CoinsSettings.FirstOrDefaultAsync() ?? new CoinsSettings();
-
-            var order = new Order
-            {
-                CustomerId = customer.Id,
-                OrderNumber = !string.IsNullOrWhiteSpace(request.OrderNumber)
-                    ? request.OrderNumber.Trim()
-                    : $"ORD-{DateTime.UtcNow:yyyyMMdd}-{new Random().Next(10000, 99999)}",
-                OrderDate = DateTime.UtcNow,
-                Status = !string.IsNullOrWhiteSpace(request.Status) ? request.Status.Trim() : "Processing",
-                PaymentStatus = !string.IsNullOrWhiteSpace(request.PaymentStatus) ? request.PaymentStatus.Trim() : "Pending",
-                PaymentMethod = !string.IsNullOrWhiteSpace(request.PaymentMethod) ? request.PaymentMethod.Trim() : "Cash on Delivery",
-                DiscountAmount = request.DiscountAmount ?? 0
-            };
-
-            // Address construction
-            var shippingAddr = request.ShippingAddress;
-            if (string.IsNullOrWhiteSpace(shippingAddr))
-            {
-                var addrParts = new List<string>();
-                if (!string.IsNullOrWhiteSpace(request.Address)) addrParts.Add(request.Address);
-                if (!string.IsNullOrWhiteSpace(request.City)) addrParts.Add(request.City);
-                if (!string.IsNullOrWhiteSpace(request.State)) addrParts.Add(request.State);
-                if (!string.IsNullOrWhiteSpace(request.PinCode)) addrParts.Add(request.PinCode);
-                shippingAddr = string.Join(", ", addrParts);
-            }
-            order.ShippingAddress = shippingAddr ?? customer.Address ?? "";
-
-            // Validate and calculate items
-            decimal calculatedSubtotal = 0;
-            foreach (var itemReq in request.Items)
-            {
-                var item = new OrderItem
-                {
-                    ProductId = itemReq.ProductId,
-                    ProductName = itemReq.ProductName ?? "",
-                    ProductCode = itemReq.ProductCode,
-                    CategoryName = itemReq.CategoryName,
-                    Price = itemReq.Price,
-                    Quantity = itemReq.Quantity,
-                    Subtotal = itemReq.Subtotal > 0 ? itemReq.Subtotal : itemReq.Price * itemReq.Quantity,
-                    ImageUrl = itemReq.ImageUrl ?? ""
-                };
-
-                var dbProduct = await _context.Products
-                    .Include(p => p.Category)
-                    .FirstOrDefaultAsync(p => p.Id == itemReq.ProductId);
-
-                if (dbProduct != null)
-                {
-                    if (string.IsNullOrEmpty(item.ProductName)) item.ProductName = dbProduct.ProductName;
-                    if (string.IsNullOrEmpty(item.ProductCode)) item.ProductCode = dbProduct.SKU;
-                    if (string.IsNullOrEmpty(item.CategoryName)) item.CategoryName = dbProduct.Category?.Name ?? "General";
-                    if (item.Price <= 0) item.Price = dbProduct.SellingPrice ?? dbProduct.MRP;
-
-                    // Deduct stock
-                    dbProduct.Stock -= item.Quantity;
-                    if (dbProduct.Stock < 0) dbProduct.Stock = 0;
-
-                    // Low stock warning
-                    if (dbProduct.Stock <= 10)
+                    var item = new OrderItem
                     {
-                        var existsLowStock = await _context.Notifications.AnyAsync(
-                            n => n.Type == "LowStock" && n.Message.Contains(dbProduct.ProductName) && !n.IsRead);
-                        if (!existsLowStock)
+                        ProductId = itemReq.ProductId,
+                        ProductName = itemReq.ProductName ?? "",
+                        ProductCode = itemReq.ProductCode,
+                        CategoryName = itemReq.CategoryName,
+                        Price = itemReq.Price,
+                        Quantity = itemReq.Quantity,
+                        Subtotal = itemReq.Subtotal > 0 ? itemReq.Subtotal : itemReq.Price * itemReq.Quantity,
+                        ImageUrl = itemReq.ImageUrl ?? ""
+                    };
+
+                    var dbProduct = await _context.Products
+                        .Include(p => p.Category)
+                        .FirstOrDefaultAsync(p => p.Id == itemReq.ProductId);
+
+                    if (dbProduct != null)
+                    {
+                        if (string.IsNullOrEmpty(item.ProductName)) item.ProductName = dbProduct.ProductName;
+                        if (string.IsNullOrEmpty(item.ProductCode)) item.ProductCode = dbProduct.SKU;
+                        if (string.IsNullOrEmpty(item.CategoryName)) item.CategoryName = dbProduct.Category?.Name ?? "General";
+                        if (item.Price <= 0) item.Price = dbProduct.SellingPrice ?? dbProduct.MRP;
+
+                        // Validate stock availability
+                        if (dbProduct.Stock < item.Quantity)
                         {
-                            _context.Notifications.Add(new Notification
+                            await transaction.RollbackAsync();
+                            return BadRequest(new { Message = $"Insufficient stock for product '{dbProduct.ProductName}'. Requested: {item.Quantity}, Available: {dbProduct.Stock}." });
+                        }
+
+                        // Deduct stock
+                        dbProduct.Stock -= item.Quantity;
+
+                        // Low stock warning
+                        if (dbProduct.Stock <= 10)
+                        {
+                            var existsLowStock = await _context.Notifications.AnyAsync(
+                                n => n.Type == "LowStock" && n.Message.Contains(dbProduct.ProductName) && !n.IsRead);
+                            if (!existsLowStock)
                             {
-                                Title = "Low Stock Warning",
-                                Message = $"{dbProduct.ProductName} is below safety threshold limit ({dbProduct.Stock} left).",
-                                Type = "LowStock"
-                            });
+                                _context.Notifications.Add(new Notification
+                                {
+                                    Title = "Low Stock Warning",
+                                    Message = $"{dbProduct.ProductName} is below safety threshold limit ({dbProduct.Stock} left).",
+                                    Type = "LowStock"
+                                });
+                            }
                         }
                     }
+                    else
+                    {
+                        if (string.IsNullOrEmpty(item.ProductName)) item.ProductName = "Product #" + itemReq.ProductId;
+                        if (string.IsNullOrEmpty(item.ProductCode)) item.ProductCode = "SKU-" + itemReq.ProductId;
+                        if (string.IsNullOrEmpty(item.CategoryName)) item.CategoryName = "General";
+                    }
+
+                    item.Subtotal = item.Price * item.Quantity;
+                    calculatedSubtotal += item.Subtotal;
+                    order.Items.Add(item);
                 }
-                else
+
+                order.TotalAmount = request.TotalAmount.HasValue && request.TotalAmount.Value > 0
+                    ? request.TotalAmount.Value
+                    : calculatedSubtotal;
+
+                order.ShippingFee = request.ShippingFee.HasValue
+                    ? request.ShippingFee.Value
+                    : (calculatedSubtotal >= 2000 ? 0 : settings.FlatShippingFee);
+
+                decimal taxableAmount = order.TotalAmount - order.DiscountAmount;
+                if (taxableAmount < 0) taxableAmount = 0;
+
+                order.GstAmount = request.GstAmount.HasValue
+                    ? request.GstAmount.Value
+                    : Math.Round(taxableAmount * (settings.GstPercentage / 100.0m), 2);
+
+                order.FinalAmount = request.FinalAmount.HasValue && request.FinalAmount.Value > 0
+                    ? request.FinalAmount.Value
+                    : taxableAmount + order.ShippingFee + order.GstAmount;
+
+                // Loyalty coins reward
+                int coinsEarned = (int)(order.FinalAmount * coinsSettings.EarnRate);
+                customer.CoinsBalance += coinsEarned;
+
+                _context.Orders.Add(order);
+
+                // IMPORTANT: Save order first so order.Id is generated by the database!
+                await _context.SaveChangesAsync();
+
+                // Add initial timeline tracking log referencing the real generated order.Id
+                var initialLog = new OrderTrackingLog
                 {
-                    if (string.IsNullOrEmpty(item.ProductName)) item.ProductName = "Product #" + itemReq.ProductId;
-                    if (string.IsNullOrEmpty(item.ProductCode)) item.ProductCode = "SKU-" + itemReq.ProductId;
-                    if (string.IsNullOrEmpty(item.CategoryName)) item.CategoryName = "General";
-                }
+                    OrderId = order.Id,
+                    Status = order.Status,
+                    Description = $"Order #{order.OrderNumber} placed successfully via {order.PaymentMethod}.",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.OrderTrackingLogs.Add(initialLog);
 
-                item.Subtotal = item.Price * item.Quantity;
-                calculatedSubtotal += item.Subtotal;
-                order.Items.Add(item);
+                // Add notification
+                _context.Notifications.Add(new Notification
+                {
+                    Title = "New Order Placed",
+                    Message = $"Order #{order.OrderNumber} placed by customer {customer.Name} (Total: INR {order.FinalAmount:N2}).",
+                    Type = "NewOrder"
+                });
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                await _context.Entry(order).Reference(o => o.Customer).LoadAsync();
+                await PopulateItemImagesAsync(new[] { order });
+
+                return Ok(order);
             }
-
-            order.TotalAmount = request.TotalAmount.HasValue && request.TotalAmount.Value > 0
-                ? request.TotalAmount.Value
-                : calculatedSubtotal;
-
-            order.ShippingFee = request.ShippingFee.HasValue
-                ? request.ShippingFee.Value
-                : (calculatedSubtotal >= 2000 ? 0 : settings.FlatShippingFee);
-
-            decimal taxableAmount = order.TotalAmount - order.DiscountAmount;
-            if (taxableAmount < 0) taxableAmount = 0;
-
-            order.GstAmount = request.GstAmount.HasValue
-                ? request.GstAmount.Value
-                : Math.Round(taxableAmount * (settings.GstPercentage / 100.0m), 2);
-
-            order.FinalAmount = request.FinalAmount.HasValue && request.FinalAmount.Value > 0
-                ? request.FinalAmount.Value
-                : taxableAmount + order.ShippingFee + order.GstAmount;
-
-            // Loyalty coins reward
-            int coinsEarned = (int)(order.FinalAmount * coinsSettings.EarnRate);
-            customer.CoinsBalance += coinsEarned;
-
-            _context.Orders.Add(order);
-
-            // Add initial timeline tracking log
-            var initialLog = new OrderTrackingLog
-            {
-                OrderId = order.Id,
-                Status = order.Status,
-                Description = $"Order #{order.OrderNumber} placed successfully via {order.PaymentMethod}.",
-                CreatedAt = DateTime.UtcNow
-            };
-            _context.OrderTrackingLogs.Add(initialLog);
-
-            // Add notification
-            _context.Notifications.Add(new Notification
-            {
-                Title = "New Order Placed",
-                Message = $"Order #{order.OrderNumber} placed by customer {customer.Name} (Total: INR {order.FinalAmount:N2}).",
-                Type = "NewOrder"
+            catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return StatusCode(500, new { Message = "Failed to create order.", Detail = ex.Message });
+                }
             });
-
-            await _context.SaveChangesAsync();
-            await _context.Entry(order).Reference(o => o.Customer).LoadAsync();
-            await PopulateItemImagesAsync(new[] { order });
-
-            return Ok(order);
         }
 
         // PUT: api/Orders/5/status
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to update order status." });
+            }
             var request = await GetStatusUpdateRequestAsync();
             var order = await _context.Orders.FindAsync(id);
             if (order == null)
@@ -974,6 +1210,11 @@ namespace Honeywell.Controllers
         [HttpPut("{id}/payment")]
         public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] OrderPaymentStatusRequest request)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to update payment status." });
+            }
+
             var order = await _context.Orders.FindAsync(id);
             if (order == null)
             {
@@ -998,6 +1239,11 @@ namespace Honeywell.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> CancelOrder(int id)
         {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to cancel orders." });
+            }
+
             var order = await _context.Orders
                 .Include(o => o.Items)
                 .FirstOrDefaultAsync(o => o.Id == id);
@@ -1012,12 +1258,61 @@ namespace Honeywell.Controllers
                 return BadRequest(new { Message = "Order is already cancelled." });
             }
 
-            // Stock restoration removed since Product table is removed
+            // Restore product stock
+            foreach (var item in order.Items)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product != null)
+                {
+                    product.Stock += item.Quantity;
+                }
+            }
 
             order.Status = "Cancelled";
             await _context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        // POST: api/Orders/repair-tracking-logs
+        [HttpPost("repair-tracking-logs")]
+        public async Task<IActionResult> RepairTrackingLogs()
+        {
+            if (!IsAdminUser())
+            {
+                return Unauthorized(new { Message = "Admin authentication token required to run tracking repair." });
+            }
+            var orphanedLogs = await _context.OrderTrackingLogs
+                .Where(l => l.OrderId == 0)
+                .ToListAsync();
+
+            int repairedCount = 0;
+            var allOrders = await _context.Orders.ToListAsync();
+
+            foreach (var log in orphanedLogs)
+            {
+                if (!string.IsNullOrEmpty(log.Description))
+                {
+                    var match = allOrders.FirstOrDefault(o => log.Description.Contains(o.OrderNumber));
+                    if (match != null)
+                    {
+                        log.OrderId = match.Id;
+                        repairedCount++;
+                    }
+                }
+            }
+
+            if (repairedCount > 0)
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return Ok(new
+            {
+                TotalOrphaned = orphanedLogs.Count,
+                RepairedCount = repairedCount,
+                RemainingOrphaned = orphanedLogs.Count - repairedCount
+            });
         }
 
         private async Task PopulateItemImagesAsync(IEnumerable<Order> orders)

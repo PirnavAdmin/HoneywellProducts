@@ -211,7 +211,8 @@ const normalizePaymentStatus = (rawPayStatus) => {
 
 // Helper to normalise order details
 const normaliseOrder = (o) => {
-  const rawSubtotal = parseAmount(o.subtotal || o.totalAmount || 0);
+  // Base subtotal before taxes and shipping
+  let rawSubtotal = parseAmount(o.rawTotalAmount ?? o.subtotal ?? 0);
   const rawDiscount = parseAmount(o.discountAmount || 0);
   const rawShipping = parseAmount(o.shippingFee || 0);
   const taxable = Math.max(0, rawSubtotal - rawDiscount);
@@ -219,9 +220,13 @@ const normaliseOrder = (o) => {
     ? o.gstAmount 
     : (o.taxAmount !== undefined && o.taxAmount > 0 ? o.taxAmount : Math.round(taxable * 0.18)));
   
-  let totalVal = parseAmount(o.finalAmount || o.total || o.totalAmount);
-  // If final amount is 0 or equal to base subtotal without tax, add tax so the ledger shows the true grand total
-  if (totalVal <= 0 || (rawSubtotal > 0 && totalVal === rawSubtotal)) {
+  // Authoritative grand total from backend/database
+  let totalVal = parseAmount(o.finalAmount ?? o.totalAmount ?? o.total ?? 0);
+  if (rawSubtotal <= 0 && totalVal > 0) {
+    rawSubtotal = Math.max(0, totalVal - rawShipping - rawGst + rawDiscount);
+  }
+  // Only recalculate total if missing or zero
+  if (totalVal <= 0) {
     totalVal = taxable + rawShipping + rawGst;
   }
 
@@ -861,39 +866,11 @@ const OrdersLedger = () => {
       try {
         setLoading(true);
         setError('');
-        const [data, custJson] = await Promise.all([
-          getOrders().catch(() => []),
-          fetch(`${getApiDomain()}/api/Customers`, {
-            headers: {
-              'ngrok-skip-browser-warning': 'true',
-              'Accept': 'application/json'
-            }
-          }).then(r => r.ok ? r.json() : []).catch(() => [])
-        ]);
-        
-        let customerMap = {};
-        const customersList = Array.isArray(custJson) ? custJson : (custJson?.data || custJson?.items || []);
-        customersList.forEach(c => {
-          if (c && c.id) customerMap[c.id] = c;
-        });
+        const data = await getOrders().catch(() => []);
 
         if (isMounted) {
           const list = Array.isArray(data) ? data : (data.orders || data.data || []);
-          const normalizedList = list.map(o => {
-            const normalized = normaliseOrder(o);
-            const custInfo = customerMap[o.customerId];
-            if (custInfo) {
-              normalized.customer = custInfo.name || normalized.customer;
-              const rawCustType = custInfo.type || custInfo.customerType || custInfo.role || '';
-              normalized.customerType = (!rawCustType || rawCustType.toLowerCase() === 'farmer' || rawCustType.toLowerCase() === 'grower')
-                ? 'Customer Account'
-                : rawCustType;
-              normalized.phone = custInfo.phone || normalized.phone;
-              normalized.email = custInfo.email || normalized.email;
-              normalized.shippingAddress = custInfo.address || normalized.shippingAddress;
-            }
-            return normalized;
-          });
+          const normalizedList = list.map(o => normaliseOrder(o));
 
           const deduplicatedMap = new Map();
           normalizedList.forEach((order) => {
@@ -1209,7 +1186,7 @@ const OrdersLedger = () => {
                         if (window.confirm(`Are you sure you want to delete Order #${order.id}?`)) {
                           try {
                             await deleteOrder(order.id);
-                            setOrders(prev => prev.filter(o => o.id !== order.id));
+                            setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'Cancelled', fulfillment: 'CANCELLED', paymentStatus: 'Payment Not Applicable' } : o));
                           } catch (err) {
                             alert(`Error: ${err.message}`);
                           }

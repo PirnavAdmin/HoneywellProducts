@@ -255,8 +255,9 @@ export default function Checkout() {
             });
 
             if (verifyRes && verifyRes.success !== false) {
+              let createdOrder = null;
               try {
-                await orderService.create({
+                createdOrder = await orderService.create({
                   orderNumber: currentOrderId,
                   customerId: activeCustId ? Number(activeCustId) : undefined,
                   customerName: customerName.trim(),
@@ -275,13 +276,18 @@ export default function Checkout() {
                   status: 'Processing',
                   items
                 });
-              } catch (e) {}
+              } catch (e) {
+                setPaymentMessage({ type: 'error', text: `Payment verified, but recording order failed: ${e.message}. Please contact support.` });
+                setSubmitting(false);
+                return;
+              }
 
+              const resolvedOrderRef = String(createdOrder?.orderNumber || createdOrder?.id || currentOrderId);
               setOrderSuccessPlaced(true);
               clearCart();
               setPaymentMessage({ type: 'success', text: 'Razorpay payment verified & order placed!' });
               setTimeout(() => {
-                navigate('/order-success', { state: { reference: currentOrderId, status: 'Paid' } });
+                navigate('/order-success', { state: { reference: resolvedOrderRef, order: createdOrder, status: 'Paid' } });
               }, 600);
             } else {
               setPaymentMessage({ type: 'error', text: verifyRes?.message || 'Razorpay payment verification failed.' });
@@ -311,8 +317,9 @@ export default function Checkout() {
         }
 
         let resolvedOrderRef = currentOrderId;
+        let createdOrder = null;
         try {
-          const createdOrder = await orderService.create({
+          createdOrder = await orderService.create({
             orderNumber: currentOrderId,
             customerId: activeCustId ? Number(activeCustId) : undefined,
             customerName: customerName.trim(),
@@ -334,7 +341,11 @@ export default function Checkout() {
           if (createdOrder && (createdOrder.orderNumber || createdOrder.id)) {
             resolvedOrderRef = String(createdOrder.orderNumber || createdOrder.id);
           }
-        } catch (e) {}
+        } catch (e) {
+          setPaymentMessage({ type: 'error', text: `Failed to create order: ${e.message}. Your cart is preserved.` });
+          setSubmitting(false);
+          return;
+        }
 
         const fd = new FormData();
         fd.append('AmountPaid', amt);
@@ -355,7 +366,7 @@ export default function Checkout() {
           clearCart();
           setPaymentMessage({ type: 'success', text: res.message || 'Manual payment submitted for verification!' });
           setTimeout(() => {
-            navigate('/order-success', { state: { reference: resolvedOrderRef, status: 'Verification Pending' } });
+            navigate('/order-success', { state: { reference: resolvedOrderRef, order: createdOrder, status: 'Verification Pending' } });
           }, 600);
         } else {
           setPaymentMessage({ type: 'error', text: res?.message || 'Manual verification failed.' });
@@ -400,8 +411,9 @@ export default function Checkout() {
             // Complete transaction
             const compRes = await completePayment(activeTransactionId);
             if (compRes && compRes.success !== false) {
+              let createdOrder = null;
               try {
-                await orderService.create({
+                createdOrder = await orderService.create({
                   orderNumber: currentOrderId,
                   customerId: activeCustId ? Number(activeCustId) : undefined,
                   customerName: customerName.trim(),
@@ -420,13 +432,18 @@ export default function Checkout() {
                   status: 'Processing',
                   items
                 });
-              } catch (e) {}
+              } catch (e) {
+                setPaymentMessage({ type: 'error', text: `Payment completed, but order record failed: ${e.message}. Please contact support.` });
+                setSubmitting(false);
+                return;
+              }
 
+              const resolvedOrderRef = String(createdOrder?.orderNumber || createdOrder?.id || currentOrderId);
               setOrderSuccessPlaced(true);
               clearCart();
               setPaymentMessage({ type: 'success', text: 'Netbanking payment completed successfully!' });
               setTimeout(() => {
-                navigate('/order-success', { state: { reference: currentOrderId, status: 'Paid' } });
+                navigate('/order-success', { state: { reference: resolvedOrderRef, order: createdOrder, status: 'Paid' } });
               }, 600);
             } else {
               setPaymentMessage({ type: 'error', text: compRes?.message || 'Transaction completion failed.' });
@@ -442,8 +459,9 @@ export default function Checkout() {
 
       // 3. CASH ON DELIVERY FLOW (DIRECT PLACEMENT)
       if (paymentMethod === 'Cash on Delivery') {
+        let createdOrder = null;
         try {
-          await orderService.create({
+          createdOrder = await orderService.create({
             orderNumber: currentOrderId,
             customerId: activeCustId ? Number(activeCustId) : undefined,
             customerName: customerName.trim(),
@@ -463,14 +481,17 @@ export default function Checkout() {
             items
           });
         } catch (orderErr) {
-          console.warn('Order creation note:', orderErr.message);
+          setPaymentMessage({ type: 'error', text: `Failed to place order: ${orderErr.message}. Your cart is preserved.` });
+          setSubmitting(false);
+          return;
         }
 
+        const resolvedOrderRef = String(createdOrder?.orderNumber || createdOrder?.id || currentOrderId);
         setOrderSuccessPlaced(true);
         clearCart();
         setPaymentMessage({ type: 'success', text: 'Order placed successfully with Cash on Delivery!' });
         setTimeout(() => {
-          navigate('/order-success', { state: { reference: currentOrderId, status: 'Success' } });
+          navigate('/order-success', { state: { reference: resolvedOrderRef, order: createdOrder, status: 'Success' } });
         }, 600);
         return;
       }
@@ -499,8 +520,9 @@ export default function Checkout() {
         // Call Complete Payment with real transaction ID
         const compRes = await completePayment(txnId);
         if (compRes && compRes.success !== false) {
+          let createdOrder = null;
           try {
-            await orderService.create({
+            createdOrder = await orderService.create({
               orderNumber: currentOrderId,
               customerId: activeCustId ? Number(activeCustId) : undefined,
               customerName: customerName.trim(),
@@ -520,74 +542,23 @@ export default function Checkout() {
               items
             });
           } catch (orderErr) {
-            console.warn('Order creation note:', orderErr.message);
+            setPaymentMessage({ type: 'error', text: `Payment processed, but order record failed: ${orderErr.message}. Please contact support.` });
+            setSubmitting(false);
+            return;
           }
 
+          const resolvedOrderRef = String(createdOrder?.orderNumber || createdOrder?.id || currentOrderId);
           setOrderSuccessPlaced(true);
           clearCart();
           setPaymentMessage({ type: 'success', text: compRes.message || 'Payment processed and order submitted successfully!' });
           setTimeout(() => {
-            navigate('/order-success', { state: { reference: currentOrderId, status: initRes.paymentStatus || 'Success' } });
+            navigate('/order-success', { state: { reference: resolvedOrderRef, order: createdOrder, status: initRes.paymentStatus || 'Success' } });
           }, 600);
         } else {
-          // If completePayment returned non-fatal error but payment was initiated, record order as processing
-          try {
-            await orderService.create({
-              orderNumber: currentOrderId,
-              customerId: activeCustId ? Number(activeCustId) : undefined,
-              customerName: customerName.trim(),
-              email: email.trim(),
-              mobile: mobile.trim(),
-              address: address.trim(),
-              city: city.trim(),
-              state: state.trim(),
-              pinCode: pinCode.trim(),
-              totalAmount: total,
-              gstAmount: taxAmount,
-              discountAmount: discountAmount,
-              finalAmount: grandTotal,
-              paymentMethod,
-              paymentStatus: initRes.paymentStatus || 'Verified',
-              status: 'Processing',
-              items
-            });
-            setOrderSuccessPlaced(true);
-            clearCart();
-            navigate('/order-success', { state: { reference: currentOrderId, status: initRes.paymentStatus || 'Success' } });
-            return;
-          } catch (e) {}
-
-          setPaymentMessage({ type: 'error', text: compRes?.message || 'Transaction completion check returned error.' });
+          setPaymentMessage({ type: 'error', text: compRes?.message || 'Transaction completion check failed.' });
           setSubmitting(false);
         }
       } else {
-        // Fallback: If payment initiate endpoint is busy, proceed with order creation
-        try {
-          await orderService.create({
-            orderNumber: currentOrderId,
-            customerId: activeCustId ? Number(activeCustId) : undefined,
-            customerName: customerName.trim(),
-            email: email.trim(),
-            mobile: mobile.trim(),
-            address: address.trim(),
-            city: city.trim(),
-            state: state.trim(),
-            pinCode: pinCode.trim(),
-            totalAmount: total,
-            gstAmount: taxAmount,
-            discountAmount: discountAmount,
-            finalAmount: grandTotal,
-            paymentMethod,
-            paymentStatus: 'Pending',
-            status: 'Processing',
-            items
-          });
-          setOrderSuccessPlaced(true);
-          clearCart();
-          navigate('/order-success', { state: { reference: currentOrderId, status: 'Success' } });
-          return;
-        } catch (e) {}
-
         setPaymentMessage({ type: 'error', text: initRes?.message || 'Payment initiation failed.' });
         setSubmitting(false);
       }

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -1113,6 +1113,11 @@ app.Use(async (context, next) =>
             !path.Contains("/roles", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/cart", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/orders", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/order", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/track", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/customer", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/payment", StringComparison.OrdinalIgnoreCase) &&
+            !path.Contains("/shipping", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/invoices", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/category", StringComparison.OrdinalIgnoreCase) &&
             !path.Contains("/categories", StringComparison.OrdinalIgnoreCase) &&

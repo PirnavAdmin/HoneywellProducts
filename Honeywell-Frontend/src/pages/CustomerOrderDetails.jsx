@@ -51,7 +51,9 @@ export default function CustomerOrderDetails() {
     async function loadOrder() {
       try {
         if (!passedOrder) setLoading(true);
-        const data = await getOrderDetails(id);
+        const searchParams = new URLSearchParams(location.search);
+        const verifyParam = location.state?.email || searchParams.get('email') || searchParams.get('phone') || localStorage.getItem('customerEmail') || localStorage.getItem('customerPhone') || '';
+        const data = await getOrderDetails(id, verifyParam);
         if (data) {
           setOrder(data);
         } else if (passedOrder) {
@@ -67,7 +69,7 @@ export default function CustomerOrderDetails() {
       }
     }
     if (id) loadOrder();
-  }, [id, passedOrder]);
+  }, [id, passedOrder, location.search, location.state]);
 
   const statusClass = (order?.status || 'processing').toLowerCase().replace(/\s+/g, '-');
 

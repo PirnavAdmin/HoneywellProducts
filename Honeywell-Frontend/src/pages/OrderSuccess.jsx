@@ -8,7 +8,7 @@ export default function OrderSuccess() {
   useDocumentTitle('Order Confirmation', 'Your purchase order has been placed successfully.');
   const { state } = useLocation();
   const orderRef = state?.reference || '';
-  const [orderDetails, setOrderDetails] = useState(null);
+  const [orderDetails, setOrderDetails] = useState(state?.order || null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {

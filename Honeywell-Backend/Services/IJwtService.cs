@@ -6,5 +6,6 @@ namespace Honeywell.Services.Interfaces
     {
         string GenerateToken(User user);
         string GenerateTokenForTestUser(TestUser user);
+        string GenerateTokenForCustomer(Customer customer);
     }
 }

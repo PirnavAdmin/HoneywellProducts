@@ -3,11 +3,17 @@ import { getApiDomain } from '../../utils/apiConfig';
 
 const BASE_URL = `${getApiDomain()}/api/orders`;
 
-const DEFAULT_HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
+const getAdminHeaders = () => {
+  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null;
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
 };
+
+const DEFAULT_HEADERS = getAdminHeaders();
 
 /** GET /api/orders — fetch all orders */
 export const getOrders = async () => {
@@ -43,7 +49,7 @@ export const deleteOrder = async (id) => {
 export const updateOrderPaymentStatus = async (id, paymentStatus, paidAmount) => {
   const response = await fetch(`${BASE_URL}/${id}/payment-status`, {
     method: 'PUT',
-    headers: DEFAULT_HEADERS,
+    headers: getAdminHeaders(),
     body: JSON.stringify({ paymentStatus, paidAmount }),
   });
   if (!response.ok && response.status !== 204) {
@@ -56,7 +62,7 @@ export const updateOrderPaymentStatus = async (id, paymentStatus, paidAmount) =>
 /** Tracking endpoints */
 export const getOrdersTracking = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/tracking`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/tracking`, { headers: getAdminHeaders() });
     if (response.ok) {
       const backendTracking = await response.json();
       return Array.isArray(backendTracking) ? backendTracking : [];
@@ -69,7 +75,7 @@ export const getOrdersTracking = async () => {
 
 export const getOrderTracking = async (id) => {
   try {
-    const response = await fetch(`${BASE_URL}/tracking/${id}`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/tracking/${id}`, { headers: getAdminHeaders() });
     if (response.ok) {
       return await response.json();
     }
@@ -82,7 +88,7 @@ export const getOrderTracking = async (id) => {
 export const postOrderTracking = async (id, trackingData) => {
   const response = await fetch(`${BASE_URL}/tracking/${id}`, {
     method: 'POST',
-    headers: DEFAULT_HEADERS,
+    headers: getAdminHeaders(),
     body: JSON.stringify(trackingData),
   });
   if (!response.ok) {
@@ -94,7 +100,7 @@ export const postOrderTracking = async (id, trackingData) => {
 /** Shipping endpoints */
 export const getOrdersShipping = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/shipping`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/shipping`, { headers: getAdminHeaders() });
     if (response.ok) {
       const backendShipping = await response.json();
       return Array.isArray(backendShipping) ? backendShipping : [];
@@ -107,7 +113,7 @@ export const getOrdersShipping = async () => {
 
 export const getOrderShipping = async (id) => {
   try {
-    const response = await fetch(`${BASE_URL}/shipping/${id}`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/shipping/${id}`, { headers: getAdminHeaders() });
     if (response.ok) {
       return await response.json();
     }
@@ -118,34 +124,34 @@ export const getOrderShipping = async (id) => {
 };
 
 export const packOrder = async (id, data = {}) => {
-  await orderService.updateStatus(id, 'Packed').catch(() => {});
-  try {
-    const response = await fetch(`${BASE_URL}/shipping/${id}/pack`, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify(data),
-    });
-    if (response.ok) return await response.json().catch(() => ({ success: true }));
-  } catch {}
-  return { success: true };
+  const response = await fetch(`${BASE_URL}/shipping/${id}/pack`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`Failed to pack order (${response.status}): ${errText}`);
+  }
+  return await response.json();
 };
 
 export const dispatchOrder = async (id, data = {}) => {
-  await orderService.updateStatus(id, 'Dispatched').catch(() => {});
-  try {
-    const response = await fetch(`${BASE_URL}/shipping/${id}/dispatch`, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify(data),
-    });
-    if (response.ok) return await response.json().catch(() => ({ success: true }));
-  } catch {}
-  return { success: true };
+  const response = await fetch(`${BASE_URL}/shipping/${id}/dispatch`, {
+    method: 'POST',
+    headers: getAdminHeaders(),
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`Failed to dispatch order (${response.status}): ${errText}`);
+  }
+  return await response.json();
 };
 
 export const getMyOrders = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/my-orders`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/my-orders`, { headers: getAdminHeaders() });
     if (!response.ok) return [];
     return await response.json();
   } catch {
@@ -157,7 +163,7 @@ export const cleanupTestOrders = async () => {
   try {
     const response = await fetch(`${BASE_URL}/cleanup-test-orders`, {
       method: 'POST',
-      headers: DEFAULT_HEADERS
+      headers: getAdminHeaders()
     });
     return await response.json();
   } catch {

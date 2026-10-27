@@ -57,6 +57,45 @@ namespace Honeywell.Services
                 .WriteToken(token);
         }
 
+
+        public string GenerateTokenForCustomer(Customer customer)
+        {
+            var email = customer.Email ?? "";
+            var role = string.IsNullOrWhiteSpace(customer.Role) ? "Customer Account" : customer.Role;
+            var identifier = customer.Id.ToString();
+
+            var claims = new List<Claim>
+            {
+                new Claim(JwtRegisteredClaimNames.Sub, email),
+                new Claim(JwtRegisteredClaimNames.Email, email),
+                new Claim(ClaimTypes.NameIdentifier, identifier),
+                new Claim(ClaimTypes.Name, customer.Name ?? email),
+                new Claim(ClaimTypes.Email, email),
+                new Claim(ClaimTypes.Role, role),
+                new Claim("customerId", identifier),
+                new Claim("email", email),
+                new Claim("role", role),
+                new Claim("phone", customer.Phone ?? "")
+            };
+
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    _configuration["Jwt:Key"] ?? "Honeywell2026@JWTSecretKey#1234567890"));
+
+            var creds = new SigningCredentials(
+                key,
+                SecurityAlgorithms.HmacSha256);
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["Jwt:Issuer"] ?? "Honeywell",
+                audience: _configuration["Jwt:Audience"] ?? "HoneywellUsers",
+                claims: claims,
+                expires: DateTime.UtcNow.AddDays(30),
+                signingCredentials: creds);
+
+            return new JwtSecurityTokenHandler()
+                .WriteToken(token);
+        }
         public string GenerateTokenForTestUser(TestUser user)
         {
             var claims = new[]

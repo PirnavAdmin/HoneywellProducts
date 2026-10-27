@@ -82,9 +82,9 @@ export function AuthProvider({ children }) {
     const token = data.token || data.Token || data.accessToken || data.AccessToken || '';
     if (!token) throw new Error('No token received from server.');
 
-    const loggedInEmail = data.email || data.emailAddress || data.Email || emailInput;
-    const loggedInName = data.name || data.fullName || (data.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : '') || loggedInEmail.split('@')[0];
-    const profileId = data.customerId || data.id || data.Id || '';
+    const loggedInEmail = data.email || data.emailAddress || data.Email || data.customer?.email || emailInput;
+    const loggedInName = data.name || data.fullName || (data.firstName ? `${data.firstName} ${data.lastName || ''}`.trim() : '') || data.customer?.name || loggedInEmail.split('@')[0];
+    const profileId = data.customer?.id || data.customerId || data.id || data.Id || '';
 
     // Clear stale session values from previous user
     clearSession();
@@ -135,7 +135,7 @@ export function AuthProvider({ children }) {
       localStorage.setItem('customerEmail', registeredEmail);
       localStorage.setItem('customerName', registeredName);
 
-      const profileId = data.customerId || data.id || data.Id || '';
+      const profileId = data.customer?.id || data.customerId || data.id || data.Id || '';
       if (profileId) localStorage.setItem('customerId', String(profileId));
 
       const merged = {
