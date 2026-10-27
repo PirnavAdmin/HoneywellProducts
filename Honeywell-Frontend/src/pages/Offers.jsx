@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Tag, Percent, Calendar, Copy, Check, ArrowRight } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import OffersDeals from '../components/home/OffersDeals';
 import { couponService } from '../services/couponService';
 import { useUI } from '../context/UIContext';
+import { useSettings } from '../context/SettingsContext';
 import heroImage from '../assets/images/products-hero.png';
 
 export default function Offers() {
+  const { priceVisibility } = useSettings();
   const [coupons, setCoupons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState(null);
@@ -15,6 +17,7 @@ export default function Offers() {
   const location = useLocation();
 
   useEffect(() => {
+    if (!priceVisibility) return;
     async function loadOffers() {
       try {
         setLoading(true);
@@ -28,9 +31,10 @@ export default function Offers() {
       }
     }
     loadOffers();
-  }, []);
+  }, [priceVisibility]);
 
   useEffect(() => {
+    if (!priceVisibility) return;
     if (location.hash === '#offers-deals' || location.hash === '#offers') {
       setTimeout(() => {
         const el = document.getElementById('offers-deals');
@@ -39,7 +43,7 @@ export default function Offers() {
         }
       }, 100);
     }
-  }, [location]);
+  }, [location, priceVisibility]);
 
   const copyCode = (code) => {
     if (!code) return;
@@ -47,6 +51,10 @@ export default function Offers() {
     setCopiedCode(code);
     setTimeout(() => setCopiedCode(null), 2500);
   };
+
+  if (!priceVisibility) {
+    return <Navigate to="/products" replace />;
+  }
 
   return (
     <>

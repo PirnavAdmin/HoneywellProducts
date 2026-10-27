@@ -416,7 +416,7 @@ const FormSettings = () => {
                     Mode A — Price Visibility OFF (Catalogue Mode)
                   </strong>
                   <p style={{ fontSize: '11.5px', color: '#64748b', margin: 0, lineHeight: 1.5 }}>
-                    Public prices, Add to Cart, Buy Now, Cart navigation, and Checkout are hidden. The site acts as a clean product catalog with Enquire and Quote requests.
+                    Public prices, Add to Cart, Buy Now, Cart navigation, Offers & Deals, and Checkout are hidden. The site acts as a clean product catalog with Enquire and Quote requests.
                   </p>
                 </div>
 

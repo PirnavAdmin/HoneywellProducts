@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Camera, Sun, ShieldCheck, Wrench, Search, Tag, Download, FileText, HelpCircle, ArrowRight, Layers, Video } from 'lucide-react';
 import { categoryService } from '../../services/categoryService';
+import { useSettings } from '../../context/SettingsContext';
 
 const getCategoryIcon = (name = '') => {
   const lower = name.toLowerCase();
@@ -28,6 +29,7 @@ const defaultCategories = [
 ];
 
 export default function ProductsMegaMenu({ onClose }) {
+  const { priceVisibility } = useSettings();
   const [categories, setCategories] = useState(defaultCategories);
 
   useEffect(() => {
@@ -119,26 +121,28 @@ export default function ProductsMegaMenu({ onClose }) {
                 </div>
               </Link>
             </li>
-            <li>
-              <Link
-                to="/offers#offers-deals"
-                onClick={(e) => {
-                  if (onClose) onClose();
-                  setTimeout(() => {
-                    const el = document.getElementById('offers-deals');
-                    if (el) {
-                      el.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }, 50);
-                }}
-              >
-                <Tag size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Offers &amp; Deals</span>
-                  <span className="mega-link-desc">Current promotions &amp; discounts</span>
-                </div>
-              </Link>
-            </li>
+            {priceVisibility && (
+              <li>
+                <Link
+                  to="/offers#offers-deals"
+                  onClick={(e) => {
+                    if (onClose) onClose();
+                    setTimeout(() => {
+                      const el = document.getElementById('offers-deals');
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }, 50);
+                  }}
+                >
+                  <Tag size={18} className="mega-icon" />
+                  <div>
+                    <span className="mega-link-title">Offers &amp; Deals</span>
+                    <span className="mega-link-desc">Current promotions &amp; discounts</span>
+                  </div>
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
 

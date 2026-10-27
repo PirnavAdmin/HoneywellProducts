@@ -5,8 +5,10 @@ import { offersService } from '../../services/offersService';
 import { productService } from '../../services/productService';
 import { getApiDomain } from '../../utils/apiConfig';
 import ProductCard from '../products/ProductCard';
+import { useSettings } from '../../context/SettingsContext';
 
 export default function OffersDeals() {
+  const { priceVisibility } = useSettings();
   const location = useLocation();
   const isOffersPage = location.pathname === '/offers';
   const scrollRef = useRef(null);
@@ -19,6 +21,10 @@ export default function OffersDeals() {
   const pauseTimerRef = useRef(null);
 
   const fetchOffers = useCallback(async () => {
+    if (!priceVisibility) {
+      setLoading(false);
+      return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -35,11 +41,13 @@ export default function OffersDeals() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [priceVisibility]);
 
   useEffect(() => {
-    fetchOffers();
-  }, [fetchOffers]);
+    if (priceVisibility) {
+      fetchOffers();
+    }
+  }, [fetchOffers, priceVisibility]);
 
   const displayOffers = offersList;
 
@@ -51,7 +59,7 @@ export default function OffersDeals() {
       setIsPaused(false);
       setUserInteracted(false);
     }, 4000);
-  }, []);
+  }, [priceVisibility]);
 
   const handlePrev = () => {
     handleUserInteraction();
@@ -98,6 +106,10 @@ export default function OffersDeals() {
       if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
     };
   }, [isPaused, loading, displayOffers.length]);
+
+  if (!priceVisibility) {
+    return null;
+  }
 
   return (
     <section className="section offers-section" id="offers-deals" aria-label="Offers and Deals">

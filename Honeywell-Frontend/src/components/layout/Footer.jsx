@@ -101,19 +101,21 @@ export default function Footer() {
           <Link to="/products">All Products</Link>
           <Link to="/product-finder">Product Finder</Link>
           <Link to="/compare">Compare Products</Link>
-          <Link
-            to="/offers#offers-deals"
-            onClick={() => {
-              setTimeout(() => {
-                const el = document.getElementById('offers-deals');
-                if (el) {
-                  el.scrollIntoView({ behavior: 'smooth' });
-                }
-              }, 50);
-            }}
-          >
-            Offers &amp; Deals
-          </Link>
+          {priceVisibility && (
+            <Link
+              to="/offers#offers-deals"
+              onClick={() => {
+                setTimeout(() => {
+                  const el = document.getElementById('offers-deals');
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }, 50);
+              }}
+            >
+              Offers &amp; Deals
+            </Link>
+          )}
           <Link to="/downloads">Downloads Center</Link>
         </div>
         <div>
