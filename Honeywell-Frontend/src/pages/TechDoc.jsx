@@ -70,9 +70,14 @@ export default function TechDoc() {
       {/* Hero Banner */}
       <header className="doc-header-banner">
         <div className="container">
-          <div className="doc-badge-pill">
-            <FileCode size={14} />
-            <span>Developer Technical Guide</span>
+          <div className="doc-header-top-row">
+            <div className="doc-header-logo-card">
+              <img src="/honeywell-logo.png" alt="Honeywell Products" className="doc-header-logo-img" />
+            </div>
+            <div className="doc-badge-pill" style={{ marginBottom: 0 }}>
+              <FileCode size={14} />
+              <span>Developer Technical Guide</span>
+            </div>
           </div>
           <h1 className="doc-header-title">Honeywell Products Technical Documentation</h1>
           <p className="doc-header-desc">
@@ -123,7 +128,7 @@ export default function TechDoc() {
           <div className="doc-print-header">
             <div className="doc-print-header-top">
               <div className="doc-print-branding">
-                <div className="doc-print-brand">HONEYWELL PRODUCTS</div>
+                <img src="/honeywell-logo.png" alt="Honeywell Products" className="doc-print-logo-img" />
                 <div className="doc-print-tagline">SMART TECHNOLOGY • STRONGER PROTECTION</div>
               </div>
               <div className="doc-print-meta-card">

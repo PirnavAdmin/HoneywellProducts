@@ -36,6 +36,31 @@
   z-index: 2;
 }
 
+.doc-header-top-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.doc-header-logo-card {
+  background: #ffffff;
+  padding: 6px 14px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.doc-header-logo-img {
+  height: 28px;
+  width: auto;
+  max-width: 170px;
+  object-fit: contain;
+  display: block;
+}
+
 .doc-badge-pill {
   display: inline-flex;
   align-items: center;
