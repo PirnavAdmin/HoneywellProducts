@@ -592,12 +592,6 @@ export default function Documentation() {
 
         </article>
       </div>
-    
-      {/* Formal Print Running Footer */}
-      <div className="doc-print-footer">
-        <span className="doc-print-footer-brand">Honeywell Products</span>
-        <span className="doc-print-footer-page"></span>
-      </div>
     </div>
   );
 }

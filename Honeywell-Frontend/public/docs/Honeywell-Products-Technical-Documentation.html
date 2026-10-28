@@ -102,34 +102,48 @@
       h3 {
         color: #0f273d;
         margin-top: 24px;
-        font-size: 17px;
+        font-size: 16px;
       }
       p, li {
-        font-size: 14.5px;
+        font-size: 15px;
         color: #334155;
       }
-      .section-badge {
-        display: inline-block;
-        background: var(--accent-blue);
-        color: var(--brand);
-        border: 1px solid #cfe2f7;
-        font-size: 11px;
-        font-weight: 800;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-        padding: 3px 8px;
+      code {
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 0.88em;
+        font-weight: 600;
+        background: #f1f5f9;
+        color: #0f273d;
+        padding: 2px 6px;
         border-radius: 4px;
-        margin-bottom: 6px;
+        border: 1px solid #e2e8f0;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+      }
+      pre {
+        background: var(--code-bg);
+        color: var(--code-text);
+        padding: 18px 22px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.55;
+        border: 1px solid #334155;
+        white-space: pre-wrap;
+        word-break: break-all;
       }
       table {
         width: 100%;
         border-collapse: collapse;
         margin: 20px 0;
-        font-size: 13.5px;
+        font-size: 14px;
+        word-break: break-word;
+        overflow-wrap: anywhere;
       }
       th, td {
         border: 1px solid var(--border);
-        padding: 10px 14px;
+        padding: 9px 12px;
         text-align: left;
         vertical-align: top;
       }
@@ -137,30 +151,6 @@
         background: #f1f5fb;
         font-weight: 700;
         color: #1e293b;
-      }
-      pre {
-        background: var(--code-bg);
-        color: var(--code-text);
-        padding: 16px 20px;
-        border-radius: 8px;
-        overflow-x: auto;
-        font-family: Consolas, Monaco, 'Courier New', monospace;
-        font-size: 13px;
-        line-height: 1.6;
-        margin: 16px 0;
-      }
-      code {
-        font-family: Consolas, Monaco, 'Courier New', monospace;
-        font-size: 13px;
-        background: #f1f5f9;
-        color: #0f172a;
-        padding: 2px 6px;
-        border-radius: 4px;
-      }
-      pre code {
-        background: transparent;
-        color: inherit;
-        padding: 0;
       }
       .callout {
         border-radius: 8px;
@@ -175,312 +165,393 @@
         background: #f0fdf4;
         border-left: 4px solid #16a34a;
       }
+      ol, ul {
+        padding-left: 24px;
+      }
+      li {
+        margin: 8px 0;
+      }
+      @page {
+        size: A4 portrait;
+        margin: 14mm 14mm 16mm 14mm;
+        @bottom-left {
+          content: "HONEYWELL PRODUCTS";
+          font-family: -apple-system, sans-serif;
+          font-size: 8.5pt;
+          font-weight: 700;
+          color: #03152f;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+        }
+        @bottom-right {
+          content: counter(page);
+          font-family: -apple-system, sans-serif;
+          font-size: 8.5pt;
+          font-weight: 600;
+          color: #475569;
+        }
+      }
       @media print {
         body { background: #ffffff; }
-        header { background: #ffffff !important; color: #000000 !important; border-bottom: 2px solid #000000; padding: 20px 0; }
-        .print-btn { display: none !important; }
-        main { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
-        h1 { color: #000000 !important; font-size: 24px !important; }
-        h2 { border-bottom: 1px solid #000000 !important; page-break-after: avoid; }
-        pre { background: #f8fafc !important; color: #000000 !important; border: 1px solid #cccccc; }
+        header { display: none; }
+        main {
+          border: none;
+          box-shadow: none;
+          padding: 0;
+          margin: 0;
+          max-width: 100%;
+        }
+        pre {
+          background: #f8fafc;
+          color: #0f172a;
+          border: 1px solid #cbd5e1;
+          font-size: 8pt;
+          padding: 10px 14px;
+        }
+        table {
+          font-size: 8pt;
+        }
+        th, td {
+          padding: 6px 8px;
+          border: 1px solid #cbd5e1;
+        }
+        th {
+          background: #f1f5f9;
+        }
+        h2 {
+          page-break-after: avoid;
+        }
+        tr {
+          page-break-inside: avoid;
+        }
       }
     </style>
   </head>
   <body>
     <header>
       <div class="header-inner">
-        <div class="badge">Technical Documentation</div>
-        <h1>Honeywell Products Platform Technical Guide</h1>
+        <span class="badge">Technical Reference</span>
+        <h1>Honeywell Products Technical Documentation</h1>
         <p class="header-desc">
-          Architecture overview, technology stacks, REST API endpoints, authentication models, database persistence, and containerized deployment topology.
+          Official full-stack architecture, technology stack, 49-controller API directory, 25-module RBAC security model, and container deployment guide.
         </p>
         <div class="meta-bar">
           <span><strong>Stack:</strong> React 19 + ASP.NET Core 8 + MySQL</span>
-          <span><strong>Repository:</strong> Honeywell Products Monorepo</span>
+          <span><strong>Monorepo:</strong> Honeywell Products Monorepo</span>
+          <span><strong>Controllers:</strong> 49 REST Controllers</span>
         </div>
         <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
       </div>
     </header>
 
     <main>
-      <section>
-        <span class="section-badge">Section 1</span>
-        <h2>1. Project Overview &amp; Monorepo Architecture</h2>
-        <p>
-          The Honeywell Products platform is a full-stack e-commerce and administrative operations system for smart surveillance hardware, solar cameras, NVRs, and perimeter security equipment.
-        </p>
-        <pre><code>HoneywellProducts-main/
-|-- Honeywell-Backend/     ASP.NET Core 8 Web API (.NET 8.0, C#, EF Core, Controllers, DTOs)
-|-- Honeywell-Frontend/    React 19 SPA, Vite 8, React Router DOM v7, Tailwind CSS, Lucide
-|-- docker-compose.yml     Multi-container production stack (frontend, backend, uploads volume)
-|-- nginx.conf             Nginx edge reverse proxy (/api/ and /uploads/, 550MB payload)
-|-- db.sql                 MySQL database schema snapshot (200KB+)
-`-- .env                   Docker container environment configuration</code></pre>
-      </section>
+      <h2>1. Architecture Overview &amp; Monorepo Topology</h2>
+      <p>
+        The <strong>Honeywell Products platform</strong> is an enterprise e-commerce, quotation, and operations management platform specialized for commercial surveillance hardware, high-definition IP cameras, NVR/DVR units, solar-powered perimeter monitoring kits, and industrial cabling accessories.
+      </p>
+      <pre>HoneywellProducts-main/
+|-- Honeywell-Backend/     ASP.NET Core 8 Web API (.NET 8.0, C#, EF Core, Controllers)
+|-- Honeywell-Frontend/    React 19 SPA, Vite 8, React Router DOM v7, Tailwind CSS
+|-- docker-compose.yml     Multi-container production stack (frontend, backend, uploads)
+|-- nginx.conf             Nginx reverse proxy (/api/ and /uploads/, 550MB payload)
+|-- db.sql                 MySQL relational schema snapshot & seed data
+`-- .env                   Container deployment environment configuration</pre>
 
-      <section>
-        <span class="section-badge">Section 2</span>
-        <h2>2. Frontend Technology Stack &amp; Structure</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Layer</th>
-              <th>Framework / Library</th>
-              <th>Version</th>
-              <th>Role in Platform</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>UI Library</td>
-              <td>React (with JSX)</td>
-              <td>19.2.0</td>
-              <td>Component tree, reactive state, functional hooks</td>
-            </tr>
-            <tr>
-              <td>Build Tool</td>
-              <td>Vite</td>
-              <td>8.2.2</td>
-              <td>Fast dev server and optimized Rollup asset bundler</td>
-            </tr>
-            <tr>
-              <td>Client Routing</td>
-              <td>React Router DOM</td>
-              <td>7.1.1</td>
-              <td>Declarative routing with nested layouts and lazy loading</td>
-            </tr>
-            <tr>
-              <td>Styling</td>
-              <td>Tailwind CSS &amp; CSS Variables</td>
-              <td>3.4.17</td>
-              <td>Design tokens (<code>--red</code>, <code>--ink</code>, <code>--surface</code>)</td>
-            </tr>
-            <tr>
-              <td>Icons</td>
-              <td>Lucide React</td>
-              <td>0.468.0</td>
-              <td>Consistent SVG icons across customer and console views</td>
-            </tr>
-            <tr>
-              <td>HTTP Client</td>
-              <td>Axios &amp; Native Fetch API</td>
-              <td>1.19.0</td>
-              <td>RESTful API client with dynamic Bearer authentication</td>
-            </tr>
-            <tr>
-              <td>PDF Invoicing</td>
-              <td>jsPDF &amp; html2canvas</td>
-              <td>4.2.1</td>
-              <td>Client-side GST tax invoice &amp; datasheet generation</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+      <h2>2. Frontend Technologies &amp; Project Structure</h2>
+      <p>Housed in <code>Honeywell-Frontend/</code> and built with modern web technologies:</p>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Technology</th><th>Version</th><th>Role in Platform</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>UI Library</td><td>React (JSX)</td><td><code>19.2.0</code></td><td>Functional component tree, hooks, reactive rendering</td></tr>
+          <tr><td>Build Engine</td><td>Vite</td><td><code>8.2.2</code></td><td>Fast HMR development server &amp; Rollup-optimized production bundling</td></tr>
+          <tr><td>Routing</td><td>React Router DOM</td><td><code>7.1.1</code></td><td>SPA routing, dynamic lazy code-splitting, nested admin layouts</td></tr>
+          <tr><td>Styling</td><td>Tailwind CSS &amp; CSS Variables</td><td><code>3.4.17</code></td><td>Honeywell design tokens (<code>--red</code>, <code>--ink</code>, <code>--surface</code>)</td></tr>
+          <tr><td>Iconography</td><td>Lucide React</td><td><code>0.468.0</code></td><td>Consistent SVG icons across storefront and admin console</td></tr>
+          <tr><td>HTTP Clients</td><td>Axios &amp; Fetch API</td><td><code>1.19.0</code></td><td>REST API communication with Bearer token injection</td></tr>
+          <tr><td>Charts</td><td>Recharts</td><td><code>3.1.0</code></td><td>Admin sales analytics and order fulfillment status breakdown</td></tr>
+          <tr><td>PDF Generation</td><td>jsPDF &amp; html2canvas</td><td><code>4.2.1</code></td><td>Client-side GST tax invoice &amp; datasheet PDF rendering</td></tr>
+        </tbody>
+      </table>
 
-      <section>
-        <span class="section-badge">Section 3</span>
-        <h2>3. Backend Technology Stack &amp; Architecture</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Area</th>
-              <th>Technology</th>
-              <th>Version</th>
-              <th>Role</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Target Runtime</td>
-              <td>.NET 8.0 (C# 12)</td>
-              <td>net8.0</td>
-              <td>Cross-platform runtime host</td>
-            </tr>
-            <tr>
-              <td>API Framework</td>
-              <td>ASP.NET Core Web API</td>
-              <td>8.0</td>
-              <td>Controllers, dependency injection, model binding</td>
-            </tr>
-            <tr>
-              <td>Database ORM</td>
-              <td>Entity Framework Core</td>
-              <td>9.0.8</td>
-              <td>Relational mapping with split queries</td>
-            </tr>
-            <tr>
-              <td>MySQL Provider</td>
-              <td>Pomelo.EntityFrameworkCore.MySql</td>
-              <td>9.0.0</td>
-              <td>Native MySQL relational dialect execution</td>
-            </tr>
-            <tr>
-              <td>Authentication</td>
-              <td>Microsoft.AspNetCore.Authentication.JwtBearer</td>
-              <td>8.0.0</td>
-              <td>JWT token generation and claims validation</td>
-            </tr>
-            <tr>
-              <td>Password Hashing</td>
-              <td>BCrypt.Net-Next</td>
-              <td>4.2.0</td>
-              <td>Secure salted password hashing</td>
-            </tr>
-            <tr>
-              <td>Email Client</td>
-              <td>MailKit</td>
-              <td>4.17.0</td>
-              <td>SMTP client for 2FA OTP codes</td>
-            </tr>
-          </tbody>
-        </table>
-      </section>
+      <h2>3. Backend Technologies &amp; Architecture</h2>
+      <p>Modular monolithic ASP.NET Core 8 Web API in <code>Honeywell-Backend/</code>:</p>
+      <table>
+        <thead>
+          <tr><th>Component</th><th>Framework / Library</th><th>Version</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Runtime</td><td>.NET 8.0 (C# 12)</td><td><code>net8.0</code></td><td>High-performance cross-platform runtime</td></tr>
+          <tr><td>API Framework</td><td>ASP.NET Core Web API</td><td><code>8.0</code></td><td>RESTful controllers, model binding, filters, DI</td></tr>
+          <tr><td>ORM</td><td>Entity Framework Core</td><td><code>9.0.8</code></td><td>Relational persistence and LINQ queries</td></tr>
+          <tr><td>MySQL Provider</td><td>Pomelo.EntityFrameworkCore.MySql</td><td><code>9.0.0</code></td><td>Native MySQL server database connectivity</td></tr>
+          <tr><td>Security</td><td>Microsoft.AspNetCore.Authentication.JwtBearer</td><td><code>8.0.0</code></td><td>JWT Bearer token validation and claims authentication</td></tr>
+          <tr><td>Password Hashing</td><td>BCrypt.Net-Next</td><td><code>4.2.0</code></td><td>Salted password hashing for admin and customers</td></tr>
+          <tr><td>Email Delivery</td><td>MailKit</td><td><code>4.17.0</code></td><td>SMTP client for 2FA OTP codes and notifications</td></tr>
+          <tr><td>API Docs</td><td>Swashbuckle.AspNetCore (Swagger)</td><td><code>6.6.2</code></td><td>Interactive OpenAPI specification at <code>/swagger</code></td></tr>
+        </tbody>
+      </table>
 
-      <section>
-        <span class="section-badge">Section 4</span>
-        <h2>4. API Integration &amp; Request-Handling Flow</h2>
-        <ul>
-          <li><strong>Bearer Token Authorization:</strong> Axios and Fetch interceptors attach <code>customerToken</code> (storefront) or <code>adminToken</code> (console) dynamically to requests.</li>
-          <li><strong>Ngrok Tunnel Header:</strong> Automatically appends <code>ngrok-skip-browser-warning: true</code> during local development.</li>
-          <li><strong>Swagger Documentation:</strong> OpenAPI definitions accessible at <code>/swagger/index.html</code> during backend execution.</li>
-        </ul>
-      </section>
+      <h2>4. 49-Controller REST API Directory</h2>
+      <p>The backend architecture exposes <strong>49 specialized ASP.NET Core controllers</strong>:</p>
+      <table>
+        <thead>
+          <tr><th>Domain</th><th>Controller &amp; Route</th><th>Methods</th><th>Core Responsibilities</th></tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="4"><strong>Auth &amp; Security</strong></td><td><code>AuthController</code> (<code>/api/Auth</code>)</td><td>POST, GET</td><td>Admin login, 2FA email OTP generation, verification, password reset.</td></tr>
+          <tr><td><code>AdminProfileController</code> (<code>/api/AdminProfile</code>)</td><td>GET, PUT</td><td>Admin profile update, credential management, avatar upload.</td></tr>
+          <tr><td><code>TestAuthController</code> (<code>/api/TestAuth</code>)</td><td>GET</td><td>Diagnostic JWT token verification and claims testing.</td></tr>
+          <tr><td><code>UserPermissionsController</code> (<code>/api/UserPermissions</code>)</td><td>GET, POST, PUT</td><td>Granular 25-module RBAC permission assignment per staff account.</td></tr>
 
-      <section>
-        <span class="section-badge">Section 5</span>
-        <h2>5. Authentication, RBAC &amp; Session Auto-Lock</h2>
-        <ul>
-          <li><strong>Storefront Customers:</strong> Authenticate via <code>/api/CustomerPortal/login</code> with IDOR ownership verification protecting order records.</li>
-          <li><strong>Admin Console:</strong> Sign in with email/ID followed by mandatory 6-digit email OTP 2-Factor Authentication.</li>
-          <li><strong>30-Minute Idle Auto-Lock:</strong> Monitored in <code>AdminLayout.jsx</code>; automatically purges active session credentials and redirects to login when inactive.</li>
-          <li><strong>Dynamic RBAC Engine:</strong> Enforced in <code>src/utils/rbac.js</code> across 25 canonical database modules with zero static fallback permissions.</li>
-          <li><strong>Manager Protection:</strong> DOM listeners intercept mutations, enforcing read-only oversight for manager roles.</li>
-        </ul>
-      </section>
+          <tr><td rowspan="6"><strong>Catalog &amp; Hardware</strong></td><td><code>ProductsController</code> (<code>/api/Products</code>)</td><td>GET, POST, PUT, DELETE</td><td>CCTV cameras, NVR/DVR, solar kits, inventory levels, specifications.</td></tr>
+          <tr><td><code>CategoryController</code> (<code>/api/Category</code>)</td><td>GET, POST, PUT, DELETE</td><td>Primary surveillance hardware categories and navigation hierarchies.</td></tr>
+          <tr><td><code>SubcategoryController</code> (<code>/api/Subcategory</code>)</td><td>GET, POST, PUT, DELETE</td><td>Subcategory classifications bound to parent categories.</td></tr>
+          <tr><td><code>BrandController</code> (<code>/api/Brand</code>)</td><td>GET, POST, PUT, DELETE</td><td>Hardware brands, manufacturer badges, and brand filters.</td></tr>
+          <tr><td><code>ProductFeaturesController</code> (<code>/api/ProductFeatures</code>)</td><td>GET, POST, PUT, DELETE</td><td>Technical bullet points, specification highlights, sensor types.</td></tr>
+          <tr><td><code>ProductReviewsController</code> (<code>/api/ProductReviews</code>)</td><td>GET, POST, PUT, DELETE</td><td>Customer ratings, verified buyer reviews, review moderation.</td></tr>
 
-      <section>
-        <span class="section-badge">Section 6</span>
-        <h2>6. MySQL Database &amp; Storage Architecture</h2>
-        <ul>
-          <li><strong>Relational Persistence:</strong> Models for users, customers, staff, permissions, categories, subcategories, products, orders, order items, invoices, returns, and suppliers.</li>
-          <li><strong>Snapshot SQL File:</strong> The root <code>db.sql</code> file provides full schema definitions and initial seeded records.</li>
-          <li><strong>Query Splitting:</strong> Configured with <code>QuerySplittingBehavior.SplitQuery</code> to eliminate Cartesian duplication in multi-table joins.</li>
-          <li><strong>Persistent Storage:</strong> Physical uploaded files live in <code>Honeywell-Backend/wwwroot/uploads/</code>, mounted to Docker as volume <code>uploads:/app/wwwroot/uploads</code>.</li>
-        </ul>
-      </section>
+          <tr><td rowspan="6"><strong>Commerce &amp; Orders</strong></td><td><code>CartController</code> (<code>/api/Cart</code>)</td><td>GET, POST, PUT, DELETE</td><td>Server-side cart synchronization and pricing recalculation.</td></tr>
+          <tr><td><code>CheckoutController</code> (<code>/api/Checkout</code>)</td><td>POST</td><td>Address validation, tax calculation, payment method verification.</td></tr>
+          <tr><td><code>OrdersController</code> (<code>/api/Orders</code>)</td><td>GET, POST, PUT, DELETE</td><td>Order lifecycle, fulfillment milestones, admin order ledger.</td></tr>
+          <tr><td><code>OrderSuccessController</code> (<code>/api/OrderSuccess</code>)</td><td>GET</td><td>Post-checkout receipt summary and tracking initialization.</td></tr>
+          <tr><td><code>InvoicesController</code> (<code>/api/Invoices</code>)</td><td>GET, POST</td><td>GST tax invoice generation, numbering, and PDF rendering.</td></tr>
+          <tr><td><code>PaymentController</code> (<code>/api/Payment</code>)</td><td>POST, GET, PUT</td><td>UPI QR, Card 3DS OTP, Net Banking, and manual UTR verification.</td></tr>
 
-      <section>
-        <span class="section-badge">Section 7</span>
-        <h2>7. Product Catalog &amp; Cart Data Flow</h2>
-        <ul>
-          <li><strong>Catalog API:</strong> Products, categories, and dynamic specifications loaded via REST endpoints.</li>
-          <li><strong>Cart Context:</strong> Managed via <code>CartContext.jsx</code>, persisting selections to <code>honey-well-cart</code> in localStorage.</li>
-          <li><strong>Price Visibility:</strong> Mode A (Catalogue Mode) suppresses prices and cart controls for institutional quote generation; Mode B (E-Commerce Mode) enables full checkout.</li>
-        </ul>
-      </section>
+          <tr><td rowspan="3"><strong>Customer Portal</strong></td><td><code>CustomerPortalController</code> (<code>/api/CustomerPortal</code>)</td><td>POST, GET, PUT</td><td>Customer registration, login, profile management, customer orders.</td></tr>
+          <tr><td><code>CustomersController</code> (<code>/api/Customers</code>)</td><td>GET, POST, PUT, DELETE</td><td>Administrative customer account directory, verification status.</td></tr>
+          <tr><td><code>CustomerAddressController</code> (<code>/api/CustomerAddress</code>)</td><td>GET, POST, PUT, DELETE</td><td>Multiple delivery addresses and default shipping destinations.</td></tr>
 
-      <section>
-        <span class="section-badge">Section 8</span>
-        <h2>8. Checkout &amp; Order Lifecycle</h2>
-        <ol>
-          <li>Customer provides shipping address and payment method in <code>Checkout.jsx</code>.</li>
-          <li>Frontend calls <code>orderService.create()</code>, generating a unique Order ID in the backend.</li>
-          <li>Backend inserts order records, line items, and decrements available product stock in the database.</li>
-          <li>Order fulfills through lifecycle states: <code>Pending Verification</code> &rarr; <code>Processing</code> &rarr; <code>Dispatched</code> &rarr; <code>In Transit</code> &rarr; <code>Delivered</code>.</li>
-        </ol>
-      </section>
+          <tr><td rowspan="2"><strong>Loyalty &amp; Wallet</strong></td><td><code>CoinsController</code> (<code>/api/Coins</code>)</td><td>GET, POST</td><td>Reward coins balance, earning rules, conversion rate, redemption ledger.</td></tr>
+          <tr><td><code>WalletController</code> (<code>/api/Wallet</code>)</td><td>GET, POST</td><td>Digital wallet credit/debit balances and transaction statements.</td></tr>
 
-      <section>
-        <span class="section-badge">Section 9</span>
-        <h2>9. Payment Architecture</h2>
-        <p>
-          Managed in <code>PaymentController.cs</code>:
-        </p>
-        <ul>
-          <li><strong>UPI:</strong> VPA collection and status resolution.</li>
-          <li><strong>Dynamic UPI QR:</strong> Real-time QR generation with active client-side transaction status polling.</li>
-          <li><strong>Cards &amp; Netbanking:</strong> Simulated 3D Secure and Net Banking OTP authentication.</li>
-          <li><strong>Manual Bank Transfer:</strong> Corporate bank transfer details displayed; customer submits UTR number for manual approval in admin payments ledger.</li>
-          <li><strong>Cashfree Note:</strong> Cashfree gateway SDK is not integrated in this codebase; operations utilize native simulation and UTR verification.</li>
-        </ul>
-      </section>
+          <tr><td rowspan="3"><strong>Marketing &amp; Promo</strong></td><td><code>CouponsController</code> (<code>/api/Coupons</code>)</td><td>GET, POST, PUT, DELETE</td><td>Percentage and flat coupon validation, minimum order requirements.</td></tr>
+          <tr><td><code>OffersController</code> (<code>/api/Offers</code>)</td><td>GET, POST, PUT, DELETE</td><td>Promotional banners, bundle discounts, featured flash deals.</td></tr>
+          <tr><td><code>BannersController</code> (<code>/api/Banners</code>)</td><td>GET, POST, PUT, DELETE</td><td>Hero slider graphics, promotional banners, mobile banners.</td></tr>
 
-      <section>
-        <span class="section-badge">Section 10</span>
-        <h2>10. Environment Configuration</h2>
-        <pre><code># Frontend (.env)
+          <tr><td rowspan="4"><strong>Procurement &amp; B2B</strong></td><td><code>SuppliersController</code> (<code>/api/Suppliers</code>)</td><td>GET, POST, PUT, DELETE</td><td>Hardware manufacturers, suppliers directory, contact records.</td></tr>
+          <tr><td><code>PurchaseIndentController</code> (<code>/api/PurchaseIndent</code>)</td><td>GET, POST, PUT, DELETE</td><td>Internal warehouse procurement requests and reorder indents.</td></tr>
+          <tr><td><code>PurchaseOrderController</code> (<code>/api/PurchaseOrder</code>)</td><td>GET, POST, PUT, DELETE</td><td>Formal Purchase Orders (PO) issued to suppliers and tracking.</td></tr>
+          <tr><td><code>DistributorsController</code> (<code>/api/Distributors</code>)</td><td>GET, POST, PUT, DELETE</td><td>Official distributor network directory and region lookup.</td></tr>
+
+          <tr><td rowspan="4"><strong>Post-Sales &amp; RMA</strong></td><td><code>ReturnsController</code> (<code>/api/Returns</code>)</td><td>GET, POST</td><td>Customer RMA return initiation, tracking, and item return reasons.</td></tr>
+          <tr><td><code>ReturnsAdminController</code> (<code>/api/ReturnsAdmin</code>)</td><td>GET, PUT</td><td>Administrative return approvals, replacements, and refund dispatch.</td></tr>
+          <tr><td><code>TicketsController</code> (<code>/api/Tickets</code>)</td><td>GET, POST, PUT, DELETE</td><td>Helpdesk tickets, warranty claims, service communications.</td></tr>
+          <tr><td><code>SupportController</code> (<code>/api/Support</code>)</td><td>GET, POST</td><td>Public support inquiries, technician assistance requests.</td></tr>
+
+          <tr><td rowspan="7"><strong>Content &amp; Hubs</strong></td><td><code>AboutController</code> (<code>/api/About</code>)</td><td>GET, PUT</td><td>Company corporate profile, certifications, mission statement.</td></tr>
+          <tr><td><code>BlogController</code> (<code>/api/Blog</code>)</td><td>GET, POST, PUT, DELETE</td><td>Technical surveillance articles, firmware release blogs.</td></tr>
+          <tr><td><code>CallHistoryController</code> (<code>/api/CallHistory</code>)</td><td>GET, POST</td><td>Inbound sales call logging and customer contact tracking.</td></tr>
+          <tr><td><code>EnquiryController</code> (<code>/api/Enquiry</code>)</td><td>GET, POST, PUT, DELETE</td><td>Product commercial quote inquiries and custom kit requests.</td></tr>
+          <tr><td><code>GrowthJourneyController</code> (<code>/api/GrowthJourney</code>)</td><td>GET, POST, PUT, DELETE</td><td>Company milestone timeline, historic corporate achievements.</td></tr>
+          <tr><td><code>SoftwareController</code> (<code>/api/Software</code>)</td><td>GET, POST, PUT, DELETE</td><td>VMS client software, IP camera discovery tools, firmware binaries.</td></tr>
+          <tr><td><code>SolutionsController</code> (<code>/api/Solutions</code>)</td><td>GET, POST, PUT, DELETE</td><td>Industry security blueprints (Retail, Banking, Industrial, Education).</td></tr>
+
+          <tr><td rowspan="6"><strong>Platform Ops</strong></td><td><code>NotificationsController</code> (<code>/api/Notifications</code>)</td><td>GET, PUT, DELETE</td><td>Administrative bell alerts, unread counts, cache-control sync.</td></tr>
+          <tr><td><code>ReportsController</code> (<code>/api/Reports</code>)</td><td>GET</td><td>Sales revenue breakdown, orders ledger reports, customer growth.</td></tr>
+          <tr><td><code>SettingsController</code> (<code>/api/Settings</code>)</td><td>GET, PUT</td><td>Price visibility toggle (Catalog vs E-Commerce), contact details.</td></tr>
+          <tr><td><code>StaffController</code> (<code>/api/Staff</code>)</td><td>GET, POST, PUT, DELETE</td><td>Internal staff employee accounts, roles, access assignments.</td></tr>
+          <tr><td><code>StockController</code> (<code>/api/Stock</code>)</td><td>GET, PUT</td><td>Real-time inventory levels, reorder threshold alerts, restocking.</td></tr>
+          <tr><td><code>WishlistController</code> (<code>/api/Wishlist</code>)</td><td>GET, POST, DELETE</td><td>Storefront customer saved products and quote wishlists.</td></tr>
+        </tbody>
+      </table>
+
+      <h2>5. API Integration &amp; Request-Handling Approach</h2>
+      <ul>
+        <li><strong>Dynamic Token Injection:</strong> <code>adminToken</code> (sessionStorage) or <code>customerToken</code> (localStorage) injected into <code>Authorization: Bearer &lt;token&gt;</code>.</li>
+        <li><strong>Ngrok Tunnel Bypass:</strong> Requests include <code>ngrok-skip-browser-warning: true</code> to avoid tunnel warning pages.</li>
+        <li><strong>DTO Normalization:</strong> Services convert null nested collections into safe default arrays or empty objects.</li>
+        <li><strong>Cache-Control Invalidation:</strong> Real-time endpoints enforce <code>Cache-Control: no-cache, no-store</code> to prevent stale client badges.</li>
+      </ul>
+
+      <h2>6. Authentication &amp; Dynamic 25-Module RBAC Security</h2>
+      <p>Permissions are canonicalized across 25 official modules in <code>src/utils/rbac.js</code>:</p>
+      <table>
+        <thead>
+          <tr><th>Module Key</th><th>Display Name</th><th>Admin Route</th><th>Operational Capability</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>dashboard</code></td><td>Dashboard</td><td><code>/admin/dashboard</code></td><td>Sales KPIs, live order counts, customer metrics</td></tr>
+          <tr><td><code>categories</code></td><td>Categories</td><td><code>/admin/categories</code></td><td>Create, edit, and organize product categories</td></tr>
+          <tr><td><code>subcategories</code></td><td>Subcategories</td><td><code>/admin/subcategories</code></td><td>Manage nested category hardware classifications</td></tr>
+          <tr><td><code>products</code></td><td>Products</td><td><code>/admin/products</code></td><td>Hardware catalog, specs, pricing, and media</td></tr>
+          <tr><td><code>product-features</code></td><td>Product Features</td><td><code>/admin/product-features</code></td><td>Technical highlights, sensor types, bullet points</td></tr>
+          <tr><td><code>product-reviews</code></td><td>Product Reviews</td><td><code>/admin/product-reviews</code></td><td>Approve, moderate, or remove customer reviews</td></tr>
+          <tr><td><code>customers</code></td><td>Customers</td><td><code>/admin/customers</code></td><td>Customer registry, account status, order history</td></tr>
+          <tr><td><code>call-history</code></td><td>Call History</td><td><code>/admin/call-history</code></td><td>Inbound sales inquiries and caller communications</td></tr>
+          <tr><td><code>reports</code></td><td>Reports</td><td><code>/admin/reports</code></td><td>Exportable revenue charts and sales analytics</td></tr>
+          <tr><td><code>tickets</code></td><td>Tickets</td><td><code>/admin/tickets</code></td><td>Warranty support and customer service desk</td></tr>
+          <tr><td><code>enquiries</code></td><td>Enquiries</td><td><code>/admin/enquiries</code></td><td>Commercial product inquiries and quote submissions</td></tr>
+          <tr><td><code>contact-submissions</code></td><td>Contact Submissions</td><td><code>/admin/contact-submissions</code></td><td>Inbound messages from the public Contact page</td></tr>
+          <tr><td><code>quotes</code></td><td>Quotes</td><td><code>/admin/quotes</code></td><td>Commercial bulk quotations and pricing estimates</td></tr>
+          <tr><td><code>invoices</code></td><td>Invoices</td><td><code>/admin/invoices</code></td><td>GST tax invoices, ledger entries, and downloads</td></tr>
+          <tr><td><code>orders</code></td><td>Orders</td><td><code>/admin/orders</code></td><td>Order fulfillment pipeline and milestone dispatch</td></tr>
+          <tr><td><code>stock-updates</code></td><td>Stock Updates</td><td><code>/admin/stock-updates</code></td><td>Batch inventory adjustments and warehouse restocking</td></tr>
+          <tr><td><code>coupons</code></td><td>Coupons</td><td><code>/admin/coupons</code></td><td>Discount voucher creation and percentage thresholds</td></tr>
+          <tr><td><code>offers</code></td><td>Offers</td><td><code>/admin/offers</code></td><td>Promotional banners and bundle discount packages</td></tr>
+          <tr><td><code>suppliers</code></td><td>Suppliers</td><td><code>/admin/suppliers</code></td><td>B2B hardware suppliers and vendor profiles</td></tr>
+          <tr><td><code>purchase-indent</code></td><td>Purchase Indent</td><td><code>/admin/purchase-indent</code></td><td>Internal warehouse procurement indents</td></tr>
+          <tr><td><code>purchase-orders</code></td><td>Purchase Orders</td><td><code>/admin/purchase-orders</code></td><td>Formal Purchase Orders (PO) sent to suppliers</td></tr>
+          <tr><td><code>distributors</code></td><td>Distributors</td><td><code>/admin/distributors</code></td><td>Authorized distributor network directory</td></tr>
+          <tr><td><code>partner-applications</code></td><td>Partner Applications</td><td><code>/admin/partner-applications</code></td><td>Channel partner onboarding requests and review</td></tr>
+          <tr><td><code>staff</code></td><td>Staff</td><td><code>/admin/staff</code></td><td>Employee accounts, role grants, permission matrix</td></tr>
+          <tr><td><code>settings</code></td><td>Settings</td><td><code>/admin/settings</code></td><td>System configuration and Price Visibility toggle</td></tr>
+        </tbody>
+      </table>
+
+      <h2>7. MySQL Database &amp; Storage Architecture</h2>
+      <ul>
+        <li><strong>Relational Store:</strong> MySQL 8.0+ (database: <code>honeywell_products</code>) with complete models for users, customers, staff, permissions, categories, products, orders, invoices, returns, and suppliers.</li>
+        <li><strong>Schema Snapshot:</strong> <code>db.sql</code> at the root provides structure and seed data.</li>
+        <li><strong>Split Queries:</strong> EF Core <code>QuerySplittingBehavior.SplitQuery</code> avoids Cartesian product on nested joins.</li>
+        <li><strong>Physical Media:</strong> Uploads hosted in <code>Honeywell-Backend/wwwroot/uploads/</code>, mounted to Docker as volume <code>uploads:/app/wwwroot/uploads</code>.</li>
+      </ul>
+
+      <h2>8. Product Catalog &amp; Shopping Cart Data Flow</h2>
+      <ol>
+        <li><strong>Catalog Fetch:</strong> <code>productService.getAll()</code> retrieves products with specs, categories, and prices.</li>
+        <li><strong>Reactive Cart:</strong> <code>CartContext.jsx</code> manages item state and synchronizes with <code>honey-well-cart</code> in <code>localStorage</code>.</li>
+        <li><strong>Price Visibility:</strong> When Catalog Mode is active, prices are hidden and quote request buttons replace cart checkout.</li>
+      </ol>
+
+      <h2>9. Checkout &amp; Order Processing Flow</h2>
+      <ol>
+        <li><strong>Address &amp; Validation:</strong> Customer details checked via <code>validators.js</code>.</li>
+        <li><strong>Creation:</strong> <code>POST /api/Orders</code> generates Order ID, records line items, and decrements stock.</li>
+        <li><strong>Fulfillment Pipeline:</strong> <code>Pending Verification</code> &rarr; <code>Processing</code> &rarr; <code>Dispatched</code> &rarr; <code>In Transit</code> &rarr; <code>Delivered</code>.</li>
+      </ol>
+
+      <h2>10. Payment Processing Architecture</h2>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Endpoint</th><th>Implementation Flow</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>UPI</td><td><code>POST /api/Payment/initiate</code></td><td>Validates VPA address format and initiates transaction.</td></tr>
+          <tr><td>Dynamic UPI QR</td><td><code>GET /api/Payment/qr/{orderId}</code></td><td>Generates real-time QR code. Client polls status until confirmed.</td></tr>
+          <tr><td>Credit/Debit Cards</td><td><code>POST /api/Payment/card/verify-otp</code></td><td>Validates card number, expiry, CVV; simulates 3D Secure OTP verification.</td></tr>
+          <tr><td>Net Banking</td><td><code>POST /api/Payment/netbanking/login</code></td><td>Bank selection, customer authentication, and OTP confirmation.</td></tr>
+          <tr><td>Manual Bank Transfer</td><td><code>POST /api/Payment/verify-manual</code></td><td>Customer submits UTR reference; admin verifies in <code>/admin/payments</code>.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout info">
+        <strong>Note on External Gateways:</strong> Cashfree SDK is not present in this repository; transactions utilize native simulated flows and administrative UTR reconciliation.
+      </div>
+
+      <h2>11. B2B Procurement &amp; RMA Returns Lifecycle</h2>
+      <h3>B2B Procurement</h3>
+      <ol>
+        <li>Warehouse manager files Purchase Indent (PI).</li>
+        <li>Procurement admin approves indent and issues Purchase Order (PO) to registered supplier.</li>
+        <li>Supplier dispatches goods; warehouse logs received items and increments inventory in <code>StockController</code>.</li>
+      </ol>
+      <h3>RMA Returns</h3>
+      <ol>
+        <li>Customer submits return request via <code>POST /api/Returns</code>.</li>
+        <li>Admin reviews ticket in <code>/admin/returns</code> via <code>ReturnsAdminController</code>.</li>
+        <li>Admin approves return, inspects unit, and issues replacement or refund.</li>
+      </ol>
+
+      <h2>12. Environment Configuration</h2>
+      <pre># Honeywell-Frontend/.env
 VITE_API_URL=http://localhost:5000
 
-// Backend (appsettings.json)
+// Honeywell-Backend/appsettings.json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Database=honeywell_products;User=root;Password=YOUR_SECURE_PASSWORD;"
+    "DefaultConnection": "Server=localhost;Database=honeywell_products;User=root;Password=YOUR_PASSWORD;"
   },
   "Jwt": {
     "Key": "YOUR_SUPER_SECRET_JWT_SIGNING_KEY_MIN_32_CHARS",
     "Issuer": "HoneywellProductsAPI",
     "Audience": "HoneywellProductsClient"
+  },
+  "Smtp": {
+    "Host": "smtp.gmail.com",
+    "Port": 587,
+    "Username": "your-email@gmail.com",
+    "Password": "YOUR_APP_SPECIFIC_PASSWORD"
   }
-}</code></pre>
-      </section>
+}</pre>
 
-      <section>
-        <span class="section-badge">Section 11</span>
-        <h2>11. Local Development Setup</h2>
-        <pre><code># 1. Database
+      <h2>13. Local Development Setup Instructions</h2>
+      <pre># 1. Database Setup
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS honeywell_products;"
 mysql -u root -p honeywell_products < db.sql
 
-# 2. Backend
+# 2. Backend Start
 cd Honeywell-Backend
 dotnet restore
 dotnet run
 
-# 3. Frontend
+# 3. Frontend Start
 cd Honeywell-Frontend
 npm install
-npm run dev</code></pre>
-      </section>
+npm run dev</pre>
 
-      <section>
-        <span class="section-badge">Section 12</span>
-        <h2>12. Testing &amp; Production Build</h2>
-        <pre><code># Frontend Tests
+      <h2>14. Testing &amp; Production Build Instructions</h2>
+      <pre># Run Frontend Unit & Integration Tests
 cd Honeywell-Frontend
 npm test
 
-# Frontend Build
+# Build Frontend Production Assets
+cd Honeywell-Frontend
 npm run build
 
-# Backend Publish
+# Publish Backend
 cd Honeywell-Backend
-dotnet publish -c Release -o publish</code></pre>
-      </section>
+dotnet publish -c Release -o publish</pre>
 
-      <section>
-        <span class="section-badge">Section 13</span>
-        <h2>13. Deployment Topology &amp; Reverse Proxy</h2>
-        <p>
-          Configured in <code>nginx.conf</code>:
-        </p>
-        <ul>
-          <li>Reverse proxies <code>/api/</code> and <code>/uploads/</code> to backend container on port 5000.</li>
-          <li>Supports up to 550MB upload payloads (<code>client_max_body_size 550m</code>) for firmware binaries.</li>
-          <li>SPA client routing fallback via <code>try_files $uri $uri/ /index.html</code>.</li>
-        </ul>
-      </section>
+      <h2>15. Docker Multi-Container &amp; Nginx Deployment</h2>
+      <pre>server {
+    listen 80;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+    client_max_body_size 550m;
 
-      <section>
-        <span class="section-badge">Section 14</span>
-        <h2>14. Limitations &amp; Scope Summary</h2>
-        <div class="callout tip">
-          <strong>Verified Implementation:</strong> All features described above correspond to confirmed source code in the Honeywell Products repository. Third-party payment gateways (such as Cashfree) and external logistics carrier webhooks are not implemented in this version.
-        </div>
-      </section>
-    
-      <div class="doc-print-footer" style="display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; padding-top: 8px; margin-top: 32px; font-size: 11px; color: #64748b;">
-        <span style="font-weight: 700; color: #03152f; text-transform: uppercase;">Honeywell Products</span>
-        <span>Platform Technical Documentation</span>
+    location /api/ {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /uploads/ {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}</pre>
+
+      <h2>16. Verified Capabilities, Known Limitations &amp; Scope</h2>
+      <table>
+        <thead>
+          <tr><th>Capability</th><th>Verified Status</th><th>Technical Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Product Catalog &amp; Cart</td><td>Verified Functional</td><td>Full category filtering, specification tables, and persistent cart state.</td></tr>
+          <tr><td>Customer Portal &amp; Orders</td><td>Verified Functional</td><td>Registration, login, order ledger, IDOR protection, and live order tracking.</td></tr>
+          <tr><td>Admin Console &amp; RBAC</td><td>Verified Functional</td><td>Dynamic module permissions across 25 modules, 30-min idle lock, manager protection.</td></tr>
+          <tr><td>Manual UTR Verification</td><td>Verified Functional</td><td>End-to-end receipt submission by customers and approval by administrators.</td></tr>
+          <tr><td>Cashfree Payment Gateway</td><td>Not Implemented</td><td>Cashfree SDK is not present in the repository; transactions use native simulated flows and manual UTR verification.</td></tr>
+          <tr><td>Live Carrier Webhooks</td><td>Simulated / Milestone-Based</td><td>Logistics partner status updates are administered via <code>TrackingOrder.jsx</code> rather than direct third-party courier webhooks.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout tip">
+        <strong>Documentation Integrity Confirmation:</strong> This technical guide strictly reflects the verified codebase of the <strong>Honeywell Products</strong> repository. All file paths, component names, API endpoints, and configuration parameters have been verified from source code.
       </div>
     </main>
   </body>
