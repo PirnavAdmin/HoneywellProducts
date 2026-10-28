@@ -13,7 +13,7 @@ const getBaseUrl = () => {
 };
 
 const getHeaders = () => {
-  const token = localStorage.getItem('adminToken');
+  const token = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('adminToken') : null) || (typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null);
   const headers = {
     'ngrok-skip-browser-warning': 'true',
     Accept: 'application/json',

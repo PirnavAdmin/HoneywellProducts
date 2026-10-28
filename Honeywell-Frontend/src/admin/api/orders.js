@@ -1,10 +1,11 @@
+import { getAdminToken } from '../../utils/rbac';
 import { orderService } from '../../services/orderService';
 import { getApiDomain } from '../../utils/apiConfig';
 
 const BASE_URL = `${getApiDomain()}/api/orders`;
 
 const getAdminHeaders = () => {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null;
+  const token = getAdminToken();
   return {
     'ngrok-skip-browser-warning': 'true',
     'Accept': 'application/json',
@@ -12,8 +13,6 @@ const getAdminHeaders = () => {
     ...(token ? { 'Authorization': `Bearer ${token}` } : {})
   };
 };
-
-const DEFAULT_HEADERS = getAdminHeaders();
 
 /** GET /api/orders — fetch all orders */
 export const getOrders = async () => {

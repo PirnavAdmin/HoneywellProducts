@@ -28,11 +28,18 @@ export async function apiRequest(path, options = {}) {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       Pragma: 'no-cache',
       Expires: '0',
-      ...(typeof localStorage !== 'undefined' && localStorage.getItem('adminToken')
-        ? { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
-        : (typeof localStorage !== 'undefined' && localStorage.getItem('customerToken')
-          ? { 'Authorization': `Bearer ${localStorage.getItem('customerToken')}` }
-          : {})),
+      ...(function getAuthHeaders() {
+        const adminTok = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('adminToken') : null) ||
+                         (typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null);
+        if (adminTok) {
+          return { 'Authorization': `Bearer ${adminTok}` };
+        }
+        const custTok = typeof localStorage !== 'undefined' ? localStorage.getItem('customerToken') : null;
+        if (custTok) {
+          return { 'Authorization': `Bearer ${custTok}` };
+        }
+        return {};
+      })(),
       ...options.headers,
     },
   });
@@ -65,10 +72,14 @@ export async function apiRequest(path, options = {}) {
     }
 
     if (response.status === 401 && typeof window !== 'undefined') {
-      sessionStorage.removeItem('isAdmin');
-      sessionStorage.removeItem('adminToken');
-      localStorage.removeItem('isAdmin');
-      localStorage.removeItem('adminToken');
+      // Only clear credentials if an explicit auth renewal endpoint returned 401
+      const isAuthRenewal = cleanPath.toLowerCase().startsWith('/api/auth/refresh');
+      if (isAuthRenewal) {
+        sessionStorage.removeItem('isAdmin');
+        sessionStorage.removeItem('adminToken');
+        localStorage.removeItem('isAdmin');
+        localStorage.removeItem('adminToken');
+      }
     }
 
     throw new Error(

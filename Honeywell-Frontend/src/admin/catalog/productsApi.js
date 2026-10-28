@@ -21,7 +21,7 @@ const api = axios.create({
 
 // Intercept requests to inject Auth token and bust browser caching on GET requests
 api.interceptors.request.use((config) => {
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null;
+  const token = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('adminToken') : null) || (typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null);
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

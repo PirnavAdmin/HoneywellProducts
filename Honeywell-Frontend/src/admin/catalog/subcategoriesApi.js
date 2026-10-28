@@ -18,7 +18,7 @@ const DEFAULT_HEADERS = {
 };
 
 const getHeaders = () => {
-  const token = localStorage.getItem('adminToken');
+  const token = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('adminToken') : null) || (typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null);
   const headers = { ...DEFAULT_HEADERS };
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;

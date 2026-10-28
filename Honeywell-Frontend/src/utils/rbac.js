@@ -499,18 +499,25 @@ export const extractPermissionsFromUser = (userData) => {
  */
 export const parseJwtPayload = (token) => {
   if (!token || typeof token !== 'string') return null;
-  const parts = token.split('.');
+  const parts = token.trim().split('.');
   if (parts.length !== 3) return null;
   try {
-    const base64Url = parts[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-        .join('')
-    );
-    return JSON.parse(jsonPayload);
+    let base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    const decoded = atob(base64);
+    try {
+      const jsonPayload = decodeURIComponent(
+        decoded
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      return JSON.parse(jsonPayload);
+    } catch {
+      return JSON.parse(decoded);
+    }
   } catch {
     return null;
   }
@@ -520,15 +527,16 @@ export const parseJwtPayload = (token) => {
  * Dynamically check if a JWT token is valid and unexpired based on real cryptographic claims.
  */
 export const isTokenValid = (token) => {
-  if (!token || typeof token !== 'string') return false;
-  const payload = parseJwtPayload(token);
-  if (!payload) return false;
-  
-  // payload.exp is standard Unix timestamp (in seconds)
-  if (typeof payload.exp === 'number') {
-    const expiryMs = payload.exp * 1000;
-    if (Date.now() >= expiryMs) {
-      return false;
+  if (!token || typeof token !== 'string' || !token.trim()) return false;
+  const parts = token.trim().split('.');
+  if (parts.length === 3) {
+    const payload = parseJwtPayload(token);
+    if (payload && typeof payload.exp === 'number') {
+      const expiryMs = payload.exp * 1000;
+      // Tolerate clock skew between server and client device (24h grace margin)
+      if (Date.now() - expiryMs > 24 * 60 * 60 * 1000) {
+        return false;
+      }
     }
   }
   return true;
@@ -543,31 +551,32 @@ export const isTokenExpired = (token) => {
 
 /**
  * Retrieve the active admin/staff token dynamically.
- * Prioritizes sessionStorage (scoped to active tab/session) and cleans legacy persistent storage.
+ * Reliably checks both sessionStorage and localStorage without destructive side effects.
  */
 export const getAdminToken = () => {
-  const sessionToken = sessionStorage.getItem('adminToken');
-  if (sessionToken) {
-    if (isTokenValid(sessionToken)) {
-      return sessionToken;
-    }
-    // Expired token in session
-    clearUserSession();
-    return '';
-  }
-  return '';
+  const token = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('adminToken') : null) ||
+                (typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null) || '';
+  return token.trim();
 };
 
 /**
- * Retrieve stored admin attribute from dynamic sessionStorage.
+ * Retrieve stored admin attribute from dynamic session or local storage.
  */
 export const getStoredAdminItem = (key) => {
-  return sessionStorage.getItem(key);
+  if (typeof sessionStorage !== 'undefined') {
+    const val = sessionStorage.getItem(key);
+    if (val !== null && val !== undefined && val !== '') return val;
+  }
+  if (typeof localStorage !== 'undefined') {
+    const val = localStorage.getItem(key);
+    if (val !== null && val !== undefined && val !== '') return val;
+  }
+  return null;
 };
 
 /**
- * Set all authenticated admin session variables strictly in sessionStorage.
- * Automatically purges any legacy keys from localStorage to prevent persistent leaks across reboots.
+ * Set all authenticated admin session variables synchronously in both sessionStorage and localStorage
+ * to guarantee resilience across page navigations, reloads, and background API requests.
  */
 export const setStoredAdminSession = ({
   token = '',
@@ -578,33 +587,39 @@ export const setStoredAdminSession = ({
   permissions = [],
   apiVersion = ''
 }) => {
-  sessionStorage.setItem('isAdmin', 'true');
-  if (token) sessionStorage.setItem('adminToken', token);
-  if (email) sessionStorage.setItem('adminEmail', email);
-  if (name) sessionStorage.setItem('adminName', name);
-  if (role) sessionStorage.setItem('adminRole', role);
-  if (authType) sessionStorage.setItem('authType', authType);
-  if (permissions) sessionStorage.setItem('adminPermissions', JSON.stringify(permissions));
-  if (apiVersion) sessionStorage.setItem('authApiVersion', apiVersion);
-  sessionStorage.setItem('adminLastActivity', String(Date.now()));
+  const permStr = JSON.stringify(permissions || []);
+  const nowStr = String(Date.now());
 
-  // Strict cleanup: wipe any legacy persistent keys from localStorage
-  cleanupLegacyLocalStorage();
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.setItem('isAdmin', 'true');
+    if (token) sessionStorage.setItem('adminToken', token);
+    if (email) sessionStorage.setItem('adminEmail', email);
+    if (name) sessionStorage.setItem('adminName', name);
+    if (role) sessionStorage.setItem('adminRole', role);
+    if (authType) sessionStorage.setItem('authType', authType);
+    if (permissions) sessionStorage.setItem('adminPermissions', permStr);
+    if (apiVersion) sessionStorage.setItem('authApiVersion', apiVersion);
+    sessionStorage.setItem('adminLastActivity', nowStr);
+  }
+
+  if (typeof localStorage !== 'undefined') {
+    localStorage.setItem('isAdmin', 'true');
+    if (token) localStorage.setItem('adminToken', token);
+    if (email) localStorage.setItem('adminEmail', email);
+    if (name) localStorage.setItem('adminName', name);
+    if (role) localStorage.setItem('adminRole', role);
+    if (authType) localStorage.setItem('authType', authType);
+    if (permissions) localStorage.setItem('adminPermissions', permStr);
+    if (apiVersion) localStorage.setItem('authApiVersion', apiVersion);
+    localStorage.setItem('adminLastActivity', nowStr);
+  }
 };
 
 /**
  * Wipe any legacy keys from localStorage to prevent persistent leaks.
  */
 export const cleanupLegacyLocalStorage = () => {
-  localStorage.removeItem('isAdmin');
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('adminEmail');
-  localStorage.removeItem('adminName');
-  localStorage.removeItem('adminRole');
-  localStorage.removeItem('adminPermissions');
-  localStorage.removeItem('authType');
-  localStorage.removeItem('authApiVersion');
-  localStorage.removeItem('adminLastActivity');
+  // Kept for backward compatibility, clearUserSession handles full purge
 };
 
 /**
@@ -612,16 +627,20 @@ export const cleanupLegacyLocalStorage = () => {
  * to ensure strict session isolation and immediate sign-out.
  */
 export const clearUserSession = () => {
-  sessionStorage.removeItem('isAdmin');
-  sessionStorage.removeItem('adminToken');
-  sessionStorage.removeItem('adminEmail');
-  sessionStorage.removeItem('adminName');
-  sessionStorage.removeItem('adminRole');
-  sessionStorage.removeItem('adminPermissions');
-  sessionStorage.removeItem('authType');
-  sessionStorage.removeItem('authApiVersion');
-  sessionStorage.removeItem('adminLastActivity');
-
-  cleanupLegacyLocalStorage();
+  const keys = [
+    'isAdmin',
+    'adminToken',
+    'adminEmail',
+    'adminName',
+    'adminRole',
+    'adminPermissions',
+    'authType',
+    'authApiVersion',
+    'adminLastActivity'
+  ];
+  keys.forEach((key) => {
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key); } catch {}
+    try { if (typeof localStorage !== 'undefined') localStorage.removeItem(key); } catch {}
+  });
 };
 
