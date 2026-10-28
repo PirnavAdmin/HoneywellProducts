@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Honeywell Products Platform — Technical Documentation</title>
+    <style>
+      :root {
+        --text: #1e293b;
+        --heading: #03152f;
+        --brand: #1268a5;
+        --brand-dark: #0a4d7c;
+        --bg-subtle: #f8fafc;
+        --card-bg: #ffffff;
+        --border: #e2e8f0;
+        --accent-blue: #edf5fd;
+        --code-bg: #0f172a;
+        --code-text: #e2e8f0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.65;
+        color: var(--text);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg-subtle);
+      }
+      header {
+        background: linear-gradient(135deg, #03152f 0%, #0a2d54 60%, #1268a5 100%);
+        color: #ffffff;
+        padding: 48px 32px;
+      }
+      .header-inner {
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      .badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+      }
+      .header-desc {
+        font-size: 16px;
+        color: #cbd5e1;
+        margin: 0 0 20px;
+        max-width: 800px;
+      }
+      .meta-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        font-size: 13px;
+        color: #94a3b8;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        padding-top: 14px;
+      }
+      .print-btn {
+        margin-top: 18px;
+        display: inline-block;
+        background: #ffffff;
+        color: #03152f;
+        padding: 8px 18px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+      }
+      .print-btn:hover { background: #f1f5f9; }
+      main {
+        max-width: 1000px;
+        margin: 36px auto 60px;
+        padding: 44px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+      }
+      h2 {
+        color: var(--heading);
+        margin-top: 44px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--border);
+        font-size: 22px;
+        letter-spacing: -0.01em;
+      }
+      h3 {
+        color: #0f273d;
+        margin-top: 24px;
+        font-size: 17px;
+      }
+      p, li {
+        font-size: 14.5px;
+        color: #334155;
+      }
+      .section-badge {
+        display: inline-block;
+        background: var(--accent-blue);
+        color: var(--brand);
+        border: 1px solid #cfe2f7;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-bottom: 6px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 13.5px;
+      }
+      th, td {
+        border: 1px solid var(--border);
+        padding: 10px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f1f5fb;
+        font-weight: 700;
+        color: #1e293b;
+      }
+      pre {
+        background: var(--code-bg);
+        color: var(--code-text);
+        padding: 16px 20px;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-family: Consolas, Monaco, 'Courier New', monospace;
+        font-size: 13px;
+        line-height: 1.6;
+        margin: 16px 0;
+      }
+      code {
+        font-family: Consolas, Monaco, 'Courier New', monospace;
+        font-size: 13px;
+        background: #f1f5f9;
+        color: #0f172a;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      pre code {
+        background: transparent;
+        color: inherit;
+        padding: 0;
+      }
+      .callout {
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 20px 0;
+      }
+      .callout.info {
+        background: #f0f7ff;
+        border-left: 4px solid var(--brand);
+      }
+      .callout.tip {
+        background: #f0fdf4;
+        border-left: 4px solid #16a34a;
+      }
+      @media print {
+        body { background: #ffffff; }
+        header { background: #ffffff !important; color: #000000 !important; border-bottom: 2px solid #000000; padding: 20px 0; }
+        .print-btn { display: none !important; }
+        main { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+        h1 { color: #000000 !important; font-size: 24px !important; }
+        h2 { border-bottom: 1px solid #000000 !important; page-break-after: avoid; }
+        pre { background: #f8fafc !important; color: #000000 !important; border: 1px solid #cccccc; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <div class="badge">Technical Documentation</div>
+        <h1>Honeywell Products Platform Technical Guide</h1>
+        <p class="header-desc">
+          Architecture overview, technology stacks, REST API endpoints, authentication models, database persistence, and containerized deployment topology.
+        </p>
+        <div class="meta-bar">
+          <span><strong>Stack:</strong> React 19 + ASP.NET Core 8 + MySQL</span>
+          <span><strong>Repository:</strong> Honeywell Products Monorepo</span>
+        </div>
+        <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <span class="section-badge">Section 1</span>
+        <h2>1. Project Overview &amp; Monorepo Architecture</h2>
+        <p>
+          The Honeywell Products platform is a full-stack e-commerce and administrative operations system for smart surveillance hardware, solar cameras, NVRs, and perimeter security equipment.
+        </p>
+        <pre><code>HoneywellProducts-main/
+|-- Honeywell-Backend/     ASP.NET Core 8 Web API (.NET 8.0, C#, EF Core, Controllers, DTOs)
+|-- Honeywell-Frontend/    React 19 SPA, Vite 8, React Router DOM v7, Tailwind CSS, Lucide
+|-- docker-compose.yml     Multi-container production stack (frontend, backend, uploads volume)
+|-- nginx.conf             Nginx edge reverse proxy (/api/ and /uploads/, 550MB payload)
+|-- db.sql                 MySQL database schema snapshot (200KB+)
+`-- .env                   Docker container environment configuration</code></pre>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 2</span>
+        <h2>2. Frontend Technology Stack &amp; Structure</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Framework / Library</th>
+              <th>Version</th>
+              <th>Role in Platform</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>UI Library</td>
+              <td>React (with JSX)</td>
+              <td>19.2.0</td>
+              <td>Component tree, reactive state, functional hooks</td>
+            </tr>
+            <tr>
+              <td>Build Tool</td>
+              <td>Vite</td>
+              <td>8.2.2</td>
+              <td>Fast dev server and optimized Rollup asset bundler</td>
+            </tr>
+            <tr>
+              <td>Client Routing</td>
+              <td>React Router DOM</td>
+              <td>7.1.1</td>
+              <td>Declarative routing with nested layouts and lazy loading</td>
+            </tr>
+            <tr>
+              <td>Styling</td>
+              <td>Tailwind CSS &amp; CSS Variables</td>
+              <td>3.4.17</td>
+              <td>Design tokens (<code>--red</code>, <code>--ink</code>, <code>--surface</code>)</td>
+            </tr>
+            <tr>
+              <td>Icons</td>
+              <td>Lucide React</td>
+              <td>0.468.0</td>
+              <td>Consistent SVG icons across customer and console views</td>
+            </tr>
+            <tr>
+              <td>HTTP Client</td>
+              <td>Axios &amp; Native Fetch API</td>
+              <td>1.19.0</td>
+              <td>RESTful API client with dynamic Bearer authentication</td>
+            </tr>
+            <tr>
+              <td>PDF Invoicing</td>
+              <td>jsPDF &amp; html2canvas</td>
+              <td>4.2.1</td>
+              <td>Client-side GST tax invoice &amp; datasheet generation</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 3</span>
+        <h2>3. Backend Technology Stack &amp; Architecture</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Technology</th>
+              <th>Version</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Target Runtime</td>
+              <td>.NET 8.0 (C# 12)</td>
+              <td>net8.0</td>
+              <td>Cross-platform runtime host</td>
+            </tr>
+            <tr>
+              <td>API Framework</td>
+              <td>ASP.NET Core Web API</td>
+              <td>8.0</td>
+              <td>Controllers, dependency injection, model binding</td>
+            </tr>
+            <tr>
+              <td>Database ORM</td>
+              <td>Entity Framework Core</td>
+              <td>9.0.8</td>
+              <td>Relational mapping with split queries</td>
+            </tr>
+            <tr>
+              <td>MySQL Provider</td>
+              <td>Pomelo.EntityFrameworkCore.MySql</td>
+              <td>9.0.0</td>
+              <td>Native MySQL relational dialect execution</td>
+            </tr>
+            <tr>
+              <td>Authentication</td>
+              <td>Microsoft.AspNetCore.Authentication.JwtBearer</td>
+              <td>8.0.0</td>
+              <td>JWT token generation and claims validation</td>
+            </tr>
+            <tr>
+              <td>Password Hashing</td>
+              <td>BCrypt.Net-Next</td>
+              <td>4.2.0</td>
+              <td>Secure salted password hashing</td>
+            </tr>
+            <tr>
+              <td>Email Client</td>
+              <td>MailKit</td>
+              <td>4.17.0</td>
+              <td>SMTP client for 2FA OTP codes</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 4</span>
+        <h2>4. API Integration &amp; Request-Handling Flow</h2>
+        <ul>
+          <li><strong>Bearer Token Authorization:</strong> Axios and Fetch interceptors attach <code>customerToken</code> (storefront) or <code>adminToken</code> (console) dynamically to requests.</li>
+          <li><strong>Ngrok Tunnel Header:</strong> Automatically appends <code>ngrok-skip-browser-warning: true</code> during local development.</li>
+          <li><strong>Swagger Documentation:</strong> OpenAPI definitions accessible at <code>/swagger/index.html</code> during backend execution.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 5</span>
+        <h2>5. Authentication, RBAC &amp; Session Auto-Lock</h2>
+        <ul>
+          <li><strong>Storefront Customers:</strong> Authenticate via <code>/api/CustomerPortal/login</code> with IDOR ownership verification protecting order records.</li>
+          <li><strong>Admin Console:</strong> Sign in with email/ID followed by mandatory 6-digit email OTP 2-Factor Authentication.</li>
+          <li><strong>30-Minute Idle Auto-Lock:</strong> Monitored in <code>AdminLayout.jsx</code>; automatically purges active session credentials and redirects to login when inactive.</li>
+          <li><strong>Dynamic RBAC Engine:</strong> Enforced in <code>src/utils/rbac.js</code> across 25 canonical database modules with zero static fallback permissions.</li>
+          <li><strong>Manager Protection:</strong> DOM listeners intercept mutations, enforcing read-only oversight for manager roles.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 6</span>
+        <h2>6. MySQL Database &amp; Storage Architecture</h2>
+        <ul>
+          <li><strong>Relational Persistence:</strong> Models for users, customers, staff, permissions, categories, subcategories, products, orders, order items, invoices, returns, and suppliers.</li>
+          <li><strong>Snapshot SQL File:</strong> The root <code>db.sql</code> file provides full schema definitions and initial seeded records.</li>
+          <li><strong>Query Splitting:</strong> Configured with <code>QuerySplittingBehavior.SplitQuery</code> to eliminate Cartesian duplication in multi-table joins.</li>
+          <li><strong>Persistent Storage:</strong> Physical uploaded files live in <code>Honeywell-Backend/wwwroot/uploads/</code>, mounted to Docker as volume <code>uploads:/app/wwwroot/uploads</code>.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 7</span>
+        <h2>7. Product Catalog &amp; Cart Data Flow</h2>
+        <ul>
+          <li><strong>Catalog API:</strong> Products, categories, and dynamic specifications loaded via REST endpoints.</li>
+          <li><strong>Cart Context:</strong> Managed via <code>CartContext.jsx</code>, persisting selections to <code>honey-well-cart</code> in localStorage.</li>
+          <li><strong>Price Visibility:</strong> Mode A (Catalogue Mode) suppresses prices and cart controls for institutional quote generation; Mode B (E-Commerce Mode) enables full checkout.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 8</span>
+        <h2>8. Checkout &amp; Order Lifecycle</h2>
+        <ol>
+          <li>Customer provides shipping address and payment method in <code>Checkout.jsx</code>.</li>
+          <li>Frontend calls <code>orderService.create()</code>, generating a unique Order ID in the backend.</li>
+          <li>Backend inserts order records, line items, and decrements available product stock in the database.</li>
+          <li>Order fulfills through lifecycle states: <code>Pending Verification</code> &rarr; <code>Processing</code> &rarr; <code>Dispatched</code> &rarr; <code>In Transit</code> &rarr; <code>Delivered</code>.</li>
+        </ol>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 9</span>
+        <h2>9. Payment Architecture</h2>
+        <p>
+          Managed in <code>PaymentController.cs</code>:
+        </p>
+        <ul>
+          <li><strong>UPI:</strong> VPA collection and status resolution.</li>
+          <li><strong>Dynamic UPI QR:</strong> Real-time QR generation with active client-side transaction status polling.</li>
+          <li><strong>Cards &amp; Netbanking:</strong> Simulated 3D Secure and Net Banking OTP authentication.</li>
+          <li><strong>Manual Bank Transfer:</strong> Corporate bank transfer details displayed; customer submits UTR number for manual approval in admin payments ledger.</li>
+          <li><strong>Cashfree Note:</strong> Cashfree gateway SDK is not integrated in this codebase; operations utilize native simulation and UTR verification.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 10</span>
+        <h2>10. Environment Configuration</h2>
+        <pre><code># Frontend (.env)
+VITE_API_URL=http://localhost:5000
+
+// Backend (appsettings.json)
+{
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost;Database=honeywell_products;User=root;Password=YOUR_SECURE_PASSWORD;"
+  },
+  "Jwt": {
+    "Key": "YOUR_SUPER_SECRET_JWT_SIGNING_KEY_MIN_32_CHARS",
+    "Issuer": "HoneywellProductsAPI",
+    "Audience": "HoneywellProductsClient"
+  }
+}</code></pre>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 11</span>
+        <h2>11. Local Development Setup</h2>
+        <pre><code># 1. Database
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS honeywell_products;"
+mysql -u root -p honeywell_products < db.sql
+
+# 2. Backend
+cd Honeywell-Backend
+dotnet restore
+dotnet run
+
+# 3. Frontend
+cd Honeywell-Frontend
+npm install
+npm run dev</code></pre>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 12</span>
+        <h2>12. Testing &amp; Production Build</h2>
+        <pre><code># Frontend Tests
+cd Honeywell-Frontend
+npm test
+
+# Frontend Build
+npm run build
+
+# Backend Publish
+cd Honeywell-Backend
+dotnet publish -c Release -o publish</code></pre>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 13</span>
+        <h2>13. Deployment Topology &amp; Reverse Proxy</h2>
+        <p>
+          Configured in <code>nginx.conf</code>:
+        </p>
+        <ul>
+          <li>Reverse proxies <code>/api/</code> and <code>/uploads/</code> to backend container on port 5000.</li>
+          <li>Supports up to 550MB upload payloads (<code>client_max_body_size 550m</code>) for firmware binaries.</li>
+          <li>SPA client routing fallback via <code>try_files $uri $uri/ /index.html</code>.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="section-badge">Section 14</span>
+        <h2>14. Limitations &amp; Scope Summary</h2>
+        <div class="callout tip">
+          <strong>Verified Implementation:</strong> All features described above correspond to confirmed source code in the Honeywell Products repository. Third-party payment gateways (such as Cashfree) and external logistics carrier webhooks are not implemented in this version.
+        </div>
+      </section>
+    
+      <div class="doc-print-footer" style="display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; padding-top: 8px; margin-top: 32px; font-size: 11px; color: #64748b;">
+        <span style="font-weight: 700; color: #03152f; text-transform: uppercase;">Honeywell Products</span>
+        <span>Platform Technical Documentation</span>
+      </div>
+    </main>
+  </body>
+</html>

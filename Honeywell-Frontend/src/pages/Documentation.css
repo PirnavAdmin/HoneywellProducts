@@ -1,0 +1,892 @@
+/* =========================================================================
+   Documentation & Tech Doc Pages Stylesheet
+   ========================================================================= */
+
+.doc-wrapper {
+  background: #f8fafc;
+  min-height: 100vh;
+  padding-bottom: 80px;
+}
+
+/* On-screen Web Banner */
+.doc-header-banner {
+  background: linear-gradient(135deg, #03152f 0%, #0a2d54 60%, #1268a5 100%);
+  color: #ffffff;
+  padding: 60px 0 50px;
+  position: relative;
+  overflow: hidden;
+}
+
+.doc-header-banner::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(18, 104, 165, 0.25) 0%, rgba(3, 21, 47, 0) 70%);
+  pointer-events: none;
+}
+
+.doc-header-banner .container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 clamp(20px, 4vw, 40px);
+  position: relative;
+  z-index: 2;
+}
+
+.doc-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #e2e8f0;
+  margin-bottom: 16px;
+}
+
+.doc-header-title {
+  font: 800 clamp(30px, 3.8vw, 46px)/1.2 'Manrope', 'DM Sans', sans-serif;
+  letter-spacing: -0.03em;
+  margin: 0 0 14px 0;
+  max-width: 860px;
+}
+
+.doc-header-desc {
+  font-size: clamp(15px, 1.2vw, 17px);
+  line-height: 1.6;
+  color: #cbd5e1;
+  max-width: 760px;
+  margin: 0 0 24px 0;
+}
+
+.doc-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+  font-size: 13px;
+  color: #94a3b8;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.doc-header-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doc-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.doc-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.doc-action-btn.btn-white {
+  background: #ffffff;
+  color: #03152f;
+  border: 1px solid #ffffff;
+}
+
+.doc-action-btn.btn-white:hover {
+  background: #f1f5f9;
+  transform: translateY(-1px);
+}
+
+.doc-action-btn.btn-outline {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.doc-action-btn.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Document Grid Layout */
+.doc-main-container {
+  max-width: 1360px;
+  margin: 36px auto 0;
+  padding: 0 clamp(20px, 4vw, 40px);
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 40px;
+  align-items: start;
+}
+
+/* Sidebar TOC */
+.doc-sidebar {
+  position: sticky;
+  top: 96px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.04);
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.doc-sidebar-title {
+  font: 700 13px/1 'Manrope', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.doc-nav-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-nav-item a {
+  display: block;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  color: #475569;
+  font-weight: 500;
+  line-height: 1.4;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.doc-nav-item a:hover {
+  background: #f1f5f9;
+  color: #1268a5;
+  padding-left: 16px;
+}
+
+.doc-nav-item.active a {
+  background: #edf5fd;
+  color: #1268a5;
+  font-weight: 700;
+  border-left: 3px solid #1268a5;
+}
+
+/* Main Content Area */
+.doc-article-box {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: clamp(28px, 4vw, 56px);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+  color: #1e293b;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+/* Formal Print-Only Header (hidden on screen) */
+.doc-print-header {
+  display: none;
+}
+
+.doc-section {
+  padding-bottom: 44px;
+  margin-bottom: 44px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.doc-section:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.doc-section-header {
+  margin-bottom: 16px;
+}
+
+.doc-section-number {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1268a5;
+  background: #edf5fd;
+  border: 1px solid #cfe2f7;
+  padding: 3px 10px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.doc-section-heading {
+  font: 700 clamp(22px, 2.4vw, 28px)/1.3 'Manrope', 'DM Sans', sans-serif;
+  color: #03152f;
+  margin: 4px 0 0 0;
+  letter-spacing: -0.02em;
+}
+
+.doc-subheading {
+  font: 700 18px/1.35 'Manrope', sans-serif;
+  color: #0f273d;
+  margin: 28px 0 12px 0;
+}
+
+.doc-p {
+  color: #475569;
+  margin: 0 0 16px 0;
+  line-height: 1.7;
+}
+
+/* Callout Boxes */
+.doc-callout {
+  border-radius: 10px;
+  padding: 18px 22px;
+  margin: 24px 0;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.doc-callout.info {
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  color: #1e3a8a;
+}
+
+.doc-callout.tip {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.doc-callout.warning {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+}
+
+.doc-callout svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.doc-callout-text h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.doc-callout-text p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+/* Steps List */
+.doc-steps-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0;
+  counter-reset: doc-step-counter;
+}
+
+.doc-step-item {
+  position: relative;
+  padding-left: 48px;
+  margin-bottom: 24px;
+  counter-increment: doc-step-counter;
+}
+
+.doc-step-item::before {
+  content: counter(doc-step-counter);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  background: #1268a5;
+  color: #ffffff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.doc-step-item h4 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.doc-step-item p {
+  margin: 0;
+  color: #475569;
+  font-size: 14.5px;
+}
+
+/* Tables */
+.doc-table-container {
+  overflow-x: auto;
+  margin: 24px 0;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+
+.doc-table th {
+  background: #f8fafc;
+  padding: 12px 18px;
+  font-weight: 700;
+  color: #334155;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.doc-table td {
+  padding: 12px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+}
+
+.doc-table tr:last-child td {
+  border-bottom: none;
+}
+
+.doc-table tr:hover td {
+  background: #fafafa;
+}
+
+/* Code Blocks */
+.doc-code-block {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 10px;
+  margin: 20px 0;
+  overflow: hidden;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13.5px;
+  border: 1px solid #334155;
+}
+
+.doc-code-header {
+  background: #1e293b;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #94a3b8;
+  border-bottom: 1px solid #334155;
+}
+
+.doc-code-copy-btn {
+  background: transparent;
+  border: 1px solid #475569;
+  color: #cbd5e1;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doc-code-copy-btn:hover {
+  background: #334155;
+  color: #ffffff;
+}
+
+.doc-code-block pre {
+  margin: 0;
+  padding: 16px 20px;
+  overflow-x: auto;
+  line-height: 1.6;
+}
+
+.doc-inline-code {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  border: 1px solid #e2e8f0;
+}
+
+/* Responsive adjustments for Screen */
+@media (max-width: 960px) {
+  .doc-main-container {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .doc-sidebar {
+    position: static;
+    max-height: none;
+    margin-bottom: 20px;
+  }
+}
+
+/* =========================================================================
+   PROFESSIONAL PRINT & PDF STYLESHEET
+   ========================================================================= */
+@page {
+  size: A4 portrait;
+  margin: 16mm 14mm 16mm 14mm;
+
+  @bottom-left {
+    content: "Honeywell Products";
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    font-size: 8.5pt;
+    font-weight: 700;
+    color: #03152f;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  @bottom-right {
+    content: counter(page);
+    font-family: 'DM Sans', -apple-system, sans-serif;
+    font-size: 8.5pt;
+    font-weight: 600;
+    color: #475569;
+  }
+}
+
+@media print {
+  /* 1. Reset Global Document Canvas */
+  html, body {
+    visibility: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+  }
+
+  /* 2. Completely Eradicate Non-Printable Chrome & Floating Widgets */
+  header.header,
+  div.topbar,
+  div.demo-strip,
+  footer.footer,
+  aside.doc-sidebar,
+  .doc-header-banner,
+  .doc-actions-bar,
+  .doc-code-copy-btn,
+  .whatsapp-button,
+  .back-to-top,
+  .floating-chat,
+  .chat-panel,
+  .chatbot,
+  .toast,
+  .filter-scrim,
+  .enquiry-modal-overlay,
+  .bulk-quote-modal-overlay {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* 3. Ensure Content Tree is Authoritatively Visible */
+  .site-shell,
+  .site-shell main,
+  .doc-wrapper,
+  .doc-wrapper *,
+  .doc-main-container,
+  .doc-article-box,
+  .doc-article-box * {
+    visibility: visible !important;
+  }
+
+  .doc-wrapper {
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+  }
+
+  .doc-main-container {
+    display: block !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .doc-article-box {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  /* 4. Formal Executive Print Header */
+  .doc-print-header {
+    display: block !important;
+    margin-bottom: 24px !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .doc-print-header-top {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 20px !important;
+  }
+
+  .doc-print-branding {
+    border-left: 4px solid #1268a5 !important;
+    padding-left: 14px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-print-brand {
+    font: 800 22px/1.1 'Manrope', 'DM Sans', -apple-system, sans-serif !important;
+    color: #03152f !important;
+    letter-spacing: -0.01em !important;
+    text-transform: uppercase !important;
+    white-space: nowrap !important;
+  }
+
+  
+  .doc-print-logo-img {
+    height: 44px !important;
+    width: auto !important;
+    max-width: 220px !important;
+    object-fit: contain !important;
+    display: block !important;
+    margin-bottom: 4px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-print-tagline {
+    font: 700 8.5pt/1.3 'DM Sans', sans-serif !important;
+    color: #1268a5 !important;
+    letter-spacing: 0.14em !important;
+    text-transform: uppercase !important;
+    margin-top: 5px !important;
+    white-space: nowrap !important;
+  }
+
+  .doc-print-meta-card {
+    background: #f8fafc !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 6px !important;
+    padding: 8px 16px !important;
+    display: grid !important;
+    grid-template-columns: auto auto !important;
+    column-gap: 24px !important;
+    row-gap: 5px !important;
+    font-size: 8.5pt !important;
+    line-height: 1.35 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-print-meta-item {
+    white-space: nowrap !important;
+    color: #475569 !important;
+  }
+
+  .doc-print-meta-item strong {
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    margin-right: 4px !important;
+    text-transform: uppercase !important;
+    font-size: 7.5pt !important;
+    letter-spacing: 0.05em !important;
+  }
+
+  .doc-print-divider {
+    height: 3px !important;
+    background: #1268a5 !important;
+    margin-top: 14px !important;
+    margin-bottom: 22px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* 5. Section Grouping & Page Break Control */
+  .doc-section {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding-bottom: 22px !important;
+    margin-bottom: 26px !important;
+  }
+
+  .doc-section-header {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    margin-bottom: 12px !important;
+  }
+
+  .doc-section-number {
+    display: inline-block !important;
+    font-size: 8.5pt !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    background: #edf5fd !important;
+    color: #1268a5 !important;
+    border: 1px solid #cfe2f7 !important;
+    padding: 2px 7px !important;
+    border-radius: 4px !important;
+    margin-bottom: 6px !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-section-heading {
+    font: 700 17pt/1.25 'Manrope', 'DM Sans', sans-serif !important;
+    color: #03152f !important;
+    margin: 2px 0 0 0 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .doc-subheading {
+    font: 700 12.5pt/1.3 'Manrope', sans-serif !important;
+    color: #0f273d !important;
+    margin: 16px 0 8px 0 !important;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .doc-p {
+    font-size: 10pt !important;
+    line-height: 1.55 !important;
+    color: #334155 !important;
+    margin: 0 0 12px 0 !important;
+  }
+
+  /* 6. Tables in Print (Allow clean flow across pages, avoid empty gaps) */
+  .doc-table-container {
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    margin: 10px 0 14px 0 !important;
+    overflow: visible !important;
+    overflow-x: visible !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  .doc-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    font-size: 8.5pt !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  .doc-table thead {
+    display: table-header-group !important;
+  }
+
+  .doc-table tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .doc-table th {
+    background: #f1f5f9 !important;
+    color: #03152f !important;
+    font-weight: 700 !important;
+    padding: 7px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-table td {
+    padding: 7px 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1e293b !important;
+    line-height: 1.4 !important;
+  }
+
+  /* 7. Callouts & Step Items */
+  .doc-callout {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    padding: 10px 14px !important;
+    margin: 14px 0 !important;
+    border-radius: 6px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-callout.info {
+    background: #f0f7ff !important;
+    border: 1px solid #bfdbfe !important;
+    border-left: 4px solid #1268a5 !important;
+  }
+
+  .doc-callout.tip {
+    background: #f0fdf4 !important;
+    border: 1px solid #bbf7d0 !important;
+    border-left: 4px solid #16a34a !important;
+  }
+
+  .doc-callout-text h4 {
+    font-size: 10.5pt !important;
+    margin: 0 0 2px 0 !important;
+  }
+
+  .doc-callout-text p {
+    font-size: 9.5pt !important;
+    margin: 0 !important;
+  }
+
+  .doc-steps-list {
+    margin: 14px 0 !important;
+  }
+
+  .doc-step-item {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 12px !important;
+    padding-left: 34px !important;
+  }
+
+  .doc-step-item::before {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 9pt !important;
+    background: #1268a5 !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-step-item h4 {
+    font-size: 10.5pt !important;
+    margin: 0 0 2px 0 !important;
+  }
+
+  .doc-step-item p {
+    font-size: 9.5pt !important;
+    margin: 0 !important;
+  }
+
+  /* 8. Code Blocks */
+  .doc-code-block {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 4px !important;
+    margin: 12px 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-code-header {
+    background: #e2e8f0 !important;
+    color: #334155 !important;
+    font-size: 8.5pt !important;
+    padding: 4px 10px !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .doc-code-block pre {
+    padding: 8px 12px !important;
+    font-size: 8.5pt !important;
+    line-height: 1.45 !important;
+    color: #0f172a !important;
+  }
+}
+
+
+  /* Print Running Footer */
+  .doc-print-footer {
+    display: none;
+  }
+
+  @media print {
+    .doc-print-footer {
+      display: flex !important;
+      position: fixed !important;
+      bottom: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      font-size: 8pt !important;
+      color: #475569 !important;
+      border-top: 1px solid #cbd5e1 !important;
+      padding: 6px 0 0 0 !important;
+      background: #ffffff !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      z-index: 9999 !important;
+    }
+
+    .doc-print-footer-brand {
+      font-weight: 700 !important;
+      color: #03152f !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.06em !important;
+    }
+
+    .doc-print-footer-title {
+      color: #64748b !important;
+    }
+
+    .doc-print-footer-page::after {
+      content: counter(page);
+      font-weight: 600 !important;
+      color: #475569 !important;
+    }
+  }

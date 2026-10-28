@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ArrowRight, Building2, Headphones, Handshake, Mail, MapPin, Phone, ShoppingBag, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Building2, Headphones, Handshake, Mail, MapPin, Phone, ShoppingBag, AlertCircle, BookOpen, FileCode } from 'lucide-react';
 import PageHero from '../components/common/PageHero';
 import { siteConfig } from '../config/siteConfig';
 import { contactService } from '../services/contactService';
@@ -248,6 +249,30 @@ export default function Contact() {
 </div>
 </section>
 <section className="contact-paths"><div className="container">{contacts.map(({ icon: Icon, ...item }) => <article key={item.title}><Icon /><h3>{item.title}</h3><p>{item.text}</p></article>)}</div></section>
+
+      {/* Need Help Section */}
+      <section className="contact-help-section" aria-label="Documentation and Technical Assistance">
+        <div className="container">
+          <div className="contact-help-card">
+            <div className="contact-help-content">
+              <h3 className="contact-help-title">Need Help?</h3>
+              <p className="contact-help-text">
+                Check our documentation or technical guide if you need assistance using or understanding our website.
+              </p>
+            </div>
+            <div className="contact-help-actions">
+              <Link to="/documentation" className="contact-help-btn btn-doc" aria-label="Customer Documentation">
+                <BookOpen size={18} />
+                <span>Documentation</span>
+              </Link>
+              <Link to="/tech-doc" className="contact-help-btn btn-tech" aria-label="Technical Documentation">
+                <FileCode size={18} />
+                <span>Tech Doc</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
 </>
 
   );

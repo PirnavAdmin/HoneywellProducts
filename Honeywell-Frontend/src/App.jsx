@@ -42,6 +42,8 @@ const Videos = lazy(() => import('./pages/Videos'));
 const LegalPage = lazy(() => import('./pages/LegalPage'));
 const BlogDetails = lazy(() => import('./pages/BlogDetails'));
 const BlogsListing = lazy(() => import('./pages/BlogsListing'));
+const Documentation = lazy(() => import('./pages/Documentation'));
+const TechDoc = lazy(() => import('./pages/TechDoc'));
 
 // Existing Admin Pages
 const AdminLayout = lazy(() => import('./admin/AdminLayout'));
@@ -271,6 +273,11 @@ export default function App() {
               <Route path="terms-and-conditions" element={<LegalPage />} />
               <Route path="cookie-policy" element={<LegalPage />} />
               <Route path="warranty-policy" element={<LegalPage />} />
+
+              {/* Documentation & Technical Documentation Routes */}
+              <Route path="documentation" element={<Documentation />} />
+              <Route path="tech-doc" element={<TechDoc />} />
+              <Route path="docs" element={<Navigate to="/documentation" replace />} />
 
               <Route path="*" element={<NotFound />} />
             </Route>

@@ -2337,6 +2337,124 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .contact-paths svg { color: #ee686e; }
 .contact-paths h3 { font: 600 19px 'Manrope'; margin-top: 24px; }
 .contact-paths p { color: #aeb1b6; line-height: 1.6; font-size: 13px; }
+
+/* Contact Page — Need Help Section */
+.contact-help-section {
+  padding: 56px 0;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+}
+
+.contact-help-card {
+  background: #edf5fd;
+  border: 1px solid #cfe2f7;
+  border-radius: 14px;
+  padding: 36px 44px;
+  box-shadow: 0 4px 18px -2px rgba(18, 104, 165, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 36px;
+}
+
+.contact-help-content {
+  max-width: 680px;
+}
+
+.contact-help-title {
+  margin: 0 0 8px 0;
+  font: 700 24px/1.25 'Manrope', 'DM Sans', sans-serif;
+  color: #03152f;
+  letter-spacing: -0.02em;
+}
+
+.contact-help-text {
+  margin: 0;
+  color: #475569;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.contact-help-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.contact-help-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 48px;
+  padding: 11px 24px;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.contact-help-btn.btn-doc {
+  background: var(--red, #1268a5);
+  color: #ffffff;
+  border: 1px solid var(--red, #1268a5);
+}
+
+.contact-help-btn.btn-doc:hover {
+  background: var(--red-dark, #0a4d7c);
+  border-color: var(--red-dark, #0a4d7c);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(18, 104, 165, 0.28);
+}
+
+.contact-help-btn.btn-tech {
+  background: #ffffff;
+  color: #03152f;
+  border: 1px solid #bfdbfe;
+}
+
+.contact-help-btn.btn-tech:hover {
+  background: #f0f7ff;
+  border-color: var(--red, #1268a5);
+  color: var(--red, #1268a5);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(18, 104, 165, 0.12);
+}
+
+@media (max-width: 860px) {
+  .contact-help-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 28px 24px;
+    gap: 20px;
+  }
+
+  .contact-help-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .contact-help-btn {
+    flex: 1 1 auto;
+    min-width: 160px;
+  }
+}
+
+@media (max-width: 480px) {
+  .contact-help-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .contact-help-btn {
+    width: 100%;
+  }
+}
 .cart-page { padding-block: 36px 80px; }
 .cart-layout { display: grid; grid-template-columns: 1fr 390px; gap: 36px; }
 .cart-items { display: flex; flex-direction: column; gap: 14px; }
@@ -3229,8 +3347,26 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 
 /* Print CSS */
 @media print {
-  body * {
+  body:has(.partner-terms-modal-container) * {
     visibility: hidden !important;
+  }
+
+  /* Globally eliminate floating buttons and widgets in print */
+  .floating-chat,
+  .whatsapp-button,
+  .back-to-top,
+  .chat-panel,
+  .chatbot,
+  .toast {
+    display: none !important;
+    visibility: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    width: 0 !important;
+    height: 0 !important;
+    box-shadow: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
   .partner-terms-modal-overlay {
     position: static !important;

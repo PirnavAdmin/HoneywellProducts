@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Honeywell Products Customer User Guide</title>
+    <style>
+      :root {
+        --text: #1e293b;
+        --heading: #03152f;
+        --brand: #1268a5;
+        --brand-dark: #0a4d7c;
+        --bg-subtle: #f8fafc;
+        --card-bg: #ffffff;
+        --border: #e2e8f0;
+        --accent-blue: #edf5fd;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        line-height: 1.65;
+        color: var(--text);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg-subtle);
+      }
+      header {
+        background: linear-gradient(135deg, #03152f 0%, #0a2d54 60%, #1268a5 100%);
+        color: #ffffff;
+        padding: 48px 32px;
+      }
+      .header-inner {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+      .badge {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        padding: 4px 12px;
+        border-radius: 9999px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1.25;
+      }
+      .header-desc {
+        font-size: 16px;
+        color: #cbd5e1;
+        margin: 0 0 20px;
+        max-width: 760px;
+      }
+      .meta-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        font-size: 13px;
+        color: #94a3b8;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        padding-top: 14px;
+      }
+      .print-btn {
+        margin-top: 18px;
+        display: inline-block;
+        background: #ffffff;
+        color: #03152f;
+        padding: 8px 18px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        border: none;
+      }
+      .print-btn:hover { background: #f1f5f9; }
+      main {
+        max-width: 960px;
+        margin: 36px auto 60px;
+        padding: 40px;
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+      }
+      h2 {
+        color: var(--heading);
+        margin-top: 40px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--border);
+        font-size: 22px;
+        letter-spacing: -0.01em;
+      }
+      h3 {
+        color: #0f273d;
+        margin-top: 24px;
+        font-size: 17px;
+      }
+      p, li {
+        font-size: 15px;
+        color: #334155;
+      }
+      .topic-badge {
+        display: inline-block;
+        background: var(--accent-blue);
+        color: var(--brand);
+        border: 1px solid #cfe2f7;
+        font-size: 11px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 3px 8px;
+        border-radius: 4px;
+        margin-bottom: 6px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        font-size: 14px;
+      }
+      th, td {
+        border: 1px solid var(--border);
+        padding: 10px 14px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f1f5fb;
+        font-weight: 700;
+        color: #1e293b;
+      }
+      .callout {
+        border-radius: 8px;
+        padding: 16px 20px;
+        margin: 20px 0;
+      }
+      .callout.info {
+        background: #f0f7ff;
+        border-left: 4px solid var(--brand);
+      }
+      .callout.tip {
+        background: #f0fdf4;
+        border-left: 4px solid #16a34a;
+      }
+      ol, ul {
+        padding-left: 24px;
+      }
+      li {
+        margin: 8px 0;
+      }
+      @media print {
+        body { background: #ffffff; }
+        header { background: #ffffff !important; color: #000000 !important; border-bottom: 2px solid #000000; padding: 20px 0; }
+        .print-btn { display: none !important; }
+        main { border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+        h1 { color: #000000 !important; font-size: 24px !important; }
+        h2 { border-bottom: 1px solid #000000 !important; page-break-after: avoid; }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="header-inner">
+        <img src="/honeywell-logo.png" alt="Honeywell Products" style="max-height: 48px; background: #ffffff; padding: 6px 14px; border-radius: 6px; margin-bottom: 14px; display: block;" />
+        <div class="badge">Customer User Guide</div>
+        <h1>Honeywell Products Customer User Guide</h1>
+        <p class="header-desc">
+          Official walkthrough for exploring CCTV and surveillance solutions, customizing security equipment, completing orders, and tracking shipments on Honeywell Products.
+        </p>
+        <div class="meta-bar">
+          <span><strong>Platform:</strong> Honeywell Products</span>
+          <span><strong>Audience:</strong> Public Customers, Dealers &amp; Integrators</span>
+        </div>
+        <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <span class="topic-badge">Topic 1</span>
+        <h2>1. Introduction to the Honeywell Products Platform</h2>
+        <p>
+          Honeywell Products provides professional surveillance and security solutions, including Network IP Cameras, Turbo HD Cameras, PTZ Cameras, Solar CCTV kits, DVRs, NVRs, surveillance storage, and networking hardware.
+        </p>
+        <p>
+          The online storefront enables individual property owners, commercial businesses, system integrators, and institutional partners to browse hardware specifications, verify availability, request quotes, and purchase security hardware online.
+        </p>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 2</span>
+        <h2>2. Browsing Products and Categories</h2>
+        <p>
+          Browse equipment via the header <strong>Products</strong> mega-menu or by visiting the catalogue directly:
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Hardware Types</th>
+              <th>Typical Applications</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Network Cameras</strong></td>
+              <td>IP Cameras, Bullet Cameras, Dome Cameras</td>
+              <td>Office buildings, warehouses, high-definition IP installations</td>
+            </tr>
+            <tr>
+              <td><strong>Turbo HD Cameras</strong></td>
+              <td>Analog HD, ColorVu Series, Value Series</td>
+              <td>Upgrading analog coaxial setups with full color night vision</td>
+            </tr>
+            <tr>
+              <td><strong>PTZ Cameras</strong></td>
+              <td>Speed Domes, Optical Zoom, Auto-Tracking</td>
+              <td>Large open perimeters, parking complexes, industrial perimeters</td>
+            </tr>
+            <tr>
+              <td><strong>Solar Security</strong></td>
+              <td>Solar Panels, 4G Solar Kits, Battery Systems</td>
+              <td>Remote farms, highway infrastructure, off-grid job sites</td>
+            </tr>
+            <tr>
+              <td><strong>Recording Systems</strong></td>
+              <td>NVRs, DVRs, Hybrid Recorders</td>
+              <td>Centralized continuous 24/7 recording and video storage</td>
+            </tr>
+            <tr>
+              <td><strong>Storage &amp; Accessories</strong></td>
+              <td>Surveillance HDDs, PoE Switches, Brackets</td>
+              <td>Power-over-Ethernet network switching and data retention</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 3</span>
+        <h2>3. Searching and Using Smart Filters</h2>
+        <ol>
+          <li><strong>Keyword Search:</strong> Type product names, SKU codes (e.g. <code>HM-CCTV-PTZ</code>), or specs (<em>4MP</em>, <em>PoE</em>, <em>Solar</em>) in the search bar.</li>
+          <li><strong>Dynamic Filter Drawer:</strong> Filter by Category, Subcategory, Installation (<em>Indoor</em> / <em>Outdoor</em>), Connectivity (<em>PoE</em>, <em>Wi-Fi</em>, <em>4G</em>), and Features (<em>Night Vision</em>, <em>AI Detection</em>, <em>IP67 Weatherproof</em>).</li>
+          <li><strong>Sorting:</strong> Sort by <em>Featured</em>, <em>Price: Low to High</em>, <em>Price: High to Low</em>, or <em>Customer Rating</em>.</li>
+          <li><strong>Reset:</strong> Click <strong>Reset all</strong> at any time to restore the entire catalog.</li>
+        </ol>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 4</span>
+        <h2>4. Product Details and Availability</h2>
+        <p>
+          Each product detail page (<code>/products/:id</code>) provides:
+        </p>
+        <ul>
+          <li><strong>High-Resolution Photo Gallery:</strong> Multi-angle view with interactive zoom.</li>
+          <li><strong>Pricing &amp; GST:</strong> Clear display of Selling Price (₹), MRP, discount percentage, and GST breakdown.</li>
+          <li><strong>Stock Status:</strong> Real-time inventory indicator (<code>In Stock</code> or <code>Out of Stock</code>).</li>
+          <li><strong>Tabbed Specifications:</strong> Resolution, sensor type, focal length, IR range, power supply, and enclosure rating.</li>
+          <li><strong>Datasheet Downloads:</strong> Direct access to official technical specification sheets (PDF).</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 5</span>
+        <h2>5. Managing Your Shopping Cart</h2>
+        <p>
+          Click <strong>Add to Cart</strong> on any product card or detail page. In your shopping cart (<code>/cart</code>):
+        </p>
+        <ul>
+          <li>Use <code>+</code> or <code>-</code> to adjust product quantities in real time.</li>
+          <li>Click the trash icon to remove any unwanted item.</li>
+          <li>Review the subtotal, calculated GST tax, and total payable amount.</li>
+          <li>Cart contents remain preserved in your browser across sessions.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 6</span>
+        <h2>6. Checkout and Placing an Order</h2>
+        <ol>
+          <li><strong>Contact Details:</strong> Enter your full name, 10-digit mobile number, and email.</li>
+          <li><strong>Delivery Address:</strong> Enter shipping street, city, state, and 6-digit PIN code.</li>
+          <li><strong>Payment Method:</strong> Select your preferred payment option (UPI, Card, Net Banking, QR, Bank Transfer, or COD).</li>
+          <li><strong>Order Confirmation:</strong> Receive an authoritative Order ID (e.g. <code>#ORD-1793014790119</code>) and instant confirmation.</li>
+        </ol>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 7</span>
+        <h2>7. Customer Account and Login</h2>
+        <p>
+          Access customer self-service at <code>/account</code>:
+        </p>
+        <ul>
+          <li><strong>Registration:</strong> Sign up with your Name, Mobile number, Email, and Password.</li>
+          <li><strong>Sign In:</strong> Authenticate securely with Email and Password.</li>
+          <li><strong>Address Book:</strong> Manage multiple saved delivery addresses.</li>
+          <li><strong>Bank Details:</strong> Save refund bank credentials for prompt claim settlements.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 8</span>
+        <h2>8. Payment Methods and Flow</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Method</th>
+              <th>How It Works</th>
+              <th>Order Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>UPI (VPA)</strong></td>
+              <td>Enter UPI ID and approve payment on your mobile app.</td>
+              <td>Immediate verification &rarr; <code>Processing</code></td>
+            </tr>
+            <tr>
+              <td><strong>Dynamic UPI QR</strong></td>
+              <td>Scan live on-screen QR code with Google Pay, PhonePe, or Paytm.</td>
+              <td>Automatic status check &rarr; <code>Processing</code></td>
+            </tr>
+            <tr>
+              <td><strong>Credit &amp; Debit Cards</strong></td>
+              <td>Enter card number, expiry, CVV; simulated 3D Secure OTP verification.</td>
+              <td>Immediate verification &rarr; <code>Processing</code></td>
+            </tr>
+            <tr>
+              <td><strong>Net Banking</strong></td>
+              <td>Select from major Indian banks (HDFC, SBI, ICICI, Axis, Kotak).</td>
+              <td>Immediate verification &rarr; <code>Processing</code></td>
+            </tr>
+            <tr>
+              <td><strong>Direct Bank Transfer</strong></td>
+              <td>Transfer via NEFT/IMPS to corporate account; submit UTR reference.</td>
+              <td>Placed in <code>Pending Verification</code> until finance team confirms credit.</td>
+            </tr>
+            <tr>
+              <td><strong>Cash on Delivery (COD)</strong></td>
+              <td>Pay upon delivery by the carrier.</td>
+              <td>Order booked with payment due on delivery.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 9</span>
+        <h2>9. Order Status, Tracking &amp; Invoices</h2>
+        <ul>
+          <li><strong>Customer Orders:</strong> View past orders, status transitions, and itemized breakdowns at <code>/account/orders</code>.</li>
+          <li><strong>Public Order Tracking:</strong> Track any order at <code>/order-tracking</code> using your Order ID and registered mobile/email.</li>
+          <li><strong>Fulfillment Stages:</strong> <code>Pending Verification</code> &rarr; <code>Processing</code> &rarr; <code>Dispatched</code> &rarr; <code>In Transit</code> &rarr; <code>Delivered</code>.</li>
+          <li><strong>Tax Invoices:</strong> Download and print official GST invoices directly from order details.</li>
+        </ul>
+      </section>
+
+      <section>
+        <span class="topic-badge">Topic 10</span>
+        <h2>10. FAQ, Bulk Quotes &amp; Warranty Support</h2>
+        <div class="callout info">
+          <strong>Bulk Quote Requests:</strong> For commercial project requirements or quantities exceeding 10 units, use <em>Get a Quote</em> in the header or on product pages.
+        </div>
+        <div class="callout tip">
+          <strong>Warranty Claims:</strong> File claims at <code>/warranty</code> or <code>/service-request</code> with your product serial number, invoice reference, and problem description.
+        </div>
+        <p>
+          <strong>Customer Helpline:</strong> Phone: <code>+91 040 4855 5758</code> | Email: <code>info@honeywellproducts.com</code> | Office: <em>101, Jain Sadguru Capital Park, Hitech City, Madhapur, Hyderabad - 500081, Telangana</em>.
+        </p>
+      </section>
+    
+      <div class="doc-print-footer" style="display: flex; justify-content: space-between; border-top: 1px solid #cbd5e1; padding-top: 8px; margin-top: 32px; font-size: 11px; color: #64748b;">
+        <span style="font-weight: 700; color: #03152f; text-transform: uppercase;">Honeywell Products</span>
+        <span>Customer User Guide</span>
+      </div>
+    </main>
+  </body>
+</html>
