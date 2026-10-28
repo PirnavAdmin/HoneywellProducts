@@ -299,8 +299,11 @@ const normaliseOrder = (o) => {
     paymentStatus: payStatus,
     payMethod: normalizePaymentMethod(o.paymentMethod || o.payMethod),
     utr: o.utr || '',
-    logistics: o.carrierName || o.logisticsPartner || o.logistics || '',
-    trackingNo: o.trackingNumber || o.trackingNo || '',
+    logistics: (() => {
+      const raw = o.carrierName || o.logisticsPartner || o.logistics || o.CarrierName || o.LogisticsPartner || '';
+      return (raw.toLowerCase() === 'self pickup' || raw.toLowerCase() === 'not assigned') ? '' : raw;
+    })(),
+    trackingNo: o.trackingNumber || o.trackingNo || o.TrackingNumber || o.TrackingNo || '',
     shippingAddress: o.shippingAddress || '',
     billingAddress: o.billingAddress || o.shippingAddress || '',
     notes: o.notes || o.adminNotes || '',
@@ -1189,12 +1192,47 @@ const OrdersLedger = () => {
                   <div style={{ fontWeight: 600, color: '#1e293b' }}>{order.customer}</div>
                   <div style={{ fontSize: '11px', color: '#64748b' }}>{order.customerType} • {order.phone}</div>
                 </td>
-                <td style={{ color: '#475569', fontWeight: 500 }}>{formatDateToDMY(order.date)}</td>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#475569' }}>
-                    <Truck size={14} style={{ color: '#6366f1' }} />
-                    <span>{order.logistics || 'Self Pickup'}</span>
-                  </div>
+                <td style={{ color: '#475569', fontWeight: 500, whiteSpace: 'nowrap' }}>{formatDateToDMY(order.date)}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  {order.status === 'Cancelled' ? (
+                    <span style={{ color: '#94a3b8', fontSize: '12px', fontWeight: 500 }} title="Order cancelled before dispatch">—</span>
+                  ) : order.logistics ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#1e293b', fontWeight: 600 }}>
+                        <Truck size={14} style={{ color: '#6366f1', flexShrink: 0 }} />
+                        <span>{order.logistics}</span>
+                      </div>
+                      {order.trackingNo && (
+                        <span style={{ fontSize: '10px', color: '#64748b', fontFamily: 'monospace' }}>
+                          AWB: {order.trackingNo}
+                        </span>
+                      )}
+                    </div>
+                  ) : (order.status === 'Dispatched' || order.status === 'Completed' || order.status === 'Delivered') ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#475569' }}>
+                      <Truck size={14} style={{ color: '#6366f1', flexShrink: 0 }} />
+                      <span>Standard Courier</span>
+                    </div>
+                  ) : (
+                    <span
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        color: '#64748b',
+                        background: '#f1f5f9',
+                        border: '1px solid #e2e8f0',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title="Courier will be assigned when order is packed and dispatched"
+                    >
+                      <Clock3 size={11} style={{ color: '#94a3b8' }} />
+                      Not Assigned
+                    </span>
+                  )}
                 </td>
                 <td>
                   <PaymentStatusBadge paymentStatus={order.paymentStatus} />
@@ -1488,7 +1526,11 @@ const OrdersLedger = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div className="detail-info-row" style={{ padding: 0, borderBottom: 'none' }}>
                       <span className="detail-info-label">Carrier:</span>
-                      <strong className="detail-info-value">{selectedOrder.logistics || 'Self Pickup'}</strong>
+                      <strong className="detail-info-value">
+                        {selectedOrder.status === 'Cancelled'
+                          ? 'Not Applicable'
+                          : (selectedOrder.logistics || ((selectedOrder.status === 'Dispatched' || selectedOrder.status === 'Completed' || selectedOrder.status === 'Delivered') ? 'Standard Courier' : 'Not Assigned'))}
+                      </strong>
                     </div>
                     <div className="detail-info-row" style={{ padding: 0, borderBottom: 'none' }}>
                       <span className="detail-info-label">Tracking No:</span>

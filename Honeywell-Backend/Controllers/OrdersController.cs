@@ -273,6 +273,8 @@ namespace Honeywell.Controllers
                     CustomerPhone = o.Customer?.Phone ?? "",
                     DateBooked = o.OrderDate.ToString("yyyy-MM-dd"),
                     LogisticsPartner = string.IsNullOrEmpty(o.CarrierName) ? "Not Assigned" : o.CarrierName,
+                    CarrierName = o.CarrierName ?? "",
+                    TrackingNumber = o.TrackingNumber ?? "",
                     PaymentStatus = displayPaymentStatus,
                     PaymentMethod = displayPaymentMethod,
                     TotalAmount = $"INR {o.FinalAmount:N0}",
