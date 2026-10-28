@@ -989,7 +989,7 @@ const OrdersLedger = () => {
 
   if (loading) {
     return (
-      <div className="orders-mgmt-container" style={{ padding: '24px' }}>
+      <div className="orders-mgmt-container">
         <div className="orders-mgmt-header">
           <div className="orders-mgmt-title">
             <h1>Orders Ledger</h1>
@@ -1002,7 +1002,7 @@ const OrdersLedger = () => {
 
   if (error) {
     return (
-      <div className="orders-mgmt-container" style={{ padding: '24px' }}>
+      <div className="orders-mgmt-container">
         <div className="orders-mgmt-header">
           <div className="orders-mgmt-title">
             <h1>Orders Ledger</h1>
@@ -1014,7 +1014,7 @@ const OrdersLedger = () => {
   }
 
   return (
-    <div className="orders-mgmt-container" style={{ padding: '24px' }}>
+    <div className="orders-mgmt-container">
       
       {/* Title & Stats */}
       <div className="orders-mgmt-header">
@@ -1164,19 +1164,20 @@ const OrdersLedger = () => {
 
       {/* Main Grid Table */}
       <div className="orders-card-table-wrap">
-        <table className="orders-modern-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer</th>
-              <th>Date Booked</th>
-              <th>Logistics Partner</th>
-              <th>Payment Status</th>
-              <th>Total Amount</th>
-              <th>Fulfillment</th>
-              <th style={{ textAlign: 'center' }}>Actions</th>
-            </tr>
-          </thead>
+        <div className="orders-table-scroll-container">
+          <table className="orders-modern-table">
+            <thead>
+              <tr>
+                <th style={{ minWidth: '95px' }}>Order ID</th>
+                <th style={{ minWidth: '150px' }}>Customer</th>
+                <th style={{ minWidth: '110px' }}>Date Booked</th>
+                <th style={{ minWidth: '135px' }}>Logistics Partner</th>
+                <th style={{ minWidth: '125px' }}>Payment Status</th>
+                <th style={{ minWidth: '105px' }}>Total Amount</th>
+                <th style={{ minWidth: '115px' }}>Fulfillment</th>
+                <th style={{ textAlign: 'center', minWidth: '175px', whiteSpace: 'nowrap' }}>Actions</th>
+              </tr>
+            </thead>
           <tbody>
             {pagedOrders.map((order) => (
               <tr key={order.id}>
@@ -1203,8 +1204,8 @@ const OrdersLedger = () => {
                 <td>
                   <OrderStatusBadge status={order.status} />
                 </td>
-                <td style={{ padding: '16px 20px', textAlign: 'center' }}>
-                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                <td style={{ padding: '14px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'inline-flex', gap: '6px', justifyContent: 'center', alignItems: 'center', flexWrap: 'nowrap' }}>
                     <button
                       onClick={async () => {
                         try {
@@ -1234,6 +1235,8 @@ const OrdersLedger = () => {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
                         transition: 'background 0.2s'
                       }}
                       onMouseOver={(e) => e.target.style.background = '#059669'}
@@ -1255,7 +1258,9 @@ const OrdersLedger = () => {
                           borderRadius: '8px',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '4px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
                         }}
                         title="This order is already cancelled and voided"
                       >
@@ -1274,7 +1279,9 @@ const OrdersLedger = () => {
                           borderRadius: '8px',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '4px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
                         }}
                         title="Order delivered. Returns/warranty workflow applies."
                       >
@@ -1293,7 +1300,9 @@ const OrdersLedger = () => {
                           borderRadius: '8px',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '4px'
+                          gap: '4px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0
                         }}
                         title="Order is in transit. Cancellation is locked after dispatch."
                       >
@@ -1320,6 +1329,8 @@ const OrdersLedger = () => {
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '4px',
+                          whiteSpace: 'nowrap',
+                          flexShrink: 0,
                           transition: 'all 0.15s ease'
                         }}
                         onMouseOver={(e) => {
@@ -1348,6 +1359,7 @@ const OrdersLedger = () => {
             )}
           </tbody>
         </table>
+        </div>
 
         {/* Pagination Controls */}
         {filteredOrders.length > 0 && (

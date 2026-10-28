@@ -218,26 +218,56 @@
   border-radius: 16px;
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.orders-table-scroll-container {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.orders-table-scroll-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.orders-table-scroll-container::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+
+.orders-table-scroll-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.orders-table-scroll-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .orders-modern-table {
   width: 100%;
+  min-width: 980px;
   border-collapse: collapse;
   text-align: left;
 }
 
 .orders-modern-table th {
   background: #f8fafc;
-  padding: 14px 18px;
+  padding: 14px 16px;
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
   color: #475569;
   border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
 }
 
 .orders-modern-table td {
-  padding: 16px 18px;
+  padding: 14px 16px;
   font-size: 13px;
   border-bottom: 1px solid var(--border-color);
   color: var(--text-main);
