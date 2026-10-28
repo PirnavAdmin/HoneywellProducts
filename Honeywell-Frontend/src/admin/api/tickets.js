@@ -1,10 +1,15 @@
+import { getAdminToken } from '../../utils/rbac';
 import { getApiDomain } from '../../utils/apiConfig';
 const BASE_URL = `${getApiDomain()}/api/Tickets`;
 
-const DEFAULT_HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
+const getHeaders = () => {
+  const token = getAdminToken();
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+  };
 };
 
 const mapServerTicketToFrontend = (st) => {
@@ -45,7 +50,7 @@ const mapServerTicketToFrontend = (st) => {
 /** GET /api/Tickets — Fetch all live tickets */
 export const getTickets = async () => {
   try {
-    const response = await fetch(BASE_URL, { headers: DEFAULT_HEADERS });
+    const response = await fetch(BASE_URL, { headers: getHeaders() });
     if (!response.ok) throw new Error(`Failed to fetch tickets (${response.status})`);
     const serverTickets = await response.json();
     
@@ -62,7 +67,7 @@ export const getTickets = async () => {
 
 /** GET /api/Tickets/{id} — Fetch single ticket */
 export const getTicketById = async (id) => {
-  const response = await fetch(`${BASE_URL}/${id}`, { headers: DEFAULT_HEADERS });
+  const response = await fetch(`${BASE_URL}/${id}`, { headers: getHeaders() });
   if (!response.ok) throw new Error(`Failed to fetch ticket ${id} (${response.status})`);
   const data = await response.json();
   return mapServerTicketToFrontend(data.ticket || data);
@@ -86,7 +91,7 @@ export const createTicket = async (payload) => {
 
   const response = await fetch(BASE_URL, {
     method: 'POST',
-    headers: DEFAULT_HEADERS,
+    headers: getHeaders(),
     body: JSON.stringify(apiPayload)
   });
 
@@ -128,7 +133,7 @@ export const updateTicket = async (id, updatedFields) => {
 
   const response = await fetch(`${BASE_URL}/${id}`, {
     method: 'PUT',
-    headers: DEFAULT_HEADERS,
+    headers: getHeaders(),
     body: JSON.stringify(apiPayload)
   });
 
@@ -143,7 +148,7 @@ export const updateTicket = async (id, updatedFields) => {
 export const deleteTicket = async (id) => {
   const response = await fetch(`${BASE_URL}/${id}`, {
     method: 'DELETE',
-    headers: DEFAULT_HEADERS
+    headers: getHeaders()
   });
   if (!response.ok && response.status !== 204) {
     throw new Error(`Failed to delete ticket ${id} (${response.status})`);

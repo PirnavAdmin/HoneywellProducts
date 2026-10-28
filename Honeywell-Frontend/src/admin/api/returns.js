@@ -1,11 +1,18 @@
+import { getAdminToken } from '../../utils/rbac';
 import { getApiDomain } from '../../utils/apiConfig';
 const BASE_URL = `${getApiDomain()}/api/Returns`;
 const ADMIN_BASE_URL = `${getApiDomain()}/api/ReturnsAdmin`;
 
-const DEFAULT_HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
+const getHeaders = () => {
+  const token = getAdminToken();
+  const custTok = typeof localStorage !== 'undefined' ? localStorage.getItem('customerToken') : null;
+  const activeToken = token || custTok;
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    ...(activeToken ? { 'Authorization': `Bearer ${activeToken}` } : {})
+  };
 };
 
 
@@ -13,7 +20,7 @@ const DEFAULT_HEADERS = {
 // GET /api/Returns/config
 export const getReturnsConfig = async () => {
   try {
-    const response = await fetch(`${BASE_URL}/config`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/config`, { headers: getHeaders() });
     if (!response.ok) throw new Error('Failed to fetch returns config');
     const data = await response.json();
     return {
@@ -84,7 +91,7 @@ export const checkReturnEligibility = async (orderItemId) => {
   // 1. Try GET /api/Returns/check-eligibility?query={query}
   try {
     const url = `${getApiDomain()}/api/Returns/check-eligibility?query=${encodeURIComponent(raw)}`;
-    const response = await fetch(url, { headers: DEFAULT_HEADERS });
+    const response = await fetch(url, { headers: getHeaders() });
     if (response.ok) {
       const d = await response.json();
       return mapEligibilityData(d);
@@ -98,7 +105,7 @@ export const checkReturnEligibility = async (orderItemId) => {
     const url = `${getApiDomain()}/api/Returns/check-eligibility`;
     const response = await fetch(url, {
       method: 'POST',
-      headers: DEFAULT_HEADERS,
+      headers: getHeaders(),
       body: JSON.stringify({ query: raw })
     });
     if (response.ok) {
@@ -111,7 +118,7 @@ export const checkReturnEligibility = async (orderItemId) => {
 
   // 3. Fallback database lookup if needed
   try {
-    const ordersRes = await fetch(`${getApiDomain()}/api/Orders`, { headers: DEFAULT_HEADERS });
+    const ordersRes = await fetch(`${getApiDomain()}/api/Orders`, { headers: getHeaders() });
     if (ordersRes.ok) {
       const oData = await ordersRes.json();
       const orders = oData.orders || (Array.isArray(oData) ? oData : []);
@@ -134,7 +141,7 @@ export const checkReturnEligibility = async (orderItemId) => {
         const item = matchedOrder.items[0];
         let eligData = null;
         try {
-          const eligRes = await fetch(`${BASE_URL}/eligibility/order-item/${item.id}`, { headers: DEFAULT_HEADERS });
+          const eligRes = await fetch(`${BASE_URL}/eligibility/order-item/${item.id}`, { headers: getHeaders() });
           if (eligRes.ok) eligData = await eligRes.json();
         } catch(e) {}
 
@@ -163,7 +170,7 @@ export const checkReturnEligibility = async (orderItemId) => {
 
   // 3. Query live Product Catalog in database by SKU or Product Name
   try {
-    const prodRes = await fetch(`${getApiDomain()}/api/products/search?keyword=${encodeURIComponent(clean)}`, { headers: DEFAULT_HEADERS });
+    const prodRes = await fetch(`${getApiDomain()}/api/products/search?keyword=${encodeURIComponent(clean)}`, { headers: getHeaders() });
     if (prodRes.ok) {
       const prods = await prodRes.json();
       const matchedProd = prods.find(p => 
@@ -208,7 +215,7 @@ export const createReturnRequest = async (formData) => {
 export const getMyReturns = async (params = {}) => {
   try {
     const query = new URLSearchParams(params).toString();
-    const response = await fetch(`${BASE_URL}/my?${query}`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/my?${query}`, { headers: getHeaders() });
     if (!response.ok) throw new Error('Failed to fetch returns');
     const data = await response.json();
     return {
@@ -230,7 +237,7 @@ export const getMyReturns = async (params = {}) => {
 
 // GET /api/Returns/{id}
 export const getReturnById = async (id) => {
-  const response = await fetch(`${BASE_URL}/${id}`, { headers: DEFAULT_HEADERS });
+  const response = await fetch(`${BASE_URL}/${id}`, { headers: getHeaders() });
   if (!response.ok) throw new Error(`Failed to fetch return details for ID ${id}`);
   return await response.json();
 };
@@ -238,7 +245,7 @@ export const getReturnById = async (id) => {
 // GET /api/Returns/order/{orderId}
 export const getReturnByOrderId = async (orderId) => {
   try {
-    const response = await fetch(`${BASE_URL}/order/${orderId}`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/order/${orderId}`, { headers: getHeaders() });
     if (!response.ok) throw new Error(`Failed to fetch return for order ${orderId}`);
     return await response.json();
   } catch (error) {
@@ -250,7 +257,7 @@ export const getReturnByOrderId = async (orderId) => {
 // GET /api/Returns/order-item/{orderItemId}
 export const getReturnByOrderItemId = async (orderItemId) => {
   try {
-    const response = await fetch(`${BASE_URL}/order-item/${orderItemId}`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${BASE_URL}/order-item/${orderItemId}`, { headers: getHeaders() });
     if (!response.ok) throw new Error(`Failed to fetch return for item ${orderItemId}`);
     return await response.json();
   } catch (error) {
@@ -270,7 +277,7 @@ export const getAdminReturns = async (params = {}) => {
         query.append(k, params[k]);
       }
     });
-    const response = await fetch(`${ADMIN_BASE_URL}/admin?${query.toString()}`, { headers: DEFAULT_HEADERS });
+    const response = await fetch(`${ADMIN_BASE_URL}/admin?${query.toString()}`, { headers: getHeaders() });
     if (!response.ok) throw new Error('Failed to fetch admin returns list');
     const data = await response.json();
     return {
@@ -294,7 +301,7 @@ export const getAdminReturns = async (params = {}) => {
 export const updateReturnStatus = async (id, data) => {
   const response = await fetch(`${ADMIN_BASE_URL}/${id}/status`, {
     method: 'PUT',
-    headers: DEFAULT_HEADERS,
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   if (!response.ok) throw new Error('Failed to update status');
@@ -305,7 +312,7 @@ export const updateReturnStatus = async (id, data) => {
 export const updateReturnPickup = async (id, data) => {
   const response = await fetch(`${ADMIN_BASE_URL}/${id}/pickup`, {
     method: 'PUT',
-    headers: DEFAULT_HEADERS,
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   if (!response.ok) throw new Error('Failed to update pickup');
@@ -316,7 +323,7 @@ export const updateReturnPickup = async (id, data) => {
 export const updateReturnRefund = async (id, data) => {
   const response = await fetch(`${ADMIN_BASE_URL}/${id}/refund`, {
     method: 'PUT',
-    headers: DEFAULT_HEADERS,
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   if (!response.ok) throw new Error('Failed to issue refund');
@@ -327,7 +334,7 @@ export const updateReturnRefund = async (id, data) => {
 export const updateReturnReplacement = async (id, data) => {
   const response = await fetch(`${ADMIN_BASE_URL}/${id}/replacement`, {
     method: 'PUT',
-    headers: DEFAULT_HEADERS,
+    headers: getHeaders(),
     body: JSON.stringify(data)
   });
   if (!response.ok) throw new Error('Failed to assign replacement details');

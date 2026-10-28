@@ -1,9 +1,16 @@
+import { getAdminToken } from '../utils/rbac';
 import { apiRequest, API_BASE_URL } from './api';
 
-const DEFAULT_HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
+const getHeaders = () => {
+  const token = getAdminToken();
+  const custTok = typeof localStorage !== 'undefined' ? localStorage.getItem('customerToken') : null;
+  const activeToken = token || custTok;
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+    ...(activeToken ? { 'Authorization': `Bearer ${activeToken}` } : {})
+  };
 };
 
 export const mapOrderFromApi = (item) => {
@@ -185,7 +192,7 @@ export const orderService = {
     const url = `${API_BASE_URL}/api/orders`;
     const response = await fetch(url, {
       method: 'POST',
-      headers: DEFAULT_HEADERS,
+      headers: getHeaders(),
       body: JSON.stringify(apiPayload)
     });
 
@@ -204,7 +211,7 @@ export const orderService = {
     const url = `${API_BASE_URL}/api/orders/${id}/status`;
     const response = await fetch(url, {
       method: 'PUT',
-      headers: DEFAULT_HEADERS,
+      headers: getHeaders(),
       body: JSON.stringify({ status: String(status) })
     });
 
@@ -212,7 +219,7 @@ export const orderService = {
       await fetch(url, {
         method: 'PUT',
         headers: {
-          ...DEFAULT_HEADERS,
+          ...getHeaders(),
           'Content-Type': 'application/x-www-form-urlencoded'
         },
         body: `status=${encodeURIComponent(status)}`
@@ -227,7 +234,7 @@ export const orderService = {
     const url = `${API_BASE_URL}/api/orders/${id}`;
     const response = await fetch(url, {
       method: 'DELETE',
-      headers: DEFAULT_HEADERS
+      headers: getHeaders()
     });
 
     if (!response.ok && response.status !== 204) {
