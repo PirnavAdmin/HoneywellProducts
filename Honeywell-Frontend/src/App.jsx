@@ -135,9 +135,10 @@ export default function App() {
               {/* Procurement Routes */}
               <Route path="purchase-indent" element={<PurchaseIndentList />} />
               <Route path="purchase-indent/add" element={<AddPurchaseIndent />} />
+              <Route path="purchase" element={<Navigate to="/admin/purchase-orders" replace />} />
               <Route path="purchase-orders" element={<PurchaseOrdersList />} />
               <Route path="purchase-orders/create" element={<CreatePurchaseOrder />} />
-              <Route path="catalog" element={<Navigate to="categories" replace />} />
+              <Route path="catalog" element={<Navigate to="/admin/catalog/categories" replace />} />
               <Route path="catalog/categories" element={<CategoriesList />} />
               <Route path="catalog/category" element={<Category />} />
               <Route path="catalog/subcategories" element={<SubcategoriesList />} />
@@ -147,7 +148,7 @@ export default function App() {
               <Route path="catalog/product-features" element={<ProductFeatures />} />
               <Route path="catalog/product-reviews" element={<ProductReviews />} />
 
-              <Route path="customers" element={<Navigate to="list" replace />} />
+              <Route path="customers" element={<Navigate to="/admin/customers/list" replace />} />
               <Route path="customers/list" element={<CustomersList />} />
               <Route path="customers/customer" element={<Customer />} />
               <Route path="call-history" element={<CallHistoryScreen />} />
@@ -169,7 +170,7 @@ export default function App() {
               <Route path="invoice/add" element={<AddInvoice />} />
               <Route path="payments" element={<PaymentHistory />} />
               <Route path="stock-updates" element={<StockUpdates />} />
-              <Route path="marketing" element={<Navigate to="banners" replace />} />
+              <Route path="marketing" element={<Navigate to="/admin/marketing/banners" replace />} />
               <Route path="marketing/banners" element={<BannersList />} />
               <Route path="marketing/solutions" element={<SolutionsManager />} />
               <Route path="marketing/banner" element={<BannerForm />} />
@@ -198,7 +199,7 @@ export default function App() {
               <Route path="suppliers/form/:id" element={<SuppliersForm />} />
               <Route path="suppliers/registrations" element={<NewSuppliersList />} />
               <Route path="coins" element={<CoinsConverterScreen />} />
-              <Route path="settings" element={<Navigate to="form" replace />} />
+              <Route path="settings" element={<Navigate to="/admin/settings/form" replace />} />
               <Route path="settings/form" element={<FormSettings />} />
               <Route path="settings/toc" element={<TableOfContent />} />
               <Route path="profile" element={<AdminProfile />} />

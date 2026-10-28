@@ -3,26 +3,22 @@ import { Navigate } from 'react-router-dom';
 import { 
   getFirstAuthorizedRoute, 
   getStoredAdminItem, 
-  getAdminToken, 
-  isTokenValid, 
-  clearUserSession 
+  clearUserSession,
+  getEffectiveAuthType,
+  getEffectiveAdminRole,
+  isUserSessionValid
 } from '../utils/rbac';
 
 const AdminIndexRedirect = () => {
-  const token = getAdminToken();
-  const isAdmin = getStoredAdminItem('isAdmin') === 'true';
-  const isValidSession = Boolean(isAdmin && token && isTokenValid(token));
+  const isValidSession = isUserSessionValid();
 
   if (!isValidSession) {
     clearUserSession();
     return <Navigate to="/admin/login" replace />;
   }
 
-  const authType = (getStoredAdminItem('authType') || (getStoredAdminItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
-  let userRole = (getStoredAdminItem('adminRole') || 'staff').toLowerCase();
-  if (userRole === 'super admin' || userRole === 'superadmin') {
-    userRole = 'admin';
-  }
+  const authType = getEffectiveAuthType();
+  const userRole = getEffectiveAdminRole();
 
   let userPermissions = [];
   try {

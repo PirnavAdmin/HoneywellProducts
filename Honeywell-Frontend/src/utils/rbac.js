@@ -401,9 +401,16 @@ export const hasModuleAccess = (moduleName, userPermissions = [], userRole = '',
   const role = (userRole || '').toLowerCase().trim();
   const type = (authType || '').toLowerCase().trim();
 
-  // ONLY genuinely authenticated Admin accounts with administrative role have full admin bypass
-  const isAdmin = type === 'admin' && ['admin', 'super admin', 'superadmin', 'administrator'].includes(role);
-  if (isAdmin) {
+  // Any administrative account, admin authType, or wildcard permission holder has full console access
+  const isAdminRole = ['admin', 'super admin', 'superadmin', 'administrator'].includes(role);
+  const isAdminType = type === 'admin';
+  const hasWildcard = Array.isArray(userPermissions) && userPermissions.some(p => {
+    if (typeof p !== 'string') return false;
+    const clean = p.toLowerCase().trim();
+    return clean === 'all' || clean === '*' || clean === 'all modules' || clean === 'full access';
+  });
+
+  if (isAdminRole || isAdminType || hasWildcard) {
     return true;
   }
 
@@ -438,7 +445,15 @@ export const getFirstAuthorizedRoute = (userPermissions = [], userRole = '', aut
   const role = (userRole || '').toLowerCase().trim();
   const type = (authType || '').toLowerCase().trim();
 
-  if (type === 'admin' && ['admin', 'super admin', 'superadmin', 'administrator'].includes(role)) {
+  const isAdminRole = ['admin', 'super admin', 'superadmin', 'administrator'].includes(role);
+  const isAdminType = type === 'admin';
+  const hasWildcard = Array.isArray(userPermissions) && userPermissions.some(p => {
+    if (typeof p !== 'string') return false;
+    const clean = p.toLowerCase().trim();
+    return clean === 'all' || clean === '*' || clean === 'all modules' || clean === 'full access';
+  });
+
+  if (isAdminRole || isAdminType || hasWildcard) {
     return '/admin/dashboard';
   }
 
@@ -644,3 +659,42 @@ export const clearUserSession = () => {
   });
 };
 
+
+/**
+ * Resolves the effective auth type ('admin' | 'staff') resiliently across stored values.
+ */
+export const getEffectiveAuthType = () => {
+  const storedType = (getStoredAdminItem('authType') || '').toLowerCase().trim();
+  const storedRole = (getStoredAdminItem('adminRole') || '').toLowerCase().trim();
+  if (storedType === 'admin' || ['admin', 'super admin', 'superadmin', 'administrator'].includes(storedRole)) {
+    return 'admin';
+  }
+  return storedType || 'staff';
+};
+
+/**
+ * Resolves the effective normalized admin role.
+ */
+export const getEffectiveAdminRole = () => {
+  let role = (getStoredAdminItem('adminRole') || '').toLowerCase().trim();
+  if (role === 'super admin' || role === 'superadmin' || role === 'administrator') {
+    return 'admin';
+  }
+  return role || 'staff';
+};
+
+/**
+ * Dynamically verifies if the current user session is valid.
+ */
+export const isUserSessionValid = () => {
+  const token = getAdminToken();
+  if (!token || !isTokenValid(token)) return false;
+  const isAdminStored = getStoredAdminItem('isAdmin');
+  const role = (getStoredAdminItem('adminRole') || '').toLowerCase().trim();
+  const authType = (getStoredAdminItem('authType') || '').toLowerCase().trim();
+  return Boolean(
+    isAdminStored === 'true' || 
+    authType === 'admin' || 
+    ['admin', 'super admin', 'superadmin', 'administrator', 'staff', 'manager', 'sales'].includes(role)
+  );
+};

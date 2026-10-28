@@ -7,14 +7,26 @@ import {
 } from 'lucide-react';
 import './AdminMenuBar.css';
 
-import { hasModuleAccess, getStoredAdminItem } from '../utils/rbac';
+import { 
+  hasModuleAccess, 
+  getStoredAdminItem,
+  getEffectiveAuthType,
+  getEffectiveAdminRole 
+} from '../utils/rbac';
 
 const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [userRole, setUserRole] = useState('staff');
-  const [authType, setAuthType] = useState('staff');
-  const [userPermissions, setUserPermissions] = useState([]);
+  const [userRole, setUserRole] = useState(() => getEffectiveAdminRole());
+  const [authType, setAuthType] = useState(() => getEffectiveAuthType());
+  const [userPermissions, setUserPermissions] = useState(() => {
+    try {
+      const perms = getStoredAdminItem('adminPermissions');
+      return perms ? JSON.parse(perms) : [];
+    } catch {
+      return [];
+    }
+  });
 
   const [openDropdowns, setOpenDropdowns] = useState({
     catalog: false,
@@ -33,13 +45,8 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   });
 
   useEffect(() => {
-    const storedAuthType = (getStoredAdminItem('authType') || (getStoredAdminItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
-    let role = (getStoredAdminItem('adminRole') || 'staff').toLowerCase();
-    if (role === 'super admin' || role === 'superadmin') {
-      role = 'admin';
-    }
-    setUserRole(role);
-    setAuthType(storedAuthType);
+    setUserRole(getEffectiveAdminRole());
+    setAuthType(getEffectiveAuthType());
 
     try {
       const perms = getStoredAdminItem('adminPermissions');

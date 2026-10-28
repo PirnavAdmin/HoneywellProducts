@@ -10,14 +10,15 @@ import {
   clearUserSession, 
   getStoredAdminItem, 
   getAdminToken, 
-  isTokenValid 
+  isTokenValid,
+  getEffectiveAuthType,
+  getEffectiveAdminRole,
+  isUserSessionValid
 } from '../utils/rbac';
 import './AdminLayout.css';
 
 const AdminLayout = () => {
-  const token = getAdminToken();
-  const isAdmin = getStoredAdminItem('isAdmin') === 'true';
-  const isValidSession = Boolean(isAdmin && token && isTokenValid(token));
+  const isValidSession = isUserSessionValid();
 
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
   const location = useLocation();
@@ -57,12 +58,14 @@ const AdminLayout = () => {
 
     let lastRecord = Date.now();
     sessionStorage.setItem('adminLastActivity', String(lastRecord));
+    localStorage.setItem('adminLastActivity', String(lastRecord));
 
     const resetTimer = () => {
       const now = Date.now();
       if (now - lastRecord > 1000) {
         lastRecord = now;
         sessionStorage.setItem('adminLastActivity', String(now));
+        localStorage.setItem('adminLastActivity', String(now));
         if (timer) clearTimeout(timer);
         timer = setTimeout(performInactivityLogout, INACTIVITY_LIMIT_MS);
       }
@@ -70,7 +73,7 @@ const AdminLayout = () => {
 
     // Check on visibility/focus in case computer was suspended or tab was backgrounded
     const checkOnFocus = () => {
-      const storedLast = parseInt(sessionStorage.getItem('adminLastActivity') || '0', 10);
+      const storedLast = parseInt(sessionStorage.getItem('adminLastActivity') || localStorage.getItem('adminLastActivity') || '0', 10);
       if (storedLast && Date.now() - storedLast >= INACTIVITY_LIMIT_MS) {
         performInactivityLogout();
       } else {
@@ -95,11 +98,8 @@ const AdminLayout = () => {
     };
   }, [isValidSession, navigate]);
 
-  const authType = (getStoredAdminItem('authType') || (getStoredAdminItem('adminRole') === 'admin' ? 'admin' : 'staff')).toLowerCase();
-  let userRole = (getStoredAdminItem('adminRole') || 'staff').toLowerCase();
-  if (userRole === 'super admin' || userRole === 'superadmin') {
-    userRole = 'admin';
-  }
+  const authType = getEffectiveAuthType();
+  const userRole = getEffectiveAdminRole();
 
   // Load actual permissions from dynamic session storage without static fallbacks
   let userPermissions = [];
