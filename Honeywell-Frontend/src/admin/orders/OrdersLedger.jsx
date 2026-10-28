@@ -18,7 +18,9 @@ import {
   ShieldCheck,
   DollarSign,
   Printer,
-  Trash2
+  Trash2,
+  Ban,
+  AlertTriangle
 } from 'lucide-react';
 import { getOrders, getOrder, getOrderInvoice, updateOrderStatus, deleteOrder } from '../api/orders';
 import { getApiDomain } from '../../utils/apiConfig';
@@ -843,6 +845,14 @@ const OrdersLedger = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // Status Tab Filter (Amazon / Flipkart pattern)
+  const [statusTab, setStatusTab] = useState('All');
+
+  // Cancellation Modal State (Amazon / Flipkart standard)
+  const [orderToCancel, setOrderToCancel] = useState(null);
+  const [cancelReason, setCancelReason] = useState('Customer requested cancellation');
+  const [isCancelling, setIsCancelling] = useState(false);
+
   // Selected order details popup modal state
   const [selectedOrder, setSelectedOrder] = useState(null);
 
@@ -941,14 +951,20 @@ const OrdersLedger = () => {
         }
       }
 
-      return matchesSearch && matchesDate;
+      // 3. Status tab filter (Amazon / Flipkart standard)
+      let matchesStatus = true;
+      if (statusTab !== 'All') {
+        matchesStatus = (order.status || '').toLowerCase() === statusTab.toLowerCase();
+      }
+
+      return matchesSearch && matchesDate && matchesStatus;
     }).sort((a, b) => Number(b.id) - Number(a.id));
-  }, [verifiedOrders, searchTerm, dateFilter, startDate, endDate]);
+  }, [verifiedOrders, searchTerm, dateFilter, startDate, endDate, statusTab]);
 
   // Reset page when filter/search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, dateFilter, startDate, endDate]);
+  }, [searchTerm, dateFilter, startDate, endDate, statusTab]);
 
   // Metrics (revenue only for verified success orders)
   const metrics = useMemo(() => {
@@ -1046,6 +1062,51 @@ const OrdersLedger = () => {
             <strong>{metrics.completed}</strong>
           </div>
         </div>
+      </div>
+
+      {/* Amazon / Flipkart Style Status Filter Tabs */}
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {[
+          { id: 'All', label: 'All Orders', count: orders.length },
+          { id: 'Processing', label: 'Processing', count: metrics.processing },
+          { id: 'Dispatched', label: 'Dispatched', count: metrics.dispatched },
+          { id: 'Completed', label: 'Completed', count: metrics.completed },
+          { id: 'Cancelled', label: 'Cancelled', count: orders.filter(o => o.status === 'Cancelled').length }
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setStatusTab(tab.id)}
+            style={{
+              padding: '7px 16px',
+              borderRadius: '20px',
+              fontSize: '12.5px',
+              fontWeight: statusTab === tab.id ? 700 : 500,
+              border: statusTab === tab.id ? '1px solid #1268a5' : '1px solid #e2e8f0',
+              background: statusTab === tab.id ? '#1268a5' : '#ffffff',
+              color: statusTab === tab.id ? '#ffffff' : '#475569',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.15s ease'
+            }}
+          >
+            <span>{tab.label}</span>
+            <span
+              style={{
+                background: statusTab === tab.id ? 'rgba(255,255,255,0.25)' : '#f1f5f9',
+                color: statusTab === tab.id ? '#ffffff' : '#64748b',
+                padding: '1px 7px',
+                borderRadius: '10px',
+                fontSize: '11px',
+                fontWeight: 700
+              }}
+            >
+              {tab.count}
+            </span>
+          </button>
+        ))}
       </div>
 
       {/* Filters Toolbar */}
@@ -1181,33 +1242,99 @@ const OrdersLedger = () => {
                       <Eye size={14} />
                       Details
                     </button>
-                    <button
-                      onClick={async () => {
-                        if (window.confirm(`Are you sure you want to delete Order #${order.id}?`)) {
-                          try {
-                            await deleteOrder(order.id);
-                            setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: 'Cancelled', fulfillment: 'CANCELLED', paymentStatus: 'Payment Not Applicable' } : o));
-                          } catch (err) {
-                            alert(`Error: ${err.message}`);
-                          }
-                        }
-                      }}
-                      title="Delete Order"
-                      style={{
-                        background: '#fee2e2',
-                        color: '#ef4444',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '6px 10px',
-                        fontSize: '12px',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {/* Amazon / Flipkart Cancel Order Action */}
+                    {order.status === 'Cancelled' ? (
+                      <span
+                        style={{
+                          padding: '5px 10px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: '#94a3b8',
+                          background: '#f1f5f9',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="This order is already cancelled and voided"
+                      >
+                        <AlertCircle size={12} />
+                        Cancelled
+                      </span>
+                    ) : (order.status === 'Completed' || order.status === 'Delivered') ? (
+                      <span
+                        style={{
+                          padding: '5px 10px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: '#047857',
+                          background: '#ecfdf5',
+                          border: '1px solid #a7f3d0',
+                          borderRadius: '8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="Order delivered. Returns/warranty workflow applies."
+                      >
+                        <CheckCircle2 size={12} />
+                        Delivered
+                      </span>
+                    ) : (order.status === 'Dispatched' || order.status === 'Shipped') ? (
+                      <span
+                        style={{
+                          padding: '5px 10px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          color: '#4338ca',
+                          background: '#e0e7ff',
+                          border: '1px solid #c7d2fe',
+                          borderRadius: '8px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                        title="Order is in transit. Cancellation is locked after dispatch."
+                      >
+                        <Truck size={12} />
+                        In Transit
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOrderToCancel(order);
+                          setCancelReason('Customer requested cancellation');
+                        }}
+                        title="Cancel Order (Restores Inventory Stock)"
+                        style={{
+                          background: '#fee2e2',
+                          color: '#ef4444',
+                          border: '1px solid #fecdd3',
+                          borderRadius: '8px',
+                          padding: '6px 10px',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.background = '#fecaca';
+                          e.currentTarget.style.borderColor = '#f87171';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.background = '#fee2e2';
+                          e.currentTarget.style.borderColor = '#fecdd3';
+                        }}
+                      >
+                        <Ban size={13} />
+                        <span>Cancel</span>
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -1509,6 +1636,189 @@ const OrdersLedger = () => {
         </div>,
         document.body
       )}
+      {/* Amazon / Flipkart Style Order Cancellation Dialog */}
+      {orderToCancel && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '16px'
+          }}
+          onClick={() => !isCancelling && setOrderToCancel(null)}
+        >
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '16px',
+              maxWidth: '480px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', marginBottom: '16px' }}>
+              <div
+                style={{
+                  background: '#fee2e2',
+                  color: '#dc2626',
+                  borderRadius: '12px',
+                  padding: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
+              >
+                <AlertTriangle size={24} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                  Cancel Order #{orderToCancel.id}
+                </h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: '#64748b' }}>
+                  Invoice: <strong>{orderToCancel.invoiceNo}</strong> • Customer: <strong>{orderToCancel.customer}</strong>
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={() => setOrderToCancel(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#94a3b8',
+                  cursor: 'pointer',
+                  padding: '4px'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Warning Box */}
+            <div
+              style={{
+                background: '#fffbeb',
+                border: '1px solid #fde68a',
+                borderRadius: '10px',
+                padding: '12px 14px',
+                marginBottom: '18px',
+                fontSize: '12.5px',
+                color: '#92400e',
+                lineHeight: 1.5
+              }}
+            >
+              <strong>Inventory & Accounting Impact:</strong> Cancelling this order will release all reserved items back into warehouse stock and mark the invoice as void.
+            </div>
+
+            {/* Cancellation Reason Selector (Amazon / Flipkart Standard) */}
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  color: '#334155',
+                  marginBottom: '6px'
+                }}
+              >
+                Cancellation Reason <span style={{ color: '#ef4444' }}>*</span>
+              </label>
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                disabled={isCancelling}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '13px',
+                  borderRadius: '8px',
+                  border: '1px solid #cbd5e1',
+                  background: '#ffffff',
+                  color: '#0f172a',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="Customer requested cancellation">Customer requested cancellation</option>
+                <option value="Inventory unavailable / Out of stock">Inventory unavailable / Out of stock</option>
+                <option value="Undeliverable / invalid shipping address">Undeliverable / invalid shipping address</option>
+                <option value="Customer uncontactable / Verification failed">Customer uncontactable / Verification failed</option>
+                <option value="Duplicate order placed by customer">Duplicate order placed by customer</option>
+                <option value="Pricing or technical system error">Pricing or technical system error</option>
+                <option value="Operational cancellation">Other operational reason</option>
+              </select>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={() => setOrderToCancel(null)}
+                style={{
+                  padding: '9px 18px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: '#475569',
+                  background: '#f1f5f9',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                Keep Order
+              </button>
+              <button
+                type="button"
+                disabled={isCancelling}
+                onClick={async () => {
+                  try {
+                    setIsCancelling(true);
+                    await deleteOrder(orderToCancel.id);
+                    setOrders(prev => prev.map(o => 
+                      o.id === orderToCancel.id 
+                        ? { ...o, status: 'Cancelled', fulfillment: 'CANCELLED', paymentStatus: 'Payment Not Applicable' } 
+                        : o
+                    ));
+                    setOrderToCancel(null);
+                  } catch (err) {
+                    alert(`Failed to cancel order: ${err.message}`);
+                  } finally {
+                    setIsCancelling(false);
+                  }
+                }}
+                style={{
+                  padding: '9px 18px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: '#ffffff',
+                  background: isCancelling ? '#94a3b8' : '#dc2626',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: isCancelling ? 'not-allowed' : 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Ban size={14} />
+                {isCancelling ? 'Cancelling...' : 'Confirm Cancellation'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

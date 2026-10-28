@@ -1253,9 +1253,15 @@ namespace Honeywell.Controllers
                 return NotFound(new { Message = "Order not found." });
             }
 
-            if (order.Status == "Cancelled")
+            if (order.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase))
             {
                 return BadRequest(new { Message = "Order is already cancelled." });
+            }
+
+            if (order.Status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+                order.Status.Equals("Delivered", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new { Message = "Delivered / Completed orders cannot be cancelled directly. Please use the Returns and Warranty module." });
             }
 
             // Restore product stock
