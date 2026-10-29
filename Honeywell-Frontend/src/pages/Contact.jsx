@@ -7,8 +7,20 @@ import { contactService } from '../services/contactService';
 import { getSupportConfig, getContactCard } from '../services/settingsApi';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { usePageBanner } from '../hooks/usePageBanner';
-import heroImage from '../assets/images/capital-park2.jpg';
+
 import { validateName, validateEmail, validatePhone } from '../utils/validators';
+
+const CONTACT_SUPPORT_CACHE_KEY = 'contact_support_info';
+
+const getCachedSupportInfo = () => {
+  if (typeof window === 'undefined' || !window.sessionStorage) return null;
+  try {
+    const raw = window.sessionStorage.getItem(CONTACT_SUPPORT_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 const empty = { name: '', mobile: '', email: '', company: '', enquiryType: '', message: '' };
  
@@ -22,7 +34,7 @@ export default function Contact() {
 
     'Send a product, sales, support or business enquiry to Honeywell.',
 
-    heroImage
+    ''
 
     );
 
@@ -38,7 +50,7 @@ export default function Contact() {
 
   const [submittedId, setSubmittedId] = useState(null);
 
-  const [supportInfo, setSupportInfo] = useState({
+  const [supportInfo, setSupportInfo] = useState(() => getCachedSupportInfo() || {
 
     phone: '',
 
@@ -74,7 +86,7 @@ export default function Contact() {
 
         const card = cardConfig.status === 'fulfilled' ? cardConfig.value : {};
  
-        setSupportInfo({
+        const nextSupport = {
 
           phone: supp.supportPhoneNumber || card.phone || card.supportHotline || siteConfig.phone,
 
@@ -86,7 +98,11 @@ export default function Contact() {
 
           googleMapsUrl: card.googleMapsUrl || siteConfig.mapLink
 
-        });
+        };
+        setSupportInfo(nextSupport);
+        try {
+          window.sessionStorage.setItem(CONTACT_SUPPORT_CACHE_KEY, JSON.stringify(nextSupport));
+        } catch {}
 
       } catch (err) {
 

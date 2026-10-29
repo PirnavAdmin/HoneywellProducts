@@ -2,6 +2,25 @@ import axios from 'axios';
 import { getApiDomain, DEFAULT_BACKEND_URL, resolveMediaUrl } from '../../utils/apiConfig';
 import { apiCache } from '../../utils/apiCache';
 
+export const clearBannerCache = () => {
+  apiCache.invalidate('banners');
+  if (typeof window !== 'undefined' && window.sessionStorage) {
+    try {
+      const keysToRemove = [];
+      for (let i = 0; i < window.sessionStorage.length; i++) {
+        const key = window.sessionStorage.key(i);
+        if (key && (key.startsWith('page_banner_') || key === 'home_hero_slides')) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => window.sessionStorage.removeItem(k));
+    } catch {}
+    try {
+      window.dispatchEvent(new CustomEvent('banners-updated'));
+    } catch {}
+  }
+};
+
 export const resolveBannerImage = (url) => {
   if (!url) return '';
   return resolveMediaUrl(url);
@@ -189,7 +208,7 @@ export const createBanner = async (bannerData) => {
     displayOrder: Number(bannerData.displayOrder || 0)
   };
   const response = await axios.post(getBaseUrl(), payload, { headers: getHeaders() });
-  apiCache.invalidate('banners');
+  clearBannerCache();
   return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
 };
 
@@ -233,7 +252,7 @@ export const updateBanner = async (id, bannerData) => {
     displayOrder: Number(bannerData.displayOrder || 0)
   };
   const response = await axios.put(`${getBaseUrl()}/${id}`, payload, { headers: getHeaders() });
-  apiCache.invalidate('banners');
+  clearBannerCache();
   return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
 };
 
@@ -245,7 +264,7 @@ export const toggleBannerActive = async (id, currentActiveState) => {
   try {
     const response = await axios.put(`${getBaseUrl()}/${id}/toggle`, {}, { headers: getHeaders() });
     if (response.status === 200) {
-      apiCache.invalidate('banners');
+      clearBannerCache();
       return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
     }
   } catch (err) {
@@ -305,6 +324,6 @@ export const uploadBannerImage = async (file) => {
  */
 export const deleteBanner = async (id) => {
   await axios.delete(`${getBaseUrl()}/${id}`, { headers: getHeaders() });
-  apiCache.invalidate('banners');
+  clearBannerCache();
   return true;
 };

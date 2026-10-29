@@ -22,7 +22,7 @@ import { usePageBanner } from '../hooks/usePageBanner';
 
 import { validateGstin } from '../utils/gstinValidation';
 import { validateName, validateEmail, validatePhone } from '../utils/validators';
-import businessImage from '../assets/images/capital-park2.jpg';
+
  
 const pathways = [
 
@@ -52,7 +52,7 @@ export default function Business() {
 
     'Explore partnership pathways for distribution, installation, system integration and channel sales.',
 
-    businessImage
+    ''
 
      );
  

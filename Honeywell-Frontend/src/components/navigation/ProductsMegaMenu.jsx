@@ -21,6 +21,19 @@ const getCategoryIcon = (name = '') => {
   return <Layers size={18} className="mega-icon" />;
 };
 
+const MEGAMENU_CATS_KEY = 'megamenu_categories';
+
+const getCachedCategories = () => {
+  if (typeof window === 'undefined' || !window.sessionStorage) return null;
+  try {
+    const raw = window.sessionStorage.getItem(MEGAMENU_CATS_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 const defaultCategories = [
   { id: 'network-cameras', slug: 'network-cameras', name: 'Network Cameras', description: 'High-Definition IP Network Cameras' },
   { id: 'solar-kit', slug: 'solar-kit', name: 'Solar kit', description: 'Complete Solar Power Kit Systems' },
@@ -30,7 +43,7 @@ const defaultCategories = [
 
 export default function ProductsMegaMenu({ onClose }) {
   const { priceVisibility } = useSettings();
-  const [categories, setCategories] = useState(defaultCategories);
+  const [categories, setCategories] = useState(() => getCachedCategories() || defaultCategories);
 
   useEffect(() => {
     let isMounted = true;
@@ -55,6 +68,9 @@ export default function ProductsMegaMenu({ onClose }) {
             });
           if (activeOnly.length > 0) {
             setCategories(activeOnly);
+            try {
+              window.sessionStorage.setItem(MEGAMENU_CATS_KEY, JSON.stringify(activeOnly));
+            } catch {}
           }
         }
       })

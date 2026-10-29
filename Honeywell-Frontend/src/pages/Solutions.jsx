@@ -9,6 +9,8 @@ import { SOLUTION_PILLARS } from '../data/solutionsData';
 import { solutionService } from '../services/solutionService';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { usePageBanner } from '../hooks/usePageBanner';
+
+const DEFAULT_FALLBACK_IMG = '/honeywell-products-logo.png';
  
 export default function Solutions() {
    const { banner } = usePageBanner(
@@ -146,11 +148,11 @@ export default function Solutions() {
                 {solutionsList.map((solution) => (
 <article className="solution-card" key={solution.id}>
 <img
-                      src={(!solution.image || String(solution.image).toLowerCase().includes('placeholder')) ? heroImage : solution.image}
+                      src={(!solution.image || String(solution.image).toLowerCase().includes('placeholder')) ? DEFAULT_FALLBACK_IMG : solution.image}
                       alt={`${solution.title} environment`}
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = heroImage;
+                        e.target.src = DEFAULT_FALLBACK_IMG;
                       }}
                     />
 <div>
@@ -187,11 +189,11 @@ export default function Solutions() {
               {applications.map((application) => (
 <Link key={application.id} to={`/solutions?application=${application.id}`} className="application-card">
 <img
-                    src={(!application.image || String(application.image).toLowerCase().includes('placeholder')) ? heroImage : application.image}
+                    src={(!application.image || String(application.image).toLowerCase().includes('placeholder')) ? DEFAULT_FALLBACK_IMG : application.image}
                     alt={`${application.name} security application`}
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = heroImage;
+                      e.target.src = DEFAULT_FALLBACK_IMG;
                     }}
                   />
 <div>

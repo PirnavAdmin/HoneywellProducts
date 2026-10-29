@@ -31,7 +31,7 @@ import SectionHeading from '../components/common/SectionHeading';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { usePageBanner } from '../hooks/usePageBanner';
 import { aboutApi, resolveImageUrl } from '../services/aboutApi';
-import defaultHeroImg from '../assets/images/capital-park2.jpg';
+
 import defaultOverviewImg from '../assets/images/smart-security-sustainable-future.png';
  
 const iconMap = {
@@ -68,7 +68,7 @@ export default function About() {
     'About',
     'Security Technology With a Clear Purpose',
     '',
-    defaultHeroImg
+    ''
   );
  
   useDocumentTitle('About Us', 'Learn about the HONEYWELL PRODUCTS company profile, vision, mission, portfolio and leadership.');

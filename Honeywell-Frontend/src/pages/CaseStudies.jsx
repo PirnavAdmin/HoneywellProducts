@@ -16,7 +16,7 @@ export default function CaseStudies() {
     'Case Studies',
     'Customer Case Studies',
     'Explore real-world enterprise deployments of Honeywell products and security solutions.',
-    heroImage
+    ''
   );
 
   useEffect(() => {
