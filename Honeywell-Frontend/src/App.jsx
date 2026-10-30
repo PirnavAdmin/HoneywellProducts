@@ -226,6 +226,9 @@ export default function App() {
               <Route index element={<Home />} />
               <Route path="about-us" element={<About />} />
               <Route path="about" element={<Navigate to="/about-us" replace />} />
+              <Route path="category" element={<Navigate to="/products" replace />} />
+              <Route path="categories" element={<Navigate to="/products" replace />} />
+              <Route path="product" element={<Navigate to="/products" replace />} />
               <Route path="products" element={<Products />} />
               <Route path="products/:id" element={<ProductDetails />} />
               <Route path="solutions" element={<Solutions />} />

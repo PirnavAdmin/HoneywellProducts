@@ -15,6 +15,8 @@ const BannerForm = () => {
     imageUrl: '',
     targetUrl: '/categories',
     bannerType: 'Hero',
+    ctaText: '',
+    secondaryType: '',
     isActive: true,
     displayOrder: 1
   });
@@ -37,6 +39,8 @@ const BannerForm = () => {
               imageUrl: found.imageUrl || '',
               targetUrl: found.targetUrl || '/categories',
               bannerType: found.bannerType || 'Hero',
+              ctaText: found.ctaText || '',
+              secondaryType: found.secondaryType || '',
               isActive: found.isActive,
               displayOrder: found.displayOrder || 1
             });
@@ -138,14 +142,34 @@ const BannerForm = () => {
               onChange={(e) => {
                 const newType = e.target.value;
                 let newTarget = formData.targetUrl;
-                if (newType === 'Products') newTarget = '/products?type=Products';
-                else if (newType === 'Solutions') newTarget = '/solutions?type=Solutions';
-                else if (newType === 'Business') newTarget = '/business?type=Business';
-                else if (newType === 'About') newTarget = '/about-us?type=About';
-                else if (newType === 'Resources') newTarget = '/resources?type=Resources';
-                else if (newType === 'Contact') newTarget = '/contact?type=Contact';
-                else if (newType === 'Promo') newTarget = '/offers?type=Promo';
-                else if (newType === 'Hero') newTarget = '/products';
+                const standardDefaults = [
+                  '',
+                  '/categories',
+                  '/products',
+                  '/products?type=Products',
+                  '/solutions',
+                  '/solutions?type=Solutions',
+                  '/business',
+                  '/business?type=Business',
+                  '/about-us',
+                  '/about-us?type=About',
+                  '/resources',
+                  '/resources?type=Resources',
+                  '/contact',
+                  '/contact?type=Contact',
+                  '/offers',
+                  '/offers?type=Promo'
+                ];
+                if (!newTarget || standardDefaults.includes(newTarget)) {
+                  if (newType === 'Products') newTarget = '/products?type=Products';
+                  else if (newType === 'Solutions') newTarget = '/solutions?type=Solutions';
+                  else if (newType === 'Business') newTarget = '/business?type=Business';
+                  else if (newType === 'About') newTarget = '/about-us?type=About';
+                  else if (newType === 'Resources') newTarget = '/resources?type=Resources';
+                  else if (newType === 'Contact') newTarget = '/contact?type=Contact';
+                  else if (newType === 'Promo') newTarget = '/offers?type=Promo';
+                  else if (newType === 'Hero') newTarget = '/products';
+                }
                 setFormData({ ...formData, bannerType: newType, targetUrl: newTarget });
               }}
               style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
@@ -221,6 +245,36 @@ const BannerForm = () => {
               onChange={(e) => setFormData({ ...formData, targetUrl: e.target.value })}
               style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
             />
+          </div>
+
+          <div style={{ display: 'flex', gap: '20px' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                Primary Button Label <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>(Optional)</span>
+              </label>
+              <input
+                type="text"
+                placeholder="Auto (e.g. Explore Categories)"
+                value={formData.ctaText || ''}
+                onChange={(e) => setFormData({ ...formData, ctaText: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                Secondary Action <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 400 }}>(Hero Slide)</span>
+              </label>
+              <select
+                value={formData.secondaryType || ''}
+                onChange={(e) => setFormData({ ...formData, secondaryType: e.target.value })}
+                style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', backgroundColor: '#fff' }}
+              >
+                <option value="">Auto (Context-Aware based on link)</option>
+                <option value="quote">Get a Quote (Popup Modal)</option>
+                <option value="contact">Contact Sales (Link to Contact)</option>
+                <option value="none">None (Single Button Only)</option>
+              </select>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: '20px' }}>

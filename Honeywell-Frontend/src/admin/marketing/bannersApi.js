@@ -44,6 +44,8 @@ const getHeaders = () => {
   return headers;
 };
 
+export const KNOWN_BANNER_TYPES = ['Hero', 'Products', 'Solutions', 'Business', 'About', 'Resources', 'Contact', 'Promo', 'Trust'];
+
 export const mapBannerFromApi = (item) => {
   if (!item || typeof item !== 'object') return null;
   const rawId = item.id ?? item.Id ?? item.bannerId ?? item.BannerId ?? item._id ?? '';
@@ -60,43 +62,78 @@ export const mapBannerFromApi = (item) => {
 
   const rawTarget = item.targetUrl || item.TargetUrl || item.link || item.Link || item.url || item.Url || '';
   const rawSub = item.subtitle || item.Subtitle || item.description || item.Description || '';
-  let rawType = item.bannerType || item.BannerType || item.type || item.Type;
+  const rawDesc = item.description || item.Description || '';
 
-  // Infer bannerType from targetUrl, subtitle or description tag if missing or defaulted
-  const targetLower = String(rawTarget).toLowerCase();
-  const subLower = String(rawSub).toLowerCase();
-  const titleLower = String(item.title || item.Title || '').toLowerCase();
+  // 1. Primary check: Extract explicit [Type:...] tag from subtitle or description
+  let extractedType = '';
+  const tagMatch = String(rawSub).match(/\[Type:\s*([A-Za-z0-9_]+)\]/i) ||
+                   String(rawDesc).match(/\[Type:\s*([A-Za-z0-9_]+)\]/i);
 
-  if (targetLower.includes('products') || subLower.includes('[type:products]') || titleLower.includes('products banner')) {
-    rawType = 'Products';
-  } else if (targetLower.includes('solutions') || subLower.includes('[type:solutions]') || titleLower.includes('solutions banner')) {
-    rawType = 'Solutions';
-  } else if (targetLower.includes('business') || subLower.includes('[type:business]') || titleLower.includes('business banner')) {
-    rawType = 'Business';
-  } else if (targetLower.includes('about') || subLower.includes('[type:about]') || titleLower.includes('about banner')) {
-    rawType = 'About';
-  } else if (targetLower.includes('resources') || subLower.includes('[type:resources]') || titleLower.includes('resources banner')) {
-    rawType = 'Resources';
-  } else if (targetLower.includes('contact') || subLower.includes('[type:contact]') || titleLower.includes('contact banner')) {
-    rawType = 'Contact';
-  } else if (targetLower.includes('offers') || targetLower.includes('promo') || subLower.includes('[type:promo]')) {
-    rawType = 'Promo';
-  } else if (targetLower.includes('trust') || subLower.includes('[type:trust]')) {
-    rawType = 'Trust';
-  } else if (!rawType) {
-    rawType = 'Hero';
+  if (tagMatch && tagMatch[1]) {
+    const matchedKnown = KNOWN_BANNER_TYPES.find(t => t.toLowerCase() === tagMatch[1].toLowerCase());
+    extractedType = matchedKnown || (tagMatch[1].charAt(0).toUpperCase() + tagMatch[1].slice(1).toLowerCase());
   }
 
-  // Clean tag from displayed subtitle
-  const cleanSubtitle = String(rawSub).replace(/\[Type:\w+\]/gi, '').trim();
+  // 2. Secondary check: Direct bannerType property on item
+  if (!extractedType) {
+    const propType = item.bannerType || item.BannerType || item.type || item.Type;
+    if (propType && typeof propType === 'string' && propType.trim()) {
+      const matchedKnown = KNOWN_BANNER_TYPES.find(t => t.toLowerCase() === propType.trim().toLowerCase());
+      extractedType = matchedKnown || (propType.trim().charAt(0).toUpperCase() + propType.trim().slice(1).toLowerCase());
+    }
+  }
+
+  // 3. Fallback: Explicit query parameter type in targetUrl (e.g. ?type=Products)
+  if (!extractedType && rawTarget) {
+    const urlMatch = String(rawTarget).match(/[?&]type=([A-Za-z0-9_]+)/i);
+    if (urlMatch && urlMatch[1]) {
+      const matchedKnown = KNOWN_BANNER_TYPES.find(t => t.toLowerCase() === urlMatch[1].toLowerCase());
+      if (matchedKnown) extractedType = matchedKnown;
+    }
+  }
+
+  // 4. Fallback: Title containing "... Banner"
+  if (!extractedType) {
+    const titleLower = String(item.title || item.Title || '').toLowerCase();
+    for (const t of KNOWN_BANNER_TYPES) {
+      if (t !== 'Hero' && titleLower.includes(`${t.toLowerCase()} banner`)) {
+        extractedType = t;
+        break;
+      }
+    }
+  }
+
+  // 5. Default fallback to Hero
+  if (!extractedType) {
+    extractedType = 'Hero';
+  }
+
+  // Extract custom CTA button text if saved: [Cta:Text] or [Btn:Text]
+  const ctaMatch = String(rawSub).match(/\[(?:Cta|Btn):\s*([^\]]+)\]/i) ||
+                   String(rawDesc).match(/\[(?:Cta|Btn):\s*([^\]]+)\]/i);
+  const customCta = ctaMatch ? ctaMatch[1].trim() : (item.ctaText || item.buttonText || '');
+
+  // Extract secondary button type: [Sec:quote|contact|none]
+  const secMatch = String(rawSub).match(/\[Sec:\s*([A-Za-z0-9_-]+)\]/i) ||
+                   String(rawDesc).match(/\[Sec:\s*([A-Za-z0-9_-]+)\]/i);
+  const customSec = secMatch ? secMatch[1].trim().toLowerCase() : (item.secondaryType || '');
+
+  // Clean tags from displayed subtitle
+  const cleanSubtitle = String(rawSub)
+    .replace(/\[Type:\s*\w+\]/gi, '')
+    .replace(/\[(?:Cta|Btn):\s*[^\]]+\]/gi, '')
+    .replace(/\[Sec:\s*[^\]]+\]/gi, '')
+    .trim();
 
   return {
     id: String(rawId),
     title: item.title || item.Title || item.name || item.Name || '',
     subtitle: cleanSubtitle,
     imageUrl: String(rawImage || '').trim(),
-    targetUrl: rawTarget || (rawType === 'Products' ? '/products' : '/'),
-    bannerType: rawType,
+    targetUrl: rawTarget || (extractedType === 'Products' ? '/products' : '/'),
+    bannerType: extractedType,
+    ctaText: customCta,
+    secondaryType: customSec,
     isActive: item.isActive !== undefined ? Boolean(item.isActive) : (item.IsActive !== undefined ? Boolean(item.IsActive) : (item.active !== undefined ? Boolean(item.active) : true)),
     displayOrder: Number(item.displayOrder ?? item.DisplayOrder ?? item.order ?? item.Order ?? 0),
     createdAt: item.createdAt || item.CreatedAt || item.dateCreated || new Date().toISOString()
@@ -143,7 +180,10 @@ export const fetchActiveBanners = async (type = '') => {
         let mapped = list.map(mapBannerFromApi).filter(Boolean);
         if (type) {
           const typeLower = type.toLowerCase();
-          const matched = mapped.filter(b => (b.bannerType && b.bannerType.toLowerCase() === typeLower) || (b.targetUrl && b.targetUrl.toLowerCase().includes(typeLower)));
+          const matched = mapped.filter(b =>
+            (b.bannerType && b.bannerType.toLowerCase() === typeLower) ||
+            (typeLower !== 'hero' && b.targetUrl && b.targetUrl.toLowerCase().includes(`type=${typeLower}`))
+          );
           if (matched.length > 0) return matched;
         }
         return mapped;
@@ -177,25 +217,33 @@ export const fetchBannerById = async (id) => {
  */
 export const createBanner = async (bannerData) => {
   const type = bannerData.bannerType || 'Hero';
-  let targetUrl = bannerData.targetUrl || '/products';
-  if (type === 'Products' && (!targetUrl || targetUrl === '/categories' || targetUrl === '/products')) {
-    targetUrl = '/products?type=Products';
-  } else if (type === 'Solutions' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/solutions?type=Solutions';
-  } else if (type === 'Business' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/business?type=Business';
-  } else if (type === 'About' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/about-us?type=About';
-  } else if (type === 'Resources' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/resources?type=Resources';
-  } else if (type === 'Contact' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/contact?type=Contact';
-  } else if (type === 'Promo' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/offers?type=Promo';
+  let targetUrl = (bannerData.targetUrl || '').trim();
+  if (!targetUrl) {
+    if (type === 'Products') targetUrl = '/products?type=Products';
+    else if (type === 'Solutions') targetUrl = '/solutions?type=Solutions';
+    else if (type === 'Business') targetUrl = '/business?type=Business';
+    else if (type === 'About') targetUrl = '/about-us?type=About';
+    else if (type === 'Resources') targetUrl = '/resources?type=Resources';
+    else if (type === 'Contact') targetUrl = '/contact?type=Contact';
+    else if (type === 'Promo') targetUrl = '/offers?type=Promo';
+    else targetUrl = '/products';
   }
 
   const rawSub = bannerData.subtitle || bannerData.description || '';
-  const taggedSub = rawSub.includes('[Type:') ? rawSub : `${rawSub} [Type:${type}]`.trim();
+  const cleanSub = rawSub
+    .replace(/\[Type:\s*\w+\]/gi, '')
+    .replace(/\[(?:Cta|Btn):\s*[^\]]+\]/gi, '')
+    .replace(/\[Sec:\s*[^\]]+\]/gi, '')
+    .trim();
+
+  let tags = `[Type:${type}]`;
+  if (bannerData.ctaText && bannerData.ctaText.trim()) {
+    tags += ` [Cta:${bannerData.ctaText.trim()}]`;
+  }
+  if (bannerData.secondaryType && bannerData.secondaryType.trim()) {
+    tags += ` [Sec:${bannerData.secondaryType.trim()}]`;
+  }
+  const taggedSub = cleanSub ? `${cleanSub} ${tags}` : tags;
 
   const payload = {
     title: bannerData.title || '',
@@ -209,7 +257,14 @@ export const createBanner = async (bannerData) => {
   };
   const response = await axios.post(getBaseUrl(), payload, { headers: getHeaders() });
   clearBannerCache();
-  return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+  apiCache.invalidate('banners');
+  const mapped = mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+  if (mapped) {
+    mapped.bannerType = type;
+    if (bannerData.ctaText) mapped.ctaText = bannerData.ctaText.trim();
+    if (bannerData.secondaryType) mapped.secondaryType = bannerData.secondaryType.trim();
+  }
+  return mapped;
 };
 
 /**
@@ -219,26 +274,33 @@ export const createBanner = async (bannerData) => {
 export const updateBanner = async (id, bannerData) => {
   const cleanId = isNaN(Number(id)) ? id : Number(id);
   const type = bannerData.bannerType || 'Hero';
-  let targetUrl = bannerData.targetUrl || '/products';
-  if (type === 'Products' && (!targetUrl || targetUrl === '/categories' || targetUrl === '/products')) {
-    targetUrl = '/products?type=Products';
-  } else if (type === 'Solutions' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/solutions?type=Solutions';
-  } else if (type === 'Business' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/business?type=Business';
-  } else if (type === 'About' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/about-us?type=About';
-  } else if (type === 'Resources' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/resources?type=Resources';
-  } else if (type === 'Contact' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/contact?type=Contact';
-  } else if (type === 'Promo' && (!targetUrl || targetUrl === '/categories')) {
-    targetUrl = '/offers?type=Promo';
+  let targetUrl = (bannerData.targetUrl || '').trim();
+  if (!targetUrl) {
+    if (type === 'Products') targetUrl = '/products?type=Products';
+    else if (type === 'Solutions') targetUrl = '/solutions?type=Solutions';
+    else if (type === 'Business') targetUrl = '/business?type=Business';
+    else if (type === 'About') targetUrl = '/about-us?type=About';
+    else if (type === 'Resources') targetUrl = '/resources?type=Resources';
+    else if (type === 'Contact') targetUrl = '/contact?type=Contact';
+    else if (type === 'Promo') targetUrl = '/offers?type=Promo';
+    else targetUrl = '/products';
   }
 
   const rawSub = bannerData.subtitle || bannerData.description || '';
-  const cleanSub = rawSub.replace(/\[Type:\w+\]/gi, '').trim();
-  const taggedSub = `${cleanSub} [Type:${type}]`.trim();
+  const cleanSub = rawSub
+    .replace(/\[Type:\s*\w+\]/gi, '')
+    .replace(/\[(?:Cta|Btn):\s*[^\]]+\]/gi, '')
+    .replace(/\[Sec:\s*[^\]]+\]/gi, '')
+    .trim();
+
+  let tags = `[Type:${type}]`;
+  if (bannerData.ctaText && bannerData.ctaText.trim()) {
+    tags += ` [Cta:${bannerData.ctaText.trim()}]`;
+  }
+  if (bannerData.secondaryType && bannerData.secondaryType.trim()) {
+    tags += ` [Sec:${bannerData.secondaryType.trim()}]`;
+  }
+  const taggedSub = cleanSub ? `${cleanSub} ${tags}` : tags;
 
   const payload = {
     id: cleanId,
@@ -253,7 +315,14 @@ export const updateBanner = async (id, bannerData) => {
   };
   const response = await axios.put(`${getBaseUrl()}/${id}`, payload, { headers: getHeaders() });
   clearBannerCache();
-  return mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+  apiCache.invalidate('banners');
+  const mapped = mapBannerFromApi(response.data?.banner || response.data?.data || response.data);
+  if (mapped) {
+    mapped.bannerType = type;
+    if (bannerData.ctaText) mapped.ctaText = bannerData.ctaText.trim();
+    if (bannerData.secondaryType) mapped.secondaryType = bannerData.secondaryType.trim();
+  }
+  return mapped;
 };
 
 /**

@@ -53,6 +53,92 @@ const setCachedHeroSlides = (slidesData) => {
   } catch {}
 };
 
+// Curated slide button architecture providing complete, zero-404 navigation
+// across all primary areas of Honeywell Products:
+const SLIDE_PRESETS = [
+  // Slide 1: Hardware & Direct Quote
+  {
+    primary: 'EXPLORE PRODUCTS',
+    to: '/products',
+    secondary: 'GET A QUOTE',
+    quote: true,
+    secondaryTo: null,
+    showSecondary: true
+  },
+  // Slide 2: Solutions & Business Partnerships
+  {
+    primary: 'EXPLORE SOLUTIONS',
+    to: '/solutions',
+    secondary: 'BUSINESS & PARTNERS',
+    quote: false,
+    secondaryTo: '/business',
+    showSecondary: true
+  },
+  // Slide 3: About Us & Knowledge / Resources Hub
+  {
+    primary: 'ABOUT US',
+    to: '/about-us',
+    secondary: 'RESOURCES & GUIDES',
+    quote: false,
+    secondaryTo: '/resources',
+    showSecondary: true
+  },
+  // Slide 4: Contact Sales & Customer Support / Help
+  {
+    primary: 'CONTACT SALES',
+    to: '/contact',
+    secondary: 'SUPPORT & FAQS',
+    quote: false,
+    secondaryTo: '/support',
+    showSecondary: true
+  }
+];
+
+export function getHeroSlideActions(banner, index = 0) {
+  const customPrimary = (banner.ctaText || banner.buttonText || banner.primaryText || '').trim();
+  const customSecondary = (banner.secondaryType || '').trim().toLowerCase();
+
+  // Pick preset based on slide index
+  const preset = SLIDE_PRESETS[index % SLIDE_PRESETS.length];
+
+  // Resolve target URL safely (sanitizing any legacy /category or /product links to prevent 404s)
+  let rawTo = banner.targetUrl ? String(banner.targetUrl).trim() : '';
+  let to = preset.to;
+  if (rawTo && !['/', '/category', '/categories', '/product'].includes(rawTo.toLowerCase())) {
+    to = rawTo;
+  }
+
+  let primary = customPrimary || preset.primary;
+  let secondary = preset.secondary;
+  let quote = preset.quote;
+  let secondaryTo = preset.secondaryTo;
+  let showSecondary = preset.showSecondary;
+
+  // Respect admin secondary override if explicitly selected
+  if (customSecondary === 'none') {
+    showSecondary = false;
+  } else if (customSecondary === 'quote') {
+    quote = true;
+    secondary = 'GET A QUOTE';
+    secondaryTo = null;
+    showSecondary = true;
+  } else if (customSecondary === 'contact') {
+    quote = false;
+    secondary = 'CONTACT SALES';
+    secondaryTo = '/contact';
+    showSecondary = true;
+  }
+
+  return {
+    primary,
+    to,
+    secondary,
+    quote,
+    secondaryTo,
+    showSecondary
+  };
+}
+
 function HeroSlideItem({ slide, isActive, openQuote }) {
   const [imageLoaded, setImageLoaded] = useState(false);
 
@@ -81,17 +167,19 @@ function HeroSlideItem({ slide, isActive, openQuote }) {
           {slide.title && <h1>{slide.title}</h1>}
           {slide.text && <p>{slide.text}</p>}
           <div className="hero-actions">
-            <Link className="button" to={slide.to || '/products'}>
+            <Link className="button" to={slide.to || '/products'} style={{ textDecoration: 'none' }}>
               {slide.primary || 'EXPLORE PRODUCTS'} <ArrowRight size={18} />
             </Link>
-            {slide.quote ? (
-              <button className="text-link" onClick={() => openQuote()}>
-                {slide.secondary || 'GET A QUOTE'} <ArrowRight size={18} />
-              </button>
-            ) : (
-              <Link className="text-link" to={slide.secondaryTo || '/contact'}>
-                {slide.secondary || 'CONTACT SALES'} <ArrowRight size={18} />
-              </Link>
+            {slide.showSecondary !== false && slide.secondary && (
+              slide.quote ? (
+                <button type="button" className="text-link" onClick={() => openQuote()} style={{ textDecoration: 'none' }}>
+                  {slide.secondary} <ArrowRight size={18} />
+                </button>
+              ) : (
+                <Link className="text-link" to={slide.secondaryTo || '/contact'} style={{ textDecoration: 'none' }}>
+                  {slide.secondary} <ArrowRight size={18} />
+                </Link>
+              )
             )}
           </div>
         </div>
@@ -125,18 +213,23 @@ export default function HeroCarousel() {
         );
         const finalBanners = heroBanners.length > 0 ? heroBanners : banners;
 
-        // Map dynamic banner items created in Admin
-        const liveSlides = finalBanners.map((b, idx) => ({
-          id: b.id || idx,
-          eyebrow: b.eyebrow || b.tag || b.badge || 'TECHNOLOGY • SECURITY • RELIABILITY',
-          title: b.title || '',
-          text: b.subtitle || b.description || '',
-          primary: 'EXPLORE PRODUCTS',
-          to: b.targetUrl || '/products',
-          secondary: 'GET A QUOTE',
-          quote: true,
-          image: resolveBannerImage(b.imageUrl)
-        }));
+        // Map dynamic banner items created in Admin with distinct button actions per slide
+        const liveSlides = finalBanners.map((b, idx) => {
+          const actions = getHeroSlideActions(b, idx);
+          return {
+            id: b.id || idx,
+            eyebrow: b.eyebrow || b.tag || b.badge || 'TECHNOLOGY • SECURITY • RELIABILITY',
+            title: b.title || '',
+            text: b.subtitle || b.description || '',
+            primary: actions.primary,
+            to: actions.to,
+            secondary: actions.secondary,
+            quote: actions.quote,
+            secondaryTo: actions.secondaryTo,
+            showSecondary: actions.showSecondary,
+            image: resolveBannerImage(b.imageUrl)
+          };
+        });
 
         setSlides(liveSlides);
         setCachedHeroSlides(liveSlides);
