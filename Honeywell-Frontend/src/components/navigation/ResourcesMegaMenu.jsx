@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { BookOpen, Newspaper, FileCheck, PlaySquare, Download, FileText, HelpCircle, LifeBuoy, Wrench, ShieldAlert, ArrowRight } from 'lucide-react';
+import { BookOpen, Newspaper, Download, FileText, HelpCircle, LifeBuoy, Wrench, ShieldAlert, ArrowRight } from 'lucide-react';
 
 export default function ResourcesMegaMenu({ onClose }) {
   return (
@@ -24,24 +24,6 @@ export default function ResourcesMegaMenu({ onClose }) {
                 <div>
                   <span className="mega-link-title">Blog &amp; Articles</span>
                   <span className="mega-link-desc">Latest security &amp; solar insights</span>
-                </div>
-              </Link>
-            </li>
-            <li>
-              <Link to="/case-studies" onClick={onClose}>
-                <FileCheck size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Case Studies</span>
-                  <span className="mega-link-desc">Real customer implementations</span>
-                </div>
-              </Link>
-            </li>
-            <li>
-              <Link to="/videos" onClick={onClose}>
-                <PlaySquare size={18} className="mega-icon" />
-                <div>
-                  <span className="mega-link-title">Video Center</span>
-                  <span className="mega-link-desc">Demos, tutorials &amp; webinars</span>
                 </div>
               </Link>
             </li>

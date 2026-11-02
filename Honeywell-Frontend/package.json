@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test": "node --test src/admin/__tests__/notifications.test.js"
+    "test": "node --test src/admin/__tests__/notifications.test.js src/__tests__/policies.test.js",
+    "test:policies": "node --test src/__tests__/policies.test.js"
   },
   "dependencies": {
     "@openai/sites-vite-plugin": "^0.2.0",

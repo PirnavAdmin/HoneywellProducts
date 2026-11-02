@@ -13,19 +13,59 @@ import { useUI } from '../../context/UIContext';
 export default function Layout() {
   const { pathname } = useLocation();
   const [showTop, setShowTop] = useState(false);
+  const [footerInView, setFooterInView] = useState(false);
   const { toast } = useUI();
-  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]);
-  useEffect(() => { const listener = () => setShowTop(window.scrollY > 700); window.addEventListener('scroll', listener); return () => window.removeEventListener('scroll', listener); }, []);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [pathname]);
+
+  useEffect(() => {
+    const listener = () => setShowTop(window.scrollY > 700);
+    window.addEventListener('scroll', listener, { passive: true });
+    return () => window.removeEventListener('scroll', listener);
+  }, []);
+
+  useEffect(() => {
+    const footerEl = document.getElementById('site-footer');
+    if (!footerEl || typeof IntersectionObserver === 'undefined') return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setFooterInView(entry.isIntersecting);
+      },
+      { threshold: 0.05 }
+    );
+
+    observer.observe(footerEl);
+    return () => observer.disconnect();
+  }, [pathname]);
+
   return (
-    <div className="site-shell">
+    <div className={`site-shell ${footerInView ? 'footer-in-view' : ''}`}>
       <Header />
       <main><Outlet /></main>
       <Footer />
       <EnquiryModal />
       <BulkQuoteModal />
       <Chatbot />
-      <button className={`whatsapp-button ${!socialLinks.whatsapp ? 'disabled' : ''}`} onClick={() => socialLinks.whatsapp && window.open(socialLinks.whatsapp, '_blank', 'noopener')} aria-label={socialLinks.whatsapp ? 'Contact on WhatsApp' : 'WhatsApp link not configured'} title={socialLinks.whatsapp ? 'WhatsApp' : 'WhatsApp link will be added by the client'}><WhatsAppIcon size={24} /></button>
-      {showTop && <button className="back-to-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Back to top"><ArrowUp /></button>}
+      <button
+        className={`whatsapp-button ${!socialLinks.whatsapp ? 'disabled' : ''}`}
+        onClick={() => socialLinks.whatsapp && window.open(socialLinks.whatsapp, '_blank', 'noopener')}
+        aria-label={socialLinks.whatsapp ? 'Contact on WhatsApp' : 'WhatsApp link not configured'}
+        title={socialLinks.whatsapp ? 'WhatsApp' : 'WhatsApp link will be added by the client'}
+      >
+        <WhatsAppIcon size={24} />
+      </button>
+      {showTop && (
+        <button
+          className="back-to-top"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Back to top"
+        >
+          <ArrowUp />
+        </button>
+      )}
       {toast && <div className="toast" role="status">{toast}</div>}
     </div>
   );

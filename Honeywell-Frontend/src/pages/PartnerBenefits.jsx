@@ -230,9 +230,9 @@ export default function PartnerBenefits() {
                 <Link to="/business#partner" className="button button-red">
                   Apply for Partnership <ArrowRight size={16} />
                 </Link>
-                <Link to="/partner/login" className="button button-ghost">
+                {/* <Link to="/partner/login" className="button button-ghost">
                   <LogIn size={15} /> Partner Portal Login
-                </Link>
+                </Link> */}
                 <button
                   type="button"
                   onClick={() => openQuote('Partner Program')}

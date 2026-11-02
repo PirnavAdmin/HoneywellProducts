@@ -37,9 +37,17 @@ const PartnerBenefits = lazy(() => import('./pages/PartnerBenefits'));
 const PartnerLogin = lazy(() => import('./pages/PartnerLogin'));
 const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard'));
 const ResourcesHub = lazy(() => import('./pages/ResourcesHub'));
-const CaseStudies = lazy(() => import('./pages/CaseStudies'));
-const Videos = lazy(() => import('./pages/Videos'));
+
+
 const LegalPage = lazy(() => import('./pages/LegalPage'));
+const PrivacyPolicy = lazy(() => import('./pages/policies/PrivacyPolicy'));
+const TermsAndConditions = lazy(() => import('./pages/policies/TermsAndConditions'));
+const ReturnRefundPolicy = lazy(() => import('./pages/policies/ReturnRefundPolicy'));
+const ShippingDeliveryPolicy = lazy(() => import('./pages/policies/ShippingDeliveryPolicy'));
+const CancellationPolicy = lazy(() => import('./pages/policies/CancellationPolicy'));
+const WarrantyPolicy = lazy(() => import('./pages/policies/WarrantyPolicy'));
+const CookiePolicy = lazy(() => import('./pages/policies/CookiePolicy'));
+const GrievanceRedressal = lazy(() => import('./pages/policies/GrievanceRedressal'));
 const BlogDetails = lazy(() => import('./pages/BlogDetails'));
 const BlogsListing = lazy(() => import('./pages/BlogsListing'));
 const Documentation = lazy(() => import('./pages/Documentation'));
@@ -230,10 +238,12 @@ export default function App() {
               <Route path="categories" element={<Navigate to="/products" replace />} />
               <Route path="product" element={<Navigate to="/products" replace />} />
               <Route path="products" element={<Products />} />
+              <Route path="catalog" element={<Navigate to="/products" replace />} />
               <Route path="products/:id" element={<ProductDetails />} />
               <Route path="solutions" element={<Solutions />} />
               <Route path="business" element={<Business />} />
               <Route path="contact" element={<Contact />} />
+              <Route path="quote" element={<Navigate to="/contact" replace />} />
               <Route path="cart" element={<Cart />} />
               <Route path="checkout" element={<Checkout />} />
               <Route path="order-success" element={<OrderSuccess />} />
@@ -270,12 +280,26 @@ export default function App() {
               <Route path="blogs/:id" element={<BlogDetails />} />
               <Route path="blog/:id" element={<BlogDetails />} />
               <Route path="blogs" element={<BlogsListing />} />
-              <Route path="case-studies" element={<CaseStudies />} />
-              <Route path="videos" element={<Videos />} />
-              <Route path="privacy-policy" element={<LegalPage />} />
-              <Route path="terms-and-conditions" element={<LegalPage />} />
-              <Route path="cookie-policy" element={<LegalPage />} />
-              <Route path="warranty-policy" element={<LegalPage />} />
+              <Route path="case-studies" element={<Navigate to="/resources" replace />} />
+              <Route path="videos" element={<Navigate to="/resources" replace />} />
+              <Route path="privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="terms-and-conditions" element={<TermsAndConditions />} />
+              <Route path="terms" element={<Navigate to="/terms-and-conditions" replace />} />
+              <Route path="return-refund-policy" element={<ReturnRefundPolicy />} />
+              <Route path="returns-and-refunds" element={<Navigate to="/return-refund-policy" replace />} />
+              <Route path="refund-policy" element={<Navigate to="/return-refund-policy" replace />} />
+              <Route path="shipping-delivery-policy" element={<ShippingDeliveryPolicy />} />
+              <Route path="shipping-policy" element={<Navigate to="/shipping-delivery-policy" replace />} />
+              <Route path="cancellation-policy" element={<CancellationPolicy />} />
+              <Route path="cancellation" element={<Navigate to="/cancellation-policy" replace />} />
+              <Route path="warranty-policy" element={<WarrantyPolicy />} />
+              <Route path="cookie-policy" element={<CookiePolicy />} />
+              <Route path="cookies" element={<Navigate to="/cookie-policy" replace />} />
+              <Route path="grievance-redressal" element={<GrievanceRedressal />} />
+              <Route path="grievance" element={<Navigate to="/grievance-redressal" replace />} />
+
+
+
 
               {/* Documentation & Technical Documentation Routes */}
               <Route path="documentation" element={<Documentation />} />

@@ -1,6 +1,6 @@
 
 const DEFAULT_BACKEND_URL =
-  'https://drab-smoking-unstaffed.ngrok-free.dev';
+  'http://localhost:5119';
 
 export { DEFAULT_BACKEND_URL };
 

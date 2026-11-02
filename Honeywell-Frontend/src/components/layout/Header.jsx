@@ -289,7 +289,7 @@ export default function Header() {
               <div className="mobile-acc-body">
                 <Link to="/business" onClick={closeMenus}>Business Opportunities</Link>
                 <Link to="/partner-benefits" onClick={closeMenus}>Partner Benefits</Link>
-                <Link to="/partner/login" onClick={closeMenus}>Partner Login</Link>
+                {/* <Link to="/partner/login" onClick={closeMenus}>Partner Login</Link> */}
                 <Link to="/partner/dashboard" onClick={closeMenus}>Partner Dashboard</Link>
               </div>
             )}
@@ -308,8 +308,8 @@ export default function Header() {
                 <Link to="/resources" onClick={closeMenus}>Resource Hub</Link>
                 <Link to="/resources/software" onClick={closeMenus}>Software &amp; Downloads</Link>
                 <Link to="/blogs" onClick={closeMenus}>Blog &amp; News</Link>
-                <Link to="/case-studies" onClick={closeMenus}>Case Studies</Link>
-                <Link to="/videos" onClick={closeMenus}>Videos</Link>
+
+
                 <Link to="/support" onClick={closeMenus}>Support Center</Link>
                 <Link to="/service-request" onClick={closeMenus}>Service Request</Link>
                 <Link to="/warranty" onClick={closeMenus}>Warranty</Link>

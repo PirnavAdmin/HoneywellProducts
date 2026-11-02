@@ -60,7 +60,7 @@ export default function BusinessMegaMenu({ onClose }) {
         <div className="mega-column">
           <h4 className="mega-title">Partner Center</h4>
           <ul className="mega-list">
-            <li>
+            {/* <li>
               <Link to="/partner/login" onClick={onClose}>
                 <LogIn size={18} className="mega-icon" />
                 <div>
@@ -68,7 +68,7 @@ export default function BusinessMegaMenu({ onClose }) {
                   <span className="mega-link-desc">Access authorized partner portal</span>
                 </div>
               </Link>
-            </li>
+            </li> */}
             <li>
               <Link to="/partner/dashboard" onClick={onClose}>
                 <LayoutDashboard size={18} className="mega-icon" />

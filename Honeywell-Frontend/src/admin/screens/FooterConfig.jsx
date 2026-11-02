@@ -16,8 +16,12 @@ const FooterConfig = () => {
     aboutSummary: '',
     privacyPolicyUrl: '/privacy-policy',
     termsUrl: '/terms-and-conditions',
-    cookiePolicyUrl: '/cookie-policy',
+    returnRefundPolicyUrl: '/return-refund-policy',
+    shippingPolicyUrl: '/shipping-delivery-policy',
+    cancellationPolicyUrl: '/cancellation-policy',
     warrantyPolicyUrl: '/warranty-policy',
+    cookiePolicyUrl: '/cookie-policy',
+    grievancePolicyUrl: '/grievance-redressal',
     facebookUrl: 'https://facebook.com/honeywell',
     twitterUrl: 'https://twitter.com/honeywell',
     linkedinUrl: 'https://linkedin.com/company/honeywell'
@@ -202,6 +206,58 @@ const FooterConfig = () => {
                   placeholder="/warranty-policy"
                   value={footerData.warrantyPolicyUrl}
                   onChange={set('warrantyPolicyUrl')}
+                />
+              </div>
+            </div>
+
+            <div className="fc-field">
+              <label className="fc-label"><Link2 size={13} /> Return &amp; Refund URL</label>
+              <div className="fc-input-wrap">
+                <Link2 size={16} />
+                <input
+                  type="text"
+                  placeholder="/return-refund-policy"
+                  value={footerData.returnRefundPolicyUrl || ''}
+                  onChange={set('returnRefundPolicyUrl')}
+                />
+              </div>
+            </div>
+
+            <div className="fc-field">
+              <label className="fc-label"><Link2 size={13} /> Shipping &amp; Delivery URL</label>
+              <div className="fc-input-wrap">
+                <Link2 size={16} />
+                <input
+                  type="text"
+                  placeholder="/shipping-delivery-policy"
+                  value={footerData.shippingPolicyUrl || ''}
+                  onChange={set('shippingPolicyUrl')}
+                />
+              </div>
+            </div>
+
+            <div className="fc-field">
+              <label className="fc-label"><Link2 size={13} /> Cancellation Policy URL</label>
+              <div className="fc-input-wrap">
+                <Link2 size={16} />
+                <input
+                  type="text"
+                  placeholder="/cancellation-policy"
+                  value={footerData.cancellationPolicyUrl || ''}
+                  onChange={set('cancellationPolicyUrl')}
+                />
+              </div>
+            </div>
+
+            <div className="fc-field">
+              <label className="fc-label"><Link2 size={13} /> Grievance Redressal URL</label>
+              <div className="fc-input-wrap">
+                <Link2 size={16} />
+                <input
+                  type="text"
+                  placeholder="/grievance-redressal"
+                  value={footerData.grievancePolicyUrl || ''}
+                  onChange={set('grievancePolicyUrl')}
                 />
               </div>
             </div>

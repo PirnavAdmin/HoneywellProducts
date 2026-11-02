@@ -5,7 +5,9 @@ import { sites } from '@openai/sites-vite-plugin';
 import { mkdir, writeFile } from 'node:fs/promises';
 
 const API_PROXY_TARGET =
-  'https://drab-smoking-unstaffed.ngrok-free.dev';
+  process.env.VITE_API_PROXY_TARGET ||
+  process.env.VITE_API_BASE_URL ||
+  'http://localhost:5119';
 
 const MEDIA_PROXY_TARGET =
   'https://honeywellproducts.com';

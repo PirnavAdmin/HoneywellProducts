@@ -180,8 +180,8 @@ export default function SupportCenter() {
 
     try {
       const data = await sendBotChat(msg);
-      const botReply = data.reply || 'I apologize, I could not find an answer. Please submit a support ticket.';
-      const links = data.suggestedLinks || [];
+      const botReply = data.reply || data.message || 'I apologize, I could not find an answer. Please submit a support ticket.';
+      const links = data.suggestedLinks || data.suggestedActions || [];
 
       setChatMessages((prev) => [
         ...prev,
@@ -396,7 +396,7 @@ export default function SupportCenter() {
                           {msg.links.map((link, j) => (
                             <Link
                               key={j}
-                              to={link.path}
+                              to={link.path || link.url || '/support'}
                               style={{
                                 display: 'inline-flex', alignItems: 'center', gap: '4px',
                                 fontSize: '12px', fontWeight: 700, color: '#1268a5',

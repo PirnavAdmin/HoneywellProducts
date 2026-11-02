@@ -25,6 +25,7 @@ namespace Honeywell.DTOs.Chat
     {
         public string Title { get; set; } = string.Empty;
         public string Url { get; set; } = string.Empty;
+        public string Path => Url;
     }
 
     public class ChatMessageResponse
@@ -37,6 +38,7 @@ namespace Honeywell.DTOs.Chat
         public string? Category { get; set; }
         public List<ChatProductDto>? Products { get; set; }
         public List<ChatActionDto>? SuggestedActions { get; set; }
+        public List<ChatActionDto>? SuggestedLinks => SuggestedActions;
     }
 
     public class ChatConfigDto

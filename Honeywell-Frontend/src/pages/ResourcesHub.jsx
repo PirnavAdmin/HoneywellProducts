@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Newspaper, FileCheck, PlaySquare, FileText, DownloadCloud,
+  Newspaper, FileText, DownloadCloud,
   Phone, Mail, Clock, Loader2, AlertCircle, Download, ArrowRight,
   Calendar, User, ChevronRight
 } from 'lucide-react';
@@ -15,7 +15,7 @@ export default function ResourcesHub() {
   const { banner } = usePageBanner(
     'Resources',
     'Honeywell Resources & Learning Hub',
-    'Technical whitepapers, case studies, video guides, software downloads, and security articles.'
+    'Technical whitepapers, software downloads, and security articles.'
   );
 
   // ── State for all 3 APIs ──
@@ -148,20 +148,6 @@ export default function ResourcesHub() {
                 }
               </p>
               <span className="res-link">Explore Articles &rarr;</span>
-            </Link>
-
-            <Link to="/case-studies" className="resource-section-card">
-              <FileCheck size={32} className="res-icon" />
-              <h3>Customer Case Studies</h3>
-              <p>Discover real-world enterprise deployments across industrial, retail, and healthcare environments.</p>
-              <span className="res-link">Read Case Studies &rarr;</span>
-            </Link>
-
-            <Link to="/videos" className="resource-section-card">
-              <PlaySquare size={32} className="res-icon" />
-              <h3>Video &amp; Demonstration Center</h3>
-              <p>Watch product walkthroughs, installation tutorials, and camera quality side-by-side demos.</p>
-              <span className="res-link">Watch Videos &rarr;</span>
             </Link>
           </div>
         </div>

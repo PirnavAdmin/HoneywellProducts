@@ -2,9 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Download, FileText, Search, FileCheck, BookOpen, Eye,
-  Loader2, AlertCircle, Package, Layers, X
+  Loader2, AlertCircle, Package, Layers, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
 import { productService } from '../services/productService';
 import { generateProductPdf } from '../utils/pdfGenerator';
 
@@ -24,6 +23,8 @@ export default function DownloadsCenter() {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 12;
 
   // State for Products (documents)
   const [products, setProducts] = useState([]);
@@ -203,10 +204,62 @@ export default function DownloadsCenter() {
     return items;
   }, [activeTab, allDocuments, category, search]);
 
+  // Reset pagination to first page when any filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, category, activeTab]);
+
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE) || 1;
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  const paginatedItems = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredItems, currentPage, ITEMS_PER_PAGE]);
+
+  const pageNumbers = useMemo(() => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else if (currentPage <= 4) {
+      for (let i = 1; i <= 5; i++) pages.push(i);
+      pages.push('...');
+      pages.push(totalPages);
+    } else if (currentPage >= totalPages - 3) {
+      pages.push(1);
+      pages.push('...');
+      for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      pages.push('...');
+      pages.push(currentPage - 1);
+      pages.push(currentPage);
+      pages.push(currentPage + 1);
+      pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  }, [currentPage, totalPages]);
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
+    setCurrentPage(newPage);
+    const targetEl = document.getElementById('downloads-top');
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const isLoading = loadingProducts;
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
+    setCurrentPage(1);
     setSearchParams(tab === 'all' ? {} : { tab });
   };
 
@@ -250,14 +303,17 @@ export default function DownloadsCenter() {
 
   return (
     <>
-      <PageHero
-        eyebrow="DOCUMENTATION &amp; RESOURCES"
-        title="Downloads &amp; Document Center"
-        description="Access official datasheets, installation manuals, product brochures, and certifications for Honeywell security products."
-      />
-
-      <section className="section">
+      <section className="section downloads-page-section" id="downloads-top">
         <div className="container">
+          {/* ── Compact Professional Header (Banner & Breadcrumbs Removed) ── */}
+          <header className="downloads-header">
+            <span className="downloads-badge">DOCUMENTATION &amp; RESOURCES</span>
+            <h1 className="downloads-title">Downloads &amp; Document Center</h1>
+            <p className="downloads-desc">
+              Access official datasheets, installation manuals, product brochures, and certifications for Honeywell security products.
+            </p>
+          </header>
+
           {/* ── Controls: Search + Category ── */}
           <div className="downloads-controls">
             <div className="search-input-wrapper">
@@ -306,10 +362,34 @@ export default function DownloadsCenter() {
             })}
           </div>
 
+          {/* ── Results Bar ── */}
+          {!isLoading && !errorProducts && filteredItems.length > 0 && (
+            <div className="downloads-results-bar">
+              <div className="downloads-results-count">
+                Showing <strong>{(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}</strong> of <strong>{filteredItems.length}</strong> {filteredItems.length === 1 ? 'document' : 'documents'}
+                {category && (
+                  <span className="downloads-active-filter-pill">
+                    Category: {category}
+                  </span>
+                )}
+                {search && (
+                  <span className="downloads-active-filter-pill">
+                    "{search}"
+                  </span>
+                )}
+              </div>
+              {totalPages > 1 && (
+                <div className="downloads-page-indicator">
+                  Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Content ── */}
           {isLoading ? (
             <div className="route-loading" style={{ minHeight: '260px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-              <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#e30613' }} />
+              <Loader2 size={32} style={{ animation: 'spin 1s linear infinite', color: '#1268a5' }} />
               <p style={{ margin: 0, color: '#64748b', fontSize: '15px' }}>Loading official Honeywell documentation...</p>
             </div>
           ) : errorProducts ? (
@@ -325,7 +405,7 @@ export default function DownloadsCenter() {
               {(search || category || activeTab !== 'all') && (
                 <button
                   type="button"
-                  className="button button-outline button-small"
+                  className="downloads-reset-btn"
                   onClick={() => { setSearch(''); setCategory(''); setActiveTab('all'); setSearchParams({}); }}
                 >
                   Reset All Filters
@@ -333,63 +413,115 @@ export default function DownloadsCenter() {
               )}
             </div>
           ) : (
-            <div className="downloads-grid">
-              {filteredItems.map((item) => (
-                <div key={item.id} className="download-card">
-                  <div className="download-card-header">
-                    <div className={`download-card-icon ${item.type}`}>
-                      {getItemIcon(item)}
+            <>
+              <div className="downloads-grid">
+                {paginatedItems.map((item) => (
+                  <div key={item.id} className="download-card">
+                    <div className="download-card-header">
+                      <div className={`download-card-icon ${item.type}`}>
+                        {getItemIcon(item)}
+                      </div>
+                      <div className="download-card-tags">
+                        <span className={`doc-type-tag ${item.type}`}>
+                          {item.badge}
+                        </span>
+                        <span
+                          className="doc-format-pill"
+                          style={{
+                            background: item.hasRealUrl ? '#dcfce7' : '#fef3c7',
+                            color: item.hasRealUrl ? '#166534' : '#92400e',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {item.hasRealUrl ? 'Official Doc' : 'Generated PDF'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="download-card-tags">
-                      <span className={`doc-type-tag ${item.type}`}>
-                        {item.badge}
+
+                    <div className="download-card-info">
+                      <h4>{item.title}</h4>
+                      <span className="doc-category">
+                        {item.category}
                       </span>
-                      <span
-                        className="doc-format-pill"
-                        style={{
-                          background: item.hasRealUrl ? '#dcfce7' : '#fef3c7',
-                          color: item.hasRealUrl ? '#166534' : '#92400e',
-                          fontWeight: 600,
-                        }}
+                      {item.description && (
+                        <p className="doc-desc">
+                          {item.description}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="download-card-actions">
+                      <button
+                        type="button"
+                        className="btn-view"
+                        onClick={() => handleDocumentAction(item, 'view')}
+                        title={item.hasRealUrl ? "Open official document in browser" : "Preview generated product datasheet"}
                       >
-                        {item.hasRealUrl ? 'Official Doc' : 'Generated PDF'}
-                      </span>
+                        <Eye size={14} /> Preview
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-download"
+                        onClick={() => handleDocumentAction(item, 'download')}
+                        title={item.hasRealUrl ? "Download official uploaded manufacturer document" : "Generate product datasheet PDF from live product specifications"}
+                      >
+                        <Download size={14} /> {item.hasRealUrl ? 'Download Official PDF' : 'Generate Product PDF'}
+                      </button>
                     </div>
                   </div>
+                ))}
+              </div>
 
-                  <div className="download-card-info">
-                    <h4>{item.title}</h4>
-                    <span className="doc-category">
-                      {item.category}
-                    </span>
-                    {item.description && (
-                      <p className="doc-desc">
-                        {item.description}
-                      </p>
-                    )}
+              {/* ── Responsive Pagination Bar ── */}
+              {totalPages > 1 && (
+                <div className="downloads-pagination-wrapper">
+                  <div className="downloads-pagination-info">
+                    Showing <strong>{(currentPage - 1) * ITEMS_PER_PAGE + 1}</strong>–<strong>{Math.min(currentPage * ITEMS_PER_PAGE, filteredItems.length)}</strong> of <strong>{filteredItems.length}</strong> documents
                   </div>
-
-                  <div className="download-card-actions">
+                  <div className="downloads-pagination-controls">
                     <button
                       type="button"
-                      className="btn-view"
-                      onClick={() => handleDocumentAction(item, 'view')}
-                      title={item.hasRealUrl ? "Open official document in browser" : "Preview generated product datasheet"}
+                      className="downloads-page-btn"
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      aria-label="Previous Page"
                     >
-                      <Eye size={14} /> Preview
+                      <ChevronLeft size={16} />
+                      <span>Previous</span>
                     </button>
+
+                    <div className="downloads-page-numbers">
+                      {pageNumbers.map((p, idx) =>
+                        p === '...' ? (
+                          <span key={`ellipsis-${idx}`} className="downloads-page-ellipsis">…</span>
+                        ) : (
+                          <button
+                            key={p}
+                            type="button"
+                            className={`downloads-page-num ${currentPage === p ? 'active' : ''}`}
+                            onClick={() => handlePageChange(p)}
+                            aria-current={currentPage === p ? 'page' : undefined}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )}
+                    </div>
+
                     <button
                       type="button"
-                      className="btn-download"
-                      onClick={() => handleDocumentAction(item, 'download')}
-                      title={item.hasRealUrl ? "Download official uploaded manufacturer document" : "Generate product datasheet PDF from live product specifications"}
+                      className="downloads-page-btn"
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      aria-label="Next Page"
                     >
-                      <Download size={14} /> {item.hasRealUrl ? 'Download Official PDF' : 'Generate Product PDF'}
+                      <span>Next</span>
+                      <ChevronRight size={16} />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </div>
       </section>

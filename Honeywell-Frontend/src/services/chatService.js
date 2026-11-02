@@ -49,13 +49,15 @@ export const chatService = {
       return {
         success: true,
         message: replyText,
+        products: resData.products || resData.data?.products || [],
+        suggestedActions: resData.suggestedActions || resData.data?.suggestedActions || [],
         raw: resData
       };
     } catch (err) {
       console.warn('Chat API send error:', err.message);
       return {
         success: false,
-        message: 'Thank you for reaching out! Our AI assistant is currently online and ready to assist with Honeywell product enquiries, quotes, and specifications.',
+        message: 'I am unable to reach the server right now. Please ensure the backend service is running, or contact us directly at support@honeywell.com.',
         error: err.message
       };
     }
