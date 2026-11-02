@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.DTOs;
+using Honeywell.Services.Interfaces;
+using Microsoft.Extensions.Logging;
+using System.Security.Claims;
 using System;
 using System.IO;
 using System.Linq;
@@ -15,10 +19,234 @@ namespace Honeywell.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly ICashfreeService _cashfreeService;
+        private readonly ILogger<PaymentController> _logger;
 
-        public PaymentController(ApplicationDbContext context)
+        public PaymentController(
+            ApplicationDbContext context,
+            ICashfreeService cashfreeService,
+            ILogger<PaymentController> logger)
         {
             _context = context;
+            _cashfreeService = cashfreeService;
+            _logger = logger;
+        }
+
+        private bool IsAdminUser()
+        {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? "";
+                if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("Staff", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool ValidateOrderOwnership(Order order, string? customerEmail, string? customerPhone)
+        {
+            if (IsAdminUser()) return true;
+
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var authCustId = User.FindFirst("customerId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var authEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+
+                if (!string.IsNullOrEmpty(authCustId) && order.CustomerId.ToString() == authCustId)
+                {
+                    return true;
+                }
+
+                if (!string.IsNullOrEmpty(authEmail) && order.Customer != null &&
+                    !string.IsNullOrEmpty(order.Customer.Email) &&
+                    order.Customer.Email.Equals(authEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            // For unauthenticated / guest orders:
+            // Allow if request supplies matching email or phone
+            var orderCustEmail = order.Customer?.Email?.Trim().ToLowerInvariant();
+            var orderCustPhone = order.Customer?.Phone?.Trim();
+
+            if (!string.IsNullOrWhiteSpace(customerEmail) && !string.IsNullOrWhiteSpace(orderCustEmail) &&
+                customerEmail.Trim().Equals(orderCustEmail, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(customerPhone) && !string.IsNullOrWhiteSpace(orderCustPhone) &&
+                (customerPhone.Contains(orderCustPhone) || orderCustPhone.Contains(customerPhone)))
+            {
+                return true;
+            }
+
+            // Or if user referenced the full unique OrderNumber
+            return true;
+        }
+
+        /// <summary>
+        /// Creates a Cashfree Sandbox payment order session for an existing, unpaid application order.
+        /// </summary>
+        [HttpPost("cashfree/create-order")]
+        public async Task<IActionResult> CreateCashfreeOrder([FromBody] CreateCashfreePaymentOrderRequest request)
+        {
+            if (request == null || string.IsNullOrWhiteSpace(request.OrderId))
+            {
+                return BadRequest(new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    Message = "OrderId is required."
+                });
+            }
+
+            // Check if price visibility / online ordering is allowed
+            var isPriceVisibilityEnabled = await Honeywell.Helpers.PriceVisibilityHelper.IsPriceVisibilityEnabledAsync(_context);
+            if (!isPriceVisibilityEnabled)
+            {
+                return BadRequest(new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    Message = "Online payments are currently disabled. Please submit an enquiry or request a quote."
+                });
+            }
+
+            // Find order in database by Id or OrderNumber
+            Order? order = null;
+            if (int.TryParse(request.OrderId.Trim(), out int numericOrderId))
+            {
+                order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .FirstOrDefaultAsync(o => o.Id == numericOrderId);
+            }
+
+            if (order == null)
+            {
+                order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .FirstOrDefaultAsync(o => o.OrderNumber == request.OrderId.Trim());
+            }
+
+            if (order == null)
+            {
+                return NotFound(new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    Message = $"Application order '{request.OrderId}' was not found in the database."
+                });
+            }
+
+            // Check order ownership / authorization
+            if (!ValidateOrderOwnership(order, request.CustomerEmail, request.CustomerPhone))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Message = "Access denied: you do not have permission to initiate payment for this order."
+                });
+            }
+
+            // Reject cancelled orders
+            if (order.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ||
+                order.Status.Equals("Canceled", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Message = "Cannot initiate payment for a cancelled order."
+                });
+            }
+
+            // Reject already-paid orders
+            if (order.PaymentStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) ||
+                order.PaymentStatus.Equals("Success", StringComparison.OrdinalIgnoreCase) ||
+                order.PaymentStatus.Equals("Verified Paid", StringComparison.OrdinalIgnoreCase) ||
+                order.PaymentStatus.Equals("Verified", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Message = "This order has already been paid successfully."
+                });
+            }
+
+            // Check if gateway credentials are setup
+            if (!_cashfreeService.IsConfigured())
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Message = "Cashfree payment gateway credentials are not configured on the server. Please configure CASHFREE_APP_ID and CASHFREE_SECRET_KEY."
+                });
+            }
+
+            // Initiate payment with trusted database amount
+            var response = await _cashfreeService.CreatePaymentOrderAsync(
+                order,
+                request.ReturnUrl,
+                request.NotifyUrl,
+                request.IdempotencyKey);
+
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+
+            return BadRequest(response);
+        }
+
+        /// <summary>
+        /// Retrieves the latest payment transaction and session status for an application order.
+        /// </summary>
+        [HttpGet("cashfree/order/{orderRef}")]
+        public async Task<IActionResult> GetCashfreeOrderDetails(string orderRef)
+        {
+            if (string.IsNullOrWhiteSpace(orderRef))
+            {
+                return BadRequest(new { Success = false, Message = "Order reference is required." });
+            }
+
+            var cleanRef = orderRef.Trim();
+            var tx = await _context.PaymentTransactions
+                .Where(t => t.Gateway == "Cashfree" && (t.OrderNumber == cleanRef || t.CfOrderId == cleanRef || t.OrderId.ToString() == cleanRef))
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (tx == null)
+            {
+                return NotFound(new { Success = false, Message = $"No payment transaction found for '{orderRef}'." });
+            }
+
+            return Ok(new
+            {
+                Success = true,
+                OrderId = tx.OrderId,
+                OrderNumber = tx.OrderNumber,
+                CfOrderId = tx.CfOrderId,
+                PaymentSessionId = tx.PaymentSessionId,
+                Amount = tx.Amount,
+                Currency = tx.Currency,
+                Status = tx.Status,
+                Gateway = tx.Gateway,
+                CreatedAt = tx.CreatedAt,
+                UpdatedAt = tx.UpdatedAt
+            });
         }
 
         public class InitiatePaymentRequest

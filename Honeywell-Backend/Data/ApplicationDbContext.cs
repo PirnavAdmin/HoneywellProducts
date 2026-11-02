@@ -57,6 +57,7 @@ namespace Honeywell.Data
         public DbSet<WishlistItem> WishlistItems { get; set; }
         public DbSet<Testimonial> Testimonials { get; set; }
         public DbSet<WalletTransaction> WalletTransactions { get; set; }
+        public DbSet<PaymentTransaction> PaymentTransactions { get; set; }
         public DbSet<ManualPayment> ManualPayments { get; set; }
         public DbSet<BankDetailsConfig> BankDetailsConfigs { get; set; }
         public DbSet<UpiDetailsConfig> UpiDetailsConfigs { get; set; }

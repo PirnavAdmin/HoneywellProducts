@@ -111,6 +111,10 @@ builder.Services.AddScoped<IBlogService, BlogService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductSoftwareService, ProductSoftwareService>();
 builder.Services.AddScoped<IChatService, ChatService>();
+builder.Services.AddHttpClient<ICashfreeService, CashfreeService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(20);
+});
 
 // JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -167,6 +171,40 @@ using (var scope = app.Services.CreateScope())
                     `PermissionsJson` TEXT NULL
                 );";
             cmd.ExecuteNonQuery();
+
+            // Ensure payment_transactions table exists for Cashfree / Gateway Tracking
+            try
+            {
+                cmd.CommandText = @"
+                    CREATE TABLE IF NOT EXISTS `payment_transactions` (
+                        `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                        `OrderId` INT NOT NULL,
+                        `OrderNumber` VARCHAR(100) NOT NULL,
+                        `Gateway` VARCHAR(50) NOT NULL DEFAULT 'Cashfree',
+                        `CfOrderId` VARCHAR(100) NOT NULL,
+                        `PaymentSessionId` VARCHAR(255) NULL,
+                        `CfPaymentId` VARCHAR(100) NULL,
+                        `Amount` DECIMAL(18, 2) NOT NULL,
+                        `Currency` VARCHAR(10) NOT NULL DEFAULT 'INR',
+                        `Status` VARCHAR(50) NOT NULL DEFAULT 'Created',
+                        `CustomerId` INT NULL,
+                        `CustomerName` VARCHAR(150) NULL,
+                        `CustomerEmail` VARCHAR(150) NULL,
+                        `CustomerPhone` VARCHAR(50) NULL,
+                        `PaymentMethod` VARCHAR(100) NULL,
+                        `IdempotencyKey` VARCHAR(100) NULL,
+                        `ErrorMessage` TEXT NULL,
+                        `RawResponse` TEXT NULL,
+                        `CreatedAt` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        `UpdatedAt` DATETIME NULL,
+                        INDEX `idx_pt_order_id` (`OrderId`),
+                        INDEX `idx_pt_order_number` (`OrderNumber`),
+                        INDEX `idx_pt_cf_order_id` (`CfOrderId`),
+                        INDEX `idx_pt_idempotency` (`IdempotencyKey`)
+                    );";
+                cmd.ExecuteNonQuery();
+            }
+            catch { }
 
             // Ensure PermissionsJson column exists
             try
