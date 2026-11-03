@@ -8,15 +8,17 @@ import {
   initiatePayment,
   netbankingLogin,
   netbankingVerifyOtp,
+  cardVerifyOtp,
   getPaymentStatus,
   completePayment,
   getQrCode,
   getQrByOrderId,
   getQrCodeByOrderId,
   submitManualVerification,
-  createRazorpayOrder,
-  verifyRazorpayPayment
+  createCashfreeOrder,
+  getCashfreeOrderDetails
 } from '../services/paymentService';
+import { launchCashfreeCheckout } from '../utils/cashfree';
 
 import { couponService } from '../services/couponService';
 import { orderService } from '../services/orderService';
@@ -85,8 +87,8 @@ export default function Checkout() {
     }
   }, [user]);
 
-  // Payment Selection
-  const [paymentMethod, setPaymentMethod] = useState('UPI'); // 'UPI' | 'Card' | 'Net Banking' | 'QR' | 'Manual Payment' | 'Cash on Delivery' | 'Razorpay Online Gateway'
+  // Payment Selection: Defaults to Cashfree Sandbox Gateway
+  const [paymentMethod, setPaymentMethod] = useState('Cashfree Sandbox'); // 'Cashfree Sandbox' | 'UPI' | 'Card' | 'Net Banking' | 'QR' | 'Manual Payment' | 'Cash on Delivery'
   
   // Specific Payment Inputs
   const [upiId, setUpiId] = useState('');
@@ -94,6 +96,8 @@ export default function Checkout() {
   const [nameOnCard, setNameOnCard] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [cvv, setCvv] = useState('');
+  const [cardStep, setCardStep] = useState('details'); // 'details' | 'otp'
+  const [cardOtp, setCardOtp] = useState('');
   
   const [bankName, setBankName] = useState('HDFC Bank');
   const [nbUsername, setNbUsername] = useState('');
@@ -179,6 +183,10 @@ export default function Checkout() {
   // Submit Main Payment Flow
   const handlePaymentSubmit = async (event) => {
     event.preventDefault();
+
+    // Prevent duplicate clicks
+    if (submitting) return;
+
     const nameErr = validateName(customerName, 'Customer name');
     if (nameErr) {
       setPaymentMessage({ type: 'error', text: nameErr });
@@ -196,122 +204,164 @@ export default function Checkout() {
         return;
       }
     }
+    if (!address.trim()) {
+      setPaymentMessage({ type: 'error', text: 'Delivery address is required.' });
+      return;
+    }
+    if (!city.trim()) {
+      setPaymentMessage({ type: 'error', text: 'City is required.' });
+      return;
+    }
+    if (!state.trim()) {
+      setPaymentMessage({ type: 'error', text: 'State is required.' });
+      return;
+    }
+    if (!pinCode.trim() || !/^\d{6}$/.test(pinCode.trim())) {
+      setPaymentMessage({ type: 'error', text: 'Please enter a valid 6-digit PIN code.' });
+      return;
+    }
+
     setSubmitting(true);
-    setPaymentMessage({ type: 'info', text: 'Processing payment request...' });
+    setPaymentMessage({ type: 'info', text: 'Preparing order details...' });
 
     const activeCustId = user?.customerId || user?.id || localStorage.getItem('customerId');
     const taxAmount = Math.round(total * 0.18);
     const grandTotal = Math.max(0, total + taxAmount - discountAmount);
 
     try {
-      // 0. RAZORPAY / ONLINE GATEWAY FLOW
-      if (paymentMethod === 'Razorpay Gateway' || paymentMethod === 'Online Gateway') {
-        const razorRes = await createRazorpayOrder(grandTotal, 'INR', currentOrderId);
-
-        if (!razorRes || razorRes.success === false) {
-          setPaymentMessage({ type: 'error', text: razorRes?.message || 'Could not initialize Razorpay online gateway.' });
+      // ----------------------------------------------------------------------
+      // 0. CASHFREE SANDBOX CHECKOUT GATEWAY (OFFICIAL HOSTED CHECKOUT)
+      // ----------------------------------------------------------------------
+      if (paymentMethod === 'Cashfree Sandbox' || paymentMethod === 'Cashfree') {
+        let createdOrder = null;
+        try {
+          createdOrder = await orderService.create({
+            orderNumber: currentOrderId,
+            customerId: activeCustId ? Number(activeCustId) : undefined,
+            customerName: customerName.trim(),
+            email: email.trim(),
+            mobile: mobile.trim(),
+            address: address.trim(),
+            city: city.trim(),
+            state: state.trim(),
+            pinCode: pinCode.trim(),
+            totalAmount: total,
+            gstAmount: taxAmount,
+            discountAmount: discountAmount,
+            finalAmount: grandTotal,
+            paymentMethod: 'Cashfree',
+            paymentStatus: 'Pending',
+            status: 'Processing',
+            items
+          });
+        } catch (e) {
+          setPaymentMessage({ type: 'error', text: `Failed to record order: ${e.message}. Your cart is preserved.` });
           setSubmitting(false);
           return;
         }
 
-        const razorpayOrderId = razorRes.razorpayOrderId || razorRes.orderId || razorRes.id;
-        const razorpayKey = razorRes.keyId || razorRes.key || 'rzp_test_honeywell';
+        const orderIdParam = String(createdOrder?.id || createdOrder?.orderNumber || currentOrderId);
+        const returnUrl = `${window.location.origin}/order-success?order_id={order_id}`;
 
-        const loadScript = () => new Promise((resolve) => {
-          if (window.Razorpay) return resolve(true);
-          const script = document.createElement('script');
-          script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-          script.onload = () => resolve(true);
-          script.onerror = () => resolve(false);
-          document.body.appendChild(script);
+        setPaymentMessage({ type: 'info', text: 'Initializing Cashfree Sandbox session...' });
+
+        const cfRes = await createCashfreeOrder({
+          orderId: orderIdParam,
+          returnUrl,
+          customerEmail: email.trim() || undefined,
+          customerPhone: mobile.trim() || undefined,
+          idempotencyKey: `cf_${orderIdParam}_${Date.now()}`
         });
 
-        const loaded = await loadScript();
-        if (!loaded) {
-          setPaymentMessage({ type: 'error', text: 'Razorpay SDK failed to load. Please check internet connection.' });
+        if (!cfRes || !cfRes.success || !cfRes.paymentSessionId) {
+          setPaymentMessage({
+            type: 'error',
+            text: cfRes?.message || 'Could not establish Cashfree payment session. Please retry or choose another method.'
+          });
           setSubmitting(false);
           return;
         }
 
-        const options = {
-          key: razorpayKey,
-          amount: grandTotal * 100,
-          currency: 'INR',
-          name: 'Honeywell Products',
-          description: `Order #${currentOrderId}`,
-          order_id: razorpayOrderId,
-          prefill: {
-            name: customerName,
-            email: email,
-            contact: mobile,
-          },
-          handler: async (response) => {
-            setPaymentMessage({ type: 'info', text: 'Verifying payment signature...' });
-            const verifyRes = await verifyRazorpayPayment({
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-              orderId: currentOrderId
-            });
+        setPaymentMessage({ type: 'info', text: 'Launching Cashfree Sandbox checkout...' });
 
-            if (verifyRes && verifyRes.success !== false) {
-              let createdOrder = null;
-              try {
-                createdOrder = await orderService.create({
-                  orderNumber: currentOrderId,
-                  customerId: activeCustId ? Number(activeCustId) : undefined,
-                  customerName: customerName.trim(),
-                  email: email.trim(),
-                  mobile: mobile.trim(),
-                  address: address.trim(),
-                  city: city.trim(),
-                  state: state.trim(),
-                  pinCode: pinCode.trim(),
-                  totalAmount: total,
-                  gstAmount: taxAmount,
-                  discountAmount: discountAmount,
-                  finalAmount: grandTotal,
-                  paymentMethod: 'Razorpay Online Gateway',
-                  paymentStatus: 'Paid',
-                  status: 'Processing',
-                  items
-                });
-              } catch (e) {
-                setPaymentMessage({ type: 'error', text: `Payment verified, but recording order failed: ${e.message}. Please contact support.` });
-                setSubmitting(false);
-                return;
+        const checkoutResult = await launchCashfreeCheckout({
+          paymentSessionId: cfRes.paymentSessionId,
+          redirectTarget: '_modal',
+          returnUrl
+        });
+
+        if (checkoutResult.status === 'CANCELLED') {
+          setPaymentMessage({
+            type: 'error',
+            text: 'Cashfree checkout was closed or cancelled. You can retry payment whenever ready.'
+          });
+          setSubmitting(false);
+          return;
+        }
+
+        if (checkoutResult.status === 'ERROR') {
+          setPaymentMessage({
+            type: 'error',
+            text: checkoutResult.message || 'Payment error during checkout. Your cart is preserved.'
+          });
+          setSubmitting(false);
+          return;
+        }
+
+        if (checkoutResult.status === 'REDIRECTED') {
+          // Cashfree has redirected the browser window to bank 3DS
+          return;
+        }
+
+        // Verify with backend independently
+        setPaymentMessage({ type: 'info', text: 'Verifying payment with backend...' });
+        const verifyRes = await getCashfreeOrderDetails(orderIdParam);
+        const resolvedRef = String(createdOrder?.orderNumber || createdOrder?.id || currentOrderId);
+
+        const isPaid = verifyRes?.success && (verifyRes.status === 'Paid' || verifyRes.status === 'Success');
+        setOrderSuccessPlaced(true);
+        clearCart();
+
+        if (isPaid) {
+          setPaymentMessage({ type: 'success', text: 'Cashfree payment verified! Order placed successfully.' });
+          setTimeout(() => {
+            navigate('/order-success', {
+              state: {
+                reference: resolvedRef,
+                order: createdOrder,
+                status: 'Paid',
+                gateway: 'Cashfree'
               }
-
-              const resolvedOrderRef = String(createdOrder?.orderNumber || createdOrder?.id || currentOrderId);
-              setOrderSuccessPlaced(true);
-              clearCart();
-              setPaymentMessage({ type: 'success', text: 'Razorpay payment verified & order placed!' });
-              setTimeout(() => {
-                navigate('/order-success', { state: { reference: resolvedOrderRef, order: createdOrder, status: 'Paid' } });
-              }, 600);
-            } else {
-              setPaymentMessage({ type: 'error', text: verifyRes?.message || 'Razorpay payment verification failed.' });
-              setSubmitting(false);
-            }
-          },
-          modal: {
-            ondismiss: () => {
-              setPaymentMessage({ type: 'error', text: 'Payment cancelled by user.' });
-              setSubmitting(false);
-            }
-          }
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.open();
+            });
+          }, 600);
+        } else {
+          setPaymentMessage({ type: 'info', text: 'Order submitted. Payment status is being processed.' });
+          setTimeout(() => {
+            navigate('/order-success', {
+              state: {
+                reference: resolvedRef,
+                order: createdOrder,
+                status: verifyRes?.status || 'Pending Verification',
+                gateway: 'Cashfree'
+              }
+            });
+          }, 600);
+        }
         return;
       }
 
+      // ----------------------------------------------------------------------
       // 1. MANUAL VERIFICATION FLOW
+      // ----------------------------------------------------------------------
       if (paymentMethod === 'Manual Payment') {
         const amt = Number(manualAmount || grandTotal);
         if (!amt || amt <= 0) {
           setPaymentMessage({ type: 'error', text: 'Amount Paid must be greater than zero.' });
+          setSubmitting(false);
+          return;
+        }
+        if (!utrNumber.trim()) {
+          setPaymentMessage({ type: 'error', text: 'Please enter the 12-digit UTR or Reference Number.' });
           setSubmitting(false);
           return;
         }
@@ -352,10 +402,10 @@ export default function Checkout() {
         fd.append('OrderId', resolvedOrderRef);
         fd.append('CustomerName', customerName);
         fd.append('MobileNumber', mobile);
-        fd.append('Remarks', `${remarks || 'Manual Payment Verification'} [GST-INCL]`);
+        fd.append('Remarks', `${remarks || 'Manual Bank Transfer Verification'} [GST-INCL]`);
         fd.append('PaymentTime', new Date().toLocaleTimeString());
         fd.append('PaymentDate', new Date().toISOString().slice(0, 10));
-        fd.append('UtrNumber', utrNumber);
+        fd.append('UtrNumber', utrNumber.trim());
         if (screenshotFile) {
           fd.append('Screenshot', screenshotFile);
         }
@@ -375,7 +425,9 @@ export default function Checkout() {
         return;
       }
 
+      // ----------------------------------------------------------------------
       // 2. NETBANKING LOGIN & OTP FLOW
+      // ----------------------------------------------------------------------
       if (paymentMethod === 'Net Banking') {
         if (nbStep === 'login') {
           const loginRes = await netbankingLogin({
@@ -389,7 +441,7 @@ export default function Checkout() {
             const txnId = loginRes.transactionId || `TXN-NB-${Date.now()}`;
             setActiveTransactionId(txnId);
             setNbStep('otp');
-            setPaymentMessage({ type: 'info', text: 'Netbanking login successful. Please enter the OTP sent to your registered mobile.' });
+            setPaymentMessage({ type: 'info', text: 'Netbanking login successful. Please enter the OTP sent to your registered mobile (Test OTP: 123456).' });
             setSubmitting(false);
           } else {
             setPaymentMessage({ type: 'error', text: loginRes?.message || 'Netbanking login failed.' });
@@ -408,7 +460,6 @@ export default function Checkout() {
             orderId: currentOrderId
           });
           if (otpRes && otpRes.success !== false) {
-            // Complete transaction
             const compRes = await completePayment(activeTransactionId);
             if (compRes && compRes.success !== false) {
               let createdOrder = null;
@@ -433,7 +484,7 @@ export default function Checkout() {
                   items
                 });
               } catch (e) {
-                setPaymentMessage({ type: 'error', text: `Payment completed, but order record failed: ${e.message}. Please contact support.` });
+                setPaymentMessage({ type: 'error', text: `Payment completed, but order record failed: ${e.message}.` });
                 setSubmitting(false);
                 return;
               }
@@ -457,7 +508,114 @@ export default function Checkout() {
         }
       }
 
-      // 3. CASH ON DELIVERY FLOW (DIRECT PLACEMENT)
+      // ----------------------------------------------------------------------
+      // 3. CARD PAYMENT WITH OTP VERIFICATION FLOW
+      // ----------------------------------------------------------------------
+      if (paymentMethod === 'Card') {
+        if (cardStep === 'details') {
+          if (!cardNumber || cardNumber.replace(/\s+/g, '').length < 16) {
+            setPaymentMessage({ type: 'error', text: 'A valid 16-digit Card Number is required.' });
+            setSubmitting(false);
+            return;
+          }
+          if (!expiryDate || !expiryDate.includes('/')) {
+            setPaymentMessage({ type: 'error', text: 'A valid Expiry Date (MM/YY) is required.' });
+            setSubmitting(false);
+            return;
+          }
+          if (!cvv || cvv.length < 3) {
+            setPaymentMessage({ type: 'error', text: 'A valid 3-digit CVV is required.' });
+            setSubmitting(false);
+            return;
+          }
+
+          const initPayload = {
+            paymentMethod: 'DebitCard',
+            amount: grandTotal,
+            orderId: currentOrderId,
+            cardNumber,
+            nameOnCard: nameOnCard || customerName,
+            expiryDate,
+            cvv,
+            bankName: 'HDFC Bank'
+          };
+
+          const initRes = await initiatePayment(initPayload);
+          if (initRes && initRes.success !== false) {
+            const txnId = initRes.transactionId || `TXN-CARD-${Date.now()}`;
+            setActiveTransactionId(txnId);
+            setCardStep('otp');
+            setPaymentMessage({ type: 'info', text: 'Card authorized. Please enter 3DS OTP (Test OTP: 123456 or 000000).' });
+            setSubmitting(false);
+          } else {
+            setPaymentMessage({ type: 'error', text: initRes?.message || 'Card payment authorization failed.' });
+            setSubmitting(false);
+          }
+          return;
+        } else if (cardStep === 'otp') {
+          if (!cardOtp) {
+            setPaymentMessage({ type: 'error', text: 'Please enter the 3DS OTP.' });
+            setSubmitting(false);
+            return;
+          }
+
+          const otpRes = await cardVerifyOtp({
+            transactionId: activeTransactionId,
+            otp: cardOtp
+          });
+
+          if (otpRes && otpRes.success !== false) {
+            const compRes = await completePayment(activeTransactionId);
+            if (compRes && compRes.success !== false) {
+              let createdOrder = null;
+              try {
+                createdOrder = await orderService.create({
+                  orderNumber: currentOrderId,
+                  customerId: activeCustId ? Number(activeCustId) : undefined,
+                  customerName: customerName.trim(),
+                  email: email.trim(),
+                  mobile: mobile.trim(),
+                  address: address.trim(),
+                  city: city.trim(),
+                  state: state.trim(),
+                  pinCode: pinCode.trim(),
+                  totalAmount: total,
+                  gstAmount: taxAmount,
+                  discountAmount: discountAmount,
+                  finalAmount: grandTotal,
+                  paymentMethod: 'Card',
+                  paymentStatus: 'Paid',
+                  status: 'Processing',
+                  items
+                });
+              } catch (e) {
+                setPaymentMessage({ type: 'error', text: `Payment authorized, but recording order failed: ${e.message}.` });
+                setSubmitting(false);
+                return;
+              }
+
+              const resolvedOrderRef = String(createdOrder?.orderNumber || createdOrder?.id || currentOrderId);
+              setOrderSuccessPlaced(true);
+              clearCart();
+              setPaymentMessage({ type: 'success', text: 'Card payment verified & order placed!' });
+              setTimeout(() => {
+                navigate('/order-success', { state: { reference: resolvedOrderRef, order: createdOrder, status: 'Paid' } });
+              }, 600);
+            } else {
+              setPaymentMessage({ type: 'error', text: compRes?.message || 'Payment completion check failed.' });
+              setSubmitting(false);
+            }
+          } else {
+            setPaymentMessage({ type: 'error', text: otpRes?.message || 'Card OTP verification failed.' });
+            setSubmitting(false);
+          }
+          return;
+        }
+      }
+
+      // ----------------------------------------------------------------------
+      // 4. CASH ON DELIVERY FLOW (DIRECT PLACEMENT)
+      // ----------------------------------------------------------------------
       if (paymentMethod === 'Cash on Delivery') {
         let createdOrder = null;
         try {
@@ -496,17 +654,14 @@ export default function Checkout() {
         return;
       }
 
-      // 4. INITIATE ONLINE PAYMENT (UPI, Card, QR)
+      // ----------------------------------------------------------------------
+      // 5. DIRECT UPI / QR CODE FLOW
+      // ----------------------------------------------------------------------
       const initPayload = {
-        paymentMethod,
+        paymentMethod: paymentMethod === 'QR' ? 'QRPayment' : paymentMethod,
         amount: grandTotal,
         orderId: currentOrderId,
         upiId: paymentMethod === 'UPI' ? upiId : undefined,
-        cardNumber: paymentMethod === 'Card' ? cardNumber : undefined,
-        nameOnCard: paymentMethod === 'Card' ? nameOnCard : undefined,
-        expiryDate: paymentMethod === 'Card' ? expiryDate : undefined,
-        cvv: paymentMethod === 'Card' ? cvv : undefined,
-        bankName: paymentMethod === 'Card' ? bankName : undefined
       };
 
       const initRes = await initiatePayment(initPayload);
@@ -542,7 +697,7 @@ export default function Checkout() {
               items
             });
           } catch (orderErr) {
-            setPaymentMessage({ type: 'error', text: `Payment processed, but order record failed: ${orderErr.message}. Please contact support.` });
+            setPaymentMessage({ type: 'error', text: `Payment processed, but order record failed: ${orderErr.message}.` });
             setSubmitting(false);
             return;
           }
@@ -579,7 +734,7 @@ export default function Checkout() {
         <div className="checkout-layout">
           <div>
             <p className="eyebrow dark">CHECKOUT</p>
-            <h1>Contact & Delivery Details</h1>
+            <h1>Contact &amp; Delivery Details</h1>
 
             {paymentMessage.text && (
               <div style={{
@@ -638,31 +793,82 @@ export default function Checkout() {
 
               {/* PAYMENT METHOD SELECTION */}
               <div className="field full" style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' }}>
-                <p className="eyebrow dark" style={{ marginBottom: '8px' }}>PAYMENT METHOD</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <p className="eyebrow dark" style={{ margin: 0 }}>PAYMENT METHOD</p>
+                  <span style={{ fontSize: '11px', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <ShieldCheck size={13} /> 256-Bit SSL Encrypted
+                  </span>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', marginBottom: '16px' }}>
-                  {['UPI', 'Card', 'Net Banking', 'QR', 'Razorpay Gateway', 'Manual Payment', 'Cash on Delivery'].map((method) => (
+                  {[
+                    { id: 'Cashfree Sandbox', label: 'Cashfree Sandbox', badge: 'Recommended' },
+                    { id: 'UPI', label: 'UPI / VPA' },
+                    { id: 'Card', label: 'Credit / Debit Card' },
+                    { id: 'Net Banking', label: 'Net Banking' },
+                    { id: 'QR', label: 'QR Code' },
+                    { id: 'Manual Payment', label: 'Direct Bank Transfer' },
+                    { id: 'Cash on Delivery', label: 'Cash on Delivery' }
+                  ].map(({ id, label, badge }) => (
                     <button
-                      key={method}
+                      key={id}
                       type="button"
-                      onClick={() => { setPaymentMethod(method); setNbStep('login'); setPaymentMessage({ type: '', text: '' }); }}
+                      onClick={() => {
+                        setPaymentMethod(id);
+                        setNbStep('login');
+                        setCardStep('details');
+                        setPaymentMessage({ type: '', text: '' });
+                      }}
                       style={{
                         padding: '10px 12px',
                         borderRadius: '8px',
-                        border: paymentMethod === method ? '2px solid #059669' : '1px solid #cbd5e1',
-                        background: paymentMethod === method ? '#ecfdf5' : '#ffffff',
-                        color: paymentMethod === method ? '#047857' : '#334155',
+                        border: paymentMethod === id ? '2px solid #059669' : '1px solid #cbd5e1',
+                        background: paymentMethod === id ? '#ecfdf5' : '#ffffff',
+                        color: paymentMethod === id ? '#047857' : '#334155',
                         fontWeight: '700',
-                        fontSize: '13px',
+                        fontSize: '12px',
                         cursor: 'pointer',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        position: 'relative'
                       }}
                     >
-                      {method}
+                      {label}
+                      {badge && (
+                        <span style={{
+                          display: 'block',
+                          fontSize: '9px',
+                          color: paymentMethod === id ? '#047857' : '#0284c7',
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          marginTop: '2px'
+                        }}>
+                          {badge}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
 
-                {/* METHOD SPECIFIC FIELDS */}
+                {/* CASHFREE SANDBOX GATEWAY (PHASE 4) */}
+                {paymentMethod === 'Cashfree Sandbox' && (
+                  <div style={{ background: '#f0fdf4', padding: '16px', borderRadius: '10px', border: '1px solid #bbf7d0', color: '#166534' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                      <ShieldCheck size={20} color="#16a34a" />
+                      <strong style={{ fontSize: '14px', color: '#14532d' }}>Official Cashfree Sandbox Gateway</strong>
+                    </div>
+                    <p style={{ fontSize: '13px', lineHeight: 1.5, margin: 0, color: '#15803d' }}>
+                      Pay securely using the official Cashfree Sandbox checkout. Supports UPI (Google Pay, PhonePe, Paytm, BHIM, QR), Credit &amp; Debit Cards (Visa, Mastercard, RuPay), Net Banking (HDFC, SBI, ICICI, Axis), and Wallets with verified test credentials.
+                    </p>
+                    <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap', fontSize: '11px', color: '#166534' }}>
+                      <span style={{ background: '#dcfce7', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>Test Cards Supported</span>
+                      <span style={{ background: '#dcfce7', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>Test UPI Apps</span>
+                      <span style={{ background: '#dcfce7', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>Net Banking Simulator</span>
+                      <span style={{ background: '#dcfce7', padding: '3px 8px', borderRadius: '4px', fontWeight: 600 }}>Zero Secret Exposure</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* UPI DIRECT */}
                 {paymentMethod === 'UPI' && (
                   <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '6px' }}>
@@ -679,34 +885,41 @@ export default function Checkout() {
                   </div>
                 )}
 
+                {/* CARD SIMULATOR */}
                 {paymentMethod === 'Card' && (
-                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Cardholder Name *</label>
-                      <input required type="text" value={nameOnCard} onChange={(e) => setNameOnCard(e.target.value)} placeholder="Name on Card" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                    </div>
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Card Number *</label>
-                      <input required type="text" maxLength="19" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="4532 •••• •••• 8901" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Expiry (MM/YY) *</label>
-                      <input required type="text" placeholder="12/28" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>CVV *</label>
-                      <input required type="password" maxLength="4" value={cvv} onChange={(e) => setCvv(e.target.value)} placeholder="•••" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
-                    </div>
+                  <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    {cardStep === 'details' ? (
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Cardholder Name *</label>
+                          <input required type="text" value={nameOnCard} onChange={(e) => setNameOnCard(e.target.value)} placeholder="Name on Card" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                        </div>
+                        <div style={{ gridColumn: '1 / -1' }}>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Card Number *</label>
+                          <input required type="text" maxLength="19" value={cardNumber} onChange={(e) => setCardNumber(e.target.value)} placeholder="4532 •••• •••• 8901" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>Expiry (MM/YY) *</label>
+                          <input required type="text" placeholder="12/28" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>CVV *</label>
+                          <input required type="password" maxLength="4" value={cvv} onChange={(e) => setCvv(e.target.value)} placeholder="•••" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gap: '10px' }}>
+                        <p style={{ fontSize: '13px', color: '#047857', fontWeight: '600', margin: 0 }}>Step 2: Enter 3DS Card OTP (Test OTP: 123456 or 000000)</p>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>OTP Code *</label>
+                          <input required type="text" maxLength="6" value={cardOtp} onChange={(e) => setCardOtp(e.target.value)} placeholder="6-digit OTP" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {paymentMethod === 'Razorpay Gateway' && (
-                  <div style={{ background: '#eff6ff', padding: '14px', borderRadius: '8px', border: '1px solid #93c5fd', color: '#1e40af', fontSize: '13px', fontWeight: '600' }}>
-                    <ShieldCheck size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
-                    Pay securely using Razorpay (Credit/Debit Card, Netbanking, UPI, Wallets).
-                  </div>
-                )}
-
+                {/* NET BANKING */}
                 {paymentMethod === 'Net Banking' && (
                   <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                     {nbStep === 'login' ? (
@@ -763,7 +976,7 @@ export default function Checkout() {
                       </div>
                     ) : (
                       <div style={{ display: 'grid', gap: '10px' }}>
-                        <p style={{ fontSize: '13px', color: '#047857', fontWeight: '600' }}>Step 2: Enter Netbanking OTP</p>
+                        <p style={{ fontSize: '13px', color: '#047857', fontWeight: '600' }}>Step 2: Enter Netbanking OTP (Test OTP: 123456)</p>
                         <div>
                           <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '4px' }}>OTP Code *</label>
                           <input required type="text" maxLength="6" value={nbOtp} onChange={(e) => setNbOtp(e.target.value)} placeholder="6-digit OTP" style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }} />
@@ -773,6 +986,7 @@ export default function Checkout() {
                   </div>
                 )}
 
+                {/* QR CODE DISPLAY */}
                 {paymentMethod === 'QR' && (
                   <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', textAlign: 'center' }}>
                     <p style={{ fontSize: '13px', fontWeight: '600', color: '#334155', marginBottom: '10px' }}>Scan QR Code with any UPI App</p>
@@ -796,6 +1010,7 @@ export default function Checkout() {
                   </div>
                 )}
 
+                {/* MANUAL DIRECT BANK TRANSFER */}
                 {paymentMethod === 'Manual Payment' && (
                   <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div style={{ gridColumn: '1 / -1' }}>
@@ -817,10 +1032,11 @@ export default function Checkout() {
                   </div>
                 )}
 
+                {/* CASH ON DELIVERY */}
                 {paymentMethod === 'Cash on Delivery' && (
                   <div style={{ background: '#ecfdf5', padding: '14px', borderRadius: '8px', border: '1px solid #6ee7b7', color: '#047857', fontSize: '13px', fontWeight: '600' }}>
                     <ShieldCheck size={18} style={{ verticalAlign: 'middle', marginRight: '6px' }} />
-                    Pay cash upon delivery at your address.
+                    Pay cash upon delivery at your designated address.
                   </div>
                 )}
               </div>
@@ -848,6 +1064,7 @@ export default function Checkout() {
                 </div>
               ))}
             </div>
+
             <hr style={{ margin: '12px 0 16px' }} />
 
             {(() => {
@@ -1005,7 +1222,7 @@ export default function Checkout() {
               );
             })()}
             <button className="button" form="checkout-form" disabled={submitting}>
-              {submitting ? 'Processing Payment…' : <>Complete {paymentMethod} Order <ArrowRight /></>}
+              {submitting ? 'Processing Payment…' : <>Complete {paymentMethod === 'Cashfree Sandbox' ? 'Cashfree' : paymentMethod} Order <ArrowRight /></>}
             </button>
             <p>Order and payment details are processed securely with the backend API.</p>
           </aside>
@@ -1014,4 +1231,3 @@ export default function Checkout() {
     </section>
   );
 }
-

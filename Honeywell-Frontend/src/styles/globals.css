@@ -2472,7 +2472,164 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     width: 100%;
   }
 }
-.cart-page { padding-block: 36px 80px; }
+.cart-page { padding-block: 28px 80px; }
+
+/* ── Cart Navigation & Breadcrumbs Row ── */
+.cart-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.cart-nav-row .product-breadcrumbs {
+  min-height: auto;
+  padding-block: 4px;
+}
+
+.cart-continue-shopping-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1268a5;
+  text-decoration: none;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.cart-continue-shopping-link:hover {
+  color: #0a4d7c;
+  transform: translateX(-3px);
+}
+
+/* ── Cart Header Section (Professional Replacement for Hero Banner) ── */
+.cart-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 22px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.cart-header-left {
+  flex: 1;
+}
+
+.cart-header-eyebrow {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1268a5;
+  margin-bottom: 6px;
+}
+
+.cart-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.cart-header-title {
+  margin: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(28px, 3.5vw, 38px);
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.cart-count-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: #eaf4fb;
+  border: 1px solid #b6d7ed;
+  color: #1268a5;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.cart-header-desc {
+  margin: 8px 0 0 0;
+  font-size: 14.5px;
+  color: #64748b;
+  line-height: 1.55;
+  max-width: 680px;
+}
+
+.cart-header-trust {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.cart-trust-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.cart-trust-icon {
+  color: #1268a5;
+  flex-shrink: 0;
+}
+
+.cart-trust-item strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.cart-trust-item span {
+  display: block;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.2;
+  margin-top: 2px;
+}
+
+@media (max-width: 768px) {
+  .cart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding-bottom: 18px;
+    margin-bottom: 24px;
+  }
+  .cart-nav-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .cart-header-title {
+    font-size: 26px;
+  }
+  .cart-header-trust {
+    width: 100%;
+  }
+  .cart-trust-item {
+    width: 100%;
+  }
+}
 .cart-layout { display: grid; grid-template-columns: 1fr 390px; gap: 36px; }
 .cart-items { display: flex; flex-direction: column; gap: 14px; }
 .cart-items article { min-height: 0; display: grid; grid-template-columns: 160px 1fr auto; gap: 20px; padding: 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 6px; box-shadow: 0 4px 16px rgba(7,30,45,0.03); transition: border-color .18s ease, box-shadow .18s ease; }

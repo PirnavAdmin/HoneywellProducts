@@ -7,7 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const API_PROXY_TARGET =
   process.env.VITE_API_PROXY_TARGET ||
   process.env.VITE_API_BASE_URL ||
-  'http://localhost:5119';
+  'https://drab-smoking-unstaffed.ngrok-free.dev ';
 
 const MEDIA_PROXY_TARGET =
   'https://honeywellproducts.com';
