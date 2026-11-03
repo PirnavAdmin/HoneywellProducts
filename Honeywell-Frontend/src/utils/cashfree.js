@@ -1,89 +1,83 @@
 /**
- * Cashfree Payments JavaScript SDK v3 Wrapper (Sandbox Mode)
+ * Cashfree Payments JavaScript SDK Wrapper (Sandbox Mode)
+ * Uses official @cashfreepayments/cashfree-js package.
  *
- * Secure client-side loader for the official Cashfree v3 Web Checkout SDK.
+ * Secure client-side wrapper for the official Cashfree Hosted Checkout SDK.
  * Note: Never store Cashfree App ID or Secret Key here. All order sessions are generated
  * strictly by the ASP.NET Core backend.
  */
 
-const CASHFREE_SDK_URL = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+import { load } from '@cashfreepayments/cashfree-js';
 
-let cashfreeSdkPromise = null;
+const CASHFREE_SDK_CDN_URL = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+
+let cashfreeInstancePromise = null;
 
 /**
- * Dynamically loads the official Cashfree JS SDK script if not already present on window.
- * @returns {Promise<Function>} Resolves to window.Cashfree constructor
+ * Initializes and caches a Cashfree SDK instance in sandbox mode.
+ * @returns {Promise<object>} Cashfree SDK instance
  */
-export function loadCashfreeSdk() {
+export async function getCashfreeInstance() {
   if (typeof window === 'undefined') {
-    return Promise.reject(new Error('Cashfree SDK can only be loaded in a browser environment.'));
+    throw new Error('Cashfree SDK can only be loaded in a browser environment.');
   }
 
-  if (window.Cashfree && typeof window.Cashfree === 'function') {
-    return Promise.resolve(window.Cashfree);
+  if (cashfreeInstancePromise) {
+    return cashfreeInstancePromise;
   }
 
-  if (cashfreeSdkPromise) {
-    return cashfreeSdkPromise;
-  }
-
-  cashfreeSdkPromise = new Promise((resolve, reject) => {
-    // Check if script tag is already in DOM
-    const existingScript = document.querySelector(`script[src="${CASHFREE_SDK_URL}"]`);
-    if (existingScript) {
-      if (window.Cashfree) {
-        return resolve(window.Cashfree);
+  cashfreeInstancePromise = (async () => {
+    try {
+      // 1. Primary: load using official @cashfreepayments/cashfree-js package
+      const instance = await load({ mode: 'sandbox' });
+      if (instance && typeof instance.checkout === 'function') {
+        return instance;
       }
-      existingScript.addEventListener('load', () => resolve(window.Cashfree));
-      existingScript.addEventListener('error', () => {
-        cashfreeSdkPromise = null;
-        reject(new Error('Failed to load Cashfree checkout SDK from CDN.'));
-      });
-      return;
+    } catch (err) {
+      console.warn('Official @cashfreepayments/cashfree-js package load failed, attempting fallback to CDN:', err);
     }
 
-    const script = document.createElement('script');
-    script.src = CASHFREE_SDK_URL;
-    script.async = true;
-    script.crossOrigin = 'anonymous';
+    // 2. Fallback: load directly via CDN script tag
+    if (window.Cashfree && typeof window.Cashfree === 'function') {
+      return window.Cashfree({ mode: 'sandbox' });
+    }
 
-    script.onload = () => {
-      if (window.Cashfree) {
-        resolve(window.Cashfree);
-      } else {
-        cashfreeSdkPromise = null;
-        reject(new Error('Cashfree SDK loaded but window.Cashfree constructor was not found.'));
+    await new Promise((resolve, reject) => {
+      const existingScript = document.querySelector(`script[src="${CASHFREE_SDK_CDN_URL}"]`);
+      if (existingScript) {
+        if (window.Cashfree) return resolve();
+        existingScript.addEventListener('load', () => resolve());
+        existingScript.addEventListener('error', () => reject(new Error('Failed to load Cashfree SDK from CDN.')));
+        return;
       }
-    };
 
-    script.onerror = () => {
-      cashfreeSdkPromise = null;
-      reject(new Error('Failed to load Cashfree checkout SDK. Please verify your internet connection.'));
-    };
+      const script = document.createElement('script');
+      script.src = CASHFREE_SDK_CDN_URL;
+      script.async = true;
+      script.crossOrigin = 'anonymous';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load Cashfree checkout SDK from CDN.'));
+      document.head.appendChild(script);
+    });
 
-    document.head.appendChild(script);
-  });
+    if (window.Cashfree && typeof window.Cashfree === 'function') {
+      return window.Cashfree({ mode: 'sandbox' });
+    }
 
-  return cashfreeSdkPromise;
+    throw new Error('Cashfree SDK could not be initialized.');
+  })();
+
+  return cashfreeInstancePromise;
 }
 
 /**
- * Initializes a Cashfree SDK instance configured for Sandbox mode.
- * @param {string} [mode='sandbox'] - 'sandbox' or 'production'
- * @returns {Promise<object>} Cashfree instance
- */
-export async function getCashfreeInstance(mode = 'sandbox') {
-  const Cashfree = await loadCashfreeSdk();
-  return Cashfree({ mode });
-}
-
-/**
- * Triggers Cashfree Checkout modal or redirect using the backend-generated paymentSessionId.
+ * Launches Cashfree Hosted Checkout using the backend-generated paymentSessionId.
+ * Prefers redirect checkout ('_self') for initial integration as specified.
  *
  * @param {object} options
- * @param {string} options.paymentSessionId - Ephemeral session ID returned by POST /api/Payment/cashfree/create-order
- * @param {'_modal'|'_self'} [options.redirectTarget='_modal'] - Modal popup or full-page redirect
- * @param {string} [options.returnUrl] - Optional fallback return URL for 3DS or full redirects
+ * @param {string} options.paymentSessionId - Backend-generated ephemeral session ID
+ * @param {'_self'|'_modal'} [options.redirectTarget='_self'] - Hosted checkout mode ('_self' for full-page redirect)
+ * @param {string} [options.returnUrl] - Fallback return URL for Cashfree redirect
  * @returns {Promise<{
  *   status: 'SUCCESS' | 'CANCELLED' | 'ERROR' | 'REDIRECTED' | 'PENDING',
  *   paymentDetails?: object,
@@ -93,40 +87,71 @@ export async function getCashfreeInstance(mode = 'sandbox') {
  */
 export async function launchCashfreeCheckout({
   paymentSessionId,
-  redirectTarget = '_modal',
+  redirectTarget = '_self',
   returnUrl
 }) {
   if (!paymentSessionId) {
     throw new Error('paymentSessionId is required to launch Cashfree checkout.');
   }
 
-  const cashfree = await getCashfreeInstance('sandbox');
+  const cashfree = await getCashfreeInstance();
 
+  const checkoutOptions = {
+    paymentSessionId,
+    redirectTarget: redirectTarget === '_modal' ? '_modal' : '_self',
+  };
+
+  if (returnUrl) {
+    checkoutOptions.returnUrl = returnUrl;
+  }
+
+  // In redirect mode ('_self'), the SDK navigates the browser window directly to Cashfree.
+  // In modal mode ('_modal'), it returns a Promise.
+  if (checkoutOptions.redirectTarget === '_self') {
+    return new Promise((resolve) => {
+      try {
+        const result = cashfree.checkout(checkoutOptions);
+        if (result && typeof result.then === 'function') {
+          result.then(() => {
+            resolve({
+              status: 'REDIRECTED',
+              message: 'Redirecting to Cashfree Hosted Checkout...'
+            });
+          }).catch((err) => {
+            resolve({
+              status: 'ERROR',
+              error: err,
+              message: err?.message || 'Failed to redirect to Cashfree checkout.'
+            });
+          });
+        } else {
+          resolve({
+            status: 'REDIRECTED',
+            message: 'Redirecting to Cashfree Hosted Checkout...'
+          });
+        }
+      } catch (err) {
+        resolve({
+          status: 'ERROR',
+          error: err,
+          message: err?.message || 'Failed to launch Cashfree checkout redirect.'
+        });
+      }
+    });
+  }
+
+  // Modal mode fallback
   return new Promise((resolve) => {
     try {
-      const checkoutOptions = {
-        paymentSessionId,
-        redirectTarget,
-      };
-
-      if (returnUrl) {
-        checkoutOptions.returnUrl = returnUrl;
-      }
-
       cashfree.checkout(checkoutOptions)
         .then((result) => {
           if (!result) {
-            resolve({
-              status: 'PENDING',
-              message: 'Checkout closed or result pending backend verification.'
-            });
+            resolve({ status: 'PENDING', message: 'Checkout closed or awaiting verification.' });
             return;
           }
-
           if (result.error) {
-            // User closed popup or checkout encountered an error
             const isDismissed = result.error.code === 'MODAL_CLOSED' ||
-                                (result.error.message && result.error.message.toLowerCase().includes('closed'));
+              (result.error.message && result.error.message.toLowerCase().includes('closed'));
             resolve({
               status: isDismissed ? 'CANCELLED' : 'ERROR',
               error: result.error,
@@ -134,42 +159,21 @@ export async function launchCashfreeCheckout({
             });
             return;
           }
-
           if (result.redirect) {
-            resolve({
-              status: 'REDIRECTED',
-              message: 'Redirecting to payment authentication page...'
-            });
+            resolve({ status: 'REDIRECTED', message: 'Redirecting to payment authentication page...' });
             return;
           }
-
           if (result.paymentDetails) {
-            resolve({
-              status: 'SUCCESS',
-              paymentDetails: result.paymentDetails,
-              message: 'Payment completed on Cashfree.'
-            });
+            resolve({ status: 'SUCCESS', paymentDetails: result.paymentDetails, message: 'Payment completed on Cashfree.' });
             return;
           }
-
-          resolve({
-            status: 'PENDING',
-            message: 'Payment submitted. Awaiting verification.'
-          });
+          resolve({ status: 'PENDING', message: 'Payment submitted. Awaiting verification.' });
         })
         .catch((err) => {
-          resolve({
-            status: 'ERROR',
-            error: err,
-            message: err?.message || 'Error occurred during Cashfree checkout.'
-          });
+          resolve({ status: 'ERROR', error: err, message: err?.message || 'Error occurred during Cashfree checkout.' });
         });
     } catch (err) {
-      resolve({
-        status: 'ERROR',
-        error: err,
-        message: err?.message || 'Failed to initialize Cashfree checkout window.'
-      });
+      resolve({ status: 'ERROR', error: err, message: err?.message || 'Failed to initialize Cashfree checkout window.' });
     }
   });
 }

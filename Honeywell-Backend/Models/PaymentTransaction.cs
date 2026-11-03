@@ -62,6 +62,19 @@ namespace Honeywell.Models
 
         public string? RawResponse { get; set; }
 
+        [MaxLength(100)]
+        public string? BankReference { get; set; }
+
+        [MaxLength(50)]
+        public string? PaymentGroup { get; set; }
+
+        public DateTime? VerifiedAt { get; set; }
+
+        public DateTime? WebhookProcessedAt { get; set; }
+
+        [MaxLength(100)]
+        public string? WebhookEventType { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? UpdatedAt { get; set; }

@@ -16,6 +16,7 @@
     "test:policies": "node --test src/__tests__/policies.test.js"
   },
   "dependencies": {
+    "@cashfreepayments/cashfree-js": "^1.0.7",
     "@openai/sites-vite-plugin": "^0.2.0",
     "axios": "^1.19.0",
     "framer-motion": "^13.1.1",

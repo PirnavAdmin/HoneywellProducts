@@ -233,43 +233,80 @@ export default function Checkout() {
       // 0. CASHFREE SANDBOX CHECKOUT GATEWAY (OFFICIAL HOSTED CHECKOUT)
       // ----------------------------------------------------------------------
       if (paymentMethod === 'Cashfree Sandbox' || paymentMethod === 'Cashfree') {
-        let createdOrder = null;
+        let existingPendingOrder = null;
         try {
-          createdOrder = await orderService.create({
-            orderNumber: currentOrderId,
-            customerId: activeCustId ? Number(activeCustId) : undefined,
-            customerName: customerName.trim(),
-            email: email.trim(),
-            mobile: mobile.trim(),
-            address: address.trim(),
-            city: city.trim(),
-            state: state.trim(),
-            pinCode: pinCode.trim(),
-            totalAmount: total,
-            gstAmount: taxAmount,
-            discountAmount: discountAmount,
-            finalAmount: grandTotal,
-            paymentMethod: 'Cashfree',
-            paymentStatus: 'Pending',
-            status: 'Processing',
-            items
-          });
-        } catch (e) {
-          setPaymentMessage({ type: 'error', text: `Failed to record order: ${e.message}. Your cart is preserved.` });
-          setSubmitting(false);
-          return;
+          const rawPending = sessionStorage.getItem('pendingCheckoutOrder');
+          if (rawPending) {
+            existingPendingOrder = JSON.parse(rawPending);
+          }
+        } catch {
+          // Ignore parse errors
         }
 
-        const orderIdParam = String(createdOrder?.id || createdOrder?.orderNumber || currentOrderId);
+        // If an existing pending order matches the current checkout context (amount and customer), re-use it
+        let orderIdParam = null;
+        if (
+          existingPendingOrder &&
+          existingPendingOrder.orderId &&
+          Number(existingPendingOrder.grandTotal) === Number(grandTotal) &&
+          existingPendingOrder.email === email.trim()
+        ) {
+          orderIdParam = String(existingPendingOrder.orderId);
+        } else {
+          let createdOrder = null;
+          try {
+            createdOrder = await orderService.create({
+              orderNumber: currentOrderId,
+              customerId: activeCustId ? Number(activeCustId) : undefined,
+              customerName: customerName.trim(),
+              email: email.trim(),
+              mobile: mobile.trim(),
+              address: address.trim(),
+              city: city.trim(),
+              state: state.trim(),
+              pinCode: pinCode.trim(),
+              totalAmount: total,
+              gstAmount: taxAmount,
+              discountAmount: discountAmount,
+              finalAmount: grandTotal,
+              paymentMethod: 'Cashfree',
+              paymentStatus: 'Pending',
+              status: 'Processing',
+              items
+            });
+
+            orderIdParam = String(createdOrder?.id || createdOrder?.orderNumber || currentOrderId);
+            const guestTok = createdOrder?.guestToken || '';
+            if (guestTok) {
+              sessionStorage.setItem('guestCheckoutToken', guestTok);
+            }
+            sessionStorage.setItem('pendingCheckoutOrder', JSON.stringify({
+              orderId: createdOrder?.id || orderIdParam,
+              orderNumber: createdOrder?.orderNumber || currentOrderId,
+              grandTotal,
+              email: email.trim(),
+              phone: mobile.trim(),
+              guestToken: guestTok
+            }));
+          } catch (e) {
+            setPaymentMessage({ type: 'error', text: `Failed to record order: ${e.message}. Your cart is preserved.` });
+            setSubmitting(false);
+            return;
+          }
+        }
+
         const returnUrl = `${window.location.origin}/order-success?order_id={order_id}`;
 
         setPaymentMessage({ type: 'info', text: 'Initializing Cashfree Sandbox session...' });
+
+        const effectiveGuestToken = existingPendingOrder?.guestToken || sessionStorage.getItem('guestCheckoutToken') || undefined;
 
         const cfRes = await createCashfreeOrder({
           orderId: orderIdParam,
           returnUrl,
           customerEmail: email.trim() || undefined,
           customerPhone: mobile.trim() || undefined,
+          guestToken: effectiveGuestToken,
           idempotencyKey: `cf_${orderIdParam}_${Date.now()}`
         });
 
@@ -282,71 +319,34 @@ export default function Checkout() {
           return;
         }
 
-        setPaymentMessage({ type: 'info', text: 'Launching Cashfree Sandbox checkout...' });
+        setPaymentMessage({ type: 'info', text: 'Redirecting to Cashfree Sandbox checkout...' });
 
+        // Retain cart during checkout so customer never loses items if payment is cancelled or dropped
+        // Cart will be authoritatively cleared upon verified payment on OrderSuccess page
         const checkoutResult = await launchCashfreeCheckout({
           paymentSessionId: cfRes.paymentSessionId,
-          redirectTarget: '_modal',
+          redirectTarget: '_self',
           returnUrl
         });
 
-        if (checkoutResult.status === 'CANCELLED') {
+        if (checkoutResult && checkoutResult.status === 'ERROR') {
           setPaymentMessage({
             type: 'error',
-            text: 'Cashfree checkout was closed or cancelled. You can retry payment whenever ready.'
+            text: checkoutResult.message || 'Payment error during checkout. Your cart has been preserved.'
           });
           setSubmitting(false);
           return;
         }
 
-        if (checkoutResult.status === 'ERROR') {
+        if (checkoutResult && checkoutResult.status === 'CANCELLED') {
           setPaymentMessage({
             type: 'error',
-            text: checkoutResult.message || 'Payment error during checkout. Your cart is preserved.'
+            text: 'Cashfree checkout was cancelled. You can retry payment whenever ready.'
           });
           setSubmitting(false);
           return;
         }
 
-        if (checkoutResult.status === 'REDIRECTED') {
-          // Cashfree has redirected the browser window to bank 3DS
-          return;
-        }
-
-        // Verify with backend independently
-        setPaymentMessage({ type: 'info', text: 'Verifying payment with backend...' });
-        const verifyRes = await getCashfreeOrderDetails(orderIdParam);
-        const resolvedRef = String(createdOrder?.orderNumber || createdOrder?.id || currentOrderId);
-
-        const isPaid = verifyRes?.success && (verifyRes.status === 'Paid' || verifyRes.status === 'Success');
-        setOrderSuccessPlaced(true);
-        clearCart();
-
-        if (isPaid) {
-          setPaymentMessage({ type: 'success', text: 'Cashfree payment verified! Order placed successfully.' });
-          setTimeout(() => {
-            navigate('/order-success', {
-              state: {
-                reference: resolvedRef,
-                order: createdOrder,
-                status: 'Paid',
-                gateway: 'Cashfree'
-              }
-            });
-          }, 600);
-        } else {
-          setPaymentMessage({ type: 'info', text: 'Order submitted. Payment status is being processed.' });
-          setTimeout(() => {
-            navigate('/order-success', {
-              state: {
-                reference: resolvedRef,
-                order: createdOrder,
-                status: verifyRes?.status || 'Pending Verification',
-                gateway: 'Cashfree'
-              }
-            });
-          }, 600);
-        }
         return;
       }
 

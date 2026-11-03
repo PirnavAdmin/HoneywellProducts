@@ -1950,3 +1950,41 @@ SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
 -- Dump completed on 2026-09-22  9:30:16
+
+
+--
+-- Table structure for table `payment_transactions`
+--
+
+CREATE TABLE IF NOT EXISTS `payment_transactions` (
+  `Id` int NOT NULL AUTO_INCREMENT,
+  `OrderId` int NOT NULL,
+  `OrderNumber` varchar(100) NOT NULL,
+  `Gateway` varchar(50) NOT NULL DEFAULT 'Cashfree',
+  `CfOrderId` varchar(100) NOT NULL,
+  `PaymentSessionId` varchar(255) DEFAULT NULL,
+  `CfPaymentId` varchar(100) DEFAULT NULL,
+  `Amount` decimal(18,2) NOT NULL,
+  `Currency` varchar(10) NOT NULL DEFAULT 'INR',
+  `Status` varchar(50) NOT NULL DEFAULT 'Created',
+  `CustomerId` int DEFAULT NULL,
+  `CustomerName` varchar(150) DEFAULT NULL,
+  `CustomerEmail` varchar(150) DEFAULT NULL,
+  `CustomerPhone` varchar(50) DEFAULT NULL,
+  `PaymentMethod` varchar(100) DEFAULT NULL,
+  `IdempotencyKey` varchar(100) DEFAULT NULL,
+  `ErrorMessage` text,
+  `RawResponse` text,
+  `BankReference` varchar(100) DEFAULT NULL,
+  `PaymentGroup` varchar(50) DEFAULT NULL,
+  `VerifiedAt` datetime DEFAULT NULL,
+  `WebhookProcessedAt` datetime DEFAULT NULL,
+  `WebhookEventType` varchar(100) DEFAULT NULL,
+  `CreatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `UpdatedAt` datetime DEFAULT NULL,
+  PRIMARY KEY (`Id`),
+  KEY `idx_pt_order_id` (`OrderId`),
+  KEY `idx_pt_order_number` (`OrderNumber`),
+  KEY `idx_pt_cf_order_id` (`CfOrderId`),
+  KEY `idx_pt_idempotency` (`IdempotencyKey`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

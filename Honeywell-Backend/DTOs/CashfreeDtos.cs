@@ -11,6 +11,11 @@ namespace Honeywell.DTOs
         public string OrderId { get; set; } = string.Empty;
 
         /// <summary>
+        /// Optional Invoice ID string (e.g. INV-20261102-12345 or 5).
+        /// </summary>
+        public string? InvoiceId { get; set; }
+
+        /// <summary>
         /// Optional client override for return URL. If omitted, default frontend template is used.
         /// </summary>
         public string? ReturnUrl { get; set; }
@@ -30,6 +35,8 @@ namespace Honeywell.DTOs
         /// </summary>
         public string? CustomerPhone { get; set; }
 
+        public string? GuestToken { get; set; }
+
         /// <summary>
         /// Optional idempotency key to prevent accidental duplicate submissions.
         /// </summary>
@@ -42,6 +49,7 @@ namespace Honeywell.DTOs
         public string Message { get; set; } = string.Empty;
         public int OrderId { get; set; }
         public string OrderNumber { get; set; } = string.Empty;
+        public string? GuestToken { get; set; }
         public string CfOrderId { get; set; } = string.Empty;
         public string? PaymentSessionId { get; set; }
         public decimal Amount { get; set; }
@@ -136,4 +144,125 @@ namespace Honeywell.DTOs
         [JsonPropertyName("type")]
         public string? Type { get; set; }
     }
+
+    public class CashfreeWebhookProcessResult
+    {
+        public bool Success { get; set; }
+        public int StatusCode { get; set; } = 200;
+        public string Message { get; set; } = string.Empty;
+    }
+
+    public class CashfreePaymentVerificationResult
+    {
+        public bool Success { get; set; }
+        public bool IsPaid { get; set; }
+        public string Status { get; set; } = "Pending";
+        public string Message { get; set; } = string.Empty;
+        public int OrderId { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public string CfOrderId { get; set; } = string.Empty;
+        public string? CfPaymentId { get; set; }
+        public decimal Amount { get; set; }
+        public string Currency { get; set; } = "INR";
+        public string? PaymentMethod { get; set; }
+        public string? BankReference { get; set; }
+        public DateTime? VerifiedAt { get; set; }
+    }
+
+    public class CashfreePgPaymentEntity
+    {
+        [JsonPropertyName("cf_payment_id")]
+        public object? CfPaymentId { get; set; }
+
+        [JsonPropertyName("order_id")]
+        public string? OrderId { get; set; }
+
+        [JsonPropertyName("entity")]
+        public string? Entity { get; set; }
+
+        [JsonPropertyName("payment_currency")]
+        public string? PaymentCurrency { get; set; }
+
+        [JsonPropertyName("payment_amount")]
+        public decimal PaymentAmount { get; set; }
+
+        [JsonPropertyName("payment_time")]
+        public string? PaymentTime { get; set; }
+
+        [JsonPropertyName("payment_status")]
+        public string? PaymentStatus { get; set; }
+
+        [JsonPropertyName("payment_message")]
+        public string? PaymentMessage { get; set; }
+
+        [JsonPropertyName("bank_reference")]
+        public string? BankReference { get; set; }
+
+        [JsonPropertyName("payment_group")]
+        public string? PaymentGroup { get; set; }
+    }
+
+    public class CashfreeWebhookPayload
+    {
+        [JsonPropertyName("type")]
+        public string Type { get; set; } = string.Empty;
+
+        [JsonPropertyName("event_time")]
+        public string? EventTime { get; set; }
+
+        [JsonPropertyName("data")]
+        public CashfreeWebhookData? Data { get; set; }
+    }
+
+    public class CashfreeWebhookData
+    {
+        [JsonPropertyName("order")]
+        public CashfreeWebhookOrder? Order { get; set; }
+
+        [JsonPropertyName("payment")]
+        public CashfreeWebhookPayment? Payment { get; set; }
+
+        [JsonPropertyName("customer_details")]
+        public CashfreePgCustomerDetails? CustomerDetails { get; set; }
+    }
+
+    public class CashfreeWebhookOrder
+    {
+        [JsonPropertyName("order_id")]
+        public string OrderId { get; set; } = string.Empty;
+
+        [JsonPropertyName("order_amount")]
+        public decimal OrderAmount { get; set; }
+
+        [JsonPropertyName("order_currency")]
+        public string OrderCurrency { get; set; } = "INR";
+    }
+
+    public class CashfreeWebhookPayment
+    {
+        [JsonPropertyName("cf_payment_id")]
+        public object? CfPaymentId { get; set; }
+
+        [JsonPropertyName("payment_status")]
+        public string PaymentStatus { get; set; } = string.Empty;
+
+        [JsonPropertyName("payment_amount")]
+        public decimal PaymentAmount { get; set; }
+
+        [JsonPropertyName("payment_currency")]
+        public string PaymentCurrency { get; set; } = "INR";
+
+        [JsonPropertyName("payment_message")]
+        public string? PaymentMessage { get; set; }
+
+        [JsonPropertyName("payment_time")]
+        public string? PaymentTime { get; set; }
+
+        [JsonPropertyName("bank_reference")]
+        public string? BankReference { get; set; }
+
+        [JsonPropertyName("payment_group")]
+        public string? PaymentGroup { get; set; }
+    }
+
 }

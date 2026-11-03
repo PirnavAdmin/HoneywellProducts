@@ -352,19 +352,26 @@ namespace Honeywell.Controllers
             }
             else
             {
-                // Unauthenticated access: allow alphanumeric OrderNumber (checkout confirmation) or require matching email/phone
-                if (int.TryParse(id, out _))
+                // Unauthenticated / Guest access:
+                // Require cryptographic GuestToken. Email and phone alone cannot grant access to an order.
+                var headerToken = Request.Headers["x-guest-token"].ToString();
+                var queryToken = Request.Query["guestToken"].ToString();
+                var suppliedToken = !string.IsNullOrWhiteSpace(headerToken) ? headerToken : queryToken;
+
+                bool isAuthorizedGuest = false;
+                if (!string.IsNullOrWhiteSpace(order.GuestToken) && !string.IsNullOrWhiteSpace(suppliedToken))
                 {
-                    var queryEmail = Request.Query["email"].ToString()?.Trim().ToLower();
-                    var queryPhone = Request.Query["phone"].ToString()?.Trim();
-
-                    bool matchesEmail = !string.IsNullOrEmpty(queryEmail) && order.Customer != null && !string.IsNullOrEmpty(order.Customer.Email) && order.Customer.Email.ToLower() == queryEmail;
-                    bool matchesPhone = !string.IsNullOrEmpty(queryPhone) && order.Customer != null && !string.IsNullOrEmpty(order.Customer.Phone) && order.Customer.Phone.Contains(queryPhone);
-
-                    if (!matchesEmail && !matchesPhone)
+                    var suppliedBytes = System.Text.Encoding.UTF8.GetBytes(suppliedToken.Trim());
+                    var orderTokenBytes = System.Text.Encoding.UTF8.GetBytes(order.GuestToken.Trim());
+                    if (suppliedBytes.Length == orderTokenBytes.Length)
                     {
-                        return Unauthorized(new { Message = "Authentication or customer email/phone verification required to access order by numeric ID." });
+                        isAuthorizedGuest = System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(suppliedBytes, orderTokenBytes);
                     }
+                }
+
+                if (!isAuthorizedGuest)
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Access denied: Valid guest authorization token required to access order." });
                 }
             }
 
@@ -1026,7 +1033,8 @@ namespace Honeywell.Controllers
                     Status = !string.IsNullOrWhiteSpace(request.Status) ? request.Status.Trim() : "Processing",
                     PaymentStatus = !string.IsNullOrWhiteSpace(request.PaymentStatus) ? request.PaymentStatus.Trim() : "Pending",
                     PaymentMethod = !string.IsNullOrWhiteSpace(request.PaymentMethod) ? request.PaymentMethod.Trim() : "Cash on Delivery",
-                    DiscountAmount = request.DiscountAmount ?? 0
+                    DiscountAmount = request.DiscountAmount ?? 0,
+                    GuestToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant()
                 };
 
                 // Address construction

@@ -34,5 +34,31 @@ namespace Honeywell.Services.Interfaces
         /// Fetches existing order status and details directly from Cashfree Sandbox.
         /// </summary>
         Task<CashfreePgOrderResponse?> GetCashfreeOrderAsync(string cfOrderId);
+
+        /// <summary>
+        /// Fetches payments associated with a Cashfree order.
+        /// </summary>
+        Task<System.Collections.Generic.List<CashfreePgPaymentEntity>?> GetCashfreeOrderPaymentsAsync(string cfOrderId);
+
+        /// <summary>
+        /// Verifies official Cashfree webhook HMAC-SHA256 signature using timing-safe comparison.
+        /// </summary>
+        bool VerifyWebhookSignature(string rawBody, string timestamp, string signatureHeader);
+
+        /// <summary>
+        /// Performs authoritative server-to-server payment verification with Cashfree API and reconciles order state.
+        /// </summary>
+        Task<CashfreePaymentVerificationResult> VerifyAndReconcileOrderPaymentAsync(string orderRef);
+
+        /// <summary>
+        /// Processes authenticated Cashfree webhook events (SUCCESS, FAILED, USER_DROPPED).
+        /// </summary>
+        Task<CashfreeWebhookProcessResult> ProcessWebhookAsync(string rawBody, string timestamp, string signatureHeader);
+
+        /// <summary>
+        /// Scans for unpaid, abandoned Cashfree orders exceeding the reservation timeout,
+        /// restores reserved inventory to product stock, and transitions orders to Expired.
+        /// </summary>
+        Task<int> ReleaseExpiredInventoryReservationsAsync(System.TimeSpan? reservationTimeout = null);
     }
 }

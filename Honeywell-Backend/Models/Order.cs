@@ -35,6 +35,9 @@ namespace Honeywell.Models
         public string? PackerPhotoUrl { get; set; }
         public string? PackagePhotoUrl { get; set; }
 
+        // Cryptographically generated guest checkout token for unauthenticated order security
+        public string? GuestToken { get; set; }
+
         // Items
         public List<OrderItem> Items { get; set; } = new();
     }

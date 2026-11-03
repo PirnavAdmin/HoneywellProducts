@@ -7,9 +7,11 @@ using Honeywell.DTOs;
 using Honeywell.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace Honeywell.Controllers
@@ -48,7 +50,7 @@ namespace Honeywell.Controllers
             return false;
         }
 
-        private bool ValidateOrderOwnership(Order order, string? customerEmail, string? customerPhone)
+        private bool ValidateOrderOwnership(Order order, string? customerEmail, string? customerPhone, string? guestToken = null)
         {
             if (IsAdminUser()) return true;
 
@@ -73,24 +75,24 @@ namespace Honeywell.Controllers
             }
 
             // For unauthenticated / guest orders:
-            // Allow if request supplies matching email or phone
-            var orderCustEmail = order.Customer?.Email?.Trim().ToLowerInvariant();
-            var orderCustPhone = order.Customer?.Phone?.Trim();
+            // Customer email and phone alone CANNOT authorize access to an order.
+            // Require the server-issued cryptographic GuestToken.
+            var tokenCandidate = !string.IsNullOrWhiteSpace(guestToken)
+                ? guestToken.Trim()
+                : (Request?.Headers["x-guest-token"].ToString()?.Trim() ?? Request?.Query["guestToken"].ToString()?.Trim());
 
-            if (!string.IsNullOrWhiteSpace(customerEmail) && !string.IsNullOrWhiteSpace(orderCustEmail) &&
-                customerEmail.Trim().Equals(orderCustEmail, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(tokenCandidate) && !string.IsNullOrWhiteSpace(order.GuestToken))
             {
-                return true;
+                var suppliedBytes = Encoding.UTF8.GetBytes(tokenCandidate);
+                var orderTokenBytes = Encoding.UTF8.GetBytes(order.GuestToken.Trim());
+                if (suppliedBytes.Length == orderTokenBytes.Length &&
+                    CryptographicOperations.FixedTimeEquals(suppliedBytes, orderTokenBytes))
+                {
+                    return true;
+                }
             }
 
-            if (!string.IsNullOrWhiteSpace(customerPhone) && !string.IsNullOrWhiteSpace(orderCustPhone) &&
-                (customerPhone.Contains(orderCustPhone) || orderCustPhone.Contains(customerPhone)))
-            {
-                return true;
-            }
-
-            // Or if user referenced the full unique OrderNumber
-            return true;
+            return false;
         }
 
         /// <summary>
@@ -99,12 +101,16 @@ namespace Honeywell.Controllers
         [HttpPost("cashfree/create-order")]
         public async Task<IActionResult> CreateCashfreeOrder([FromBody] CreateCashfreePaymentOrderRequest request)
         {
-            if (request == null || string.IsNullOrWhiteSpace(request.OrderId))
+            var orderRef = !string.IsNullOrWhiteSpace(request?.OrderId)
+                ? request.OrderId.Trim()
+                : request?.InvoiceId?.Trim();
+
+            if (string.IsNullOrWhiteSpace(orderRef))
             {
                 return BadRequest(new CashfreeOrderCreationResponse
                 {
                     Success = false,
-                    Message = "OrderId is required."
+                    Message = "OrderId or InvoiceId is required."
                 });
             }
 
@@ -119,12 +125,13 @@ namespace Honeywell.Controllers
                 });
             }
 
-            // Find order in database by Id or OrderNumber
+            // Find order in database by Id, OrderNumber, or InvoiceId
             Order? order = null;
-            if (int.TryParse(request.OrderId.Trim(), out int numericOrderId))
+            if (int.TryParse(orderRef, out int numericOrderId))
             {
                 order = await _context.Orders
                     .Include(o => o.Customer)
+                    .Include(o => o.Items)
                     .FirstOrDefaultAsync(o => o.Id == numericOrderId);
             }
 
@@ -132,7 +139,26 @@ namespace Honeywell.Controllers
             {
                 order = await _context.Orders
                     .Include(o => o.Customer)
-                    .FirstOrDefaultAsync(o => o.OrderNumber == request.OrderId.Trim());
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.OrderNumber == orderRef);
+            }
+
+            if (order == null && orderRef.StartsWith("INV-", StringComparison.OrdinalIgnoreCase))
+            {
+                var ordNumberEquivalent = "ORD-" + orderRef[4..];
+                var rawSuffix = orderRef[4..];
+                order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.OrderNumber == ordNumberEquivalent || o.OrderNumber == rawSuffix);
+
+                if (order == null && int.TryParse(rawSuffix, out int invoiceNumId))
+                {
+                    order = await _context.Orders
+                        .Include(o => o.Customer)
+                        .Include(o => o.Items)
+                        .FirstOrDefaultAsync(o => o.Id == invoiceNumId);
+                }
             }
 
             if (order == null)
@@ -140,19 +166,35 @@ namespace Honeywell.Controllers
                 return NotFound(new CashfreeOrderCreationResponse
                 {
                     Success = false,
-                    Message = $"Application order '{request.OrderId}' was not found in the database."
+                    Message = $"Application order or invoice '{orderRef}' was not found in the database."
                 });
             }
 
+            // Ensure verified database amount
+            if (order.FinalAmount <= 0)
+            {
+                decimal sub = order.TotalAmount > 0 ? order.TotalAmount : (order.Items?.Sum(i => i.Subtotal) ?? 0);
+                decimal tax = order.GstAmount > 0 ? order.GstAmount : Math.Round(sub * 0.18m, 2);
+                order.GstAmount = tax;
+                order.FinalAmount = sub + order.ShippingFee + tax - order.DiscountAmount;
+            }
+
+            // Ensure order has server-issued guest token
+            if (string.IsNullOrWhiteSpace(order.GuestToken))
+            {
+                order.GuestToken = Convert.ToHexString(System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
+                await _context.SaveChangesAsync();
+            }
+
             // Check order ownership / authorization
-            if (!ValidateOrderOwnership(order, request.CustomerEmail, request.CustomerPhone))
+            if (!ValidateOrderOwnership(order, request.CustomerEmail, request.CustomerPhone, request.GuestToken))
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new CashfreeOrderCreationResponse
                 {
                     Success = false,
                     OrderId = order.Id,
                     OrderNumber = order.OrderNumber,
-                    Message = "Access denied: you do not have permission to initiate payment for this order."
+                    Message = "Access denied: Valid authentication or guest checkout authorization token required."
                 });
             }
 
@@ -205,6 +247,7 @@ namespace Honeywell.Controllers
 
             if (response.Success)
             {
+                response.GuestToken = order.GuestToken;
                 return Ok(response);
             }
 
@@ -233,6 +276,19 @@ namespace Honeywell.Controllers
                 return NotFound(new { Success = false, Message = $"No payment transaction found for '{orderRef}'." });
             }
 
+            var order = await _context.Orders
+                .Include(o => o.Customer)
+                .FirstOrDefaultAsync(o => o.Id == tx.OrderId);
+
+            if (order != null && !ValidateOrderOwnership(order, null, null))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    Success = false,
+                    Message = "Access denied: You are not authorized to view this transaction."
+                });
+            }
+
             return Ok(new
             {
                 Success = true,
@@ -246,6 +302,87 @@ namespace Honeywell.Controllers
                 Gateway = tx.Gateway,
                 CreatedAt = tx.CreatedAt,
                 UpdatedAt = tx.UpdatedAt
+            });
+        }
+
+        /// <summary>
+        /// Authoritatively verifies and reconciles Cashfree payment status with Cashfree PG Sandbox APIs.
+        /// </summary>
+        [HttpGet("cashfree/verify/{orderRef}")]
+        public async Task<IActionResult> VerifyCashfreeOrderPayment(
+            string orderRef,
+            [FromQuery] string? customerEmail = null,
+            [FromQuery] string? customerPhone = null,
+            [FromQuery] string? guestToken = null)
+        {
+            if (string.IsNullOrWhiteSpace(orderRef))
+            {
+                return BadRequest(new { Success = false, Message = "Order reference is required." });
+            }
+
+            var cleanRef = orderRef.Trim();
+            var tx = await _context.PaymentTransactions
+                .Where(t => t.Gateway == "Cashfree" && (t.OrderNumber == cleanRef || t.CfOrderId == cleanRef || t.OrderId.ToString() == cleanRef))
+                .OrderByDescending(t => t.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (tx == null)
+            {
+                return NotFound(new { Success = false, Message = $"No payment transaction found for '{orderRef}'." });
+            }
+
+            var order = await _context.Orders
+                .Include(o => o.Customer)
+                .FirstOrDefaultAsync(o => o.Id == tx.OrderId);
+
+            if (order != null && !ValidateOrderOwnership(order, customerEmail, customerPhone, guestToken))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    Success = false,
+                    Message = "Access denied: You are not authorized to view or verify this transaction."
+                });
+            }
+
+            var result = await _cashfreeService.VerifyAndReconcileOrderPaymentAsync(orderRef);
+                        return Ok(result);
+        }
+
+        /// <summary>
+        /// Official Cashfree webhook endpoint (POST /api/Payment/cashfree-webhook).
+        /// Validates HMAC-SHA256 signature using timing-safe comparison, handles idempotency,
+        /// and reconciles application order payment state.
+        /// </summary>
+        [HttpPost("cashfree-webhook")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+        public async Task<IActionResult> HandleCashfreeWebhook()
+        {
+            Request.EnableBuffering();
+
+            string rawBody;
+            using (var reader = new StreamReader(Request.Body, Encoding.UTF8, leaveOpen: true))
+            {
+                rawBody = await reader.ReadToEndAsync();
+                Request.Body.Position = 0;
+            }
+
+            var signature = Request.Headers["x-webhook-signature"].ToString();
+            var timestamp = Request.Headers["x-webhook-timestamp"].ToString();
+
+            if (string.IsNullOrWhiteSpace(rawBody) ||
+                string.IsNullOrWhiteSpace(signature) ||
+                string.IsNullOrWhiteSpace(timestamp))
+            {
+                _logger.LogWarning("Cashfree Webhook rejected: Missing body or signature/timestamp headers.");
+                return BadRequest(new { Message = "Missing required signature headers or payload." });
+            }
+
+            var processResult = await _cashfreeService.ProcessWebhookAsync(rawBody, timestamp, signature);
+
+            return StatusCode(processResult.StatusCode, new
+            {
+                Success = processResult.Success,
+                Message = processResult.Message
             });
         }
 
@@ -608,6 +745,35 @@ namespace Honeywell.Controllers
         [HttpPost("complete")]
         public async Task<IActionResult> CompletePayment([FromBody] CompletePaymentRequest request)
         {
+            if (string.IsNullOrWhiteSpace(request?.TransactionId))
+            {
+                return BadRequest(new { Success = false, Message = "TransactionId is required." });
+            }
+
+            // Security: Cashfree transactions cannot be marked as Success merely based on client request
+            var tx = await _context.PaymentTransactions
+                .Where(t => t.Gateway == "Cashfree" && (t.CfOrderId == request.TransactionId || t.PaymentSessionId == request.TransactionId || t.OrderNumber == request.TransactionId))
+                .FirstOrDefaultAsync();
+
+            if (tx != null)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Cashfree transactions require authoritative server-side or webhook verification."
+                });
+            }
+
+            // For non-gateway / manual orders: require Admin authorization to complete
+            if (!IsAdminUser())
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    Success = false,
+                    Message = "Only authorized administrators can manually complete transactions."
+                });
+            }
+
             var order = await _context.OrderSuccesses.FirstOrDefaultAsync(x => x.TransactionId == request.TransactionId);
             if (order == null)
             {
@@ -618,13 +784,7 @@ namespace Honeywell.Controllers
             order.OrderStatus = "Placed";
             await _context.SaveChangesAsync();
 
-            return Ok(new
-            {
-                Success = true,
-                TransactionId = order.TransactionId,
-                OrderId = order.OrderId,
-                Message = "Payment completed successfully."
-            });
+            return Ok(new { Success = true, Message = "Transaction completed by administrator." });
         }
 
         // GET: api/Payment/qr-code
@@ -1317,6 +1477,21 @@ namespace Honeywell.Controllers
                 OrderId = match.OrderId,
                 CustomerName = match.CustomerName
             });
+        }
+
+        /// <summary>
+        /// Admin endpoint to sweep and release expired unpaid inventory reservations.
+        /// </summary>
+        [HttpPost("reconcile-expired-reservations")]
+        public async Task<IActionResult> ReconcileExpiredReservations([FromQuery] int timeoutMinutes = 60)
+        {
+            if (!IsAdminUser())
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { Message = "Admin privileges required." });
+            }
+
+            var released = await _cashfreeService.ReleaseExpiredInventoryReservationsAsync(TimeSpan.FromMinutes(timeoutMinutes));
+            return Ok(new { Success = true, ReleasedOrdersCount = released });
         }
     }
 }

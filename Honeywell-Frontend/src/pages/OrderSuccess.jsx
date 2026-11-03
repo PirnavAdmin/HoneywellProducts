@@ -1,14 +1,17 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ArrowRight, Check, Package, Clock, ShieldCheck, AlertCircle, RefreshCw, RotateCcw } from 'lucide-react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
+import { useCart } from '../context/CartContext';
 import { orderService } from '../services/orderService';
-import { getCashfreeOrderDetails } from '../services/paymentService';
+import { getCashfreeOrderDetails, verifyCashfreePayment } from '../services/paymentService';
 
 export default function OrderSuccess() {
   useDocumentTitle('Order Confirmation', 'Your purchase order has been recorded live on the server.');
   const { state } = useLocation();
   const [searchParams] = useSearchParams();
+  const { clearCart } = useCart();
+  const cartClearedRef = useRef(false);
 
   // Extract reference from router state or query parameters (Cashfree redirect return_url)
   const queryOrderId =
@@ -20,6 +23,21 @@ export default function OrderSuccess() {
     '';
 
   const orderRef = state?.reference || queryOrderId || '';
+
+  // Retrieve pending order guest context saved during checkout if available
+  let pendingOrderContext = null;
+  try {
+    const rawSaved = sessionStorage.getItem('pendingCheckoutOrder');
+    if (rawSaved) {
+      pendingOrderContext = JSON.parse(rawSaved);
+    }
+  } catch {
+    // Ignore storage parse error
+  }
+
+  const customerEmail = state?.customerEmail || pendingOrderContext?.email || undefined;
+  const customerPhone = state?.customerPhone || pendingOrderContext?.phone || undefined;
+  const guestToken = state?.guestToken || pendingOrderContext?.guestToken || (typeof window !== 'undefined' ? sessionStorage.getItem('guestCheckoutToken') : null) || undefined;
 
   const [orderDetails, setOrderDetails] = useState(state?.order || null);
   const [paymentStatus, setPaymentStatus] = useState(state?.status || 'Pending');
@@ -39,29 +57,54 @@ export default function OrderSuccess() {
     }
 
     try {
-      // 1. Check Cashfree transaction on backend
       let resolvedOrderId = orderRef;
+
+      // 1. Authoritatively verify with Cashfree gateway sandbox via backend
       try {
-        const cfRes = await getCashfreeOrderDetails(orderRef);
-        if (cfRes && cfRes.success) {
-          setCfTransaction(cfRes);
-          if (cfRes.status) {
-            setPaymentStatus(cfRes.status);
+        const verifyRes = await verifyCashfreePayment(orderRef, { customerEmail, customerPhone, guestToken });
+        if (verifyRes && verifyRes.success) {
+          setCfTransaction(verifyRes);
+          if (verifyRes.status) {
+            setPaymentStatus(verifyRes.status);
           }
-          if (cfRes.orderId || cfRes.orderNumber) {
-            resolvedOrderId = cfRes.orderNumber || String(cfRes.orderId);
+          if (verifyRes.orderId || verifyRes.orderNumber) {
+            resolvedOrderId = verifyRes.orderNumber || String(verifyRes.orderId);
+          }
+
+          if (verifyRes.isPaid && !cartClearedRef.current) {
+            cartClearedRef.current = true;
+            clearCart();
+            sessionStorage.removeItem('pendingCheckoutOrder');
+            setFeedbackMsg('Payment verified and confirmed by Cashfree Gateway.');
+          }
+        } else {
+          // Fallback to local transaction details
+          const cfRes = await getCashfreeOrderDetails(orderRef);
+          if (cfRes && cfRes.success) {
+            setCfTransaction(cfRes);
+            if (cfRes.status) {
+              setPaymentStatus(cfRes.status);
+            }
+            if (cfRes.orderId || cfRes.orderNumber) {
+              resolvedOrderId = cfRes.orderNumber || String(cfRes.orderId);
+            }
           }
         }
-      } catch {
-        // Non-Cashfree or unverified transaction
+      } catch (gatewayErr) {
+        console.warn('Gateway verification query failed:', gatewayErr);
       }
 
       // 2. Fetch application order record
       const data = await orderService.getById(resolvedOrderId);
       if (data) {
         setOrderDetails(data);
-        if (data.paymentStatus && (!cfTransaction || cfTransaction.status !== 'Success')) {
+        if (data.paymentStatus) {
           setPaymentStatus(data.paymentStatus);
+          if (data.paymentStatus.toLowerCase() === 'paid' && !cartClearedRef.current) {
+            cartClearedRef.current = true;
+            clearCart();
+            sessionStorage.removeItem('pendingCheckoutOrder');
+          }
         }
       }
 
@@ -77,7 +120,7 @@ export default function OrderSuccess() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [orderRef]);
+  }, [orderRef, customerEmail, customerPhone, clearCart]);
 
   useEffect(() => {
     if (orderRef) {
@@ -199,6 +242,24 @@ export default function OrderSuccess() {
                   : (cfTransaction?.amount ? `₹${Number(cfTransaction.amount).toLocaleString('en-IN')}` : (orderDetails?.totalAmount ? `₹${Number(orderDetails.totalAmount).toLocaleString('en-IN')}` : 'Settled'))}
               </strong>
             </div>
+
+            {cfTransaction?.cfPaymentId && (
+              <div>
+                <span style={{ color: '#64748b', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>Gateway Payment ID</span>
+                <strong style={{ color: '#0f172a', fontSize: '12px' }}>
+                  {cfTransaction.cfPaymentId}
+                </strong>
+              </div>
+            )}
+
+            {cfTransaction?.bankReference && (
+              <div>
+                <span style={{ color: '#64748b', display: 'block', fontSize: '10px', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.04em' }}>Bank Reference</span>
+                <span style={{ color: '#0f172a', fontWeight: 600, fontSize: '12px' }}>
+                  {cfTransaction.bankReference}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

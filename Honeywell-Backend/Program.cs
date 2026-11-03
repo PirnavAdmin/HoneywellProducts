@@ -205,6 +205,13 @@ using (var scope = app.Services.CreateScope())
                 cmd.ExecuteNonQuery();
             }
             catch { }
+            try { cmd.CommandText = "ALTER TABLE `payment_transactions` ADD COLUMN `BankReference` VARCHAR(100) NULL;"; cmd.ExecuteNonQuery(); } catch { }
+            try { cmd.CommandText = "ALTER TABLE `payment_transactions` ADD COLUMN `PaymentGroup` VARCHAR(50) NULL;"; cmd.ExecuteNonQuery(); } catch { }
+            try { cmd.CommandText = "ALTER TABLE `payment_transactions` ADD COLUMN `VerifiedAt` DATETIME NULL;"; cmd.ExecuteNonQuery(); } catch { }
+            try { cmd.CommandText = "ALTER TABLE `payment_transactions` ADD COLUMN `WebhookProcessedAt` DATETIME NULL;"; cmd.ExecuteNonQuery(); } catch { }
+            try { cmd.CommandText = "ALTER TABLE `payment_transactions` ADD COLUMN `WebhookEventType` VARCHAR(100) NULL;"; cmd.ExecuteNonQuery(); } catch { }
+            try { cmd.CommandText = "ALTER TABLE `Orders` ADD COLUMN `GuestToken` VARCHAR(128) NULL;"; cmd.ExecuteNonQuery(); } catch { }
+
 
             // Ensure PermissionsJson column exists
             try

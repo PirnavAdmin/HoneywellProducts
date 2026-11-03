@@ -31,6 +31,11 @@ const getHeaders = (isMultipart = false) => {
     if (activeToken) {
       headers['Authorization'] = `Bearer ${activeToken}`;
     }
+
+    const guestToken = sessionStorage.getItem('guestCheckoutToken');
+    if (guestToken) {
+      headers['x-guest-token'] = guestToken;
+    }
   }
 
   return headers;
@@ -119,6 +124,7 @@ export async function createCashfreeOrder(payload) {
     notifyUrl: payload.notifyUrl || undefined,
     customerEmail: payload.customerEmail || undefined,
     customerPhone: payload.customerPhone || undefined,
+    guestToken: payload.guestToken || undefined,
     idempotencyKey: payload.idempotencyKey || undefined,
   };
 
@@ -207,6 +213,80 @@ export async function getCashfreeOrderDetails(orderRef) {
       success: false,
       message: `Network error checking Cashfree transaction: ${err.message}`,
       status: 0,
+    };
+  }
+}
+
+/**
+ * GET /api/Payment/cashfree/verify/{orderRef}
+ * Authoritatively verifies and reconciles Cashfree Sandbox payment status
+ * against Cashfree PG APIs and reconciles application order status.
+ *
+ * @param {string|number} orderRef - Application Order ID, Order Number, or Cashfree Order ID
+ * @param {object} [params]
+ * @param {string} [params.customerEmail] - Customer email for guest verification
+ * @param {string} [params.customerPhone] - Customer phone for guest verification
+ * @returns {Promise<{
+ *   success: boolean,
+ *   isPaid: boolean,
+ *   status: string,
+ *   message: string,
+ *   orderId?: number,
+ *   orderNumber?: string,
+ *   cfOrderId?: string,
+ *   cfPaymentId?: string,
+ *   amount?: number,
+ *   currency?: string,
+ *   paymentMethod?: string,
+ *   bankReference?: string,
+ *   verifiedAt?: string
+ * }>}
+ */
+export async function verifyCashfreePayment(orderRef, params = {}) {
+  if (!orderRef || String(orderRef).trim() === '') {
+    return { success: false, isPaid: false, message: 'Order reference is required.' };
+  }
+
+  const cleanRef = encodeURIComponent(String(orderRef).trim());
+  const queryParams = new URLSearchParams();
+  if (params.customerEmail) queryParams.set('customerEmail', params.customerEmail.trim());
+  if (params.customerPhone) queryParams.set('customerPhone', params.customerPhone.trim());
+  if (params.guestToken) queryParams.set('guestToken', params.guestToken.trim());
+  const queryString = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+  const headers = getHeaders();
+  if (params.guestToken) {
+    headers['x-guest-token'] = params.guestToken.trim();
+  }
+
+  try {
+    const response = await fetch(`${getBaseUrl()}/cashfree/verify/${cleanRef}${queryString}`, {
+      method: 'GET',
+      headers,
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      return {
+        success: false,
+        isPaid: false,
+        message: extractErrorMessage(data, response, 'Failed to verify Cashfree payment status'),
+        status: data.status || 'Failed',
+        data,
+      };
+    }
+
+    return {
+      success: true,
+      ...data,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      isPaid: false,
+      message: `Network error verifying payment with gateway: ${err.message}`,
+      status: 'NetworkError',
     };
   }
 }

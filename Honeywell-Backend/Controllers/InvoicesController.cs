@@ -1,3 +1,9 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
+using Honeywell.DTOs;
+using Honeywell.Services.Interfaces;
+using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,11 +20,213 @@ namespace Honeywell.Controllers
     public class InvoicesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly ICashfreeService _cashfreeService;
+        private readonly ILogger<InvoicesController> _logger;
 
-        public InvoicesController(ApplicationDbContext context)
+        public InvoicesController(
+            ApplicationDbContext context,
+            ICashfreeService cashfreeService,
+            ILogger<InvoicesController> logger)
         {
             _context = context;
+            _cashfreeService = cashfreeService;
+            _logger = logger;
         }
+
+        /// <summary>
+        /// Initiates a Cashfree Sandbox payment session for an invoice.
+        /// Accepts invoice string/numeric id in route and optional overrides in body.
+        /// </summary>
+        [HttpPost("{id}/pay")]
+        [HttpPost("{id}/initiate-payment")]
+        
+        private bool IsAdminUser()
+        {
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var role = User.FindFirst(ClaimTypes.Role)?.Value ?? User.FindFirst("role")?.Value ?? "";
+                if (role.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("Manager", StringComparison.OrdinalIgnoreCase) ||
+                    role.Equals("Staff", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private bool ValidateOrderOwnership(Order order, string? customerEmail, string? customerPhone, string? guestToken = null)
+        {
+            if (IsAdminUser()) return true;
+
+            if (User?.Identity?.IsAuthenticated == true)
+            {
+                var authCustId = User.FindFirst("customerId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                var authEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+
+                if (!string.IsNullOrEmpty(authCustId) && order.CustomerId.ToString() == authCustId)
+                {
+                    return true;
+                }
+
+                if (!string.IsNullOrEmpty(authEmail) && order.Customer != null &&
+                    !string.IsNullOrEmpty(order.Customer.Email) &&
+                    order.Customer.Email.Equals(authEmail, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                return false;
+            }
+
+            var tokenCandidate = !string.IsNullOrWhiteSpace(guestToken)
+                ? guestToken.Trim()
+                : (Request?.Headers["x-guest-token"].ToString()?.Trim() ?? Request?.Query["guestToken"].ToString()?.Trim());
+
+            if (!string.IsNullOrWhiteSpace(tokenCandidate) && !string.IsNullOrWhiteSpace(order.GuestToken))
+            {
+                var suppliedBytes = System.Text.Encoding.UTF8.GetBytes(tokenCandidate);
+                var orderTokenBytes = System.Text.Encoding.UTF8.GetBytes(order.GuestToken.Trim());
+                if (suppliedBytes.Length == orderTokenBytes.Length &&
+                    System.Security.Cryptography.CryptographicOperations.FixedTimeEquals(suppliedBytes, orderTokenBytes))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public async Task<IActionResult> InitiatePayment(string id, [FromBody] CreateCashfreePaymentOrderRequest? request)
+        {
+            request ??= new CreateCashfreePaymentOrderRequest();
+            if (string.IsNullOrWhiteSpace(request.OrderId) && string.IsNullOrWhiteSpace(request.InvoiceId))
+            {
+                request.InvoiceId = id;
+            }
+
+            var invoiceRef = !string.IsNullOrWhiteSpace(request.InvoiceId)
+                ? request.InvoiceId.Trim()
+                : id.Trim();
+
+            // Find matching order
+            Order? order = null;
+            if (int.TryParse(invoiceRef, out int numericId))
+            {
+                order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.Id == numericId);
+            }
+
+            if (order == null)
+            {
+                order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.OrderNumber == invoiceRef);
+            }
+
+            if (order == null && invoiceRef.StartsWith("INV-", StringComparison.OrdinalIgnoreCase))
+            {
+                var ordNumberEquivalent = "ORD-" + invoiceRef[4..];
+                var rawSuffix = invoiceRef[4..];
+                order = await _context.Orders
+                    .Include(o => o.Customer)
+                    .Include(o => o.Items)
+                    .FirstOrDefaultAsync(o => o.OrderNumber == ordNumberEquivalent || o.OrderNumber == rawSuffix);
+
+                if (order == null && int.TryParse(rawSuffix, out int invoiceNumId))
+                {
+                    order = await _context.Orders
+                        .Include(o => o.Customer)
+                        .Include(o => o.Items)
+                        .FirstOrDefaultAsync(o => o.Id == invoiceNumId);
+                }
+            }
+
+            if (order == null)
+            {
+                return NotFound(new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    Message = $"Invoice or order '{invoiceRef}' was not found in the database."
+                });
+            }
+
+            // Check invoice order ownership / authorization
+            if (!ValidateOrderOwnership(order, request?.CustomerEmail, request?.CustomerPhone, request?.GuestToken))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Message = "Access denied: You are not authorized to initiate payment for this invoice."
+                });
+            }
+
+            // Ensure invoice amounts are calculated and verified from trusted database records
+            if (order.FinalAmount <= 0)
+            {
+                decimal sub = order.TotalAmount > 0 ? order.TotalAmount : (order.Items?.Sum(i => i.Subtotal) ?? 0);
+                decimal tax = order.GstAmount > 0 ? order.GstAmount : Math.Round(sub * 0.18m, 2);
+                order.GstAmount = tax;
+                order.FinalAmount = sub + order.ShippingFee + tax - order.DiscountAmount;
+            }
+
+            if (order.Status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ||
+                order.Status.Equals("Canceled", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Message = "Cannot initiate payment for a cancelled invoice."
+                });
+            }
+
+            if (order.PaymentStatus.Equals("Paid", StringComparison.OrdinalIgnoreCase) ||
+                order.PaymentStatus.Equals("Success", StringComparison.OrdinalIgnoreCase) ||
+                order.PaymentStatus.Equals("Verified Paid", StringComparison.OrdinalIgnoreCase) ||
+                order.PaymentStatus.Equals("Verified", StringComparison.OrdinalIgnoreCase))
+            {
+                return BadRequest(new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Message = "This invoice has already been paid successfully."
+                });
+            }
+
+            if (!_cashfreeService.IsConfigured())
+            {
+                return StatusCode(StatusCodes.Status503ServiceUnavailable, new CashfreeOrderCreationResponse
+                {
+                    Success = false,
+                    OrderId = order.Id,
+                    OrderNumber = order.OrderNumber,
+                    Message = "Cashfree payment gateway credentials are not configured on the server. Please set CASHFREE_APP_ID and CASHFREE_SECRET_KEY."
+                });
+            }
+
+            var response = await _cashfreeService.CreatePaymentOrderAsync(
+                order,
+                request.ReturnUrl,
+                request.NotifyUrl,
+                request.IdempotencyKey);
+
+            if (response.Success)
+            {
+                return Ok(response);
+            }
+
+            return BadRequest(response);
+        }
+
 
         // GET: api/Invoices?search=
         [HttpGet]
