@@ -5,7 +5,6 @@ import {
   ShieldCheck, ChevronRight, ArrowRight, Wrench, AlertCircle, Loader2,
   CheckCircle2, Cpu, Lock, Activity, Layers, Sparkles, Sliders, Server
 } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
 import ProductCard from '../components/products/ProductCard';
 import { INDUSTRY_VERTICALS, getIndustryVertical } from '../data/industryData';
 import { SOLUTION_PILLARS } from '../data/solutionsData';
@@ -116,23 +115,14 @@ export default function Industries() {
 
   return (
     <>
-      <PageHero
-        eyebrow={`INDUSTRY SOLUTIONS • ${activeIndustry.eyebrow}`}
-        title="Industry Specific Security Solutions"
-        description="Tailored Honeywell technology architectures built for specific operational environments."
-        image={heroImage}
-      />
-
-      <section className="section" style={{ paddingTop: '28px', paddingBottom: '70px' }}>
+      <section className="section industries-page-section" style={{ paddingTop: '32px', paddingBottom: '70px' }}>
         <div className="container">
-          {/* Breadcrumbs */}
-          <div className="breadcrumbs" style={{ marginBottom: '20px', fontSize: '13px' }}>
-            <Link to="/">Home</Link>
-            <ChevronRight size={14} />
-            <Link to="/industries">Industries</Link>
-            <ChevronRight size={14} />
-            <span style={{ color: '#1268a5', fontWeight: 600 }}>{activeIndustry.name}</span>
-          </div>
+          {/* Header */}
+          <header className="industries-header">
+            <h1 className="industries-header-title">
+              Industry Specific Security Solutions
+            </h1>
+          </header>
 
           {/* Industry Horizontal Selector Grid */}
           <div style={{

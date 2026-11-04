@@ -318,6 +318,7 @@ export default function Home() {
       </section>
 
       {/* Section 3: COMPLETE SECURITY SOLUTIONS (PILLARS) */}
+      {Object.values(SOLUTION_PILLARS).length > 0 && (
       <section className="section solutions-preview">
         <div className="container">
           <div className="split-heading">
@@ -370,6 +371,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      )}
     <section className="section why-section">
       <div className="container">
         <SectionHeading eyebrow="WHY CHOOSE US" title="Technology Designed Around Your Security" description="A practical, conservative framework for product discovery, project planning and support." inverse />

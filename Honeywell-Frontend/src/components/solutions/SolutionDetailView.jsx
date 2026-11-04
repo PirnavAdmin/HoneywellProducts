@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { 
   ChevronRight, 
   ShieldCheck, 
   ArrowRight, 
-  Eye, 
   Wrench, 
   HelpCircle, 
   AlertCircle, 
   Loader2,
   Shield,
   Check,
-  CheckCircle2,
   ArrowDown
 } from 'lucide-react';
 import ArchitectureDiagram from './ArchitectureDiagram';
-import SolarEstimatorWidget from './SolarEstimatorWidget';
 import ProductCard from '../products/ProductCard';
 import { SOLUTION_PILLARS } from '../../data/solutionsData';
 import { INDUSTRY_VERTICALS } from '../../data/industryData';
@@ -25,9 +22,6 @@ import { useUI } from '../../context/UIContext';
 
 /**
  * Resolves and ranks recommended hardware products for each solution pillar.
- * Specifically for "solar-solutions", it accurately retrieves both solar-compatible outdoor
- * surveillance cameras (PT/ColorVu/outdoor) and solar power hardware (panels/kits)
- * and organizes them cleanly so both cameras and power equipment appear in cohesive groups.
  */
 function filterRecommendedProducts(pillarId, allList = []) {
   if (!Array.isArray(allList) || allList.length === 0) return [];
@@ -57,94 +51,10 @@ function filterRecommendedProducts(pillarId, allList = []) {
       .toLowerCase();
   };
 
-  // ── 1. SOLAR SOLUTIONS & OFF-GRID SECURITY ─────────────────────────────────
-  if (cleanId === "solar-solutions") {
-    const validList = allList.filter((p) => !isBrokenUrl(p));
+  const validList = allList.filter((p) => !isBrokenUrl(p));
 
-    // Cameras suitable for off-grid & solar deployments (outdoor, PT, ColorVu, low power)
-    const solarCameras = validList.filter((p) => {
-      const text = getProductSearchText(p);
-      const isCamera = text.includes("camera");
-      if (!isCamera) return false;
-      return (
-        text.includes("outdoor") ||
-        text.includes("pt ") ||
-        text.includes("ptz") ||
-        text.includes("colorvu") ||
-        text.includes("solar") ||
-        text.includes("hybrid-light") ||
-        text.includes("4g") ||
-        text.includes("pir")
-      );
-    });
-
-    // Solar panels, kits, and power modules (strictly non-cameras)
-    const solarPower = validList.filter((p) => {
-      const text = getProductSearchText(p);
-      const isCamera = text.includes("camera");
-      const hasSolarTerm =
-        text.includes("solar") ||
-        text.includes("photovoltaic") ||
-        text.includes("waaree") ||
-        text.includes("foldable panel") ||
-        text.includes("flexible panel") ||
-        text.includes("solar kit") ||
-        text.includes("small solar") ||
-        text.includes("panel") ||
-        text.includes("module");
-      return hasSolarTerm && !isCamera;
-    });
-
-    // Rank cameras: prioritize outdoor, PT, and ColorVu
-    solarCameras.sort((a, b) => {
-      const aText = `${a.name || ""} ${a.productType || ""}`.toLowerCase();
-      const bText = `${b.name || ""} ${b.productType || ""}`.toLowerCase();
-      const aScore =
-        (aText.includes("outdoor") ? 6 : 0) +
-        (aText.includes("colorvu") ? 4 : 0) +
-        (aText.includes("pt") ? 2 : 0) +
-        (aText.includes("hybrid") ? 1 : 0);
-      const bScore =
-        (bText.includes("outdoor") ? 6 : 0) +
-        (bText.includes("colorvu") ? 4 : 0) +
-        (bText.includes("pt") ? 2 : 0) +
-        (bText.includes("hybrid") ? 1 : 0);
-      return bScore - aScore;
-    });
-
-    // Rank solar power: small CCTV modules & panels first, then foldable panels and combo kits
-    solarPower.sort((a, b) => {
-      const aText = `${a.name || ""} ${a.productType || ""}`.toLowerCase();
-      const bText = `${b.name || ""} ${b.productType || ""}`.toLowerCase();
-      const aScore =
-        (aText.includes("50w") ? 6 : 0) +
-        (aText.includes("20w") ? 5 : 0) +
-        (aText.includes("5w") ? 4 : 0) +
-        (aText.includes("small") ? 3 : 0) +
-        (aText.includes("cctv") ? 2 : 0) +
-        (aText.includes("foldable") ? 1 : 0);
-      const bScore =
-        (bText.includes("50w") ? 6 : 0) +
-        (bText.includes("20w") ? 5 : 0) +
-        (bText.includes("5w") ? 4 : 0) +
-        (bText.includes("small") ? 3 : 0) +
-        (bText.includes("cctv") ? 2 : 0) +
-        (bText.includes("foldable") ? 1 : 0);
-      return bScore - aScore;
-    });
-
-    // Cohesive ordering: 4 Outdoor Solar Surveillance Cameras + 4 Dedicated Solar Power Modules
-    const organized = [
-      ...solarCameras.slice(0, 4),
-      ...solarPower.slice(0, 4),
-    ];
-
-    if (organized.length > 0) return organized;
-  }
-
-  // ── 2. SMART SECURITY & AI ANALYTICS ───────────────────────────────────────
+  // ── 1. SMART SECURITY & AI ANALYTICS ───────────────────────────────────────
   if (cleanId === "smart-security") {
-    const validList = allList.filter((p) => !isBrokenUrl(p));
     const smartProds = validList.filter((p) => {
       const text = getProductSearchText(p);
       return (
@@ -178,9 +88,8 @@ function filterRecommendedProducts(pillarId, allList = []) {
     if (smartProds.length > 0) return smartProds;
   }
 
-  // ── 3. INTEGRATED SECURITY & ACCESS CONTROL ───────────────────────────────
+  // ── 2. INTEGRATED SECURITY & ACCESS CONTROL ───────────────────────────────
   if (cleanId === "integrated-solutions") {
-    const validList = allList.filter((p) => !isBrokenUrl(p));
     const accessProds = validList.filter((p) => {
       const text = getProductSearchText(p);
       return (
@@ -216,47 +125,17 @@ function filterRecommendedProducts(pillarId, allList = []) {
     if (accessProds.length > 0) return accessProds;
   }
 
-  // ── 4. SECURITY & SURVEILLANCE (HIGH-DEFINITION MONITORING) ───────────────
-  const validList = allList.filter((p) => !isBrokenUrl(p));
-  const surveillanceProds = validList.filter((p) => {
-    const text = getProductSearchText(p);
-    return text.includes("camera") || text.includes("turbo hd") || text.includes("network");
-  });
-
-  surveillanceProds.sort((a, b) => {
-    const aText = `${a.name || ""} ${a.productType || ""}`.toLowerCase();
-    const bText = `${b.name || ""} ${b.productType || ""}`.toLowerCase();
-    const aScore =
-      (aText.includes("4k") ? 5 : 0) +
-      (aText.includes("16mp") ? 4 : 0) +
-      (aText.includes("colorvu") ? 3 : 0) +
-      (aText.includes("bullet") ? 2 : 0) +
-      (aText.includes("dome") ? 1 : 0);
-    const bScore =
-      (bText.includes("4k") ? 5 : 0) +
-      (bText.includes("16mp") ? 4 : 0) +
-      (bText.includes("colorvu") ? 3 : 0) +
-      (bText.includes("bullet") ? 2 : 0) +
-      (bText.includes("dome") ? 1 : 0);
-    return bScore - aScore;
-  });
-
-  return surveillanceProds.length > 0 ? surveillanceProds : validList;
+  return validList;
 }
 
-export default function SolutionDetailView({ activeSolutionId = "security-surveillance", onSelectSolution }) {
-  const pillar = SOLUTION_PILLARS[activeSolutionId] || SOLUTION_PILLARS["security-surveillance"];
+export default function SolutionDetailView({ activeSolutionId, onSelectSolution }) {
+  const pillar = SOLUTION_PILLARS[activeSolutionId] || null;
+  if (!pillar) return null;
   const { openQuote } = useUI();
 
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [errorProducts, setErrorProducts] = useState(null);
-  const [solarHardwareFilter, setSolarHardwareFilter] = useState("all"); // "all", "cameras", "power"
-
-  // Reset subcategory filter when switching solution pillars
-  useEffect(() => {
-    setSolarHardwareFilter("all");
-  }, [activeSolutionId]);
 
   // Fetch live real products for the active solution pillar
   useEffect(() => {
@@ -293,26 +172,6 @@ export default function SolutionDetailView({ activeSolutionId = "security-survei
       window.removeEventListener("product-updated", handleUpdate);
     };
   }, [activeSolutionId]);
-
-  // Resolve displayed products based on solar hardware sub-filter
-  const displayedProducts = React.useMemo(() => {
-    if (pillar.id !== "solar-solutions" || solarHardwareFilter === "all") {
-      return products;
-    }
-    if (solarHardwareFilter === "cameras") {
-      return products.filter((p) => {
-        const text = `${p.name || ""} ${p.category || ""} ${p.subcategory || ""}`.toLowerCase();
-        return text.includes("camera");
-      });
-    }
-    if (solarHardwareFilter === "power") {
-      return products.filter((p) => {
-        const text = `${p.name || ""} ${p.category || ""} ${p.subcategory || ""}`.toLowerCase();
-        return (text.includes("solar") || text.includes("panel") || text.includes("module") || text.includes("waaree")) && !text.includes("camera");
-      });
-    }
-    return products;
-  }, [products, pillar.id, solarHardwareFilter]);
 
   // Pre-fill context for Quote modal
   const handleConsultation = () => {
@@ -665,11 +524,6 @@ export default function SolutionDetailView({ activeSolutionId = "security-survei
         <ArchitectureDiagram steps={pillar.architecture} title={`${pillar.title} Topology`} />
       </div>
 
-      {/* Render Indicative Solar Solution Estimator Widget for Solar Solutions */}
-      {pillar.id === 'solar-solutions' && (
-        <SolarEstimatorWidget />
-      )}
-
       {/* Recommended Products (Live from productService API) */}
       <div style={{ marginBottom: '40px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -679,9 +533,7 @@ export default function SolutionDetailView({ activeSolutionId = "security-survei
           </div>
           <Link
             to={
-              pillar.id === 'solar-solutions'
-                ? '/products?category=solar-panels'
-                : pillar.id === 'smart-security'
+              pillar.id === 'smart-security'
                 ? '/products?search=AcuSense'
                 : '/products?category=network-cameras'
             }
@@ -690,62 +542,6 @@ export default function SolutionDetailView({ activeSolutionId = "security-survei
             View All Products <ChevronRight size={16} />
           </Link>
         </div>
-
-        {pillar.id === "solar-solutions" && (
-          <div style={{ display: "flex", gap: "8px", marginBottom: "18px", flexWrap: "wrap" }}>
-            <button
-              onClick={() => setSolarHardwareFilter("all")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: 700,
-                border: "1px solid",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                borderColor: solarHardwareFilter === "all" ? "#1268a5" : "#cbd5e1",
-                background: solarHardwareFilter === "all" ? "#1268a5" : "#ffffff",
-                color: solarHardwareFilter === "all" ? "#ffffff" : "#475569",
-              }}
-            >
-              All Recommended Equipment (8)
-            </button>
-            <button
-              onClick={() => setSolarHardwareFilter("cameras")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: 700,
-                border: "1px solid",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                borderColor: solarHardwareFilter === "cameras" ? "#1268a5" : "#cbd5e1",
-                background: solarHardwareFilter === "cameras" ? "#1268a5" : "#ffffff",
-                color: solarHardwareFilter === "cameras" ? "#ffffff" : "#475569",
-              }}
-            >
-              Outdoor Solar Cameras (4)
-            </button>
-            <button
-              onClick={() => setSolarHardwareFilter("power")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: 700,
-                border: "1px solid",
-                cursor: "pointer",
-                transition: "all 0.15s ease",
-                borderColor: solarHardwareFilter === "power" ? "#1268a5" : "#cbd5e1",
-                background: solarHardwareFilter === "power" ? "#1268a5" : "#ffffff",
-                color: solarHardwareFilter === "power" ? "#ffffff" : "#475569",
-              }}
-            >
-              Solar Panels & Modules (4)
-            </button>
-          </div>
-        )}
 
         {loadingProducts ? (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '40px 0', gap: '10px', color: '#64748b' }}>
@@ -758,7 +554,7 @@ export default function SolutionDetailView({ activeSolutionId = "security-survei
           </div>
         ) : products.length > 0 ? (
           <div className="product-grid">
-            {displayedProducts.map((product) => (
+            {products.map((product) => (
               <ProductCard key={product.id || product.slug} product={product} />
             ))}
           </div>

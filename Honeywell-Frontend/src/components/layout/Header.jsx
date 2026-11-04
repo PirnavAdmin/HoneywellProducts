@@ -273,8 +273,8 @@ export default function Header() {
               <div className="mobile-acc-body">
                 <Link to="/solutions" onClick={closeMenus}>Overview</Link>
                 <Link to="/industries" onClick={closeMenus}>Industries</Link>
-                <Link to="/solutions?solution=security-surveillance" onClick={closeMenus}>Security &amp; Surveillance</Link>
-                <Link to="/solutions?solution=solar-solutions" onClick={closeMenus}>Solar Solutions</Link>
+
+
               </div>
             )}
           </div>

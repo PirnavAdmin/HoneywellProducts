@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
 import {
   Download,
   ExternalLink,
@@ -9,7 +8,6 @@ import {
   FileText,
   AlertCircle,
   Loader2,
-  ChevronRight,
   Monitor,
   Smartphone,
   Cpu,
@@ -19,7 +17,7 @@ import {
   CheckCircle2,
   HelpCircle,
 } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { softwareService } from '../services/softwareService';
 import { productService } from '../services/productService';
 
@@ -66,6 +64,7 @@ const formatDate = (dateStr) => {
 };
 
 export default function SoftwareDownloads() {
+  useDocumentTitle('Software & Downloads', 'Find software, firmware, tools and applications for your Honeywell products.');
   const [softwareList, setSoftwareList] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -178,22 +177,16 @@ export default function SoftwareDownloads() {
 
   return (
     <>
-      <div className="product-breadcrumbs container" style={{ marginTop: '16px', marginBottom: '8px' }}>
-        <Link to="/">Home</Link>
-        <ChevronRight size={14} />
-        <Link to="/resources">Resources</Link>
-        <ChevronRight size={14} />
-        <span>Software &amp; Downloads</span>
-      </div>
-
-      <PageHero
-        eyebrow="SOFTWARE &amp; DOWNLOADS"
-        title="Software &amp; Downloads"
-        description="Find software, firmware, tools and applications for your Honeywell products."
-      />
-
-      <section className="section" style={{ paddingTop: '32px', paddingBottom: '64px' }}>
+      <section className="section software-page-section">
         <div className="container">
+          {/* Professional Software & Downloads Header */}
+          <header className="software-header">
+            <span className="software-badge">SOFTWARE &amp; DOWNLOADS</span>
+            <h1 className="software-title">Software &amp; Downloads</h1>
+            <p className="software-desc">
+              Find software, firmware, tools and applications for your Honeywell products.
+            </p>
+          </header>
           {/* Search & Filter Header Container */}
           <div
             style={{

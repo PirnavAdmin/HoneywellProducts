@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Wrench, CheckCircle2, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
 import { API_BASE_URL } from '../services/api';
-import heroImage from '../assets/images/capital-park2.jpg';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 const HEADERS = {
   'ngrok-skip-browser-warning': 'true',
@@ -13,6 +12,11 @@ const HEADERS = {
 
 export default function ServiceRequest() {
   const [searchParams] = useSearchParams();
+
+  useDocumentTitle(
+    'Service & Repair Request | Honeywell Security',
+    'Submit a technical service inquiry or hardware inspection ticket for your product.'
+  );
 
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
@@ -105,15 +109,16 @@ export default function ServiceRequest() {
 
   return (
     <>
-      <PageHero
-        eyebrow="TECHNICAL SERVICE"
-        title="Service &amp; Repair Request"
-        description="Submit a technical service inquiry or hardware inspection ticket for your product."
-        image={heroImage}
-      />
-
-      <section className="section">
+      <section className="section service-request-page-section">
         <div className="container">
+          {/* Professional Clean In-Page Header */}
+          <header className="service-request-header">
+            <span className="service-request-badge">TECHNICAL SERVICE</span>
+            <h1 className="service-request-title">Service &amp; Repair Request</h1>
+            <p className="service-request-desc">
+              Submit a technical service inquiry or hardware inspection ticket for your product.
+            </p>
+          </header>
           {submitted ? (
             <div className="empty-state" style={{ maxWidth: '640px', margin: '0 auto', textAlign: 'center', padding: '48px 24px', background: '#fff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.04)' }}>
               <CheckCircle2 size={64} style={{ color: '#16a34a', margin: '0 auto 16px' }} />

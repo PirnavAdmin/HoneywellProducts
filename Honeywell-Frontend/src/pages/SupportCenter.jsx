@@ -5,10 +5,10 @@ import {
   MessageSquare, Send, Loader2, AlertCircle, CheckCircle2, X,
   ChevronRight, Bot, User, Ticket, Search, HelpCircle, Filter
 } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { getSupportConfig } from '../services/settingsApi';
 import { API_BASE_URL } from '../services/api';
-import heroImage from '../assets/images/capital-park2.jpg';
+
 
 // ── API helpers for Support Bot Chat, Ticket, and FAQs ──
 const SUPPORT_HEADERS = {
@@ -93,6 +93,11 @@ const renderFaqAnswer = (text) => {
 
 export default function SupportCenter() {
   const [searchParams, setSearchParams] = useSearchParams();
+
+  useDocumentTitle(
+    'Customer Support Hub | Honeywell Security',
+    'We are here to assist with product setup, technical service, warranty claims, and documentation.'
+  );
   const initialCategory = searchParams.get('category') || 'All';
   const isFaqsTab = searchParams.get('tab') === 'faqs' || window.location.pathname.includes('/faqs');
 
@@ -249,16 +254,8 @@ export default function SupportCenter() {
 
   return (
     <>
-      <PageHero
-        eyebrow="SUPPORT CENTER"
-        title="Honeywell Customer Support Hub"
-        description="We are here to assist with product setup, technical service, warranty claims, and documentation."
-        image={heroImage}
-      />
-
-      <section className="section">
+      <section className="section support-page-section">
         <div className="container">
-
           {/* ── Section 1: Support Contact Info (from GET /api/Support/config) ── */}
           <div style={{ marginBottom: '48px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', marginBottom: '20px' }}>

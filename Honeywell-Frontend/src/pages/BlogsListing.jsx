@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import {
   Calendar, User, Search, X, Loader2, AlertCircle, ArrowRight, BookOpen
 } from 'lucide-react';
-import PageHero from '../components/common/PageHero';
 import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
+import { useDocumentTitle } from '../hooks/useDocumentTitle';
 
 export default function BlogsListing() {
+  useDocumentTitle('Blog & Technical Articles', 'Browse latest technical articles and Honeywell product updates.');
+
   const [blogs, setBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -66,14 +68,14 @@ export default function BlogsListing() {
 
   return (
     <>
-      <PageHero
-        eyebrow="BLOG &amp; ARTICLES"
-        title="Blog &amp; Technical Articles"
-        description="Read the latest industry insights on CCTV surveillance, solar integration, smart security, and Honeywell product news."
-      />
-
-      <section className="section">
+      <section className="section blogs-page-section">
         <div className="container">
+          {/* Professional Blogs Header */}
+          <header className="blogs-header">
+            <span className="blogs-badge">BLOG &amp; ARTICLES</span>
+            <h1 className="blogs-title">Blog &amp; Technical Articles</h1>
+          </header>
+
           {/* Search & Filter Controls */}
           <div style={{
             display: 'flex', gap: '16px', flexWrap: 'wrap',

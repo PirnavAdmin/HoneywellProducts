@@ -98,7 +98,6 @@ export default function Footer() {
           {Boolean(footerData.aboutSummary && footerData.aboutSummary.trim()) && (
             <p>{footerData.aboutSummary}</p>
           )}
-          <span>{siteConfig.tagline}</span>
         </div>
         <div>
           <h3>Products</h3>
@@ -106,7 +105,7 @@ export default function Footer() {
           <Link to="/product-finder">Product Finder</Link>
           <Link to="/compare">Compare Products</Link>
           {priceVisibility && (
-            <Link
+            <Link 
               to="/offers#offers-deals"
               onClick={() => {
                 setTimeout(() => {
@@ -126,8 +125,6 @@ export default function Footer() {
           <h3>Solutions</h3>
           <Link to="/solutions">Solutions Overview</Link>
           <Link to="/industries">Industries</Link>
-          <Link to="/solutions?solution=security-surveillance">Surveillance</Link>
-          <Link to="/solutions?solution=solar-solutions">Solar Solutions</Link>
         </div>
         <div>
           <h3>Business</h3>
