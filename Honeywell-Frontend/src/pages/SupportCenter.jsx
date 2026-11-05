@@ -1,14 +1,14 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   LifeBuoy, Wrench, ShieldCheck, Download, PhoneCall, Mail, Clock,
-  MessageSquare, Send, Loader2, AlertCircle, CheckCircle2, X,
-  ChevronRight, Bot, User, Ticket, Search, HelpCircle, Filter
+  Send, Loader2, AlertCircle, CheckCircle2, X,
+  ChevronRight, Bot, User, Ticket
 } from 'lucide-react';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { getSupportConfig } from '../services/settingsApi';
 import { API_BASE_URL } from '../services/api';
-
+import FaqSection from '../components/support/FaqSection';
 
 // ── API helpers for Support Bot Chat, Ticket, and FAQs ──
 const SUPPORT_HEADERS = {
@@ -45,61 +45,31 @@ async function submitSupportTicket(payload) {
 }
 
 async function fetchFaqs(category) {
-  const url = category && category !== 'All'
-    ? `${API_BASE_URL}/api/Support/faqs?category=${encodeURIComponent(category)}`
-    : `${API_BASE_URL}/api/Support/faqs`;
-  const res = await fetch(url, { headers: SUPPORT_HEADERS });
-  if (!res.ok) throw new Error(`Failed to fetch FAQs (${res.status})`);
-  return res.json();
+  try {
+    const url = category && category !== 'All'
+      ? `${API_BASE_URL}/api/Support/faqs?category=${encodeURIComponent(category)}`
+      : `${API_BASE_URL}/api/Support/faqs`;
+    const res = await fetch(url, { headers: SUPPORT_HEADERS });
+    if (!res.ok) throw new Error(`Failed to fetch FAQs (${res.status})`);
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend fetchFaqs unavailable; utilizing local knowledge base.', err.message);
+    return [];
+  }
 }
-
-const FAQ_CATEGORIES = [
-  'All',
-  'Warranty',
-  'Technical Service',
-  'Downloads',
-  'Returns',
-  'Software & Drivers',
-];
-
-// Parses paths inside parentheses like "Warranty Page (/warranty)" into React Router Links
-const renderFaqAnswer = (text) => {
-  if (!text) return '';
-  const regex = /([A-Za-z0-9\s&]+)\s*\(((\/[a-zA-Z0-9\?\=\&\-_]+)+)\)/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.substring(lastIndex, match.index));
-    }
-    const label = match[1].trim();
-    const linkPath = match[2].trim();
-    parts.push(
-      <Link key={match.index} to={linkPath} style={{ color: '#1268a5', fontWeight: 700, textDecoration: 'underline' }}>
-        {label}
-      </Link>
-    );
-    lastIndex = regex.lastIndex;
-  }
-
-  if (lastIndex < text.length) {
-    parts.push(text.substring(lastIndex));
-  }
-
-  return parts.length > 0 ? parts : text;
-};
 
 export default function SupportCenter() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  useDocumentTitle(
-    'Customer Support Hub | Honeywell Security',
-    'We are here to assist with product setup, technical service, warranty claims, and documentation.'
-  );
   const initialCategory = searchParams.get('category') || 'All';
   const isFaqsTab = searchParams.get('tab') === 'faqs' || window.location.pathname.includes('/faqs');
+
+  useDocumentTitle(
+    isFaqsTab
+      ? 'Frequently Asked Questions (FAQ) | Honeywell Security'
+      : 'Customer Support Hub | Honeywell Security',
+    'Find answers to common questions about Honeywell CCTV, surveillance, downloads, warranties, and orders.'
+  );
 
   // ── Support Config State (GET /api/Support/config) ──
   const [supportConfig, setSupportConfig] = useState(null);
@@ -120,10 +90,7 @@ export default function SupportCenter() {
 
   // ── FAQs State (GET /api/Support/faqs & GET /api/Support/faqs?category={cat}) ──
   const [faqs, setFaqs] = useState([]);
-  const [loadingFaqs, setLoadingFaqs] = useState(true);
-  const [errorFaqs, setErrorFaqs] = useState(null);
   const [faqCategory, setFaqCategory] = useState(initialCategory);
-  const [faqSearch, setFaqSearch] = useState('');
   const faqsRef = useRef(null);
 
   // ── Load Support Config on mount ──
@@ -146,15 +113,10 @@ export default function SupportCenter() {
   useEffect(() => {
     async function loadFaqs() {
       try {
-        setLoadingFaqs(true);
-        setErrorFaqs(null);
         const data = await fetchFaqs(faqCategory);
         setFaqs(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to load FAQs:', err);
-        setErrorFaqs('Unable to load FAQs from API.');
-      } finally {
-        setLoadingFaqs(false);
       }
     }
     loadFaqs();
@@ -238,24 +200,42 @@ export default function SupportCenter() {
     }
   };
 
-  // Filter FAQs by local search query
-  const filteredFaqs = useMemo(() => {
-    return faqs.filter((item) => {
-      if (!faqSearch.trim()) return true;
-      const q = faqSearch.trim().toLowerCase();
-      return (
-        (item.question || '').toLowerCase().includes(q) ||
-        (item.answer || '').toLowerCase().includes(q) ||
-        (item.category || '').toLowerCase().includes(q) ||
-        (item.code || '').toLowerCase().includes(q)
-      );
-    });
-  }, [faqs, faqSearch]);
-
   return (
     <>
       <section className="section support-page-section">
         <div className="container">
+
+          {/* ── FAQ Banner (if on /faqs or tab=faqs) ── */}
+          {isFaqsTab && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px',
+              padding: '12px 18px',
+              background: '#eff6ff',
+              border: '1px solid #bfdbfe',
+              borderRadius: '8px',
+              marginBottom: '28px',
+              fontSize: '13.5px',
+              color: '#1e40af',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <LifeBuoy size={18} />
+                <span>You are viewing the <strong>Honeywell Knowledge Base &amp; FAQ</strong> hub.</span>
+              </div>
+              <div style={{ display: 'flex', gap: '16px' }}>
+                <a href="#ticket-section" style={{ color: '#1268a5', fontWeight: 700, textDecoration: 'underline' }}>
+                  Submit Ticket &darr;
+                </a>
+                <a href="#chatbot-section" style={{ color: '#1268a5', fontWeight: 700, textDecoration: 'underline' }}>
+                  AI Assistant &darr;
+                </a>
+              </div>
+            </div>
+          )}
+
           {/* ── Section 1: Support Contact Info (from GET /api/Support/config) ── */}
           <div style={{ marginBottom: '48px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', marginBottom: '20px' }}>
@@ -358,7 +338,7 @@ export default function SupportCenter() {
           </div>
 
           {/* ── Section 3: AI Support Chatbot (POST /api/Support/bot/chat) ── */}
-          <div style={{ marginBottom: '48px' }}>
+          <div id="chatbot-section" style={{ marginBottom: '48px', scrollMarginTop: '80px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Bot size={24} style={{ color: '#1268a5' }} /> AI Support Assistant
             </h2>
@@ -454,7 +434,7 @@ export default function SupportCenter() {
           </div>
 
           {/* ── Section 4: Submit Support Ticket (POST /api/Support/ticket) ── */}
-          <div style={{ marginBottom: '48px' }}>
+          <div id="ticket-section" style={{ marginBottom: '48px', scrollMarginTop: '80px' }}>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
               <Ticket size={24} style={{ color: '#e53935' }} /> Submit a Support Ticket
             </h2>
@@ -570,86 +550,14 @@ export default function SupportCenter() {
             </form>
           </div>
 
-          {/* ── Section 5: FAQs (GET /api/Support/faqs & GET /api/Support/faqs?category={category}) ── */}
-          <div ref={faqsRef} className="support-faqs-section" style={{ scrollMarginTop: '80px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '20px' }}>
-              <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <HelpCircle size={24} style={{ color: '#1268a5' }} /> Frequently Asked Questions
-              </h2>
-
-              {/* Local Search inside FAQs */}
-              <div style={{ position: 'relative', width: '280px' }}>
-                <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
-                <input
-                  type="text"
-                  value={faqSearch}
-                  onChange={(e) => setFaqSearch(e.target.value)}
-                  placeholder="Search FAQs..."
-                  style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none' }}
-                />
-                {faqSearch && (
-                  <button onClick={() => setFaqSearch('')} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Category Filter Pills (calls GET /api/Support/faqs?category={cat}) */}
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
-              {FAQ_CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => handleCategoryChange(cat)}
-                  style={{
-                    padding: '6px 14px', borderRadius: '20px', fontSize: '13px', fontWeight: 700,
-                    border: '1px solid', cursor: 'pointer', transition: 'all 0.15s ease',
-                    borderColor: faqCategory === cat ? '#1268a5' : '#cbd5e1',
-                    background: faqCategory === cat ? '#1268a5' : '#ffffff',
-                    color: faqCategory === cat ? '#ffffff' : '#475569',
-                  }}
-                >
-                  {cat === 'All' ? 'All Questions' : cat}
-                </button>
-              ))}
-            </div>
-
-            {/* FAQs Content / Accordion */}
-            {loadingFaqs ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '32px 0', color: '#64748b', justifyContent: 'center' }}>
-                <Loader2 size={22} style={{ animation: 'spin 1s linear infinite', color: '#1268a5' }} />
-                <span>Loading FAQs from API...</span>
-              </div>
-            ) : errorFaqs ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '20px', background: '#fef2f2', borderRadius: '8px', color: '#dc2626' }}>
-                <AlertCircle size={20} />
-                <span>{errorFaqs}</span>
-              </div>
-            ) : filteredFaqs.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', background: '#fff', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                <HelpCircle size={40} style={{ color: '#cbd5e1', marginBottom: '12px' }} />
-                <h4 style={{ margin: '0 0 6px', color: '#475569' }}>No matching FAQs found</h4>
-                <p style={{ margin: 0, color: '#94a3b8', fontSize: '14px' }}>Try selecting a different category or clearing your search phrase.</p>
-              </div>
-            ) : (
-              <div className="faqs-accordion">
-                {filteredFaqs.map((item) => (
-                  <details key={item.id || item.code || item.question} className="faq-item" defaultOpen={filteredFaqs.length === 1}>
-                    <summary style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span>{item.question}</span>
-                      {item.category && (
-                        <span style={{ fontSize: '11px', fontWeight: 700, background: '#eff6ff', color: '#1268a5', padding: '2px 8px', borderRadius: '4px', textTransform: 'uppercase', marginLeft: '12px' }}>
-                          {item.category}
-                        </span>
-                      )}
-                    </summary>
-                    <p style={{ margin: '12px 0 0', lineHeight: 1.7, color: '#334155', fontSize: '14px' }}>
-                      {renderFaqAnswer(item.answer)}
-                    </p>
-                  </details>
-                ))}
-              </div>
-            )}
+          {/* ── Section 5: Frequently Asked Questions (FAQ) ── */}
+          <div ref={faqsRef} id="faqs-section" className="support-faqs-section" style={{ scrollMarginTop: '80px' }}>
+            <FaqSection
+              initialCategory={faqCategory}
+              onCategoryChange={handleCategoryChange}
+              faqsOverride={faqs.length > 0 ? faqs : null}
+              supportConfig={supportConfig}
+            />
           </div>
 
         </div>
