@@ -1,4 +1,3 @@
-
 using System;
 using System.Collections.Generic;
 
@@ -78,5 +77,6 @@ namespace Honeywell.Models
         public List<ProductFeature> Features { get; set; } = new();
         public List<ProductReview> Reviews { get; set; } = new();
         public List<ProductSoftware> SoftwareList { get; set; } = new();
+        public List<ProductDocument> Documents { get; set; } = new();
     }
 }

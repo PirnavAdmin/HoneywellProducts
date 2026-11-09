@@ -31,6 +31,7 @@ namespace Honeywell.Data
         public DbSet<ProductFeature> ProductFeatures { get; set; }
         public DbSet<ProductReview> ProductReviews { get; set; }
         public DbSet<ProductSoftware> ProductSoftware { get; set; }
+        public DbSet<ProductDocument> ProductDocuments { get; set; }
         public DbSet<GrowthJourney> GrowthJourneys { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Subcategory> Subcategories { get; set; }
@@ -215,6 +216,21 @@ namespace Honeywell.Data
                 entity.HasIndex(s => s.Status);
                 entity.HasIndex(s => s.SoftwareType);
                 entity.HasIndex(s => s.Platform);
+            });
+
+            // ProductDocument
+            modelBuilder.Entity<ProductDocument>(entity =>
+            {
+                entity.ToTable("ProductDocuments");
+
+                entity.HasOne(d => d.Product)
+                    .WithMany(p => p.Documents)
+                    .HasForeignKey(d => d.ProductId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasIndex(d => d.ProductId);
+                entity.HasIndex(d => d.Status);
+                entity.HasIndex(d => d.Category);
             });
 
             // Product table and decimal precision

@@ -503,6 +503,7 @@ export const mapProductFromApi = (
     highlights: defaultHighlights,
     keyFeatures: defaultHighlights,
     downloads: Array.isArray(raw.downloads) && raw.downloads.length > 0 ? raw.downloads : ['Product Specification Datasheet (PDF)', 'User Installation Manual (PDF)'],
+    documents: Array.isArray(raw.documents) ? raw.documents : (Array.isArray(raw.Documents) ? raw.Documents : []),
     faq: Array.isArray(raw.faq) && raw.faq.length > 0 ? raw.faq : [
       { question: 'What is the warranty coverage for this model?', answer: 'This product includes a standard 1-year manufacturer hardware warranty with technical support.' },
       { question: 'Is professional installation supported?', answer: 'Yes, full installation guidance and regional technician support are available.' }

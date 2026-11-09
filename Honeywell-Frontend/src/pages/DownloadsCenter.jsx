@@ -5,7 +5,24 @@ import {
   Loader2, AlertCircle, Package, Layers, X, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { productService } from '../services/productService';
+import { documentService } from '../services/documentService';
 import { generateProductPdf } from '../utils/pdfGenerator';
+
+const formatFileSize = (bytes) => {
+  if (!bytes || isNaN(bytes) || bytes <= 0) return '';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+};
+
+const mapCategoryToType = (cat) => {
+  const c = (cat || '').toLowerCase().trim();
+  if (c.includes('datasheet')) return 'datasheets';
+  if (c.includes('manual')) return 'manuals';
+  if (c.includes('brochure')) return 'brochures';
+  return 'documents';
+};
 
 // Helper to extract category name from product — handles both string and object shapes
 const getCategoryName = (product) => {
@@ -26,125 +43,197 @@ export default function DownloadsCenter() {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 12;
 
-  // State for Products (documents)
+  // State for Products and Uploaded Documents
   const [products, setProducts] = useState([]);
+  const [uploadedDocs, setUploadedDocs] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [errorProducts, setErrorProducts] = useState(null);
 
-  // ── Fetch products on mount ──
+  // ── Fetch products and uploaded documents on mount ──
   useEffect(() => {
-    const fetchProducts = async () => {
+    let isMounted = true;
+    const fetchAllData = async () => {
       try {
         setLoadingProducts(true);
         setErrorProducts(null);
-        const data = await productService.getAll();
-        setProducts(Array.isArray(data) ? data : []);
+        const [productsData, docsData] = await Promise.all([
+          productService.getAll().catch((err) => {
+            console.error('Error loading products for documents:', err);
+            return [];
+          }),
+          documentService.getAll({ status: 'Active' }).catch((err) => {
+            console.error('Error loading uploaded documents:', err);
+            return [];
+          }),
+        ]);
+        if (!isMounted) return;
+        setProducts(Array.isArray(productsData) ? productsData : []);
+        setUploadedDocs(Array.isArray(docsData) ? docsData : []);
       } catch (err) {
-        console.error('Error loading products for documents:', err);
-        setErrorProducts(err.message || 'Failed to load product documents');
+        console.error('Error loading document center resources:', err);
+        if (isMounted) setErrorProducts(err.message || 'Failed to load product documents');
       } finally {
-        setLoadingProducts(false);
+        if (isMounted) setLoadingProducts(false);
       }
     };
 
-    fetchProducts();
+    fetchAllData();
+    return () => { isMounted = false; };
   }, []);
 
-  // ── Build complete document list for each product ──
+  // ── Build complete document list incorporating uploaded documents & product documentation ──
   const allDocuments = useMemo(() => {
-    return products.flatMap((product) => {
-      const docs = [];
+    const list = [];
+    const productsById = new Map();
+    products.forEach((p) => {
+      if (p.id) productsById.set(String(p.id), p);
+    });
+
+    // Track which (productId, type) combinations already have real uploaded documents
+    const uploadedCategoryProductKeys = new Set();
+
+    // 1. Primary: Add all real uploaded documents (Datasheets, Manuals, Brochures, Certifications, etc.)
+    uploadedDocs.forEach((doc) => {
+      const pIdStr = String(doc.productId);
+      const matchedProduct = productsById.get(pIdStr);
+      const productName = doc.productName || matchedProduct?.name || 'Honeywell Product';
+      const catName = matchedProduct ? getCategoryName(matchedProduct) : (doc.productCategoryName || 'General');
+      const docType = mapCategoryToType(doc.category);
+
+      uploadedCategoryProductKeys.add(`${pIdStr}-${docType}`);
+
+      list.push({
+        id: `uploaded-${doc.id}`,
+        dbId: doc.id,
+        isUploadedDoc: true,
+        productId: doc.productId,
+        productName,
+        category: catName,
+        docCategory: doc.category,
+        title: doc.title,
+        type: docType,
+        badge: doc.category || 'Official Document',
+        hasRealUrl: true,
+        fileUrl: documentService.getViewUrl(doc.id),
+        downloadUrl: documentService.getDownloadUrl(doc.id),
+        originalFileName: doc.originalFileName,
+        format: 'Official Doc',
+        productObj: matchedProduct,
+        description: doc.description || `${doc.category} for ${productName}.`,
+        revision: doc.revision,
+        language: doc.language,
+        fileSize: doc.fileSize,
+        documentDate: doc.documentDate,
+      });
+    });
+
+    // Helper to test if a raw URL is a real external file
+    const checkRealUrl = (urlStr) => Boolean(
+      urlStr &&
+      typeof urlStr === 'string' &&
+      (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('blob:') || urlStr.startsWith('data:')) &&
+      !urlStr.includes('/docs/')
+    );
+
+    // 2. Secondary: Include ONLY products with genuine real external files (if any exist)
+    // DO NOT generate dummy placeholder documents for products without documents
+    products.forEach((product) => {
+      const pIdStr = String(product.id);
       const productName = product.name || product.productName || product.title || 'Honeywell Product';
       const catName = getCategoryName(product);
 
-      // Helper to test if a raw URL is a real external file
-      const checkRealUrl = (urlStr) => Boolean(
-        urlStr &&
-        typeof urlStr === 'string' &&
-        (urlStr.startsWith('http://') || urlStr.startsWith('https://') || urlStr.startsWith('blob:') || urlStr.startsWith('data:')) &&
-        !urlStr.includes('/docs/')
-      );
-
-      // 1. Datasheet
+      // 1. Datasheet (Only if real URL exists)
       const dsUrl = product.datasheetUrl || product.datasheet;
-      const isRealDs = checkRealUrl(dsUrl);
-      docs.push({
-        id: `${product.id}-datasheet`,
-        productId: product.id,
-        productName,
-        category: catName,
-        title: isRealDs ? `${productName} — Official Datasheet` : `${productName} — Generated Product Datasheet`,
-        type: 'datasheets',
-        badge: 'Datasheet',
-        hasRealUrl: isRealDs,
-        fileUrl: dsUrl || `/docs/${product.id}-datasheet.pdf`,
-        format: isRealDs ? 'Official Doc' : 'Generated PDF',
-        productObj: product,
-        description: product.shortDescription || product.description || 'Comprehensive technical specifications, pin configurations, and electrical ratings.',
-      });
+      if (checkRealUrl(dsUrl) && !uploadedCategoryProductKeys.has(`${pIdStr}-datasheets`)) {
+        list.push({
+          id: `${product.id}-datasheet-ext`,
+          productId: product.id,
+          productName,
+          category: catName,
+          title: `${productName} — Official Datasheet`,
+          type: 'datasheets',
+          badge: 'Datasheet',
+          hasRealUrl: true,
+          fileUrl: dsUrl,
+          format: 'Official Doc',
+          productObj: product,
+          description: product.shortDescription || product.description || 'Comprehensive technical specifications and ratings.',
+        });
+      }
 
-      // 2. Installation & User Manual
+      // 2. Installation & User Manual (Only if real URL exists)
       const manualUrl = product.manualUrl || product.manual;
-      const isRealManual = checkRealUrl(manualUrl);
-      docs.push({
-        id: `${product.id}-manual`,
-        productId: product.id,
-        productName,
-        category: catName,
-        title: isRealManual ? `${productName} — Official User Manual` : `${productName} — Generated User Guide`,
-        type: 'manuals',
-        badge: 'User Manual',
-        hasRealUrl: isRealManual,
-        fileUrl: manualUrl || `/docs/${product.id}-manual.pdf`,
-        format: isRealManual ? 'Official Doc' : 'Generated PDF',
-        productObj: product,
-        description: 'Step-by-step setup guide, hardware mounting procedures, and configuration manual.',
-      });
+      if (checkRealUrl(manualUrl) && !uploadedCategoryProductKeys.has(`${pIdStr}-manuals`)) {
+        list.push({
+          id: `${product.id}-manual-ext`,
+          productId: product.id,
+          productName,
+          category: catName,
+          title: `${productName} — Official User Manual`,
+          type: 'manuals',
+          badge: 'User Manual',
+          hasRealUrl: true,
+          fileUrl: manualUrl,
+          format: 'Official Doc',
+          productObj: product,
+          description: 'Step-by-step setup guide and configuration manual.',
+        });
+      }
 
-      // 3. Product Brochure
+      // 3. Product Brochure (Only if real URL exists)
       const brochureUrl = product.brochureUrl || product.brochure;
-      const isRealBrochure = checkRealUrl(brochureUrl);
-      docs.push({
-        id: `${product.id}-brochure`,
-        productId: product.id,
-        productName,
-        category: catName,
-        title: isRealBrochure ? `${productName} — Official Brochure` : `${productName} — Generated Overview Sheet`,
-        type: 'brochures',
-        badge: 'Brochure',
-        hasRealUrl: isRealBrochure,
-        fileUrl: brochureUrl || `/docs/${product.id}-brochure.pdf`,
-        format: isRealBrochure ? 'Official Doc' : 'Generated PDF',
-        productObj: product,
-        description: 'Feature overview, application scenarios, benefits, and solution deployment architecture.',
-      });
+      if (checkRealUrl(brochureUrl) && !uploadedCategoryProductKeys.has(`${pIdStr}-brochures`)) {
+        list.push({
+          id: `${product.id}-brochure-ext`,
+          productId: product.id,
+          productName,
+          category: catName,
+          title: `${productName} — Official Brochure`,
+          type: 'brochures',
+          badge: 'Brochure',
+          hasRealUrl: true,
+          fileUrl: brochureUrl,
+          format: 'Official Doc',
+          productObj: product,
+          description: 'Feature overview and product architecture.',
+        });
+      }
 
-      // 4. Quality & Compliance Certificate
+      // 4. Quality & Compliance Certificate (Only if real URL exists)
       const certUrl = product.certificationUrl || product.certification;
-      const isRealCert = checkRealUrl(certUrl);
-      docs.push({
-        id: `${product.id}-certification`,
-        productId: product.id,
-        productName,
-        category: catName,
-        title: isRealCert ? `${productName} — Official Quality Certificate` : `${productName} — Generated Compliance Summary`,
-        type: 'documents',
-        badge: 'Certification',
-        hasRealUrl: isRealCert,
-        fileUrl: certUrl || `/docs/${product.id}-certification.pdf`,
-        format: isRealCert ? 'Official Doc' : 'Generated PDF',
-        productObj: product,
-        description: 'Official CE, RoHS, ISO quality compliance and commercial warranty documentation.',
-      });
-
-      return docs;
+      if (checkRealUrl(certUrl) && !uploadedCategoryProductKeys.has(`${pIdStr}-documents`)) {
+        list.push({
+          id: `${product.id}-certification-ext`,
+          productId: product.id,
+          productName,
+          category: catName,
+          title: `${productName} — Official Quality Certificate`,
+          type: 'documents',
+          badge: 'Certification',
+          hasRealUrl: true,
+          fileUrl: certUrl,
+          format: 'Official Doc',
+          productObj: product,
+          description: 'Official CE, RoHS, ISO quality compliance and certification.',
+        });
+      }
     });
-  }, [products]);
 
-  // ── Extract unique categories from live product data ──
+    return list;
+  }, [products, uploadedDocs]);
+
+  // ── Extract unique categories from live product data & documents ──
   const uniqueCategories = useMemo(() => {
-    return [...new Set(products.map(getCategoryName))].filter(Boolean).sort();
-  }, [products]);
+    const cats = new Set();
+    allDocuments.forEach((d) => {
+      if (d.category) cats.add(d.category);
+    });
+    products.forEach((p) => {
+      const c = getCategoryName(p);
+      if (c && c !== 'General') cats.add(c);
+    });
+    return [...cats].filter(Boolean).sort();
+  }, [allDocuments, products]);
 
   // ── Accurate Tab counts ──
   const tabCounts = useMemo(() => ({
@@ -264,6 +353,15 @@ export default function DownloadsCenter() {
   };
 
   const handleDocumentAction = async (doc, mode = 'download') => {
+    if (doc.isUploadedDoc && doc.dbId) {
+      if (mode === 'view') {
+        await documentService.openPreview(doc.dbId);
+      } else {
+        await documentService.download(doc.dbId, doc.originalFileName || `${doc.title}.pdf`);
+      }
+      return;
+    }
+
     const url = doc.fileUrl || '';
     const isRealExternalPdf = (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) && !url.includes('/docs/');
 
@@ -465,7 +563,7 @@ export default function DownloadsCenter() {
                         onClick={() => handleDocumentAction(item, 'download')}
                         title={item.hasRealUrl ? "Download official uploaded manufacturer document" : "Generate product datasheet PDF from live product specifications"}
                       >
-                        <Download size={14} /> {item.hasRealUrl ? 'Download Official PDF' : 'Generate Product PDF'}
+                        <Download size={14} /> Download PDF
                       </button>
                     </div>
                   </div>

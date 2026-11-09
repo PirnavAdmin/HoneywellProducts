@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Download, ExternalLink, Minus, Plus, ShoppingCart, St
 import { productService } from '../services/productService';
 import { reviewService } from '../services/reviewService';
 import { softwareService } from '../services/softwareService';
+import { documentService } from '../services/documentService';
 import { getDescriptionManager } from '../services/settingsApi';
 import { generateProductPdf } from '../utils/pdfGenerator';
 import ProductCard from '../components/products/ProductCard';
@@ -75,6 +76,8 @@ export function ProductDetailsContent() {
   const [productSoftware, setProductSoftware] = useState([]);
   const [softwareLoading, setSoftwareLoading] = useState(false);
   const [selectedNotesItem, setSelectedNotesItem] = useState(null);
+  const [productDocuments, setProductDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
 
   // Reviews state
   const [reviews, setReviews] = useState([]);
@@ -172,18 +175,43 @@ export function ProductDetailsContent() {
           setReviews(strictReviews);
           setLoading(false);
 
-          // Fetch secondary independent resources (software & related products) in parallel
+          // Initialize product documents from loaded product data if present
+          const initialDocs = Array.isArray(data?.documents)
+            ? data.documents.filter((d) => (d.status || 'Active').toLowerCase() === 'active')
+            : [];
+          if (initialDocs.length > 0) {
+            setProductDocuments(initialDocs);
+          }
+
+          // Fetch secondary independent resources (software, documents & related products) in parallel
           const resolvedId = data?.id || id;
+          setDocumentsLoading(true);
           Promise.all([
             softwareService.getByProductId(resolvedId).catch(() => []),
+            documentService.getByProductId(resolvedId).catch(() => []),
             productService.getRelated(resolvedId).catch(() => []),
-          ]).then(([softwareData, relData]) => {
+          ]).then(([softwareData, docData, relData]) => {
             if (!isMounted) return;
             const activeSoftware = Array.isArray(softwareData)
               ? softwareData.filter((s) => (s.status || 'Active').toLowerCase() === 'active')
               : [];
             setProductSoftware(activeSoftware);
+
+            // Merge fetched docs with initial docs from product payload
+            const combinedDocs = [
+              ...(Array.isArray(docData) ? docData : []),
+              ...initialDocs
+            ];
+            const uniqueDocsMap = new Map();
+            combinedDocs.forEach((d) => {
+              if (d && d.id && (d.status || 'Active').toLowerCase() === 'active') {
+                uniqueDocsMap.set(String(d.id), d);
+              }
+            });
+            setProductDocuments(Array.from(uniqueDocsMap.values()));
             setRelated(Array.isArray(relData) ? relData.slice(0, 4) : []);
+          }).finally(() => {
+            if (isMounted) setDocumentsLoading(false);
           });
         } else {
           setError('Product not found');
@@ -393,6 +421,23 @@ export function ProductDetailsContent() {
             <button className="button secondary" onClick={() => openQuote(product)}>Request Bulk Quote</button>
           </div>
 
+          {productDocuments.length > 0 && (
+            <div style={{ marginTop: '12px' }}>
+              <button
+                type="button"
+                className="button outline button-small"
+                style={{ width: '100%', borderColor: '#cbd5e1', color: '#0f172a', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                onClick={() => {
+                  setTab('Documents');
+                  const tabSec = document.getElementById('product-tabs-section');
+                  if (tabSec) tabSec.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                <FileText size={15} style={{ color: '#1268a5' }} /> View Product Documents ({productDocuments.length})
+              </button>
+            </div>
+          )}
+
           <div className="product-trust-badges">
             <div className="trust-badge-card">
               <ShieldCheck size={18} className="badge-icon-blue" />
@@ -432,6 +477,9 @@ export function ProductDetailsContent() {
                   {item === 'Reviews' && effectiveCount > 0 && (
                     <span className="tab-review-pill">{effectiveCount}</span>
                   )}
+                  {item === 'Documents' && productDocuments.length > 0 && (
+                    <span className="tab-review-pill" style={{ marginLeft: '6px', background: '#e0f2fe', color: '#0369a1' }}>{productDocuments.length}</span>
+                  )}
                 </button>
               );
             })}
@@ -445,6 +493,71 @@ export function ProductDetailsContent() {
                   <div style={{ marginTop: '20px', padding: '14px 18px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <ShieldCheck size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
                     <span style={{ fontSize: '13.5px', color: '#166534' }}><strong>Warranty & Service:</strong> {descSettings.warrantyTerms}</span>
+                  </div>
+                )}
+
+                {productDocuments.length > 0 && (
+                  <div style={{ marginTop: '28px', paddingTop: '24px', borderTop: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                      <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: '#0f172a' }}>
+                        Product Documentation &amp; Datasheets
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => setTab('Documents')}
+                        style={{ background: 'none', border: 'none', color: '#1268a5', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        View all documents ({productDocuments.length}) <ChevronRight size={14} />
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                      {productDocuments.slice(0, 4).map((doc) => (
+                        <div
+                          key={`ov-${doc.id}`}
+                          style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            padding: '14px 16px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            gap: '10px',
+                          }}
+                        >
+                          <div>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: '#0369a1', background: '#e0f2fe', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase' }}>
+                              {doc.category}
+                            </span>
+                            <h4 style={{ margin: '6px 0 2px', fontSize: '14px', fontWeight: 600, color: '#1e293b' }}>
+                              {doc.title}
+                            </h4>
+                            {doc.fileSize > 0 && (
+                              <span style={{ fontSize: '12px', color: '#64748b' }}>PDF • {formatFileSize(doc.fileSize)}</span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            <button
+                              type="button"
+                              className="button outline button-small"
+                              style={{ flex: 1, padding: '4px 8px', fontSize: '12px' }}
+                              onClick={() => documentService.openPreview(doc.id)}
+                            >
+                              <Eye size={12} /> Preview
+                            </button>
+                            <button
+                              type="button"
+                              className="button button-small"
+                              style={{ flex: 1, padding: '4px 8px', fontSize: '12px', backgroundColor: '#1268a5', color: '#fff' }}
+                              onClick={() => documentService.download(doc.id, doc.originalFileName || `${doc.title}.pdf`)}
+                            >
+                              <Download size={12} /> Download
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -620,67 +733,128 @@ export function ProductDetailsContent() {
                   Official datasheets, compliance certificates, and technical manuals for {productNameText}.
                 </p>
 
-                <div style={{ display: 'grid', gap: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <strong style={{ display: 'block', fontSize: '15px', color: '#0f172a' }}>Technical Specification Datasheet</strong>
-                      <small style={{ color: '#64748b' }}>Includes comprehensive product specs, electrical data, and dimension drawings (PDF)</small>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="button outline button-small" onClick={() => generateProductPdf(product, 'datasheet', 'view')}>
-                        <Eye size={14} /> View PDF
-                      </button>
-                      <button className="button button-small" onClick={() => generateProductPdf(product, 'datasheet', 'download')}>
-                        <Download size={14} /> Download PDF
-                      </button>
-                    </div>
+                {documentsLoading ? (
+                  <div style={{ padding: '32px 0', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                    <Loader2 size={20} style={{ animation: 'spin 1s linear infinite', color: '#1268a5' }} />
+                    <span style={{ fontSize: '15px' }}>Loading official product documents...</span>
                   </div>
+                ) : productDocuments.length === 0 ? (
+                  <div style={{ padding: '48px 24px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1', textAlign: 'center' }}>
+                    <FileText size={42} style={{ color: '#94a3b8', margin: '0 auto 14px' }} />
+                    <h3 style={{ color: '#334155', margin: '0 0 8px 0', fontSize: '17px', fontWeight: 600 }}>
+                      No documents currently available
+                    </h3>
+                    <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '440px', margin: '0 auto' }}>
+                      Official datasheets, user manuals, and compliance certificates for {productNameText} will be available once uploaded and published.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gap: '16px' }}>
+                    {productDocuments.map((doc) => {
+                      const categoryColors = {
+                        'Datasheets': { bg: '#e0f2fe', text: '#0369a1', border: '#bae6fd' },
+                        'User Manuals': { bg: '#fef3c7', text: '#b45309', border: '#fde68a' },
+                        'Brochures': { bg: '#f3e8ff', text: '#7e22ce', border: '#e9d5ff' },
+                        'Certifications': { bg: '#dcfce7', text: '#15803d', border: '#bbf7d0' },
+                        'Technical Documents': { bg: '#ffedd5', text: '#c2410c', border: '#fed7aa' },
+                      };
+                      const catStyle = categoryColors[doc.category] || { bg: '#f1f5f9', text: '#475569', border: '#e2e8f0' };
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <strong style={{ display: 'block', fontSize: '15px', color: '#0f172a' }}>Certificate of Conformity &amp; Compliance</strong>
-                      <small style={{ color: '#64748b' }}>ISO 9001, CE, FCC &amp; RoHS Honeywell quality assurance certificate (PDF)</small>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="button outline button-small" onClick={() => generateProductPdf(product, 'certification', 'view')}>
-                        <Eye size={14} /> View PDF
-                      </button>
-                      <button className="button button-small" onClick={() => generateProductPdf(product, 'certification', 'download')}>
-                        <Download size={14} /> Download PDF
-                      </button>
-                    </div>
-                  </div>
+                      return (
+                        <div
+                          key={doc.id}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            background: '#ffffff',
+                            padding: '18px 22px',
+                            borderRadius: '12px',
+                            border: '1px solid #e2e8f0',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                            flexWrap: 'wrap',
+                            gap: '16px',
+                          }}
+                        >
+                          <div style={{ flex: '1 1 340px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                              <span
+                                style={{
+                                  backgroundColor: catStyle.bg,
+                                  color: catStyle.text,
+                                  border: `1px solid ${catStyle.border}`,
+                                  fontSize: '11px',
+                                  fontWeight: 700,
+                                  padding: '3px 8px',
+                                  borderRadius: '4px',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.03em',
+                                }}
+                              >
+                                {doc.category}
+                              </span>
+                              <span
+                                style={{
+                                  backgroundColor: '#dcfce7',
+                                  color: '#166534',
+                                  border: '1px solid #bbf7d0',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  padding: '2px 7px',
+                                  borderRadius: '4px',
+                                }}
+                              >
+                                Official Doc
+                              </span>
+                            </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <strong style={{ display: 'block', fontSize: '15px', color: '#0f172a' }}>Installation &amp; Operating Manual</strong>
-                      <small style={{ color: '#64748b' }}>Setup guide, wiring diagrams, and maintenance instructions (PDF)</small>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="button outline button-small" onClick={() => generateProductPdf(product, 'manual', 'view')}>
-                        <Eye size={14} /> View PDF
-                      </button>
-                      <button className="button button-small" onClick={() => generateProductPdf(product, 'manual', 'download')}>
-                        <Download size={14} /> Download PDF
-                      </button>
-                    </div>
-                  </div>
+                            <strong style={{ display: 'block', fontSize: '16px', color: '#0f172a', marginBottom: '4px' }}>
+                              {doc.title}
+                            </strong>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '16px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <strong style={{ display: 'block', fontSize: '15px', color: '#0f172a' }}>Official Commercial Brochure</strong>
-                      <small style={{ color: '#64748b' }}>Enterprise product brochure &amp; feature overview (PDF)</small>
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button className="button outline button-small" onClick={() => generateProductPdf(product, 'brochure', 'view')}>
-                        <Eye size={14} /> View PDF
-                      </button>
-                      <button className="button button-small" onClick={() => generateProductPdf(product, 'brochure', 'download')}>
-                        <Download size={14} /> Download PDF
-                      </button>
-                    </div>
+                            {doc.description && (
+                              <p style={{ margin: '0 0 10px 0', fontSize: '13.5px', color: '#475569', lineHeight: 1.5 }}>
+                                {doc.description}
+                              </p>
+                            )}
+
+                            <div style={{ display: 'flex', gap: '14px', rowGap: '4px', flexWrap: 'wrap', fontSize: '12px', color: '#64748b' }}>
+                              {doc.revision && <span>Rev: <strong>{doc.revision}</strong></span>}
+                              {doc.language && <span>Language: <strong>{doc.language}</strong></span>}
+                              {doc.documentDate && <span>Date: <strong>{doc.documentDate}</strong></span>}
+                              {doc.fileSize > 0 && <span>Size: <strong>{formatFileSize(doc.fileSize)}</strong></span>}
+                              {doc.originalFileName && (
+                                <span style={{ maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={doc.originalFileName}>
+                                  File: {doc.originalFileName}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="button outline button-small"
+                              onClick={() => documentService.openPreview(doc.id)}
+                              title="Preview document in browser"
+                            >
+                              <Eye size={14} /> Preview
+                            </button>
+                            <button
+                              type="button"
+                              className="button button-small"
+                              onClick={() => documentService.download(doc.id, doc.originalFileName || `${doc.title}.pdf`)}
+                              title="Download official PDF"
+                              style={{ backgroundColor: '#1268a5', color: '#ffffff' }}
+                            >
+                              <Download size={14} /> Download PDF
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
+                )}
               </div>
             )}
             {tab === 'Reviews' && (() => {

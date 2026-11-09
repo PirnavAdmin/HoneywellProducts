@@ -25,6 +25,8 @@ import { generateStandardizedSku } from '../../utils/skuGenerator';
 import { fetchSuppliers } from '../suppliers/suppliersApi';
 import { softwareService } from '../../services/softwareService';
 import AdminSoftwareModal from './AdminSoftwareModal';
+import { documentService } from '../../services/documentService';
+import AdminDocumentModal from './AdminDocumentModal';
 import { getApiDomain } from '../../utils/apiConfig';
 import { Toast } from '../components/Toast';
 import { Download, ExternalLink, Search as SearchIcon } from 'lucide-react';
@@ -256,6 +258,72 @@ const ProductsForm = () => {
   const [softwareSearch, setSoftwareSearch] = useState('');
   const [softwareStatusFilter, setSoftwareStatusFilter] = useState('All');
   const [softwareTypeFilter, setSoftwareTypeFilter] = useState('All');
+
+  // Product Documents Admin State
+  const [productDocuments, setProductDocuments] = useState([]);
+  const [pendingDocuments, setPendingDocuments] = useState([]);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [editingDocItem, setEditingDocItem] = useState(null);
+  const [deletingDocId, setDeletingDocId] = useState(null);
+  const [docSearch, setDocSearch] = useState('');
+  const [docCategoryFilter, setDocCategoryFilter] = useState('All');
+  const [createdProductId, setCreatedProductId] = useState(null);
+  const [isDocUploading, setIsDocUploading] = useState(false);
+
+  const formatBytes = (bytes) => {
+    if (!bytes || isNaN(bytes) || bytes <= 0) return '0 B';
+    const units = ['B', 'KB', 'MB', 'GB'];
+    let size = bytes;
+    let unitIndex = 0;
+    while (size >= 1024 && unitIndex < units.length - 1) {
+      size /= 1024;
+      unitIndex++;
+    }
+    return `${size.toFixed(1)} ${units[unitIndex]}`;
+  };
+
+  const getCategoryBadgeClass = (category) => {
+    const cat = (category || '').toLowerCase();
+    if (cat.includes('datasheet')) return 'catalog-badge--datasheet';
+    if (cat.includes('manual') || cat.includes('guide')) return 'catalog-badge--manual';
+    if (cat.includes('brochure')) return 'catalog-badge--brochure';
+    if (cat.includes('certif')) return 'catalog-badge--cert';
+    return 'catalog-badge--tech';
+  };
+
+  const loadProductDocuments = async (prodId) => {
+    if (!prodId) return;
+    try {
+      const docs = await documentService.getByProductId(prodId);
+      setProductDocuments(Array.isArray(docs) ? docs : []);
+    } catch (err) {
+      console.warn('Error fetching document list for product:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (productId) {
+      loadProductDocuments(productId);
+    }
+  }, [productId]);
+
+  const filteredProductDocuments = useMemo(() => {
+    return productDocuments.filter((item) => {
+      if (docCategoryFilter !== 'All' && item.category !== docCategoryFilter) {
+        return false;
+      }
+      if (docSearch.trim()) {
+        const q = docSearch.toLowerCase();
+        return (
+          (item.title || '').toLowerCase().includes(q) ||
+          (item.category || '').toLowerCase().includes(q) ||
+          (item.revision || '').toLowerCase().includes(q) ||
+          (item.description || '').toLowerCase().includes(q)
+        );
+      }
+      return true;
+    });
+  }, [productDocuments, docCategoryFilter, docSearch]);
 
   const loadProductSoftware = async (prodId) => {
     if (!prodId) return;
@@ -771,7 +839,49 @@ const ProductsForm = () => {
     setToast(null);
 
     try {
-      const savedProduct = await saveProductApi(preparedProduct, imageFiles, videoFile, posterFile);
+      let savedProduct;
+      let targetProdId = createdProductId;
+
+      if (!targetProdId) {
+        savedProduct = await saveProductApi(preparedProduct, imageFiles, videoFile, posterFile);
+        targetProdId = savedProduct?.id || savedProduct?.productId;
+      }
+
+      // Handle Pending Documents upload for newly created product (Add Product workflow)
+      if (targetProdId && pendingDocuments.length > 0) {
+        setIsDocUploading(true);
+        const failedDocs = [];
+        let uploadedCount = 0;
+
+        for (let i = 0; i < pendingDocuments.length; i++) {
+          const docItem = pendingDocuments[i];
+          try {
+            await documentService.create(targetProdId, { ...docItem.metadata, productName: preparedProduct?.name || formData?.name }, docItem.file);
+            uploadedCount++;
+          } catch (docErr) {
+            console.error(`Document upload failed for '${docItem.metadata.title}':`, docErr);
+            failedDocs.push({
+              doc: docItem,
+              error: docErr?.response?.data?.message || docErr.message || 'Upload failed',
+            });
+          }
+        }
+
+        setIsDocUploading(false);
+
+        if (failedDocs.length > 0) {
+          setCreatedProductId(targetProdId);
+          setPendingDocuments(failedDocs.map((f) => f.doc));
+          setToast({
+            message: `Product saved (#${targetProdId}), but ${failedDocs.length} document(s) failed: ${failedDocs.map((f) => f.doc.metadata.title).join(', ')}. Please retry upload.`,
+            type: 'warning',
+          });
+          return savedProduct;
+        } else {
+          setPendingDocuments([]);
+          setCreatedProductId(null);
+        }
+      }
 
       setDeletedReviewIds([]);
       setFormData(normalizeProduct(savedProduct));
@@ -1352,6 +1462,235 @@ const ProductsForm = () => {
               </div>
             </section>
 
+            {/* Product Documents Section */}
+            <section className="catalog-card">
+              <div className="product-section-heading product-section-heading--inline">
+                <div>
+                  <h2>Product Documents ({isEditing ? productDocuments.length : pendingDocuments.length})</h2>
+                  <p>Upload and manage official PDF datasheets, user manuals, brochures, certifications, and technical documents.</p>
+                </div>
+                <button
+                  type="button"
+                  className="catalog-btn catalog-btn--primary"
+                  onClick={() => {
+                    setEditingDocItem(null);
+                    setIsDocModalOpen(true);
+                  }}
+                  title="Add Product Document"
+                >
+                  <Plus size={15} /> Add Document
+                </button>
+              </div>
+
+              {!isEditing && (
+                <div style={{ backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', padding: '12px 16px', borderRadius: '8px', fontSize: '13px', color: '#0369a1', marginBottom: '16px' }}>
+                  Documents selected below will be uploaded and linked automatically when you save this product. Adding documents is completely optional.
+                </div>
+              )}
+
+              {/* Add Product Mode: Pending Documents List */}
+              {!isEditing ? (
+                pendingDocuments.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '28px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                    <FileText size={32} style={{ color: '#94a3b8', margin: '0 auto 8px', display: 'block' }} />
+                    <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#475569', fontWeight: 600 }}>
+                      No documents attached yet
+                    </p>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>
+                      Click "+ Add Document" to attach datasheets, manuals, or certificates. (Optional)
+                    </span>
+                  </div>
+                ) : (
+                  <div className="catalog-table-wrap">
+                    <table className="catalog-table">
+                      <thead>
+                        <tr>
+                          <th>Category</th>
+                          <th>Document Title</th>
+                          <th>File Name &amp; Size</th>
+                          <th>Revision</th>
+                          <th>Language</th>
+                          <th className="catalog-center-cell">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pendingDocuments.map((doc, idx) => (
+                          <tr key={doc.id || idx}>
+                            <td>
+                              <span className={`catalog-badge ${getCategoryBadgeClass(doc.metadata.category)}`}>
+                                {doc.metadata.category}
+                              </span>
+                            </td>
+                            <td>
+                              <strong style={{ display: 'block', fontSize: '13px', color: '#0f172a' }}>{doc.metadata.title}</strong>
+                              {doc.metadata.description && (
+                                <span style={{ fontSize: '11px', color: '#64748b' }}>{doc.metadata.description}</span>
+                              )}
+                            </td>
+                            <td>
+                              <span style={{ fontSize: '12px', color: '#334155', fontWeight: 500 }}>{doc.fileName}</span>
+                              <span style={{ display: 'block', fontSize: '11px', color: '#64748b' }}>{formatBytes(doc.fileSize)}</span>
+                            </td>
+                            <td>{doc.metadata.revision || '—'}</td>
+                            <td>{doc.metadata.language || 'English'}</td>
+                            <td className="catalog-center-cell">
+                              <button
+                                type="button"
+                                className="catalog-btn catalog-btn--danger"
+                                style={{ padding: '4px 8px', fontSize: '11px' }}
+                                onClick={() => setPendingDocuments((prev) => prev.filter((_, i) => i !== idx))}
+                                title="Remove selected document before saving"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              ) : (
+                /* Edit Product Mode: Uploaded Documents Table */
+                <>
+                  <div className="catalog-filterbar" style={{ marginBottom: '14px', marginTop: '12px' }}>
+                    <div className="catalog-search" style={{ minWidth: '200px', flex: 1 }}>
+                      <SearchIcon size={16} />
+                      <input
+                        type="text"
+                        placeholder="Search document title, category, revision..."
+                        value={docSearch}
+                        onChange={(e) => setDocSearch(e.target.value)}
+                        style={{ fontSize: '12px', padding: '6px 10px 6px 32px' }}
+                      />
+                    </div>
+                    <select
+                      value={docCategoryFilter}
+                      onChange={(e) => setDocCategoryFilter(e.target.value)}
+                      style={{ padding: '6px 10px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}
+                    >
+                      <option value="All">All Categories</option>
+                      <option value="Datasheets">Datasheets</option>
+                      <option value="User Manuals">User Manuals</option>
+                      <option value="Brochures">Brochures</option>
+                      <option value="Certifications">Certifications</option>
+                      <option value="Technical Documents">Technical Documents</option>
+                    </select>
+                  </div>
+
+                  <div className="catalog-table-wrap">
+                    <table className="catalog-table">
+                      <thead>
+                        <tr>
+                          <th>Document Title</th>
+                          <th>Category</th>
+                          <th>Revision / Lang</th>
+                          <th>File Size</th>
+                          <th>Date</th>
+                          <th>Status</th>
+                          <th className="catalog-center-cell">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredProductDocuments.length === 0 ? (
+                          <tr>
+                            <td colSpan="7" className="catalog-center-cell" style={{ fontSize: '12px', padding: '24px', color: '#64748b' }}>
+                              No documents uploaded for this product yet. Click "+ Add Document" above.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredProductDocuments.map((doc) => (
+                            <tr key={doc.id} style={{ fontSize: '12px' }}>
+                              <td>
+                                <strong style={{ display: 'block', color: '#0f172a' }}>{doc.title}</strong>
+                                {doc.description && (
+                                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block', maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {doc.description}
+                                  </span>
+                                )}
+                              </td>
+                              <td>
+                                <span className={`catalog-badge ${getCategoryBadgeClass(doc.category)}`}>
+                                  {doc.category}
+                                </span>
+                              </td>
+                              <td>
+                                {doc.revision || 'v1.0'} {doc.language ? `• ${doc.language}` : ''}
+                              </td>
+                              <td>{doc.fileSize > 0 ? formatBytes(doc.fileSize) : 'N/A'}</td>
+                              <td>{doc.documentDate ? doc.documentDate.split('T')[0] : 'N/A'}</td>
+                              <td>
+                                <span
+                                  className={`catalog-badge ${doc.status === 'Active' ? 'catalog-badge--stock' : 'catalog-badge--out'}`}
+                                  style={{ fontSize: '10px', cursor: 'pointer' }}
+                                  title="Click to toggle Active/Inactive"
+                                  onClick={async () => {
+                                    const nextStatus = (doc.status || 'Active').toLowerCase() === 'active' ? 'Inactive' : 'Active';
+                                    try {
+                                      await documentService.updateStatus(doc.id, nextStatus);
+                                      loadProductDocuments(productId || formData.id);
+                                      setToast({ message: `Document status updated to ${nextStatus}`, type: 'success' });
+                                    } catch (err) {
+                                      setToast({ message: 'Failed to update document status.', type: 'error' });
+                                    }
+                                  }}
+                                >
+                                  {doc.status || 'Active'}
+                                </span>
+                              </td>
+                              <td className="catalog-center-cell">
+                                <div className="catalog-inline-actions">
+                                  <button
+                                    type="button"
+                                    className="catalog-btn"
+                                    style={{ padding: '4px 8px', fontSize: '11px' }}
+                                    onClick={() => documentService.openPreview(doc.id)}
+                                    title="Preview PDF"
+                                  >
+                                    <Eye size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="catalog-btn"
+                                    style={{ padding: '4px 8px', fontSize: '11px' }}
+                                    onClick={() => documentService.download(doc.id, doc.originalFileName || doc.title)}
+                                    title="Download PDF"
+                                  >
+                                    <Download size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="catalog-btn"
+                                    style={{ padding: '4px 8px', fontSize: '11px' }}
+                                    onClick={() => {
+                                      setEditingDocItem(doc);
+                                      setIsDocModalOpen(true);
+                                    }}
+                                    title="Edit Document"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="catalog-btn catalog-btn--danger"
+                                    style={{ padding: '4px 8px', fontSize: '11px' }}
+                                    onClick={() => setDeletingDocId(doc.id)}
+                                    title="Delete Document"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </section>
+
             <section className="catalog-card">
               <div className="product-section-heading product-section-heading--inline">
                 <div>
@@ -1922,6 +2261,88 @@ const ProductsForm = () => {
                 }}
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Product Document Add/Edit Modal */}
+      <AdminDocumentModal
+        isOpen={isDocModalOpen}
+        onClose={() => {
+          setIsDocModalOpen(false);
+          setEditingDocItem(null);
+        }}
+        productId={isEditing ? (productId || formData.id) : null}
+        productName={formData.name}
+        editingItem={editingDocItem}
+        onAddPending={(pendingDoc) => {
+          setPendingDocuments((prev) => [...prev, pendingDoc]);
+          setToast({ message: `Added "${pendingDoc.metadata.title}" to upload queue.`, type: 'success' });
+        }}
+        onSaved={() => {
+          setToast({ message: 'Product document saved successfully!', type: 'success' });
+          loadProductDocuments(productId || formData.id);
+        }}
+      />
+
+      {/* Delete Document Confirmation Modal */}
+      {deletingDocId && (
+        <div
+          className="catalog-modal-overlay"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.65)',
+            backdropFilter: 'blur(3px)',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: '#fff',
+              borderRadius: '12px',
+              maxWidth: '440px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+              Confirm Document Deletion
+            </h3>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: '#64748b', lineHeight: 1.5 }}>
+              Are you sure you want to permanently delete this document and remove its file from storage? This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                className="catalog-btn"
+                onClick={() => setDeletingDocId(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="catalog-btn catalog-btn--danger"
+                style={{ backgroundColor: '#dc2626', color: '#fff', border: 'none' }}
+                onClick={async () => {
+                  try {
+                    await documentService.delete(deletingDocId);
+                    setToast({ message: 'Document deleted successfully.', type: 'success' });
+                    setDeletingDocId(null);
+                    loadProductDocuments(productId || formData.id);
+                  } catch (err) {
+                    setToast({ message: 'Failed to delete document: ' + (err.response?.data?.message || err.message), type: 'error' });
+                  }
+                }}
+              >
+                Delete Document
               </button>
             </div>
           </div>

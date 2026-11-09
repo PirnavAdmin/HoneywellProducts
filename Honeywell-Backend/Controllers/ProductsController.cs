@@ -151,6 +151,26 @@ namespace Honeywell.Controllers
                 features = featuresList,
                 videos = p.Videos != null ? p.Videos.Select(v => new { v.Id, v.VideoUrl }).ToList() : new object(),
                 reviews = reviewsList.Select(r => new { r.Id, r.CustomerName, r.Rating, r.ReviewComment, r.ReviewDate, r.VerifiedPurchase, r.Status }).ToList(),
+                documents = p.Documents != null ? p.Documents.Select(d => new
+                {
+                    id = d.Id,
+                    productId = d.ProductId,
+                    category = d.Category,
+                    title = d.Title,
+                    description = d.Description,
+                    revision = d.Revision,
+                    language = d.Language,
+                    documentDate = d.DocumentDate,
+                    fileUrl = !string.IsNullOrWhiteSpace(d.StoredFileName) ? $"/api/documents/{d.Id}/download" : d.FileUrl,
+                    originalFileName = d.OriginalFileName,
+                    fileSize = d.FileSize,
+                    mimeType = d.MimeType ?? "application/pdf",
+                    status = d.Status,
+                    sortOrder = d.SortOrder,
+                    downloadCount = d.DownloadCount,
+                    createdAt = d.CreatedAt,
+                    updatedAt = d.UpdatedAt
+                }).ToList() : new object(),
                 rating = actualAvgRating,
                 averageRating = actualAvgRating,
                 totalReviews = actualTotalReviews,
@@ -187,6 +207,7 @@ namespace Honeywell.Controllers
                 .Include(x => x.Videos)
                 .Include(x => x.Features)
                 .Include(x => x.Reviews)
+                .Include(x => x.Documents)
                 .AsQueryable();
 
             if (includeInactive != true)
@@ -262,6 +283,7 @@ namespace Honeywell.Controllers
                     .Include(x => x.Videos)
                     .Include(x => x.Features)
                     .Include(x => x.Reviews)
+                    .Include(x => x.Documents)
                     .FirstOrDefaultAsync(x => x.Id == id && x.IsActive);
             }
 
@@ -281,6 +303,7 @@ namespace Honeywell.Controllers
                     .Include(x => x.Videos)
                     .Include(x => x.Features)
                     .Include(x => x.Reviews)
+                    .Include(x => x.Documents)
                     .FirstOrDefaultAsync(p =>
                         p.IsActive && (
                         p.SKU.ToLower() == lowerClean ||
@@ -1346,6 +1369,7 @@ namespace Honeywell.Controllers
                     .Include(x => x.Features)
                     .Include(x => x.Reviews)
                     .Include(x => x.SoftwareList)
+                    .Include(x => x.Documents)
                     .FirstOrDefaultAsync(x => x.Id == productId);
 
                 if (product == null)
@@ -1384,6 +1408,25 @@ namespace Honeywell.Controllers
                             {
                                 var relativePath = v.VideoUrl.TrimStart('/');
                                 var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath.Replace('/', Path.DirectorySeparatorChar));
+                                if (System.IO.File.Exists(fullPath))
+                                {
+                                    System.IO.File.Delete(fullPath);
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+                }
+
+                if (product.Documents != null && product.Documents.Count > 0)
+                {
+                    foreach (var doc in product.Documents)
+                    {
+                        if (!string.IsNullOrWhiteSpace(doc.StoredFileName))
+                        {
+                            try
+                            {
+                                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "documents", Path.GetFileName(doc.StoredFileName));
                                 if (System.IO.File.Exists(fullPath))
                                 {
                                     System.IO.File.Delete(fullPath);

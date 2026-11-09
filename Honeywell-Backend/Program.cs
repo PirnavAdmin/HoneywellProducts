@@ -110,6 +110,7 @@ builder.Services.AddScoped<ITestAuthService, TestAuthService>();
 builder.Services.AddScoped<IBlogService, BlogService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IProductSoftwareService, ProductSoftwareService>();
+builder.Services.AddScoped<IProductDocumentService, ProductDocumentService>();
 builder.Services.AddScoped<IChatService, ChatService>();
 builder.Services.AddHttpClient<ICashfreeService, CashfreeService>(client =>
 {
@@ -436,6 +437,35 @@ using (var scope = app.Services.CreateScope())
                     `Id` INT AUTO_INCREMENT PRIMARY KEY,
                     `QrImageUrl` VARCHAR(500) NOT NULL,
                     `UpdatedAt` DATETIME NOT NULL
+                );";
+            cmd.ExecuteNonQuery();
+
+            cmd.CommandText = @"
+                CREATE TABLE IF NOT EXISTS `ProductDocuments` (
+                    `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                    `ProductId` INT NOT NULL,
+                    `Category` VARCHAR(100) NOT NULL,
+                    `Title` VARCHAR(255) NOT NULL,
+                    `Description` TEXT NULL,
+                    `Revision` VARCHAR(50) NULL,
+                    `Language` VARCHAR(50) NULL DEFAULT 'English',
+                    `DocumentDate` DATETIME NULL,
+                    `FileUrl` VARCHAR(500) NULL,
+                    `OriginalFileName` VARCHAR(255) NULL,
+                    `StoredFileName` VARCHAR(255) NULL,
+                    `FileSize` BIGINT NULL,
+                    `MimeType` VARCHAR(100) NULL DEFAULT 'application/pdf',
+                    `Status` VARCHAR(20) NOT NULL DEFAULT 'Active',
+                    `SortOrder` INT NOT NULL DEFAULT 0,
+                    `DownloadCount` INT NOT NULL DEFAULT 0,
+                    `CreatedAt` DATETIME NOT NULL,
+                    `UpdatedAt` DATETIME NULL,
+                    `CreatedBy` VARCHAR(100) NULL,
+                    `UpdatedBy` VARCHAR(100) NULL,
+                    CONSTRAINT `FK_ProductDocuments_Products_ProductId` FOREIGN KEY (`ProductId`) REFERENCES `Products` (`Id`) ON DELETE CASCADE,
+                    INDEX `IX_ProductDocuments_ProductId` (`ProductId`),
+                    INDEX `IX_ProductDocuments_Status` (`Status`),
+                    INDEX `IX_ProductDocuments_Category` (`Category`)
                 );";
             cmd.ExecuteNonQuery();
 
