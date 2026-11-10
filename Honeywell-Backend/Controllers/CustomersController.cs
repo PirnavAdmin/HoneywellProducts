@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AuthorizeModule("customers", "staff")]
     public class CustomersController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,6 +23,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Customers?search=&status=
+        [AuthorizeModule(PermissionAction.View, "customers", "staff")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Customer>>> GetAll([FromQuery] string? search, [FromQuery] string? status)
         {
@@ -52,6 +55,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Customers/5
+        [AuthorizeModule(PermissionAction.View, "customers", "staff")]
         [HttpGet("{id}")]
         public async Task<ActionResult<Customer>> GetById(int id)
         {
@@ -76,6 +80,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Customers
+        [AuthorizeModule(PermissionAction.Add, "customers", "staff")]
         [HttpPost]
         public async Task<ActionResult<Customer>> Create([FromBody] Customer customer)
         {
@@ -124,6 +129,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Customers/5
+        [AuthorizeModule(PermissionAction.Edit, "customers", "staff")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] Customer updateData)
         {
@@ -189,6 +195,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Customers/5
+        [AuthorizeModule(PermissionAction.Delete, "customers", "staff")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -204,6 +211,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Customers/5/advisory
+        [AuthorizeModule(PermissionAction.Add, "customers", "staff")]
         [HttpPost("{id}/advisory")]
         public async Task<ActionResult<CustomerAdvisory>> AddAdvisory(int id, [FromBody] AdvisoryLogRequest request)
         {

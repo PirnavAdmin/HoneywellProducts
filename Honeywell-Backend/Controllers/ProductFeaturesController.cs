@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -19,6 +20,7 @@ namespace Honeywell.Controllers
 
         // POST: api/features
         [HttpPost]
+        [AuthorizeModule(PermissionAction.Add, "catalog")]
         public async Task<IActionResult> AddFeature([FromBody] ProductFeature feature)
         {
             // Validate that the ProductId exists
@@ -45,6 +47,7 @@ namespace Honeywell.Controllers
 
         // DELETE: api/features/{id}
         [HttpDelete("{id}")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog")]
         public async Task<IActionResult> DeleteFeature(int id)
         {
             var feature = _context.ProductFeatures.FirstOrDefault(x => x.Id == id);

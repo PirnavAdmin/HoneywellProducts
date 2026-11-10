@@ -7,6 +7,7 @@ using Honeywell.DTOs.Catalog;
 using Honeywell.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -130,13 +131,9 @@ namespace Honeywell.Controllers
 
         // POST: api/documents
         [HttpPost]
+        [AuthorizeModule(PermissionAction.Add, "catalog", "documents")]
         public async Task<IActionResult> Create([FromForm] CreateProductDocumentDto dto)
         {
-            if (!IsAdminMode())
-            {
-                return Unauthorized(new { message = "Administrator access required to upload product documents." });
-            }
-
             try
             {
                 var userEmail = GetUserEmail();
@@ -157,6 +154,7 @@ namespace Honeywell.Controllers
 
         // POST: api/products/{productId}/documents
         [HttpPost("/api/products/{productId:int}/documents")]
+        [AuthorizeModule(PermissionAction.Add, "catalog", "documents")]
         public async Task<IActionResult> CreateForProduct(int productId, [FromForm] CreateProductDocumentDto dto)
         {
             dto.ProductId = productId;
@@ -165,13 +163,9 @@ namespace Honeywell.Controllers
 
         // PUT: api/documents/{id}
         [HttpPut("{id:int}")]
+        [AuthorizeModule(PermissionAction.Edit, "catalog", "documents")]
         public async Task<IActionResult> Update(int id, [FromForm] UpdateProductDocumentDto dto)
         {
-            if (!IsAdminMode())
-            {
-                return Unauthorized(new { message = "Administrator access required to modify product documents." });
-            }
-
             try
             {
                 var userEmail = GetUserEmail();
@@ -196,13 +190,9 @@ namespace Honeywell.Controllers
 
         // DELETE: api/documents/{id}
         [HttpDelete("{id:int}")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog", "documents")]
         public async Task<IActionResult> Delete(int id)
         {
-            if (!IsAdminMode())
-            {
-                return Unauthorized(new { message = "Administrator access required to delete product documents." });
-            }
-
             try
             {
                 var success = await _documentService.DeleteAsync(id);
@@ -220,6 +210,7 @@ namespace Honeywell.Controllers
 
         // PATCH: api/documents/{id}/status
         [HttpPatch("{id:int}/status")]
+        [AuthorizeModule(PermissionAction.Edit, "catalog", "documents")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] DocumentStatusUpdateRequest request)
         {
             if (!IsAdminMode())

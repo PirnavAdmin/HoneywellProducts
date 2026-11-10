@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -228,6 +229,7 @@ namespace Honeywell.Controllers
 
 
         // GET: api/Invoices?search=
+        [AuthorizeModule(PermissionAction.View, "orders", "invoices")]
         [HttpGet]
         public async Task<IActionResult> GetAll([FromQuery] string? search)
         {
@@ -329,6 +331,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Invoices/5
+        [AuthorizeModule(PermissionAction.View, "orders", "invoices")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -397,6 +400,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Invoices
+        [AuthorizeModule(PermissionAction.Add, "orders", "invoices")]
         [HttpPost]
         [ProducesResponseType(StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -578,6 +582,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Invoices/5
+        [AuthorizeModule(PermissionAction.Edit, "orders", "invoices")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] InvoiceUpdateRequest request)
         {
@@ -608,6 +613,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Invoices/5
+        [AuthorizeModule(PermissionAction.Delete, "orders", "invoices")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

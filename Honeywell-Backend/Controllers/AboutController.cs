@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -168,6 +169,7 @@ namespace Honeywell.Controllers
         // PUT: api/Settings/about-us
         // POST: api/Settings/about-us
 
+        [AuthorizeModule(PermissionAction.Edit, "settings", "marketing")]
         [HttpPut]
         [HttpPost]
         public async Task<IActionResult> UpdateAboutData(
@@ -215,6 +217,7 @@ namespace Honeywell.Controllers
         // POST: api/About/upload-image
         // POST: api/Settings/about-us/upload-image
 
+        [AuthorizeModule(PermissionAction.Add, "settings", "marketing")]
         [HttpPost("upload-image")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadAboutImage(

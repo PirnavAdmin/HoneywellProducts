@@ -6,6 +6,7 @@ using Honeywell.DTOs.Catalog;
 using Honeywell.Services.Interfaces;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -130,6 +131,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/software
+        [AuthorizeModule(PermissionAction.Add, "catalog", "settings")]
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] CreateProductSoftwareDto dto)
         {
@@ -152,6 +154,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/software/{id}
+        [AuthorizeModule(PermissionAction.Edit, "catalog", "settings")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromForm] UpdateProductSoftwareDto dto)
         {
@@ -178,6 +181,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/software/{id}
+        [AuthorizeModule(PermissionAction.Delete, "catalog", "settings")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -197,6 +201,7 @@ namespace Honeywell.Controllers
         }
 
         // PATCH: api/software/{id}/status
+        [AuthorizeModule(PermissionAction.Edit, "catalog", "settings")]
         [HttpPatch("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] SoftwareStatusUpdateRequest request)
         {

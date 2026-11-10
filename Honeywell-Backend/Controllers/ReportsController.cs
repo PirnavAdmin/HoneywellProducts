@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AuthorizeModule("reports")]
     public class ReportsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -252,6 +254,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/reports/export
+        [AuthorizeModule(PermissionAction.View, "reports")]
         [HttpPost("export")]
         public IActionResult ExportReport([FromBody] ExportRequest request)
         {
@@ -272,6 +275,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/reports/settings
+        [AuthorizeModule(PermissionAction.Edit, "reports")]
         [HttpPut("settings")]
         public async Task<IActionResult> UpdateReportSettings([FromBody] ReportSettingsUpdate request)
         {
@@ -294,6 +298,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/reports/cache
+        [AuthorizeModule(PermissionAction.Delete, "reports")]
         [HttpDelete("cache")]
         public IActionResult ClearReportCache()
         {

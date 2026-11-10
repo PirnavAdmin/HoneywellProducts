@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.DTOs;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -186,6 +187,7 @@ namespace Honeywell.Controllers
         /// Updates an existing review
         /// </summary>
         [HttpPut("{id}")]
+        [AuthorizeModule(PermissionAction.Edit, "catalog", "marketing")]
         public async Task<IActionResult> Update(long id, [FromBody] CreateReviewDto dto)
         {
             var entity = await _context.ProductReviews.FindAsync((int)id);
@@ -227,6 +229,7 @@ namespace Honeywell.Controllers
         /// Deletes a review
         /// </summary>
         [HttpDelete("{id}")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog", "marketing")]
         public async Task<IActionResult> Delete(long id)
         {
             var entity = await _context.ProductReviews.FindAsync((int)id);

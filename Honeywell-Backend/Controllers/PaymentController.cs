@@ -5,6 +5,7 @@ using Honeywell.Data;
 using Honeywell.Models;
 using Honeywell.DTOs;
 using Honeywell.Services.Interfaces;
+using Honeywell.Helpers;
 using Microsoft.Extensions.Logging;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -940,6 +941,7 @@ namespace Honeywell.Controllers
 
         // PUT: api/Payment/bank-details
         // POST: api/Payment/bank-details
+        [AuthorizeModule(PermissionAction.Edit, "orders", "settings", "payment settings")]
         [HttpPut("bank-details")]
         [HttpPost("bank-details")]
         public async Task<IActionResult> UpdateBankDetails([FromBody] BankDetailsRequestDto request)
@@ -1024,6 +1026,7 @@ namespace Honeywell.Controllers
 
         // PUT: api/Payment/upi-details
         // POST: api/Payment/upi-details
+        [AuthorizeModule(PermissionAction.Edit, "orders", "settings", "payment settings")]
         [HttpPut("upi-details")]
         [HttpPost("upi-details")]
         public async Task<IActionResult> UpdateUpiDetails([FromBody] UpiDetailsRequestDto request)
@@ -1079,6 +1082,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Payment/qr-config
+        [AuthorizeModule(PermissionAction.Edit, "orders", "settings", "payment settings")]
         [HttpPut("qr-config")]
         public async Task<IActionResult> UpdateQrConfig([FromForm] UpdateQrConfigRequest request)
         {
@@ -1121,6 +1125,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Payment/manual-verifications
+        [AuthorizeModule(PermissionAction.View, "orders", "settings", "payment settings")]
         [HttpGet("manual-verifications")]
         public async Task<IActionResult> GetManualVerifications([FromQuery] string? search, [FromQuery] string? status)
         {
@@ -1153,6 +1158,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Payment/verify-manual/{id}/status
+        [AuthorizeModule(PermissionAction.Edit, "orders", "settings", "payment settings")]
         [HttpPut("verify-manual/{id}/status")]
         public async Task<IActionResult> UpdateManualStatus(int id, [FromBody] ManualStatusUpdateRequest request)
         {
@@ -1212,6 +1218,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Payment/verify-manual/{id}
+        [AuthorizeModule(PermissionAction.Delete, "orders", "settings", "payment settings")]
         [HttpDelete("verify-manual/{id}")]
         public async Task<IActionResult> DeleteManualVerification(int id)
         {

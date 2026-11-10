@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/Auth/users")]
+    [AuthorizeModule("staff", "users")]
     public class UserPermissionsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,6 +23,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Auth/users or api/Users
+        [AuthorizeModule(PermissionAction.View, "staff", "users")]
         [HttpGet]
         public async Task<IActionResult> GetAllUsers()
         {
@@ -43,6 +46,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Auth/users/{emailOrId}/permissions
+        [AuthorizeModule(PermissionAction.View, "staff", "users")]
         [HttpGet("{emailOrId}/permissions")]
         public async Task<IActionResult> GetUserPermissions(string emailOrId)
         {
@@ -72,6 +76,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Auth/users/{emailOrId}/permissions
+        [AuthorizeModule(PermissionAction.Edit, "staff", "users")]
         [HttpPut("{emailOrId}/permissions")]
         [HttpPost("{emailOrId}/permissions")]
         public async Task<IActionResult> UpdateUserPermissions(string emailOrId, [FromBody] UpdateUserPermissionsDto dto)
@@ -111,6 +116,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Users or api/Auth/users
+        [AuthorizeModule(PermissionAction.Add, "staff", "users")]
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] CreateAdminUserDto dto)
         {
@@ -151,6 +157,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Users/{email} or api/Auth/users/{email}
+        [AuthorizeModule(PermissionAction.Delete, "staff", "users")]
         [HttpDelete("{email}")]
         public async Task<IActionResult> DeleteUser(string email)
         {

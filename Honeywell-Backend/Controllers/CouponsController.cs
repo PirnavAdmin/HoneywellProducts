@@ -8,6 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Honeywell.Controllers
 {
@@ -94,6 +96,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Coupons
+        [AuthorizeModule(PermissionAction.View, "coupons", "marketing")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Coupon>>> GetAll()
         {
@@ -108,6 +111,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Coupons/5
+        [AuthorizeModule(PermissionAction.View, "coupons", "marketing")]
         [HttpGet("{id}")]
         public async Task<ActionResult<Coupon>> GetById(int id)
         {
@@ -125,6 +129,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Coupons
+        [AuthorizeModule(PermissionAction.Add, "coupons", "marketing")]
         [HttpPost]
         public async Task<ActionResult<Coupon>> Create()
         {
@@ -189,6 +194,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Coupons/5
+        [AuthorizeModule(PermissionAction.Edit, "coupons", "marketing")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id)
         {
@@ -250,6 +256,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Coupons/5
+        [AuthorizeModule(PermissionAction.Delete, "coupons", "marketing")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -265,6 +272,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Coupons/validate?code=SAVE10&cartTotal=500
+        [AllowAnonymous]
         [HttpGet("validate")]
         public async Task<ActionResult<object>> ValidateCoupon([FromQuery] string code, [FromQuery] decimal? cartTotal, [FromQuery] decimal? cartValue)
         {

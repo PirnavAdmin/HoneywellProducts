@@ -8,6 +8,7 @@ using Honeywell.Data;
 using Honeywell.Models;
 
 using Honeywell.Services.Interfaces;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -48,6 +49,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Support/config
+        [AuthorizeModule(PermissionAction.Edit, "support", "settings", "tickets")]
         [HttpPut("config")]
         public async Task<IActionResult> UpdateSupportConfig([FromBody] SupportConfig request)
         {
@@ -153,6 +155,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Support/ticket
+        [AuthorizeModule(PermissionAction.View, "support", "tickets")]
         [HttpGet("ticket")]
         public async Task<IActionResult> GetTickets()
         {

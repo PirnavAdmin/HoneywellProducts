@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -189,6 +190,7 @@ namespace Honeywell.Controllers
         }
 
         // 3. POST / PUT: api/SystemConfigs  (or api/SystemConfig)
+        [AuthorizeModule(PermissionAction.Edit, "settings")]
         [HttpPost]
         [HttpPut]
         public async Task<IActionResult> SaveConfig([FromBody] JsonElement payload, [FromQuery] string? key)
@@ -260,6 +262,7 @@ namespace Honeywell.Controllers
         }
 
         // 4. PUT: api/SystemConfigs/{key}
+        [AuthorizeModule(PermissionAction.Edit, "settings")]
         [HttpPut("{key}")]
         public async Task<IActionResult> SaveConfigByKey(string key, [FromBody] JsonElement payload)
         {

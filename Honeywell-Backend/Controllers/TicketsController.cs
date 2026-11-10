@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Honeywell.Controllers
 {
@@ -21,6 +23,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Tickets?search=&type=&status=&priority=
+        [AuthorizeModule(PermissionAction.View, "tickets", "support")]
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? search,
@@ -87,6 +90,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Tickets/5
+        [AuthorizeModule(PermissionAction.View, "tickets", "support")]
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -129,6 +133,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Tickets
+        [AllowAnonymous]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] SupportTicket ticket)
         {
@@ -166,6 +171,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Tickets/5
+        [AuthorizeModule(PermissionAction.Edit, "tickets", "support")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateTicketRequest request)
         {
@@ -200,6 +206,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Tickets/5
+        [AuthorizeModule(PermissionAction.Delete, "tickets", "support")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

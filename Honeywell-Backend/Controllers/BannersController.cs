@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 using Microsoft.Extensions.Caching.Memory;
 
@@ -51,6 +52,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Banners/admin
+        [AuthorizeModule(PermissionAction.View, "banners", "marketing")]
         [HttpGet("admin")]
         public async Task<IActionResult> GetAllBannersForAdmin()
         {
@@ -75,6 +77,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Banners
+        [AuthorizeModule(PermissionAction.Add, "banners", "marketing")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] Banner banner)
         {
@@ -91,6 +94,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Banners/5
+        [AuthorizeModule(PermissionAction.Edit, "banners", "marketing")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] Banner banner)
         {
@@ -118,6 +122,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Banners/5/toggle
+        [AuthorizeModule(PermissionAction.Edit, "banners", "marketing")]
         [HttpPut("{id}/toggle")]
         public async Task<IActionResult> ToggleActive(int id)
         {
@@ -136,6 +141,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Banners/5
+        [AuthorizeModule(PermissionAction.Delete, "banners", "marketing")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -152,6 +158,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Banners/upload-image
+        [AuthorizeModule(PermissionAction.Add, "banners", "marketing")]
         [HttpPost("upload-image")]
         public async Task<IActionResult> UploadBannerImage(IFormFile file)
         {

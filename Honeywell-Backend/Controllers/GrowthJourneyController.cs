@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -116,6 +117,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/GrowthJourney
+        [AuthorizeModule(PermissionAction.Add, "marketing", "settings")]
         [HttpPost]
         public async Task<IActionResult> CreateOrUpdate([FromBody] CreateOrUpdateGrowthDto dto)
         {
@@ -152,6 +154,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/GrowthJourney/bulk
+        [AuthorizeModule(PermissionAction.Edit, "marketing", "settings")]
         [HttpPut("bulk")]
         public async Task<IActionResult> BulkUpdate([FromBody] List<CreateOrUpdateGrowthDto> dtoList)
         {
@@ -193,6 +196,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/GrowthJourney/{idOrYear}
+        [AuthorizeModule(PermissionAction.Delete, "marketing", "settings")]
         [HttpDelete("{idOrYear}")]
         public async Task<IActionResult> Delete(string idOrYear)
         {

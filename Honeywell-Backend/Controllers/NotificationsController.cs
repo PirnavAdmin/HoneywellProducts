@@ -1,15 +1,17 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AuthorizeModule("staff", "orders", "tickets", "catalog")]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public class NotificationsController : ControllerBase
     {
@@ -20,6 +22,7 @@ namespace Honeywell.Controllers
             _context = context;
         }
 
+        [AuthorizeModule(PermissionAction.View, "staff", "orders", "tickets", "catalog")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Notification>>> GetAll()
         {
@@ -28,6 +31,7 @@ namespace Honeywell.Controllers
                 .ToListAsync();
         }
 
+        [AuthorizeModule(PermissionAction.View, "staff", "orders", "tickets", "catalog")]
         [HttpGet("unread-count")]
         public async Task<ActionResult<int>> GetUnreadCount()
         {
@@ -36,6 +40,7 @@ namespace Honeywell.Controllers
             return Ok(count);
         }
 
+        [AuthorizeModule(PermissionAction.Edit, "staff", "orders", "tickets", "catalog")]
         [HttpPut("{id}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
         {
@@ -50,6 +55,7 @@ namespace Honeywell.Controllers
             return NoContent();
         }
 
+        [AuthorizeModule(PermissionAction.Edit, "staff", "orders", "tickets", "catalog")]
         [HttpPut("mark-all-read")]
         public async Task<IActionResult> MarkAllAsRead()
         {
@@ -66,6 +72,7 @@ namespace Honeywell.Controllers
             return NoContent();
         }
 
+        [AuthorizeModule(PermissionAction.Delete, "staff", "orders", "tickets", "catalog")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
@@ -80,6 +87,7 @@ namespace Honeywell.Controllers
             return NoContent();
         }
 
+        [AuthorizeModule(PermissionAction.Delete, "staff", "orders", "tickets", "catalog")]
         [HttpDelete("clear-all")]
         public async Task<IActionResult> ClearAll()
         {

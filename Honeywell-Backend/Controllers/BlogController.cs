@@ -4,6 +4,7 @@ using Honeywell.Data;
 using Honeywell.Models;
 using Honeywell.DTOs.Blog;
 using Honeywell.Services.Interfaces;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -41,6 +42,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/blog
+        [AuthorizeModule(PermissionAction.Add, "blog", "marketing")]
         [HttpPost]
         public async Task<IActionResult> Create([FromForm] CreateBlogDto dto)
         {
@@ -62,6 +64,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/blog/5
+        [AuthorizeModule(PermissionAction.Edit, "blog", "marketing")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id,
             [FromForm] UpdateBlogDto dto)
@@ -78,6 +81,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/blog/5
+        [AuthorizeModule(PermissionAction.Delete, "blog", "marketing")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

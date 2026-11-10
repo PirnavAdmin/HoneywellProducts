@@ -7,11 +7,13 @@ using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
 using Honeywell.DTOs;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AuthorizeModule("suppliers", "procurement", "inventory")]
     public class PurchaseIndentController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -51,6 +53,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/PurchaseIndent
+        [AuthorizeModule(PermissionAction.Add, "suppliers", "procurement", "inventory")]
         [HttpPost]
         public async Task<ActionResult<PurchaseIndentDto>> Create([FromBody] CreatePurchaseIndentRequest request)
         {
@@ -115,6 +118,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/PurchaseIndent/{id}/status
+        [AuthorizeModule(PermissionAction.Edit, "suppliers", "procurement", "inventory")]
         [HttpPut("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdatePurchaseIndentStatusRequest request)
         {

@@ -9,11 +9,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AuthorizeModule("settings", "staff")]
     public class AdminProfileController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -359,6 +361,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/AdminProfile
+        [AuthorizeModule(PermissionAction.View, "settings", "staff")]
         [HttpGet]
         [HttpGet("settings")]
         public async Task<IActionResult> GetProfile()
@@ -378,6 +381,7 @@ namespace Honeywell.Controllers
         // PUT: api/AdminProfile/settings
         // POST: api/AdminProfile/settings
         // POST: api/AdminProfile
+        [AuthorizeModule(PermissionAction.Edit, "settings", "staff")]
         [HttpPut]
         [HttpPut("settings")]
         [HttpPost("settings")]

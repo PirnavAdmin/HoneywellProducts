@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -151,6 +152,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Offers/admin (Admin All Offers)
+        [AuthorizeModule(PermissionAction.View, "offers", "marketing")]
         [HttpGet("admin")]
         public async Task<IActionResult> GetAllOffersAdmin()
         {
@@ -172,6 +174,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Offers/clear-all (Admin Clear All Offers)
+        [AuthorizeModule(PermissionAction.Delete, "offers", "marketing")]
         [HttpDelete("clear-all")]
         public async Task<IActionResult> ClearAllOffers()
         {
@@ -209,6 +212,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Offers (Admin Create Offer)
+        [AuthorizeModule(PermissionAction.Add, "offers", "marketing")]
         [HttpPost]
         public async Task<IActionResult> CreateOffer([FromBody] Offer offer)
         {
@@ -334,6 +338,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Offers/{id} (Admin Update Offer)
+        [AuthorizeModule(PermissionAction.Edit, "offers", "marketing")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateOffer(int id, [FromBody] Offer updatedOffer)
         {
@@ -439,6 +444,7 @@ namespace Honeywell.Controllers
         }
 
         // PATCH: api/Offers/{id}/status (Admin Toggle Status)
+        [AuthorizeModule(PermissionAction.Edit, "offers", "marketing")]
         [HttpPatch("{id}/status")]
         public async Task<IActionResult> ToggleStatus(int id)
         {
@@ -461,6 +467,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/Offers/{id} (Admin Delete Offer)
+        [AuthorizeModule(PermissionAction.Delete, "offers", "marketing")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteOffer(int id)
         {

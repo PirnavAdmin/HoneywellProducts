@@ -5,11 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AuthorizeModule("returns", "orders")]
     public class ReturnsAdminController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -20,6 +22,7 @@ namespace Honeywell.Controllers
         }
 
         // 1. GET: api/ReturnsAdmin
+        [AuthorizeModule(PermissionAction.View, "returns", "orders")]
         [HttpGet]
         [Route("admin")]
         public async Task<IActionResult> GetAdminList(
@@ -129,6 +132,7 @@ namespace Honeywell.Controllers
         }
 
         // 2. PUT: api/ReturnsAdmin/{id}/status
+        [AuthorizeModule(PermissionAction.Edit, "returns", "orders")]
         [HttpPut]
         [Route("{id}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] StatusUpdateRequest request)
@@ -173,6 +177,7 @@ namespace Honeywell.Controllers
         }
 
         // 3. PUT: api/ReturnsAdmin/{id}/pickup
+        [AuthorizeModule(PermissionAction.Edit, "returns", "orders")]
         [HttpPut]
         [Route("{id}/pickup")]
         public async Task<IActionResult> UpdatePickup(int id, [FromBody] PickupUpdateRequest request)
@@ -223,6 +228,7 @@ namespace Honeywell.Controllers
         }
 
         // 4. PUT: api/ReturnsAdmin/{id}/refund
+        [AuthorizeModule(PermissionAction.Edit, "returns", "orders")]
         [HttpPut]
         [Route("{id}/refund")]
         public async Task<IActionResult> UpdateRefund(int id, [FromBody] RefundUpdateRequest request)
@@ -262,6 +268,7 @@ namespace Honeywell.Controllers
         }
 
         // 5. PUT: api/ReturnsAdmin/{id}/replacement
+        [AuthorizeModule(PermissionAction.Edit, "returns", "orders")]
         [HttpPut]
         [Route("{id}/replacement")]
         public async Task<IActionResult> UpdateReplacement(int id, [FromBody] ReplacementUpdateRequest request)

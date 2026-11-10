@@ -8,6 +8,7 @@ using Honeywell.Data;
 using Honeywell.Models;
 
 using Honeywell.Services.Interfaces;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -362,6 +363,7 @@ namespace Honeywell.Controllers
 
         // 6. Get Partner Applications (Admin View)
         // GET: api/Partner/applications
+        [AuthorizeModule(PermissionAction.View, "partner applications", "dealers & distributors")]
         [HttpGet("applications")]
         public async Task<IActionResult> GetPartnerApplications()
         {

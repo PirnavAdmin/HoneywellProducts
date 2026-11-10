@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
 using Honeywell.Services.Interfaces;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -315,6 +316,7 @@ namespace Honeywell.Controllers
         // ==========================================
         // 4. ADMIN GET LISTING ENDPOINTS
         // ==========================================
+        [AuthorizeModule(PermissionAction.View, "enquiries", "tickets")]
         [HttpGet("bulk-quotes")]
         public async Task<IActionResult> GetBulkQuotes()
         {
@@ -322,6 +324,7 @@ namespace Honeywell.Controllers
             return Ok(quotes);
         }
 
+        [AuthorizeModule(PermissionAction.View, "enquiries", "tickets")]
         [HttpGet("contact-us")]
         public async Task<IActionResult> GetContactUsRequests()
         {
@@ -329,6 +332,7 @@ namespace Honeywell.Controllers
             return Ok(requests);
         }
 
+        [AuthorizeModule(PermissionAction.View, "enquiries", "tickets")]
         [HttpGet("product-enquiries")]
         public async Task<IActionResult> GetProductEnquiries()
         {

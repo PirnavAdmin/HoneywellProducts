@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AuthorizeModule("call history", "support", "tickets", "customers")]
     public class CallHistoryController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
@@ -21,6 +23,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/CallHistory
+        [AuthorizeModule(PermissionAction.View, "call history", "support", "tickets", "customers")]
         [HttpGet]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? search,
@@ -104,6 +107,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/CallHistory
+        [AuthorizeModule(PermissionAction.Add, "call history", "support", "tickets", "customers")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CallLogCreateRequest request)
         {
@@ -145,6 +149,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/CallHistory/5
+        [AuthorizeModule(PermissionAction.Edit, "call history", "support", "tickets", "customers")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, [FromBody] CallLogUpdateRequest request)
         {
@@ -181,6 +186,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/CallHistory/5
+        [AuthorizeModule(PermissionAction.Delete, "call history", "support", "tickets", "customers")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

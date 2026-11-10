@@ -7,6 +7,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -93,6 +94,7 @@ namespace Honeywell.Controllers
         // CREATE TESTIMONIAL (SUPPORTS JSON AND MULTIPART/FORM-DATA)
         // api/Testimonials
         // ====================================================
+        [AuthorizeModule(PermissionAction.Add, "testimonials", "marketing")]
         [HttpPost]
         public async Task<IActionResult> Create()
         {
@@ -168,6 +170,7 @@ namespace Honeywell.Controllers
         // UPDATE TESTIMONIAL (SUPPORTS JSON AND MULTIPART/FORM-DATA)
         // api/Testimonials/5
         // ====================================================
+        [AuthorizeModule(PermissionAction.Edit, "testimonials", "marketing")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id)
         {
@@ -250,6 +253,7 @@ namespace Honeywell.Controllers
         // DELETE TESTIMONIAL
         // api/Testimonials/5
         // ====================================================
+        [AuthorizeModule(PermissionAction.Delete, "testimonials", "marketing")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

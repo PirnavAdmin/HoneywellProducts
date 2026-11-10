@@ -23,6 +23,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Stock/ledger
+        [AuthorizeModule(PermissionAction.View, "inventory", "stockupdates", "catalog")]
         [HttpGet("ledger")]
         public async Task<IActionResult> GetLedger(
             [FromQuery] string? search,
@@ -124,6 +125,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Stock/adjust/{productId}
+        [AuthorizeModule(PermissionAction.Edit, "inventory", "stockupdates", "catalog")]
         [HttpPost("adjust/{productId}")]
         public async Task<IActionResult> AdjustStock(int productId, [FromBody] StockAdjustmentRequest request)
         {
@@ -218,6 +220,7 @@ namespace Honeywell.Controllers
         }
 
         // GET: api/Stock/adjustments
+        [AuthorizeModule(PermissionAction.View, "inventory", "stockupdates", "catalog")]
         [HttpGet("adjustments")]
         public async Task<IActionResult> GetAdjustments()
         {
@@ -241,6 +244,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/Stock/entry
+        [AuthorizeModule(PermissionAction.Add, "inventory", "stockupdates", "catalog")]
         [HttpPost("entry")]
         public async Task<IActionResult> CreateStockEntry([FromBody] NewStockEntryRequest request)
         {

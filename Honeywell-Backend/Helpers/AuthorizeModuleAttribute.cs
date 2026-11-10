@@ -485,32 +485,134 @@ namespace Honeywell.Helpers
                     set.Add("categories");
                     set.Add("subcategories");
                     set.Add("brands");
+                    set.Add("documents");
+                    set.Add("features");
                     break;
                 case "products":
-                    set.Add("catalog");
-                    break;
                 case "categories":
                 case "subcategories":
                 case "brands":
+                case "documents":
+                case "features":
                     set.Add("catalog");
                     break;
+
                 case "inventory":
                     set.Add("stockupdates");
                     set.Add("stock");
                     set.Add("warehouse");
                     break;
                 case "stockupdates":
+                case "stock":
+                case "warehouse":
                     set.Add("inventory");
-                    set.Add("stock");
                     break;
+
                 case "orders":
                     set.Add("orders & sales");
                     set.Add("sales");
+                    set.Add("invoices");
+                    set.Add("returns");
                     break;
+                case "orders & sales":
+                case "sales":
+                case "invoices":
+                case "returns":
+                    set.Add("orders");
+                    break;
+
                 case "staff":
                     set.Add("staff management");
                     set.Add("users");
                     set.Add("team");
+                    set.Add("roles");
+                    break;
+                case "staff management":
+                case "users":
+                case "team":
+                case "roles":
+                    set.Add("staff");
+                    break;
+
+                case "suppliers":
+                    set.Add("procurement");
+                    set.Add("vendors");
+                    set.Add("purchase");
+                    break;
+                case "procurement":
+                case "vendors":
+                case "purchase":
+                    set.Add("suppliers");
+                    break;
+
+                case "dealers & distributors":
+                    set.Add("distributors");
+                    set.Add("dealers");
+                    set.Add("partner applications");
+                    break;
+                case "distributors":
+                case "dealers":
+                case "partner applications":
+                    set.Add("dealers & distributors");
+                    break;
+
+                case "marketing":
+                    set.Add("banners");
+                    set.Add("blogs");
+                    set.Add("testimonials");
+                    set.Add("offers");
+                    set.Add("coupons");
+                    set.Add("promotions");
+                    break;
+                case "banners":
+                case "blogs":
+                case "testimonials":
+                case "offers":
+                case "coupons":
+                case "promotions":
+                    set.Add("marketing");
+                    break;
+
+                case "settings":
+                    set.Add("system");
+                    set.Add("configs");
+                    set.Add("system configs");
+                    set.Add("administration");
+                    set.Add("payment settings");
+                    set.Add("coins converter");
+                    break;
+                case "system":
+                case "configs":
+                case "system configs":
+                case "administration":
+                case "payment settings":
+                case "coins converter":
+                    set.Add("settings");
+                    break;
+
+                case "reports":
+                    set.Add("analytics");
+                    break;
+                case "analytics":
+                    set.Add("reports");
+                    break;
+
+                case "tickets":
+                    set.Add("support");
+                    set.Add("helpdesk");
+                    break;
+                case "support":
+                case "helpdesk":
+                    set.Add("tickets");
+                    break;
+
+                case "enquiries":
+                    set.Add("contact form");
+                    set.Add("bulk quotes");
+                    break;
+                case "contact form":
+                case "bulk quotes":
+                    set.Add("enquiries");
                     break;
             }
 

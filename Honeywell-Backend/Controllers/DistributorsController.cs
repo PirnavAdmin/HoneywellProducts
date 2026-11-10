@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
 using Honeywell.Services.Interfaces;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -328,6 +329,7 @@ namespace Honeywell.Controllers
 
         // 6. GET: api/Distributors/admin/all
         // Admin views all dealers / distributors (including inactive)
+        [AuthorizeModule(PermissionAction.View, "dealers & distributors", "distributors")]
         [HttpGet("admin/all")]
         public async Task<IActionResult> GetAllAdmin([FromQuery] string? search, [FromQuery] string? region)
         {
@@ -437,6 +439,7 @@ namespace Honeywell.Controllers
 
         // 7. POST: api/Distributors
         // Admin creates new distributor / dealer
+        [AuthorizeModule(PermissionAction.Add, "dealers & distributors", "distributors")]
         [HttpPost]
         [Consumes("application/json", "multipart/form-data", "application/x-www-form-urlencoded", "text/plain")]
         public async Task<IActionResult> Create()
@@ -487,6 +490,7 @@ namespace Honeywell.Controllers
 
         // 8. PUT: api/Distributors/5
         // Admin updates distributor / dealer
+        [AuthorizeModule(PermissionAction.Edit, "dealers & distributors", "distributors")]
         [HttpPut("{id:int}")]
         [Consumes("application/json", "multipart/form-data", "application/x-www-form-urlencoded", "text/plain")]
         public async Task<IActionResult> Update(int id)
@@ -537,6 +541,7 @@ namespace Honeywell.Controllers
         }
 
         // 9. PATCH: api/Distributors/5/toggle-status
+        [AuthorizeModule(PermissionAction.Edit, "dealers & distributors", "distributors")]
         [HttpPatch("{id:int}/toggle-status")]
         public async Task<IActionResult> ToggleStatus(int id)
         {
@@ -560,6 +565,7 @@ namespace Honeywell.Controllers
         }
 
         // 10. PATCH: api/Distributors/5/display-order
+        [AuthorizeModule(PermissionAction.Edit, "dealers & distributors", "distributors")]
         [HttpPatch("{id:int}/display-order")]
         public async Task<IActionResult> UpdateDisplayOrder(int id, [FromQuery] int displayOrder)
         {
@@ -583,6 +589,7 @@ namespace Honeywell.Controllers
         }
 
         // 11. DELETE: api/Distributors/5
+        [AuthorizeModule(PermissionAction.Delete, "dealers & distributors", "distributors")]
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
         {

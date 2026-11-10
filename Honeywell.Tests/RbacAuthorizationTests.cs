@@ -481,5 +481,214 @@ namespace Honeywell.Tests
             await delAttr.OnAuthorizationAsync(delCtx);
             Assert.Equal(403, Assert.IsType<ObjectResult>(delCtx.Result).StatusCode);
         }
+
+        [Fact]
+        public async Task DistributorsModule_EnforcesActionLevelGranularity()
+        {
+            using var db = CreateInMemoryDbContext();
+            var services = CreateServiceProvider(db);
+
+            // User has dealers & distributors:view only
+            var token = GenerateJwtToken("dealerviewer@honeywell.com", "Manager", "[\"dealers & distributors:view\"]");
+
+            var viewAttr = new AuthorizeModuleAttribute(PermissionAction.View, "dealers & distributors", "distributors");
+            var addAttr = new AuthorizeModuleAttribute(PermissionAction.Add, "dealers & distributors", "distributors");
+            var editAttr = new AuthorizeModuleAttribute(PermissionAction.Edit, "dealers & distributors", "distributors");
+            var delAttr = new AuthorizeModuleAttribute(PermissionAction.Delete, "dealers & distributors", "distributors");
+
+            // GET /api/distributors/admin/all -> Allowed
+            var getCtx = CreateAuthContext(null, services, "GET", "/api/distributors/admin/all", bearerToken: token);
+            await viewAttr.OnAuthorizationAsync(getCtx);
+            Assert.Null(getCtx.Result);
+
+            // POST /api/distributors -> 403 Forbidden
+            var postCtx = CreateAuthContext(null, services, "POST", "/api/distributors", bearerToken: token);
+            await addAttr.OnAuthorizationAsync(postCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(postCtx.Result).StatusCode);
+
+            // PUT /api/distributors/1 -> 403 Forbidden
+            var putCtx = CreateAuthContext(null, services, "PUT", "/api/distributors/1", bearerToken: token);
+            await editAttr.OnAuthorizationAsync(putCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(putCtx.Result).StatusCode);
+
+            // DELETE /api/distributors/1 -> 403 Forbidden
+            var delCtx = CreateAuthContext(null, services, "DELETE", "/api/distributors/1", bearerToken: token);
+            await delAttr.OnAuthorizationAsync(delCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(delCtx.Result).StatusCode);
+        }
+
+        [Fact]
+        public async Task SuppliersAndProcurement_EnforcesActionLevelGranularity()
+        {
+            using var db = CreateInMemoryDbContext();
+            var services = CreateServiceProvider(db);
+
+            // User has suppliers:view only
+            var token = GenerateJwtToken("procurementviewer@honeywell.com", "Manager", "[\"suppliers:view\"]");
+
+            var viewAttr = new AuthorizeModuleAttribute(PermissionAction.View, "suppliers", "procurement");
+            var addAttr = new AuthorizeModuleAttribute(PermissionAction.Add, "suppliers", "procurement");
+            var editAttr = new AuthorizeModuleAttribute(PermissionAction.Edit, "suppliers", "procurement");
+
+            // GET /api/PurchaseIndent -> Allowed
+            var getCtx = CreateAuthContext(null, services, "GET", "/api/PurchaseIndent", bearerToken: token);
+            await viewAttr.OnAuthorizationAsync(getCtx);
+            Assert.Null(getCtx.Result);
+
+            // POST /api/PurchaseIndent -> 403 Forbidden
+            var postCtx = CreateAuthContext(null, services, "POST", "/api/PurchaseIndent", bearerToken: token);
+            await addAttr.OnAuthorizationAsync(postCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(postCtx.Result).StatusCode);
+
+            // PUT /api/PurchaseIndent/1/status -> 403 Forbidden
+            var putCtx = CreateAuthContext(null, services, "PUT", "/api/PurchaseIndent/1/status", bearerToken: token);
+            await editAttr.OnAuthorizationAsync(putCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(putCtx.Result).StatusCode);
+        }
+
+        [Fact]
+        public async Task MarketingCouponsAndBanners_EnforcesActionLevelGranularity()
+        {
+            using var db = CreateInMemoryDbContext();
+            var services = CreateServiceProvider(db);
+
+            // User has marketing:view only
+            var token = GenerateJwtToken("marketingviewer@honeywell.com", "Manager", "[\"marketing:view\"]");
+
+            var viewAttr = new AuthorizeModuleAttribute(PermissionAction.View, "coupons", "marketing");
+            var addAttr = new AuthorizeModuleAttribute(PermissionAction.Add, "coupons", "marketing");
+            var editAttr = new AuthorizeModuleAttribute(PermissionAction.Edit, "coupons", "marketing");
+            var delAttr = new AuthorizeModuleAttribute(PermissionAction.Delete, "coupons", "marketing");
+
+            // GET /api/coupons -> Allowed
+            var getCtx = CreateAuthContext(null, services, "GET", "/api/coupons", bearerToken: token);
+            await viewAttr.OnAuthorizationAsync(getCtx);
+            Assert.Null(getCtx.Result);
+
+            // POST /api/coupons -> 403 Forbidden
+            var postCtx = CreateAuthContext(null, services, "POST", "/api/coupons", bearerToken: token);
+            await addAttr.OnAuthorizationAsync(postCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(postCtx.Result).StatusCode);
+
+            // PUT /api/coupons/1 -> 403 Forbidden
+            var putCtx = CreateAuthContext(null, services, "PUT", "/api/coupons/1", bearerToken: token);
+            await editAttr.OnAuthorizationAsync(putCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(putCtx.Result).StatusCode);
+
+            // DELETE /api/coupons/1 -> 403 Forbidden
+            var delCtx = CreateAuthContext(null, services, "DELETE", "/api/coupons/1", bearerToken: token);
+            await delAttr.OnAuthorizationAsync(delCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(delCtx.Result).StatusCode);
+        }
+
+        [Fact]
+        public async Task SettingsAndSystemConfigs_EnforcesActionLevelGranularity()
+        {
+            using var db = CreateInMemoryDbContext();
+            var services = CreateServiceProvider(db);
+
+            // User has settings:view only
+            var token = GenerateJwtToken("settingsviewer@honeywell.com", "Manager", "[\"settings:view\"]");
+
+            var viewAttr = new AuthorizeModuleAttribute(PermissionAction.View, "settings");
+            var editAttr = new AuthorizeModuleAttribute(PermissionAction.Edit, "settings");
+
+            // GET /api/admin-profile -> Allowed
+            var getCtx = CreateAuthContext(null, services, "GET", "/api/admin-profile", bearerToken: token);
+            await viewAttr.OnAuthorizationAsync(getCtx);
+            Assert.Null(getCtx.Result);
+
+            // PUT /api/settings/contact-card -> 403 Forbidden
+            var putCtx = CreateAuthContext(null, services, "PUT", "/api/settings/contact-card", bearerToken: token);
+            await editAttr.OnAuthorizationAsync(putCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(putCtx.Result).StatusCode);
+        }
+
+        [Fact]
+        public async Task ReportsModule_EnforcesActionLevelGranularity()
+        {
+            using var db = CreateInMemoryDbContext();
+            var services = CreateServiceProvider(db);
+
+            // User has reports:view only
+            var token = GenerateJwtToken("reportsviewer@honeywell.com", "Manager", "[\"reports:view\"]");
+
+            var viewAttr = new AuthorizeModuleAttribute(PermissionAction.View, "reports");
+            var editAttr = new AuthorizeModuleAttribute(PermissionAction.Edit, "reports");
+            var delAttr = new AuthorizeModuleAttribute(PermissionAction.Delete, "reports");
+
+            // GET /api/reports/orders -> Allowed
+            var getCtx = CreateAuthContext(null, services, "GET", "/api/reports/orders", bearerToken: token);
+            await viewAttr.OnAuthorizationAsync(getCtx);
+            Assert.Null(getCtx.Result);
+
+            // PUT /api/reports/settings -> 403 Forbidden
+            var putCtx = CreateAuthContext(null, services, "PUT", "/api/reports/settings", bearerToken: token);
+            await editAttr.OnAuthorizationAsync(putCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(putCtx.Result).StatusCode);
+
+            // DELETE /api/reports/cache -> 403 Forbidden
+            var delCtx = CreateAuthContext(null, services, "DELETE", "/api/reports/cache", bearerToken: token);
+            await delAttr.OnAuthorizationAsync(delCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(delCtx.Result).StatusCode);
+        }
+
+        [Fact]
+        public async Task SupportAndTickets_EnforcesActionLevelGranularity()
+        {
+            using var db = CreateInMemoryDbContext();
+            var services = CreateServiceProvider(db);
+
+            // User has tickets:view only
+            var token = GenerateJwtToken("ticketsviewer@honeywell.com", "Manager", "[\"tickets:view\"]");
+
+            var viewAttr = new AuthorizeModuleAttribute(PermissionAction.View, "tickets", "support");
+            var editAttr = new AuthorizeModuleAttribute(PermissionAction.Edit, "tickets", "support");
+            var delAttr = new AuthorizeModuleAttribute(PermissionAction.Delete, "tickets", "support");
+
+            // GET /api/tickets -> Allowed
+            var getCtx = CreateAuthContext(null, services, "GET", "/api/tickets", bearerToken: token);
+            await viewAttr.OnAuthorizationAsync(getCtx);
+            Assert.Null(getCtx.Result);
+
+            // PUT /api/tickets/5 -> 403 Forbidden
+            var putCtx = CreateAuthContext(null, services, "PUT", "/api/tickets/5", bearerToken: token);
+            await editAttr.OnAuthorizationAsync(putCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(putCtx.Result).StatusCode);
+
+            // DELETE /api/tickets/5 -> 403 Forbidden
+            var delCtx = CreateAuthContext(null, services, "DELETE", "/api/tickets/5", bearerToken: token);
+            await delAttr.OnAuthorizationAsync(delCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(delCtx.Result).StatusCode);
+        }
+
+        [Fact]
+        public async Task Admin_HasUnrestrictedAccessAcrossAllModules()
+        {
+            using var db = CreateInMemoryDbContext();
+            var services = CreateServiceProvider(db);
+            var token = GenerateJwtToken("admin@honeywell.com", "Admin", "[]");
+
+            var modules = new[]
+            {
+                ("catalog", PermissionAction.Add),
+                ("dealers & distributors", PermissionAction.Delete),
+                ("suppliers", PermissionAction.Edit),
+                ("marketing", PermissionAction.Add),
+                ("settings", PermissionAction.Edit),
+                ("reports", PermissionAction.Delete),
+                ("tickets", PermissionAction.Edit),
+                ("customers", PermissionAction.Delete),
+                ("orders", PermissionAction.Edit)
+            };
+
+            foreach (var (mod, action) in modules)
+            {
+                var attr = new AuthorizeModuleAttribute(action, mod);
+                var ctx = CreateAuthContext(null, services, "POST", $"/api/{mod}", bearerToken: token);
+                await attr.OnAuthorizationAsync(ctx);
+                Assert.Null(ctx.Result); // Access granted to Admin unconditionally
+            }
+        }
     }
 }

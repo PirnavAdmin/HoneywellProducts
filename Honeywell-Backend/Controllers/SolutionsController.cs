@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -138,6 +139,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/solutions
+        [AuthorizeModule(PermissionAction.Add, "catalog", "settings")]
         [HttpPost]
         public async Task<ActionResult<Solution>> CreateSolution([FromBody] Solution solution)
         {
@@ -173,6 +175,7 @@ namespace Honeywell.Controllers
         }
 
         // POST: api/solutions/upload-image
+        [AuthorizeModule(PermissionAction.Add, "catalog", "settings")]
         [HttpPost("upload-image")]
         public async Task<IActionResult> UploadSolutionImage(IFormFile file)
         {
@@ -202,6 +205,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/solutions/{id}
+        [AuthorizeModule(PermissionAction.Edit, "catalog", "settings")]
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateSolution(string id, [FromBody] Solution updated)
         {
@@ -298,6 +302,7 @@ namespace Honeywell.Controllers
         }
 
         // DELETE: api/solutions/{id}
+        [AuthorizeModule(PermissionAction.Delete, "catalog", "settings")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSolution(string id)
         {

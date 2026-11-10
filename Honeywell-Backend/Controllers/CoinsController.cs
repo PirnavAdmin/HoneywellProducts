@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -46,6 +47,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT: api/Coins
+        [AuthorizeModule(PermissionAction.Edit, "coins converter", "settings")]
         [HttpPut]
         public async Task<IActionResult> UpdateSettings([FromBody] CoinsSettings updateData)
         {

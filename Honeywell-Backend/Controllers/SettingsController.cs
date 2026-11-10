@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -43,6 +44,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT/POST: api/Settings/contact-card
+        [AuthorizeModule(PermissionAction.Edit, "settings")]
         [HttpPut("contact-card")]
         [HttpPost("contact-card")]
         [HttpPut("contactcard")]
@@ -100,6 +102,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT/POST: api/Settings/footer
+        [AuthorizeModule(PermissionAction.Edit, "settings")]
         [HttpPut("footer")]
         [HttpPost("footer")]
         public async Task<IActionResult> UpdateFooterConfig([FromBody] object data)
@@ -151,6 +154,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT/POST: api/Settings/description-manager
+        [AuthorizeModule(PermissionAction.Edit, "settings")]
         [HttpPut("description-manager")]
         [HttpPost("description-manager")]
         [HttpPut("descriptionmanager")]
@@ -227,6 +231,7 @@ namespace Honeywell.Controllers
         }
 
         // PUT/POST: api/Settings/price-visibility
+        [AuthorizeModule(PermissionAction.Edit, "settings")]
         [HttpPut("price-visibility")]
         [HttpPost("price-visibility")]
         [HttpPut("pricevisibility")]

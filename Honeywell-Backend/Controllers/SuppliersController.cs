@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -20,12 +21,14 @@ namespace Honeywell.Controllers
         }
 
         [HttpGet]
+        [AuthorizeModule(PermissionAction.View, "suppliers", "procurement")]
         public async Task<ActionResult<IEnumerable<Supplier>>> GetAll()
         {
             return await _context.Suppliers.AsNoTracking().ToListAsync();
         }
 
         [HttpGet("{id}")]
+        [AuthorizeModule(PermissionAction.View, "suppliers", "procurement")]
         public async Task<ActionResult<Supplier>> GetById(int id)
         {
             var supplier = await _context.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);
@@ -37,6 +40,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPost]
+        [AuthorizeModule(PermissionAction.Add, "suppliers", "procurement")]
         public async Task<ActionResult<Supplier>> Create([FromBody] Supplier supplier)
         {
             if (string.IsNullOrEmpty(supplier.Name))
@@ -128,6 +132,7 @@ namespace Honeywell.Controllers
 
         // PUT: api/Suppliers/{id}/status
         [HttpPut("{id}/status")]
+        [AuthorizeModule(PermissionAction.Edit, "suppliers", "procurement")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] SupplierStatusUpdateRequest request)
         {
             if (string.IsNullOrEmpty(request.Status))
@@ -183,6 +188,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPut("{id}")]
+        [AuthorizeModule(PermissionAction.Edit, "suppliers", "procurement")]
         public async Task<IActionResult> Update(int id, [FromBody] Supplier updateData)
         {
             var supplier = await _context.Suppliers.FindAsync(id);
@@ -222,6 +228,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpDelete("{id}")]
+        [AuthorizeModule(PermissionAction.Delete, "suppliers", "procurement")]
         public async Task<IActionResult> Delete(int id)
         {
             var supplier = await _context.Suppliers.FindAsync(id);

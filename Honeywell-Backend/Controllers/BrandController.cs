@@ -10,6 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -106,6 +107,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPost]
+        [AuthorizeModule(PermissionAction.Add, "brands", "catalog")]
         [Consumes("multipart/form-data")]
         public async Task<ActionResult<Brand>> CreateBrand([FromForm] BrandUpsertDto request)
         {
@@ -141,6 +143,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPut("{id}")]
+        [AuthorizeModule(PermissionAction.Edit, "brands", "catalog")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UpdateBrand(int id, [FromForm] BrandUpsertDto request)
         {
@@ -172,6 +175,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpDelete("{id}")]
+        [AuthorizeModule(PermissionAction.Delete, "brands", "catalog")]
         public async Task<IActionResult> DeleteBrand(int id)
         {
             var brand = await _context.Brands.FindAsync(id);
