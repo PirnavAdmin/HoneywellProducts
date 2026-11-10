@@ -1,3 +1,4 @@
+using Honeywell.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,7 +19,7 @@ namespace Honeywell.Controllers
         private readonly ApplicationDbContext _context;
         private readonly IJwtService _jwtService;
 
-        private static readonly Dictionary<string, List<string>> RoleDefaultPermissions = new(StringComparer.OrdinalIgnoreCase)
+        public static readonly Dictionary<string, List<string>> RoleDefaultPermissions = new(StringComparer.OrdinalIgnoreCase)
         {
             ["admin"] = new List<string>
             {
@@ -91,16 +92,20 @@ namespace Honeywell.Controllers
                 s.Department = GetDefaultDepartmentForRole(s.Role);
             }
 
-            if (string.IsNullOrWhiteSpace(s.Status))
+            if (!s.IsActive)
             {
-                s.Status = s.IsActive ? "Active" : "Inactive";
+                s.Status = "Inactive";
             }
-            else
+            else if (!string.IsNullOrWhiteSpace(s.Status))
             {
                 s.IsActive = s.Status.Equals("Active", StringComparison.OrdinalIgnoreCase);
             }
+            else
+            {
+                s.Status = "Active";
+            }
 
-            if (s.Permissions == null || s.Permissions.Count == 0)
+            if (s.PermissionsJson == null)
             {
                 var roleKey = (s.Role ?? "staff").Trim().ToLowerInvariant();
                 s.Permissions = RoleDefaultPermissions.TryGetValue(roleKey, out var defaults)
@@ -236,6 +241,7 @@ namespace Honeywell.Controllers
         }
 
         // 1. GET /api/Staff
+        [AuthorizeModule("staff")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Staff>>> GetAll(
             [FromQuery] string? search = null,
@@ -284,6 +290,7 @@ namespace Honeywell.Controllers
         }
 
         // 2. GET /api/Staff/{id}
+        [AuthorizeModule("staff")]
         [HttpGet("{id}")]
         public async Task<ActionResult<Staff>> GetById(string id)
         {
@@ -314,6 +321,7 @@ namespace Honeywell.Controllers
         }
 
         // 3. POST /api/Staff
+        [AuthorizeModule("staff")]
         [HttpPost]
         public async Task<ActionResult<Staff>> Create([FromBody] Staff staff)
         {
@@ -395,6 +403,7 @@ namespace Honeywell.Controllers
         }
 
         // 4. PUT /api/Staff/{id}
+        [AuthorizeModule("staff")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] Staff updateData)
         {
@@ -452,7 +461,7 @@ namespace Honeywell.Controllers
                 staff.Status = staff.IsActive ? "Active" : "Inactive";
             }
 
-            if (updateData.Permissions != null && updateData.Permissions.Count > 0)
+            if (updateData.Permissions != null)
             {
                 staff.Permissions = updateData.Permissions;
             }
@@ -513,6 +522,7 @@ namespace Honeywell.Controllers
         }
 
         // 6. DELETE /api/Staff/{id}
+        [AuthorizeModule("staff")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -685,7 +695,8 @@ namespace Honeywell.Controllers
                 FullName = staff.Name,
                 EmployeeId = staff.EmployeeId,
                 MobileNumber = string.IsNullOrWhiteSpace(staff.MobileNumber) ? staff.Phone : staff.MobileNumber,
-                IsActive = staff.IsActive
+                IsActive = staff.IsActive,
+                PermissionsJson = staff.PermissionsJson
             };
             var jwtToken = _jwtService.GenerateToken(tokenUser);
 

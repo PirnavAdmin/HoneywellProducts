@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.DTOs.Catalog;
 using Honeywell.Models;
+using Honeywell.Helpers;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -452,6 +453,9 @@ namespace Honeywell.Controllers
 
             var specsJson = GetFormVal("Specifications", "specifications", "specs", "Specs");
             if (!string.IsNullOrWhiteSpace(specsJson)) dto.Specifications = specsJson;
+
+            var imagesJsonVal = GetFormVal("ImagesJson", "imagesJson", "images_json", "existingImages", "ExistingImages");
+            if (!string.IsNullOrWhiteSpace(imagesJsonVal)) dto.ImagesJson = imagesJsonVal;
         }
 
         // Helper: Parse raw JSON body to populate CreateProductDto fields regardless of property casing or naming variations
@@ -599,6 +603,9 @@ namespace Honeywell.Controllers
                 var specsDirect = GetStrVal("Specifications", "specifications", "specs");
                 if (!string.IsNullOrWhiteSpace(specsDirect)) dto.Specifications = specsDirect;
 
+                var imagesJsonDirect = GetStrVal("ImagesJson", "imagesJson", "images_json", "existingImages", "ExistingImages");
+                if (!string.IsNullOrWhiteSpace(imagesJsonDirect)) dto.ImagesJson = imagesJsonDirect;
+
                 foreach (var prop in root.EnumerateObject())
                 {
                     if (prop.Name.Equals("specifications", StringComparison.OrdinalIgnoreCase) || prop.Name.Equals("specs", StringComparison.OrdinalIgnoreCase))
@@ -658,37 +665,57 @@ namespace Honeywell.Controllers
             string? bodyText)
         {
             var productImages = new List<ProductImage>();
+            var seenImageUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".jfif", ".svg", ".bmp" };
 
             var imagesFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "images");
             Directory.CreateDirectory(imagesFolder);
 
-            // 1. Collect all uploaded IFormFiles
+            // 1. Collect all uploaded IFormFiles without duplicates (keyed by FileName + Length)
+            var seenFileKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var filesToProcess = new List<IFormFile>();
-            if (dtoImages != null && dtoImages.Count > 0)
+
+            if (dtoImages != null)
             {
-                filesToProcess.AddRange(dtoImages);
+                foreach (var file in dtoImages)
+                {
+                    if (file != null && file.Length > 0)
+                    {
+                        var key = $"{file.FileName}_{file.Length}";
+                        if (seenFileKeys.Add(key))
+                        {
+                            filesToProcess.Add(file);
+                        }
+                    }
+                }
             }
-            if (requestFiles != null && requestFiles.Count > 0)
+
+            if (requestFiles != null)
             {
                 foreach (var file in requestFiles)
                 {
-                    if (file.Length > 0 && !filesToProcess.Contains(file))
+                    if (file != null && file.Length > 0 &&
+                        (file.Name.Contains("image", StringComparison.OrdinalIgnoreCase) ||
+                         file.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)))
                     {
-                        filesToProcess.Add(file);
+                        var key = $"{file.FileName}_{file.Length}";
+                        if (seenFileKeys.Add(key))
+                        {
+                            filesToProcess.Add(file);
+                        }
                     }
                 }
             }
 
             foreach (var image in filesToProcess)
             {
-                var ext = Path.GetExtension(image.FileName).ToLower();
+                var ext = Path.GetExtension(image.FileName).ToLowerInvariant();
                 if (string.IsNullOrEmpty(ext) || !allowedExtensions.Contains(ext))
                 {
                     ext = ".png";
                 }
 
-                var fileName = Guid.NewGuid().ToString() + ext;
+                var fileName = Guid.NewGuid().ToString("N") + ext;
                 var filePath = Path.Combine(imagesFolder, fileName);
 
                 using (var stream = new FileStream(filePath, FileMode.Create))
@@ -696,32 +723,33 @@ namespace Honeywell.Controllers
                     await image.CopyToAsync(stream);
                 }
 
-                productImages.Add(new ProductImage { ImageUrl = "/uploads/images/" + fileName });
+                var relativeUrl = "/uploads/images/" + fileName;
+                if (seenImageUrls.Add(relativeUrl))
+                {
+                    productImages.Add(new ProductImage { ImageUrl = relativeUrl });
+                }
             }
 
-            // 2. Process text fields / JSON body for image URLs or Base64 data
-            var candidateStrings = new List<string>();
+            // 2. Process text fields / JSON body for image URLs or Base64 data (strictly deduplicated)
+            var candidateStrings = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             if (form != null)
             {
-                var keysToCheck = new[] { "imageUrl", "image", "images", "imageUrls", "ImagesJson", "img", "Image", "Images" };
-                foreach (var key in keysToCheck)
+                var targetKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
-                    if (form.TryGetValue(key, out var vals))
+                    "imagesjson", "existingimages", "images", "image", "imageurl", "imageurls", "img"
+                };
+
+                foreach (var fk in form.Keys)
+                {
+                    if (targetKeys.Contains(fk))
                     {
-                        foreach (var v in vals)
+                        foreach (var v in form[fk])
                         {
                             if (!string.IsNullOrWhiteSpace(v))
-                                candidateStrings.Add(v.ToString());
-                        }
-                    }
-                    foreach (var fk in form.Keys)
-                    {
-                        if (fk.Equals(key, StringComparison.OrdinalIgnoreCase))
-                        {
-                            var val = form[fk].ToString();
-                            if (!string.IsNullOrWhiteSpace(val))
-                                candidateStrings.Add(val);
+                            {
+                                candidateStrings.Add(v.Trim());
+                            }
                         }
                     }
                 }
@@ -734,24 +762,42 @@ namespace Honeywell.Controllers
                     using var doc = System.Text.Json.JsonDocument.Parse(bodyText);
                     var root = doc.RootElement;
 
-                    var propNames = new[] { "imageUrl", "image", "images", "imageUrls", "Images", "Image" };
-                    foreach (var prop in propNames)
+                    var propNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                     {
-                        if (root.TryGetProperty(prop, out var elem) || root.TryGetProperty(prop.ToLower(), out elem))
+                        "imagesjson", "existingimages", "images", "image", "imageurl", "imageurls", "img"
+                    };
+
+                    foreach (var prop in root.EnumerateObject())
+                    {
+                        if (propNames.Contains(prop.Name))
                         {
-                            if (elem.ValueKind == System.Text.Json.JsonValueKind.String)
+                            if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.String)
                             {
-                                var s = elem.GetString();
-                                if (!string.IsNullOrWhiteSpace(s)) candidateStrings.Add(s);
+                                var s = prop.Value.GetString();
+                                if (!string.IsNullOrWhiteSpace(s)) candidateStrings.Add(s.Trim());
                             }
-                            else if (elem.ValueKind == System.Text.Json.JsonValueKind.Array)
+                            else if (prop.Value.ValueKind == System.Text.Json.JsonValueKind.Array)
                             {
-                                foreach (var item in elem.EnumerateArray())
+                                foreach (var item in prop.Value.EnumerateArray())
                                 {
                                     if (item.ValueKind == System.Text.Json.JsonValueKind.String)
                                     {
                                         var s = item.GetString();
-                                        if (!string.IsNullOrWhiteSpace(s)) candidateStrings.Add(s);
+                                        if (!string.IsNullOrWhiteSpace(s)) candidateStrings.Add(s.Trim());
+                                    }
+                                    else if (item.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                    {
+                                        string? u = null;
+                                        if (item.TryGetProperty("imageUrl", out var p) ||
+                                            item.TryGetProperty("ImageUrl", out p) ||
+                                            item.TryGetProperty("url", out p) ||
+                                            item.TryGetProperty("Url", out p) ||
+                                            item.TryGetProperty("image", out p) ||
+                                            item.TryGetProperty("Image", out p))
+                                        {
+                                            u = p.GetString();
+                                        }
+                                        if (!string.IsNullOrWhiteSpace(u)) candidateStrings.Add(u.Trim());
                                     }
                                 }
                             }
@@ -770,12 +816,36 @@ namespace Honeywell.Controllers
                 {
                     try
                     {
-                        var parsedList = System.Text.Json.JsonSerializer.Deserialize<List<string>>(trimmed);
-                        if (parsedList != null)
+                        using var arrDoc = System.Text.Json.JsonDocument.Parse(trimmed);
+                        if (arrDoc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Array)
                         {
-                            foreach (var s in parsedList)
+                            foreach (var item in arrDoc.RootElement.EnumerateArray())
                             {
-                                await ProcessSingleImageString(s, productImages, imagesFolder);
+                                if (item.ValueKind == System.Text.Json.JsonValueKind.String)
+                                {
+                                    var s = item.GetString();
+                                    if (!string.IsNullOrWhiteSpace(s))
+                                    {
+                                        await ProcessSingleImageString(s.Trim(), productImages, seenImageUrls, imagesFolder);
+                                    }
+                                }
+                                else if (item.ValueKind == System.Text.Json.JsonValueKind.Object)
+                                {
+                                    string? u = null;
+                                    if (item.TryGetProperty("imageUrl", out var p) ||
+                                        item.TryGetProperty("ImageUrl", out p) ||
+                                        item.TryGetProperty("url", out p) ||
+                                        item.TryGetProperty("Url", out p) ||
+                                        item.TryGetProperty("image", out p) ||
+                                        item.TryGetProperty("Image", out p))
+                                    {
+                                        u = p.GetString();
+                                    }
+                                    if (!string.IsNullOrWhiteSpace(u))
+                                    {
+                                        await ProcessSingleImageString(u.Trim(), productImages, seenImageUrls, imagesFolder);
+                                    }
+                                }
                             }
                             continue;
                         }
@@ -783,13 +853,17 @@ namespace Honeywell.Controllers
                     catch { }
                 }
 
-                await ProcessSingleImageString(trimmed, productImages, imagesFolder);
+                await ProcessSingleImageString(trimmed, productImages, seenImageUrls, imagesFolder);
             }
 
             return productImages;
         }
 
-        private static async Task ProcessSingleImageString(string str, List<ProductImage> productImages, string imagesFolder)
+        private static async Task ProcessSingleImageString(
+            string str,
+            List<ProductImage> productImages,
+            HashSet<string> seenImageUrls,
+            string imagesFolder)
         {
             if (string.IsNullOrWhiteSpace(str)) return;
 
@@ -798,31 +872,39 @@ namespace Honeywell.Controllers
                 try
                 {
                     var parts = str.Split(";base64,");
-                    var mime = parts[0].Replace("data:image/", "").ToLower();
+                    var mime = parts[0].Replace("data:image/", "", StringComparison.OrdinalIgnoreCase).ToLowerInvariant();
                     var ext = mime.Contains("png") ? ".png" : (mime.Contains("jpeg") || mime.Contains("jpg") ? ".jpg" : (mime.Contains("webp") ? ".webp" : ".png"));
                     var bytes = Convert.FromBase64String(parts[1]);
 
-                    var fileName = Guid.NewGuid().ToString() + ext;
+                    var hash = Convert.ToHexString(System.Security.Cryptography.MD5.HashData(bytes)).ToLowerInvariant();
+                    var fileName = $"img_{hash}{ext}";
                     var filePath = Path.Combine(imagesFolder, fileName);
-                    await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+                    if (!System.IO.File.Exists(filePath))
+                    {
+                        await System.IO.File.WriteAllBytesAsync(filePath, bytes);
+                    }
 
-                    productImages.Add(new ProductImage { ImageUrl = "/uploads/images/" + fileName });
+                    var relativeUrl = "/uploads/images/" + fileName;
+                    if (seenImageUrls.Add(relativeUrl))
+                    {
+                        productImages.Add(new ProductImage { ImageUrl = relativeUrl });
+                    }
                     return;
                 }
                 catch { }
             }
 
-            if (str.StartsWith("/") || str.StartsWith("http://") || str.StartsWith("https://"))
+            if (str.StartsWith("/") || str.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || str.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
             {
-                if (!productImages.Any(pi => pi.ImageUrl.Equals(str, StringComparison.OrdinalIgnoreCase)))
+                if (seenImageUrls.Add(str))
                 {
                     productImages.Add(new ProductImage { ImageUrl = str });
                 }
             }
         }
-
         // POST: api/products
         [HttpPost]
+        [AuthorizeModule("catalog")]
         public async Task<IActionResult> CreateProduct([FromForm] CreateProductDto dto)
         {
             dto ??= new CreateProductDto();
@@ -1128,6 +1210,7 @@ namespace Honeywell.Controllers
 
         // PUT: api/products/{id}
         [HttpPut("{id}")]
+        [AuthorizeModule("catalog")]
         public async Task<IActionResult> UpdateProduct(int id, [FromForm] CreateProductDto dto)
         {
             var product = await _context.Products
@@ -1328,18 +1411,65 @@ namespace Honeywell.Controllers
                 product.Videos.Add(new ProductVideo { VideoUrl = "/uploads/videos/" + videoFileName });
             }
 
-            // Handle images update
+            // Handle images update with preservation of existing images
             var formCollUpdate = Request.HasFormContentType ? await Request.ReadFormAsync() : null;
             var requestFilesUpdate = Request.HasFormContentType ? Request.Form.Files : null;
-            var newImages = await ProcessIncomingImagesAsync(dto.Images, requestFilesUpdate, formCollUpdate, bodyText);
+            var incomingImages = await ProcessIncomingImagesAsync(dto.Images, requestFilesUpdate, formCollUpdate, bodyText);
 
-            // Replace images ONLY if new images were actually provided
-            if (newImages.Count > 0)
+            bool hasExplicitImageList = !string.IsNullOrWhiteSpace(dto.ImagesJson) ||
+                                       (dto.ExistingImages != null && dto.ExistingImages.Count > 0) ||
+                                       (formCollUpdate != null && (formCollUpdate.ContainsKey("ImagesJson") || formCollUpdate.ContainsKey("existingImages")));
+
+            bool hasNewlyUploadedFiles = (dto.Images != null && dto.Images.Count > 0) ||
+                                         (requestFilesUpdate != null && requestFilesUpdate.Any(f => f.Length > 0 &&
+                                             (f.Name.Contains("image", StringComparison.OrdinalIgnoreCase) || f.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))));
+
+            if (hasExplicitImageList)
             {
-                _context.ProductImages.RemoveRange(product.Images);
-                product.Images = newImages;
-            }
+                var seenUrls = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var finalImages = new List<ProductImage>();
 
+                foreach (var img in incomingImages)
+                {
+                    if (!string.IsNullOrWhiteSpace(img.ImageUrl) && seenUrls.Add(img.ImageUrl))
+                    {
+                        var existing = product.Images.FirstOrDefault(pi => pi.ImageUrl.Equals(img.ImageUrl, StringComparison.OrdinalIgnoreCase));
+                        if (existing != null)
+                        {
+                            finalImages.Add(existing);
+                        }
+                        else
+                        {
+                            finalImages.Add(new ProductImage { ImageUrl = img.ImageUrl });
+                        }
+                    }
+                }
+
+                if (finalImages.Count > 0)
+                {
+                    var toRemove = product.Images.Where(pi => !seenUrls.Contains(pi.ImageUrl)).ToList();
+                    _context.ProductImages.RemoveRange(toRemove);
+
+                    foreach (var img in finalImages)
+                    {
+                        if (!product.Images.Any(pi => pi.ImageUrl.Equals(img.ImageUrl, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            product.Images.Add(img);
+                        }
+                    }
+                }
+            }
+            else if (hasNewlyUploadedFiles && incomingImages.Count > 0)
+            {
+                foreach (var img in incomingImages)
+                {
+                    if (!string.IsNullOrWhiteSpace(img.ImageUrl) &&
+                        !product.Images.Any(pi => pi.ImageUrl.Equals(img.ImageUrl, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        product.Images.Add(new ProductImage { ImageUrl = img.ImageUrl });
+                    }
+                }
+            }
             await _context.SaveChangesAsync();
 
             var updatedProduct = await _context.Products
@@ -1494,6 +1624,7 @@ namespace Honeywell.Controllers
         // DELETE: api/products/{id} OR api/products/delete/{id}
         [HttpDelete("{id:int}")]
         [HttpDelete("delete/{id:int}")]
+        [AuthorizeModule("catalog")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
             return await ExecuteProductDelete(id);
@@ -1501,6 +1632,7 @@ namespace Honeywell.Controllers
 
         // DELETE: api/products?id=123
         [HttpDelete]
+        [AuthorizeModule("catalog")]
         public async Task<IActionResult> DeleteProductQuery([FromQuery] int? id)
         {
             if (!id.HasValue || id.Value <= 0)
@@ -1623,6 +1755,7 @@ namespace Honeywell.Controllers
 
         // PATCH: api/products/{id}/stock?stock=50
         [HttpPatch("{id}/stock")]
+        [AuthorizeModule("catalog", "inventory", "stockupdates")]
         public async Task<IActionResult> UpdateStock(int id, [FromQuery] int stock)
         {
             var product = await _context.Products.FirstOrDefaultAsync(x => x.Id == id);

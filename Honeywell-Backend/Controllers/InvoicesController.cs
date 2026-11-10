@@ -98,6 +98,12 @@ namespace Honeywell.Controllers
             return false;
         }
 
+        /// <summary>
+        /// Initiates a Cashfree Sandbox payment session for an invoice.
+        /// Accepts invoice string/numeric id in route and optional overrides in body.
+        /// </summary>
+        [HttpPost("{id}/pay")]
+        [HttpPost("{id}/initiate-payment")]
         public async Task<IActionResult> InitiatePayment(string id, [FromBody] CreateCashfreePaymentOrderRequest? request)
         {
             request ??= new CreateCashfreePaymentOrderRequest();

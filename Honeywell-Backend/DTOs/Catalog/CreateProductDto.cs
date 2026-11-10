@@ -53,5 +53,7 @@ namespace Honeywell.DTOs.Catalog
         public List<string>? Features { get; set; }
         public string? FeaturesJson { get; set; }
         public string? ReviewsJson { get; set; }
+        public string? ImagesJson { get; set; }
+        public List<string>? ExistingImages { get; set; }
     }
 }

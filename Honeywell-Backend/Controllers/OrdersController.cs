@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -129,6 +130,7 @@ namespace Honeywell.Controllers
 
         // GET: api/Orders?status=&search=&dateBooked=&startDate=&endDate=
         [HttpGet]
+        [AuthorizeModule("orders")]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? status, 
             [FromQuery] string? search,
@@ -495,6 +497,7 @@ namespace Honeywell.Controllers
 
         // POST: api/Orders/tracking/{id}
         [HttpPost("tracking/{id}")]
+        [AuthorizeModule("orders")]
         public async Task<IActionResult> PublishTrackingUpdate(int id, [FromBody] TrackingUpdateRequest request)
         {
             if (!IsAdminUser())
@@ -654,6 +657,7 @@ namespace Honeywell.Controllers
 
         // POST: api/Orders/shipping/{id}/pack
         [HttpPost("shipping/{id}/pack")]
+        [AuthorizeModule("orders")]
         public async Task<IActionResult> ConfirmPacked(int id)
         {
             if (!IsAdminUser())
@@ -741,6 +745,7 @@ namespace Honeywell.Controllers
 
         // POST: api/Orders/shipping/{id}/dispatch
         [HttpPost("shipping/{id}/dispatch")]
+        [AuthorizeModule("orders")]
         public async Task<IActionResult> ConfirmDispatched(int id)
         {
             if (!IsAdminUser())
@@ -1179,6 +1184,7 @@ namespace Honeywell.Controllers
 
         // PUT: api/Orders/5/status
         [HttpPut("{id}/status")]
+        [AuthorizeModule("orders")]
         public async Task<IActionResult> UpdateStatus(int id)
         {
             if (!IsAdminUser())
@@ -1218,6 +1224,7 @@ namespace Honeywell.Controllers
         // PUT: api/Orders/5/payment-status
         [HttpPut("{id}/payment-status")]
         [HttpPut("{id}/payment")]
+        [AuthorizeModule("orders")]
         public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] OrderPaymentStatusRequest request)
         {
             if (!IsAdminUser())

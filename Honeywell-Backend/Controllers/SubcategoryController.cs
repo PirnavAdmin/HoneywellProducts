@@ -8,6 +8,7 @@ using Microsoft.Extensions.Caching.Memory;
 using Honeywell.Data;
 using Honeywell.Models;
 using Honeywell.DTOs.Catalog;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
@@ -65,6 +66,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPost]
+        [AuthorizeModule("catalog")]
         public async Task<ActionResult<Subcategory>> CreateSubcategory([FromBody] SubcategoryUpsertRequest request)
         {
             if (string.IsNullOrEmpty(request.Name))
@@ -105,6 +107,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPut("{id}")]
+        [AuthorizeModule("catalog")]
         public async Task<IActionResult> UpdateSubcategory(int id, [FromBody] SubcategoryUpsertRequest request)
         {
             var subcategory = await _context.Subcategories.FindAsync(id);
@@ -144,6 +147,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpDelete("{id}")]
+        [AuthorizeModule("catalog")]
         public async Task<IActionResult> DeleteSubcategory(int id)
         {
             var subcategory = await _context.Subcategories.FindAsync(id);
