@@ -241,7 +241,7 @@ namespace Honeywell.Controllers
         }
 
         // 1. GET /api/Staff
-        [AuthorizeModule("staff")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Staff>>> GetAll(
             [FromQuery] string? search = null,
@@ -290,7 +290,7 @@ namespace Honeywell.Controllers
         }
 
         // 2. GET /api/Staff/{id}
-        [AuthorizeModule("staff")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         [HttpGet("{id}")]
         public async Task<ActionResult<Staff>> GetById(string id)
         {
@@ -321,7 +321,7 @@ namespace Honeywell.Controllers
         }
 
         // 3. POST /api/Staff
-        [AuthorizeModule("staff")]
+        [AuthorizeModule(PermissionAction.Add, "staff")]
         [HttpPost]
         public async Task<ActionResult<Staff>> Create([FromBody] Staff staff)
         {
@@ -403,7 +403,7 @@ namespace Honeywell.Controllers
         }
 
         // 4. PUT /api/Staff/{id}
-        [AuthorizeModule("staff")]
+        [AuthorizeModule(PermissionAction.Edit, "staff")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] Staff updateData)
         {
@@ -479,6 +479,7 @@ namespace Honeywell.Controllers
         [HttpPatch("{id}/status")]
         [HttpPut("{id}/status")]
         [HttpPost("{id}/status")]
+        [AuthorizeModule(PermissionAction.Edit, "staff")]
         public async Task<IActionResult> UpdateStatus(string id, [FromBody] StaffStatusPatchDto? dto)
         {
             var staff = await FindStaffAsync(id);
@@ -522,7 +523,7 @@ namespace Honeywell.Controllers
         }
 
         // 6. DELETE /api/Staff/{id}
-        [AuthorizeModule("staff")]
+        [AuthorizeModule(PermissionAction.Delete, "staff")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
@@ -540,6 +541,7 @@ namespace Honeywell.Controllers
 
         // 7. GET /api/Staff/stats
         [HttpGet("stats")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         public async Task<IActionResult> GetStats()
         {
             await EnsureStaffSchemaAsync();
@@ -576,6 +578,7 @@ namespace Honeywell.Controllers
 
         // 8. GET /api/Staff/roles
         [HttpGet("roles")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         public async Task<IActionResult> GetRoles()
         {
             var roles = await RolesStoreHelper.GetStoredRolesAsync(_context, RoleDefaultPermissions);
@@ -597,6 +600,7 @@ namespace Honeywell.Controllers
 
         // 9. GET /api/Staff/departments
         [HttpGet("departments")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         public IActionResult GetDepartments()
         {
             var departments = new[]
@@ -711,6 +715,7 @@ namespace Honeywell.Controllers
 
         // 1. GET /api/Permissions/modules (under Staff in Swagger)
         [HttpGet("/api/Permissions/modules")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         public async Task<IActionResult> GetPermissionModules()
         {
             var modules = await ModulesStoreHelper.GetStoredModulesAsync(_context);
@@ -718,6 +723,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPost("/api/Permissions/modules")]
+        [AuthorizeModule(PermissionAction.Add, "staff")]
         public async Task<IActionResult> CreatePermissionModule([FromBody] StaffModuleItem item)
         {
             if (item == null || string.IsNullOrWhiteSpace(item.ModuleName))
@@ -743,6 +749,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpDelete("/api/Permissions/modules/{id:int}")]
+        [AuthorizeModule(PermissionAction.Delete, "staff")]
         public async Task<IActionResult> DeletePermissionModule(int id)
         {
             var modules = await ModulesStoreHelper.GetStoredModulesAsync(_context);
@@ -757,6 +764,7 @@ namespace Honeywell.Controllers
 
         // 2. GET /api/Staff/{id}/permissions
         [HttpGet("{id}/permissions")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         public async Task<IActionResult> GetStaffPermissions(string id)
         {
             var staff = await FindStaffAsync(id);
@@ -795,6 +803,7 @@ namespace Honeywell.Controllers
 
         // 3. PUT /api/Staff/{id}/permissions
         [HttpPut("{id}/permissions")]
+        [AuthorizeModule(PermissionAction.Edit, "staff")]
         public async Task<IActionResult> UpdateStaffPermissions(string id, [FromBody] StaffPermissionsUpdateDto dto)
         {
             var staff = await FindStaffAsync(id);
@@ -828,113 +837,89 @@ namespace Honeywell.Controllers
         // 3b. POST /api/Staff/{id}/permissions
         [HttpPost("{id}/permissions")]
         [HttpPatch("{id}/permissions")]
+        [AuthorizeModule(PermissionAction.Edit, "staff")]
         public async Task<IActionResult> CreateStaffPermissions(string id, [FromBody] StaffPermissionsUpdateDto dto)
         {
             return await UpdateStaffPermissions(id, dto);
         }
 
         // 4. GET /api/Auth/me/permissions (under Staff in Swagger)
+        [AuthorizeModule]
         [HttpGet("/api/Auth/me/permissions")]
         public async Task<IActionResult> GetMyEffectivePermissions([FromQuery] string? email = null)
         {
             await EnsureStaffSchemaAsync();
-            string? resolvedEmail = email;
+            string? resolvedEmail = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                                 ?? User?.FindFirst("email")?.Value
+                                 ?? User?.Identity?.Name;
 
-            if (string.IsNullOrWhiteSpace(resolvedEmail) && User?.Identity?.IsAuthenticated == true)
+            if (string.IsNullOrWhiteSpace(resolvedEmail) && !string.IsNullOrWhiteSpace(email))
             {
-                resolvedEmail = User.Identity.Name
-                    ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-                    ?? User.FindFirst("email")?.Value;
-            }
-
-            if (string.IsNullOrWhiteSpace(resolvedEmail) && Request.Headers.TryGetValue("X-User-Email", out var headerEmail))
-            {
-                resolvedEmail = headerEmail.ToString();
-            }
-
-            if (string.IsNullOrWhiteSpace(resolvedEmail) && Request.Headers.TryGetValue("Authorization", out var authHeader))
-            {
-                var raw = authHeader.ToString();
-                if (raw.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+                // Only allow query param if caller is legitimate SuperAdmin/Admin
+                var userRole = User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                            ?? User?.FindFirst("role")?.Value;
+                if (!string.IsNullOrWhiteSpace(userRole) &&
+                    (userRole.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                     userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                     userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase)))
                 {
-                    var tokenPart = raw.Substring("Bearer ".Length).Trim();
-                    var segments = tokenPart.Split('.');
-                    if (segments.Length >= 2)
-                    {
-                        try
-                        {
-                            var payloadSegment = segments[1].Replace('-', '+').Replace('_', '/');
-                            switch (payloadSegment.Length % 4)
-                            {
-                                case 2: payloadSegment += "=="; break;
-                                case 3: payloadSegment += "="; break;
-                            }
-                            var jsonBytes = Convert.FromBase64String(payloadSegment);
-                            using var doc = JsonDocument.Parse(jsonBytes);
-                            var root = doc.RootElement;
-                            if (root.TryGetProperty("email", out var em))
-                                resolvedEmail = em.GetString();
-                            else if (root.TryGetProperty("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name", out var cn))
-                                resolvedEmail = cn.GetString();
-                            else if (root.TryGetProperty("unique_name", out var un))
-                                resolvedEmail = un.GetString();
-                        }
-                        catch { }
-                    }
+                    resolvedEmail = email;
                 }
+            }
+
+            if (string.IsNullOrWhiteSpace(resolvedEmail))
+            {
+                return Unauthorized(new { success = false, message = "Authentication required." });
             }
 
             var allModules = await ModulesStoreHelper.GetStoredModulesAsync(_context);
             var allRoles = await RolesStoreHelper.GetStoredRolesAsync(_context);
-            var cleanIdentifier = (resolvedEmail ?? "").Trim().ToLowerInvariant();
+            var cleanIdentifier = resolvedEmail.Trim().ToLowerInvariant();
 
-            if (!string.IsNullOrWhiteSpace(cleanIdentifier))
+            var staff = await _context.Staff.FirstOrDefaultAsync(s =>
+                s.Email.ToLower() == cleanIdentifier ||
+                s.EmployeeId.ToLower() == cleanIdentifier);
+
+            if (staff != null)
             {
-                var staff = await _context.Staff.FirstOrDefaultAsync(s =>
-                    s.Email.ToLower() == cleanIdentifier ||
-                    s.EmployeeId.ToLower() == cleanIdentifier);
-
-                if (staff != null)
+                NormalizeStaffEntity(staff);
+                var allowedSet = new HashSet<string>(staff.Permissions, StringComparer.OrdinalIgnoreCase);
+                return Ok(new
                 {
-                    NormalizeStaffEntity(staff);
-                    var allowedSet = new HashSet<string>(staff.Permissions, StringComparer.OrdinalIgnoreCase);
-                    return Ok(new
+                    success = true,
+                    staffId = staff.Id,
+                    employeeId = staff.EmployeeId,
+                    name = staff.Name,
+                    email = staff.Email,
+                    role = staff.Role,
+                    isActive = staff.IsActive,
+                    permissions = staff.Permissions,
+                    modulePermissions = allModules.Select(m => new
                     {
-                        success = true,
-                        staffId = staff.Id,
-                        employeeId = staff.EmployeeId,
-                        name = staff.Name,
-                        email = staff.Email,
-                        role = staff.Role,
-                        isActive = staff.IsActive,
-                        permissions = staff.Permissions,
-                        modulePermissions = allModules.Select(m => new
-                        {
-                            moduleId = m.Id,
-                            moduleName = m.ModuleName,
-                            isAllowed = allowedSet.Contains(m.ModuleName),
-                            canView = allowedSet.Contains(m.ModuleName),
-                            canAdd = allowedSet.Contains(m.ModuleName),
-                            canEdit = allowedSet.Contains(m.ModuleName),
-                            canDelete = allowedSet.Contains(m.ModuleName)
-                        }).ToList()
-                    });
-                }
+                        moduleId = m.Id,
+                        moduleName = m.ModuleName,
+                        isAllowed = allowedSet.Contains(m.ModuleName),
+                        canView = allowedSet.Contains(m.ModuleName),
+                        canAdd = allowedSet.Contains(m.ModuleName),
+                        canEdit = allowedSet.Contains(m.ModuleName),
+                        canDelete = allowedSet.Contains(m.ModuleName)
+                    }).ToList()
+                });
             }
 
-            var adminUser = !string.IsNullOrWhiteSpace(cleanIdentifier)
-                ? await _context.Users.FirstOrDefaultAsync(u =>
-                    u.Email.ToLower() == cleanIdentifier ||
-                    (u.EmployeeId != null && u.EmployeeId.ToLower() == cleanIdentifier))
-                : null;
+            var adminUser = await _context.Users.FirstOrDefaultAsync(u =>
+                u.Email.ToLower() == cleanIdentifier ||
+                (u.EmployeeId != null && u.EmployeeId.ToLower() == cleanIdentifier));
 
-            adminUser ??= await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == "bhargavakurapati49@gmail.com")
-                          ?? await _context.Users.FirstOrDefaultAsync();
+            if (adminUser == null)
+            {
+                return NotFound(new { success = false, message = $"User '{cleanIdentifier}' not found." });
+            }
 
-            var roleName = adminUser?.Role ?? "SuperAdmin";
+            var roleName = adminUser.Role ?? "SuperAdmin";
             List<string>? effectivePerms = null;
 
-            if (adminUser != null && !string.IsNullOrWhiteSpace(adminUser.PermissionsJson))
+            if (!string.IsNullOrWhiteSpace(adminUser.PermissionsJson))
             {
                 effectivePerms = PermissionsPayloadParser.ParsePermissionsJson(adminUser.PermissionsJson);
             }
@@ -942,7 +927,8 @@ namespace Honeywell.Controllers
             if (effectivePerms == null || effectivePerms.Count == 0)
             {
                 if (roleName.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
-                    roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                    roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                    roleName.Equals("Administrator", StringComparison.OrdinalIgnoreCase))
                 {
                     effectivePerms = allModules.Select(m => m.ModuleName).ToList();
                 }
@@ -958,11 +944,11 @@ namespace Honeywell.Controllers
             return Ok(new
             {
                 success = true,
-                employeeId = string.IsNullOrWhiteSpace(adminUser?.EmployeeId) ? "EMP-0001" : adminUser!.EmployeeId,
-                name = adminUser?.FullName ?? adminUser?.Email?.Split('@')[0] ?? "Admin",
-                email = adminUser?.Email ?? "bhargavakurapati49@gmail.com",
+                employeeId = string.IsNullOrWhiteSpace(adminUser.EmployeeId) ? "EMP-0001" : adminUser.EmployeeId,
+                name = adminUser.FullName ?? adminUser.Email?.Split('@')[0] ?? "Admin",
+                email = adminUser.Email,
                 role = roleName,
-                isActive = adminUser?.IsActive ?? true,
+                isActive = adminUser.IsActive,
                 permissions = effectivePerms,
                 modulePermissions = allModules.Select(m => new
                 {
@@ -979,6 +965,7 @@ namespace Honeywell.Controllers
 
         // GET /api/Roles (under Staff in Swagger)
         [HttpGet("/api/Roles")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         public async Task<IActionResult> GetAllRolesRoot()
         {
             return await GetRoles();
@@ -986,6 +973,7 @@ namespace Honeywell.Controllers
 
         // GET /api/Roles/{id} (under Staff in Swagger)
         [HttpGet("/api/Roles/{id}")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         public async Task<IActionResult> GetRoleByIdRoot(string id)
         {
             var roles = await RolesStoreHelper.GetStoredRolesAsync(_context);
@@ -997,6 +985,7 @@ namespace Honeywell.Controllers
 
         // 5. GET /api/Roles/{id}/permissions (under Staff in Swagger)
         [HttpGet("/api/Roles/{id}/permissions")]
+        [AuthorizeModule(PermissionAction.View, "staff")]
         public async Task<IActionResult> GetRolePermissions(string id)
         {
             var roles = await RolesStoreHelper.GetStoredRolesAsync(_context);
@@ -1028,6 +1017,7 @@ namespace Honeywell.Controllers
 
         // 6. PUT /api/Roles/{id}/permissions (under Staff in Swagger)
         [HttpPut("/api/Roles/{id}/permissions")]
+        [AuthorizeModule(PermissionAction.Edit, "staff")]
         public async Task<IActionResult> UpdateRolePermissions(string id, [FromBody] StaffPermissionsUpdateDto dto)
         {
             var roles = await RolesStoreHelper.GetStoredRolesAsync(_context);
@@ -1055,6 +1045,7 @@ namespace Honeywell.Controllers
         // 6b. POST /api/Roles/{id}/permissions (under Staff in Swagger)
         [HttpPost("/api/Roles/{id}/permissions")]
         [HttpPatch("/api/Roles/{id}/permissions")]
+        [AuthorizeModule(PermissionAction.Edit, "staff")]
         public async Task<IActionResult> CreateRolePermissions(string id, [FromBody] StaffPermissionsUpdateDto dto)
         {
             return await UpdateRolePermissions(id, dto);
@@ -1062,6 +1053,7 @@ namespace Honeywell.Controllers
 
         // 7. POST /api/Roles (under Staff in Swagger)
         [HttpPost("/api/Roles")]
+        [AuthorizeModule(PermissionAction.Add, "staff")]
         public async Task<IActionResult> CreateRole([FromBody] CreateOrUpdateRoleDto dto)
         {
             if (dto == null || string.IsNullOrWhiteSpace(dto.Name))
@@ -1097,6 +1089,7 @@ namespace Honeywell.Controllers
 
         // 8. PUT /api/Roles/{id} (under Staff in Swagger)
         [HttpPut("/api/Roles/{id}")]
+        [AuthorizeModule(PermissionAction.Edit, "staff")]
         public async Task<IActionResult> UpdateRole(string id, [FromBody] CreateOrUpdateRoleDto dto)
         {
             if (dto == null)
@@ -1134,6 +1127,7 @@ namespace Honeywell.Controllers
 
         // 9. DELETE /api/Roles/{id} (under Staff in Swagger)
         [HttpDelete("/api/Roles/{id}")]
+        [AuthorizeModule(PermissionAction.Delete, "staff")]
         public async Task<IActionResult> DeleteRole(string id)
         {
             var roles = await RolesStoreHelper.GetStoredRolesAsync(_context);

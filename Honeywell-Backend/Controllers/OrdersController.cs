@@ -130,7 +130,7 @@ namespace Honeywell.Controllers
 
         // GET: api/Orders?status=&search=&dateBooked=&startDate=&endDate=
         [HttpGet]
-        [AuthorizeModule("orders")]
+        [AuthorizeModule(PermissionAction.View, "orders")]
         public async Task<IActionResult> GetAll(
             [FromQuery] string? status, 
             [FromQuery] string? search,
@@ -497,7 +497,7 @@ namespace Honeywell.Controllers
 
         // POST: api/Orders/tracking/{id}
         [HttpPost("tracking/{id}")]
-        [AuthorizeModule("orders")]
+        [AuthorizeModule(PermissionAction.Edit, "orders")]
         public async Task<IActionResult> PublishTrackingUpdate(int id, [FromBody] TrackingUpdateRequest request)
         {
             if (!IsAdminUser())
@@ -657,7 +657,7 @@ namespace Honeywell.Controllers
 
         // POST: api/Orders/shipping/{id}/pack
         [HttpPost("shipping/{id}/pack")]
-        [AuthorizeModule("orders")]
+        [AuthorizeModule(PermissionAction.Edit, "orders")]
         public async Task<IActionResult> ConfirmPacked(int id)
         {
             if (!IsAdminUser())
@@ -745,7 +745,7 @@ namespace Honeywell.Controllers
 
         // POST: api/Orders/shipping/{id}/dispatch
         [HttpPost("shipping/{id}/dispatch")]
-        [AuthorizeModule("orders")]
+        [AuthorizeModule(PermissionAction.Edit, "orders")]
         public async Task<IActionResult> ConfirmDispatched(int id)
         {
             if (!IsAdminUser())
@@ -1184,7 +1184,7 @@ namespace Honeywell.Controllers
 
         // PUT: api/Orders/5/status
         [HttpPut("{id}/status")]
-        [AuthorizeModule("orders")]
+        [AuthorizeModule(PermissionAction.Edit, "orders")]
         public async Task<IActionResult> UpdateStatus(int id)
         {
             if (!IsAdminUser())
@@ -1224,7 +1224,7 @@ namespace Honeywell.Controllers
         // PUT: api/Orders/5/payment-status
         [HttpPut("{id}/payment-status")]
         [HttpPut("{id}/payment")]
-        [AuthorizeModule("orders")]
+        [AuthorizeModule(PermissionAction.Edit, "orders")]
         public async Task<IActionResult> UpdatePaymentStatus(int id, [FromBody] OrderPaymentStatusRequest request)
         {
             if (!IsAdminUser())
@@ -1254,6 +1254,7 @@ namespace Honeywell.Controllers
 
         // DELETE: api/Orders/5  (cancel order & restore stock)
         [HttpDelete("{id}")]
+        [AuthorizeModule(PermissionAction.Delete, "orders")]
         public async Task<IActionResult> CancelOrder(int id)
         {
             if (!IsAdminUser())

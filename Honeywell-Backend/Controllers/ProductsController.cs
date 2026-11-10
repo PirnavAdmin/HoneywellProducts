@@ -904,7 +904,7 @@ namespace Honeywell.Controllers
         }
         // POST: api/products
         [HttpPost]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Add, "catalog")]
         public async Task<IActionResult> CreateProduct([FromForm] CreateProductDto dto)
         {
             dto ??= new CreateProductDto();
@@ -1210,7 +1210,7 @@ namespace Honeywell.Controllers
 
         // PUT: api/products/{id}
         [HttpPut("{id}")]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Edit, "catalog")]
         public async Task<IActionResult> UpdateProduct(int id, [FromForm] CreateProductDto dto)
         {
             var product = await _context.Products
@@ -1624,7 +1624,7 @@ namespace Honeywell.Controllers
         // DELETE: api/products/{id} OR api/products/delete/{id}
         [HttpDelete("{id:int}")]
         [HttpDelete("delete/{id:int}")]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog")]
         public async Task<IActionResult> DeleteProduct(int id)
         {
             return await ExecuteProductDelete(id);
@@ -1632,7 +1632,7 @@ namespace Honeywell.Controllers
 
         // DELETE: api/products?id=123
         [HttpDelete]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog")]
         public async Task<IActionResult> DeleteProductQuery([FromQuery] int? id)
         {
             if (!id.HasValue || id.Value <= 0)
@@ -1644,6 +1644,7 @@ namespace Honeywell.Controllers
 
         // POST: api/products/delete/{id}
         [HttpPost("delete/{id:int}")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog")]
         public async Task<IActionResult> PostDeleteProduct(int id)
         {
             return await ExecuteProductDelete(id);
@@ -1651,6 +1652,7 @@ namespace Honeywell.Controllers
 
         // POST: api/products/delete?id=123
         [HttpPost("delete")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog")]
         public async Task<IActionResult> PostDeleteProductBody([FromQuery] int? id)
         {
             int targetId = id ?? 0;
@@ -1755,7 +1757,7 @@ namespace Honeywell.Controllers
 
         // PATCH: api/products/{id}/stock?stock=50
         [HttpPatch("{id}/stock")]
-        [AuthorizeModule("catalog", "inventory", "stockupdates")]
+        [AuthorizeModule(PermissionAction.Edit, "catalog", "inventory", "stockupdates")]
         public async Task<IActionResult> UpdateStock(int id, [FromQuery] int stock)
         {
             var product = await _context.Products.FirstOrDefaultAsync(x => x.Id == id);

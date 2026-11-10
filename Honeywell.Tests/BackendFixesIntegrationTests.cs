@@ -191,10 +191,8 @@ namespace Honeywell.Tests
             var attr = new AuthorizeModuleAttribute("catalog");
 
             // 1. Unauthenticated request -> 401
-            var unauthContext = CreateActionExecutingContext(new ClaimsPrincipal(), serviceProvider);
-            bool unauthNextCalled = false;
-            await attr.OnActionExecutionAsync(unauthContext, () => { unauthNextCalled = true; return Task.FromResult<ActionExecutedContext>(null!); });
-            Assert.False(unauthNextCalled);
+            var unauthContext = CreateAuthorizationFilterContext(new ClaimsPrincipal(), serviceProvider);
+            await attr.OnAuthorizationAsync(unauthContext);
             Assert.IsType<ObjectResult>(unauthContext.Result);
             Assert.Equal(401, ((ObjectResult)unauthContext.Result!).StatusCode);
 
@@ -206,14 +204,12 @@ namespace Honeywell.Tests
                 new Claim("permissions", "[\"dashboard\"]")
             };
             var staffWithoutPermPrincipal = new ClaimsPrincipal(new ClaimsIdentity(staffWithoutPermClaims, "Bearer"));
-            var forbiddenContext = CreateActionExecutingContext(staffWithoutPermPrincipal, serviceProvider);
-            bool forbiddenNextCalled = false;
-            await attr.OnActionExecutionAsync(forbiddenContext, () => { forbiddenNextCalled = true; return Task.FromResult<ActionExecutedContext>(null!); });
-            Assert.False(forbiddenNextCalled);
+            var forbiddenContext = CreateAuthorizationFilterContext(staffWithoutPermPrincipal, serviceProvider);
+            await attr.OnAuthorizationAsync(forbiddenContext);
             Assert.IsType<ObjectResult>(forbiddenContext.Result);
             Assert.Equal(403, ((ObjectResult)forbiddenContext.Result!).StatusCode);
 
-            // 3. Staff with "catalog" permission -> Allowed (next() called)
+            // 3. Staff with "catalog" permission -> Allowed (Result is null)
             var staffWithPermClaims = new[]
             {
                 new Claim(ClaimTypes.Role, "Staff"),
@@ -221,10 +217,8 @@ namespace Honeywell.Tests
                 new Claim("permissions", "[\"catalog\", \"dashboard\"]")
             };
             var staffWithPermPrincipal = new ClaimsPrincipal(new ClaimsIdentity(staffWithPermClaims, "Bearer"));
-            var allowedStaffContext = CreateActionExecutingContext(staffWithPermPrincipal, serviceProvider);
-            bool allowedStaffNextCalled = false;
-            await attr.OnActionExecutionAsync(allowedStaffContext, () => { allowedStaffNextCalled = true; return Task.FromResult<ActionExecutedContext>(null!); });
-            Assert.True(allowedStaffNextCalled);
+            var allowedStaffContext = CreateAuthorizationFilterContext(staffWithPermPrincipal, serviceProvider);
+            await attr.OnAuthorizationAsync(allowedStaffContext);
             Assert.Null(allowedStaffContext.Result);
 
             // 4. Admin -> Allowed full access
@@ -234,22 +228,22 @@ namespace Honeywell.Tests
                 new Claim(ClaimTypes.Email, "admin@honeywell.com")
             };
             var adminPrincipal = new ClaimsPrincipal(new ClaimsIdentity(adminClaims, "Bearer"));
-            var adminContext = CreateActionExecutingContext(adminPrincipal, serviceProvider);
-            bool adminNextCalled = false;
-            await attr.OnActionExecutionAsync(adminContext, () => { adminNextCalled = true; return Task.FromResult<ActionExecutedContext>(null!); });
-            Assert.True(adminNextCalled);
+            var adminContext = CreateAuthorizationFilterContext(adminPrincipal, serviceProvider);
+            await attr.OnAuthorizationAsync(adminContext);
             Assert.Null(adminContext.Result);
         }
 
-        private ActionExecutingContext CreateActionExecutingContext(ClaimsPrincipal user, IServiceProvider services)
+        private AuthorizationFilterContext CreateAuthorizationFilterContext(ClaimsPrincipal user, IServiceProvider services, string method = "GET", string path = "/api/products")
         {
             var httpContext = new DefaultHttpContext
             {
                 User = user,
                 RequestServices = services
             };
+            httpContext.Request.Method = method;
+            httpContext.Request.Path = path;
             var actionContext = new ActionContext(httpContext, new RouteData(), new ActionDescriptor());
-            return new ActionExecutingContext(actionContext, new List<IFilterMetadata>(), new Dictionary<string, object?>(), null!);
+            return new AuthorizationFilterContext(actionContext, new List<IFilterMetadata>());
         }
     }
 }

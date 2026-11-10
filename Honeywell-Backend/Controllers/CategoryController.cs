@@ -283,7 +283,7 @@ namespace Honeywell.Controllers
 
         // POST: api/Category/upload-image
         [HttpPost("upload-image")]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Add, "catalog")]
         [Consumes("multipart/form-data")]
         public async Task<IActionResult> UploadImage([FromForm] CategoryUploadImageRequest dto)
         {
@@ -306,7 +306,7 @@ namespace Honeywell.Controllers
 
         // POST: api/Category
         [HttpPost]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Add, "catalog")]
         public async Task<ActionResult<Category>> CreateOrUpdateCategoryPost()
         {
             var request = await GetCategoryRequestAsync();
@@ -352,7 +352,7 @@ namespace Honeywell.Controllers
         // PUT: api/Category/{id} or POST: api/Category/{id}
         [HttpPut("{id:int}")]
         [HttpPost("{id:int}")]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Edit, "catalog")]
         public async Task<IActionResult> UpdateCategory(int id)
         {
             var request = await GetCategoryRequestAsync();
@@ -395,7 +395,7 @@ namespace Honeywell.Controllers
 
         // DELETE: api/Category/{id}
         [HttpDelete("{id:int}")]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog")]
         public async Task<IActionResult> DeleteCategory(int id)
         {
             var category = await _context.Categories.FindAsync(id);

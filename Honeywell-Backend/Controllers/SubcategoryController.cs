@@ -66,7 +66,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPost]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Add, "catalog")]
         public async Task<ActionResult<Subcategory>> CreateSubcategory([FromBody] SubcategoryUpsertRequest request)
         {
             if (string.IsNullOrEmpty(request.Name))
@@ -107,7 +107,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpPut("{id}")]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Edit, "catalog")]
         public async Task<IActionResult> UpdateSubcategory(int id, [FromBody] SubcategoryUpsertRequest request)
         {
             var subcategory = await _context.Subcategories.FindAsync(id);
@@ -147,7 +147,7 @@ namespace Honeywell.Controllers
         }
 
         [HttpDelete("{id}")]
-        [AuthorizeModule("catalog")]
+        [AuthorizeModule(PermissionAction.Delete, "catalog")]
         public async Task<IActionResult> DeleteSubcategory(int id)
         {
             var subcategory = await _context.Subcategories.FindAsync(id);
