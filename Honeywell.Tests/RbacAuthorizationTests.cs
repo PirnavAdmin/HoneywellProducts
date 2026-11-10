@@ -690,5 +690,183 @@ namespace Honeywell.Tests
                 Assert.Null(ctx.Result); // Access granted to Admin unconditionally
             }
         }
+
+        [Fact]
+        public async Task EnquiryAndContactAndBulkQuote_EnforcesActionLevelGranularity()
+        {
+            using var db = CreateInMemoryDbContext();
+            var services = CreateServiceProvider(db);
+
+            var editAttr = new AuthorizeModuleAttribute(PermissionAction.Edit, "enquiries", "tickets");
+            var delAttr = new AuthorizeModuleAttribute(PermissionAction.Delete, "enquiries", "tickets");
+
+            // 1. Anonymous -> 401
+            var anonPutCtx = CreateAuthContext(null, services, "PUT", "/api/Enquiry/product-enquiries/1");
+            await editAttr.OnAuthorizationAsync(anonPutCtx);
+            Assert.Equal(401, Assert.IsType<ObjectResult>(anonPutCtx.Result).StatusCode);
+
+            var anonDelCtx = CreateAuthContext(null, services, "DELETE", "/api/Enquiry/contact-us/1");
+            await delAttr.OnAuthorizationAsync(anonDelCtx);
+            Assert.Equal(401, Assert.IsType<ObjectResult>(anonDelCtx.Result).StatusCode);
+
+            // 2. Manager with enquiries:view only -> 403 on PUT & DELETE
+            var viewOnlyToken = GenerateJwtToken("viewer@honeywell.com", "Manager", "[\"enquiries:view\"]");
+
+            var viewPutCtx = CreateAuthContext(null, services, "PUT", "/api/Enquiry/product-enquiries/1", bearerToken: viewOnlyToken);
+            await editAttr.OnAuthorizationAsync(viewPutCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(viewPutCtx.Result).StatusCode);
+
+            var viewDelCtx = CreateAuthContext(null, services, "DELETE", "/api/Enquiry/bulk-quotes/1", bearerToken: viewOnlyToken);
+            await delAttr.OnAuthorizationAsync(viewDelCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(viewDelCtx.Result).StatusCode);
+
+            // 3. Manager with enquiries:edit -> PUT allowed, DELETE 403
+            var editToken = GenerateJwtToken("editor@honeywell.com", "Manager", "[\"enquiries:edit\"]");
+
+            var editAllowedCtx = CreateAuthContext(null, services, "PUT", "/api/Enquiry/product-enquiries/1", bearerToken: editToken);
+            await editAttr.OnAuthorizationAsync(editAllowedCtx);
+            Assert.Null(editAllowedCtx.Result);
+
+            var editDelBlockedCtx = CreateAuthContext(null, services, "DELETE", "/api/Enquiry/product-enquiries/1", bearerToken: editToken);
+            await delAttr.OnAuthorizationAsync(editDelBlockedCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(editDelBlockedCtx.Result).StatusCode);
+
+            // 4. Manager with enquiries:delete -> DELETE allowed, PUT 403
+            var delToken = GenerateJwtToken("deleter@honeywell.com", "Manager", "[\"enquiries:delete\"]");
+
+            var delAllowedCtx = CreateAuthContext(null, services, "DELETE", "/api/Enquiry/contact-us/1", bearerToken: delToken);
+            await delAttr.OnAuthorizationAsync(delAllowedCtx);
+            Assert.Null(delAllowedCtx.Result);
+
+            var delPutBlockedCtx = CreateAuthContext(null, services, "PUT", "/api/Enquiry/contact-us/1", bearerToken: delToken);
+            await editAttr.OnAuthorizationAsync(delPutBlockedCtx);
+            Assert.Equal(403, Assert.IsType<ObjectResult>(delPutBlockedCtx.Result).StatusCode);
+
+            // 5. Admin -> unrestricted access to both
+            var adminToken = GenerateJwtToken("admin@honeywell.com", "Admin", "[]");
+
+            var adminPutCtx = CreateAuthContext(null, services, "PUT", "/api/Enquiry/bulk-quotes/1", bearerToken: adminToken);
+            await editAttr.OnAuthorizationAsync(adminPutCtx);
+            Assert.Null(adminPutCtx.Result);
+
+            var adminDelCtx = CreateAuthContext(null, services, "DELETE", "/api/Enquiry/bulk-quotes/1", bearerToken: adminToken);
+            await delAttr.OnAuthorizationAsync(adminDelCtx);
+            Assert.Null(adminDelCtx.Result);
+        }
+
+        [Fact]
+        public async Task EnquiryController_MutationEndpoints_UpdateAndDeleteSuccessfully()
+        {
+            using var db = CreateInMemoryDbContext();
+
+            // Seed test items
+            var enquiry = new ProductEnquiry
+            {
+                Id = 1,
+                Product = "Honeywell Thermostat",
+                Name = "John Doe",
+                MobileNumber = "9876543210",
+                Email = "john@example.com",
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow
+            };
+            var contact = new ContactUsRequest
+            {
+                Id = 1,
+                Name = "Jane Smith",
+                Email = "jane@example.com",
+                Mobile = "9876543211",
+                Message = "Help with order",
+                EnquiryType = "Support",
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow
+            };
+            var quote = new BulkQuoteRequest
+            {
+                Id = 1,
+                Name = "Acme Corp",
+                CompanyName = "Acme",
+                Email = "buyer@acme.com",
+                Mobile = "9876543212",
+                Product = "Honeywell Sensors",
+                Quantity = 100,
+                Requirement = "Bulk order needed",
+                Location = "Bangalore",
+                Status = "Pending",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            db.ProductEnquiries.Add(enquiry);
+            db.ContactUsRequests.Add(contact);
+            db.BulkQuoteRequests.Add(quote);
+            await db.SaveChangesAsync();
+
+            // Mock IEmailService (null or dummy)
+            var controller = new EnquiryController(db, null!);
+
+            // Test ProductEnquiry Update
+            var updateEnquiryRes = await controller.UpdateProductEnquiry(1, new UpdateProductEnquiryDto
+            {
+                Status = "Resolved",
+                Name = "John Updated"
+            });
+            var okEnquiry = Assert.IsType<OkObjectResult>(updateEnquiryRes);
+            Assert.Equal(200, okEnquiry.StatusCode);
+            var updatedEnquiry = await db.ProductEnquiries.FindAsync(1);
+            Assert.NotNull(updatedEnquiry);
+            Assert.Equal("Resolved", updatedEnquiry.Status);
+            Assert.Equal("John Updated", updatedEnquiry.Name);
+
+            // Test ContactUs Update
+            var updateContactRes = await controller.UpdateContactUsRequest(1, new UpdateContactUsRequestDto
+            {
+                Status = "In Progress",
+                Message = "Updated message"
+            });
+            var okContact = Assert.IsType<OkObjectResult>(updateContactRes);
+            Assert.Equal(200, okContact.StatusCode);
+            var updatedContact = await db.ContactUsRequests.FindAsync(1);
+            Assert.NotNull(updatedContact);
+            Assert.Equal("In Progress", updatedContact.Status);
+            Assert.Equal("Updated message", updatedContact.Message);
+
+            // Test BulkQuote Update
+            var updateQuoteRes = await controller.UpdateBulkQuote(1, new UpdateBulkQuoteRequestDto
+            {
+                Status = "Approved",
+                Quantity = 250,
+                Location = "Mumbai"
+            });
+            var okQuote = Assert.IsType<OkObjectResult>(updateQuoteRes);
+            Assert.Equal(200, okQuote.StatusCode);
+            var updatedQuote = await db.BulkQuoteRequests.FindAsync(1);
+            Assert.NotNull(updatedQuote);
+            Assert.Equal("Approved", updatedQuote.Status);
+            Assert.Equal(250, updatedQuote.Quantity);
+            Assert.Equal("Mumbai", updatedQuote.Location);
+
+            // Test Delete
+            var delEnquiryRes = await controller.DeleteProductEnquiry(1);
+            Assert.IsType<OkObjectResult>(delEnquiryRes);
+            Assert.Null(await db.ProductEnquiries.FindAsync(1));
+
+            var delContactRes = await controller.DeleteContactUsRequest(1);
+            Assert.IsType<OkObjectResult>(delContactRes);
+            Assert.Null(await db.ContactUsRequests.FindAsync(1));
+
+            var delQuoteRes = await controller.DeleteBulkQuote(1);
+            Assert.IsType<OkObjectResult>(delQuoteRes);
+            Assert.Null(await db.BulkQuoteRequests.FindAsync(1));
+
+            // Test 404 for deleted / nonexistent items
+            var notFoundEnquiry = await controller.UpdateProductEnquiry(999, new UpdateProductEnquiryDto { Status = "Test" });
+            Assert.IsType<NotFoundObjectResult>(notFoundEnquiry);
+
+            var notFoundContact = await controller.DeleteContactUsRequest(999);
+            Assert.IsType<NotFoundObjectResult>(notFoundContact);
+
+            var notFoundQuote = await controller.DeleteBulkQuote(999);
+            Assert.IsType<NotFoundObjectResult>(notFoundQuote);
+        }
     }
 }

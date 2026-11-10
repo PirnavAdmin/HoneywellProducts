@@ -122,4 +122,28 @@ namespace Honeywell.Models
         public string? Mobile { get; set; }
         public string? Email { get; set; }
     }
+
+    public class UpdateProductEnquiryDto
+    {
+        public string? Status { get; set; }
+        public string? Product { get; set; }
+        public string? Name { get; set; }
+        public string? MobileNumber { get; set; }
+        public string? Email { get; set; }
+    }
+
+    public class UpdateContactUsRequestDto
+    {
+        public string? Status { get; set; }
+        public string? Message { get; set; }
+        public string? EnquiryType { get; set; }
+    }
+
+    public class UpdateBulkQuoteRequestDto
+    {
+        public string? Status { get; set; }
+        public int? Quantity { get; set; }
+        public string? Requirement { get; set; }
+        public string? Location { get; set; }
+    }
 }

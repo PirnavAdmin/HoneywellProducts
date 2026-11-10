@@ -339,5 +339,126 @@ namespace Honeywell.Controllers
             var enquiries = await _context.ProductEnquiries.OrderByDescending(p => p.CreatedAt).ToListAsync();
             return Ok(enquiries);
         }
+
+        // ==========================================
+        // 5. ADMIN MUTATION ENDPOINTS (PUT & DELETE)
+        // ==========================================
+
+        // --- Product Enquiries ---
+        [AuthorizeModule(PermissionAction.Edit, "enquiries", "tickets")]
+        [HttpPut("product-enquiries/{id:int}")]
+        [HttpPut("product-enquiry/{id:int}")]
+        [HttpPut("/api/ProductEnquiry/{id:int}")]
+        public async Task<IActionResult> UpdateProductEnquiry(int id, [FromBody] UpdateProductEnquiryDto dto)
+        {
+            var item = await _context.ProductEnquiries.FindAsync(id);
+            if (item == null)
+            {
+                return NotFound(new { success = false, message = $"Product enquiry with ID {id} not found." });
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto?.Status)) item.Status = dto.Status.Trim();
+            if (!string.IsNullOrWhiteSpace(dto?.Product)) item.Product = dto.Product.Trim();
+            if (!string.IsNullOrWhiteSpace(dto?.Name)) item.Name = dto.Name.Trim();
+            if (!string.IsNullOrWhiteSpace(dto?.MobileNumber)) item.MobileNumber = dto.MobileNumber.Trim();
+            if (dto?.Email != null) item.Email = dto.Email.Trim();
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Product enquiry updated successfully.", enquiry = item });
+        }
+
+        [AuthorizeModule(PermissionAction.Delete, "enquiries", "tickets")]
+        [HttpDelete("product-enquiries/{id:int}")]
+        [HttpDelete("product-enquiry/{id:int}")]
+        [HttpDelete("/api/ProductEnquiry/{id:int}")]
+        public async Task<IActionResult> DeleteProductEnquiry(int id)
+        {
+            var item = await _context.ProductEnquiries.FindAsync(id);
+            if (item == null)
+            {
+                return NotFound(new { success = false, message = $"Product enquiry with ID {id} not found." });
+            }
+
+            _context.ProductEnquiries.Remove(item);
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Product enquiry deleted successfully." });
+        }
+
+        // --- Contact Us Submissions ---
+        [AuthorizeModule(PermissionAction.Edit, "enquiries", "tickets")]
+        [HttpPut("contact-us/{id:int}")]
+        [HttpPut("/api/Contact/{id:int}")]
+        public async Task<IActionResult> UpdateContactUsRequest(int id, [FromBody] UpdateContactUsRequestDto dto)
+        {
+            var item = await _context.ContactUsRequests.FindAsync(id);
+            if (item == null)
+            {
+                return NotFound(new { success = false, message = $"Contact submission with ID {id} not found." });
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto?.Status)) item.Status = dto.Status.Trim();
+            if (!string.IsNullOrWhiteSpace(dto?.Message)) item.Message = dto.Message.Trim();
+            if (!string.IsNullOrWhiteSpace(dto?.EnquiryType)) item.EnquiryType = dto.EnquiryType.Trim();
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Contact submission updated successfully.", contact = item });
+        }
+
+        [AuthorizeModule(PermissionAction.Delete, "enquiries", "tickets")]
+        [HttpDelete("contact-us/{id:int}")]
+        [HttpDelete("/api/Contact/{id:int}")]
+        public async Task<IActionResult> DeleteContactUsRequest(int id)
+        {
+            var item = await _context.ContactUsRequests.FindAsync(id);
+            if (item == null)
+            {
+                return NotFound(new { success = false, message = $"Contact submission with ID {id} not found." });
+            }
+
+            _context.ContactUsRequests.Remove(item);
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Contact submission deleted successfully." });
+        }
+
+        // --- Bulk Quotes ---
+        [AuthorizeModule(PermissionAction.Edit, "enquiries", "tickets")]
+        [HttpPut("bulk-quotes/{id:int}")]
+        [HttpPut("bulk-quote/{id:int}")]
+        [HttpPut("/api/BulkQuote/{id:int}")]
+        [HttpPut("/api/Quotes/bulk/{id:int}")]
+        public async Task<IActionResult> UpdateBulkQuote(int id, [FromBody] UpdateBulkQuoteRequestDto dto)
+        {
+            var item = await _context.BulkQuoteRequests.FindAsync(id);
+            if (item == null)
+            {
+                return NotFound(new { success = false, message = $"Bulk quote request with ID {id} not found." });
+            }
+
+            if (!string.IsNullOrWhiteSpace(dto?.Status)) item.Status = dto.Status.Trim();
+            if (dto?.Quantity.HasValue == true && dto.Quantity.Value > 0) item.Quantity = dto.Quantity.Value;
+            if (!string.IsNullOrWhiteSpace(dto?.Requirement)) item.Requirement = dto.Requirement.Trim();
+            if (!string.IsNullOrWhiteSpace(dto?.Location)) item.Location = dto.Location.Trim();
+
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Bulk quote request updated successfully.", quote = item });
+        }
+
+        [AuthorizeModule(PermissionAction.Delete, "enquiries", "tickets")]
+        [HttpDelete("bulk-quotes/{id:int}")]
+        [HttpDelete("bulk-quote/{id:int}")]
+        [HttpDelete("/api/BulkQuote/{id:int}")]
+        [HttpDelete("/api/Quotes/bulk/{id:int}")]
+        public async Task<IActionResult> DeleteBulkQuote(int id)
+        {
+            var item = await _context.BulkQuoteRequests.FindAsync(id);
+            if (item == null)
+            {
+                return NotFound(new { success = false, message = $"Bulk quote request with ID {id} not found." });
+            }
+
+            _context.BulkQuoteRequests.Remove(item);
+            await _context.SaveChangesAsync();
+            return Ok(new { success = true, message = "Bulk quote request deleted successfully." });
+        }
     }
 }
