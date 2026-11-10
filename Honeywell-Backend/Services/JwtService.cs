@@ -35,7 +35,8 @@ namespace Honeywell.Services
                 new Claim("fullName", user.FullName ?? ""),
                 new Claim("name", user.FullName ?? ""),
                 new Claim("employeeId", user.EmployeeId ?? ""),
-                new Claim("mobileNumber", user.MobileNumber ?? "")
+                new Claim("mobileNumber", user.MobileNumber ?? ""),
+                new Claim("permissions", user.PermissionsJson ?? "")
             };
 
             var key = new SymmetricSecurityKey(

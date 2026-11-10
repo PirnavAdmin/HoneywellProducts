@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Honeywell.Data;
 using Honeywell.Models;
+using Honeywell.Helpers;
 
 namespace Honeywell.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [AuthorizeModule("inventory", "stockupdates", "catalog")]
     public class StockController : ControllerBase
     {
         private readonly ApplicationDbContext _context;

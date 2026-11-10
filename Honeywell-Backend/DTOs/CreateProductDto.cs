@@ -73,5 +73,7 @@ namespace Honeywell.DTOs
 
         // Cash on Delivery availability
         public bool CODAvailability { get; set; }
+        public string? ImagesJson { get; set; }
+        public List<string>? ExistingImages { get; set; }
     }
 }

@@ -33,13 +33,6 @@ namespace Honeywell.Controllers
             _logger = logger;
         }
 
-        /// <summary>
-        /// Initiates a Cashfree Sandbox payment session for an invoice.
-        /// Accepts invoice string/numeric id in route and optional overrides in body.
-        /// </summary>
-        [HttpPost("{id}/pay")]
-        [HttpPost("{id}/initiate-payment")]
-        
         private bool IsAdminUser()
         {
             if (User?.Identity?.IsAuthenticated == true)
@@ -98,6 +91,12 @@ namespace Honeywell.Controllers
             return false;
         }
 
+        /// <summary>
+        /// Initiates a Cashfree Sandbox payment session for an invoice.
+        /// Accepts invoice string/numeric id in route and optional overrides in body.
+        /// </summary>
+        [HttpPost("{id}/pay")]
+        [HttpPost("{id}/initiate-payment")]
         public async Task<IActionResult> InitiatePayment(string id, [FromBody] CreateCashfreePaymentOrderRequest? request)
         {
             request ??= new CreateCashfreePaymentOrderRequest();
@@ -250,8 +249,8 @@ namespace Honeywell.Controllers
             if (!string.IsNullOrEmpty(search))
             {
                 var s = search.ToLower();
-                query = query.Where(o => 
-                    o.OrderNumber.ToLower().Contains(s) || 
+                query = query.Where(o =>
+                    o.OrderNumber.ToLower().Contains(s) ||
                     (o.Customer != null && o.Customer.Name.ToLower().Contains(s)) ||
                     (o.Customer != null && o.Customer.Email.ToLower().Contains(s))
                 );
@@ -281,8 +280,8 @@ namespace Honeywell.Controllers
             // Format entries into Invoice models
             var formattedInvoices = ordersList.Select(o => {
                 var cleanOrderNum = o.OrderNumber.Replace("#", "").Trim();
-                var invoiceId = cleanOrderNum.StartsWith("ORD-") 
-                    ? cleanOrderNum.Replace("ORD-", "INV-") 
+                var invoiceId = cleanOrderNum.StartsWith("ORD-")
+                    ? cleanOrderNum.Replace("ORD-", "INV-")
                     : $"INV-{cleanOrderNum}";
 
                 var displayStatus = "Unpaid";
@@ -352,8 +351,8 @@ namespace Honeywell.Controllers
             }
 
             var cleanOrderNum = order.OrderNumber.Replace("#", "").Trim();
-            var invoiceId = cleanOrderNum.StartsWith("ORD-") 
-                ? cleanOrderNum.Replace("ORD-", "INV-") 
+            var invoiceId = cleanOrderNum.StartsWith("ORD-")
+                ? cleanOrderNum.Replace("ORD-", "INV-")
                 : $"INV-{cleanOrderNum}";
 
             var displayStatus = "Unpaid";
@@ -486,13 +485,13 @@ namespace Honeywell.Controllers
                 }
             }
 
-            var invoiceNumClean = string.IsNullOrEmpty(request.InvoiceNo) 
+            var invoiceNumClean = string.IsNullOrEmpty(request.InvoiceNo)
                 ? $"INV-{new Random().Next(100000, 999999)}"
                 : request.InvoiceNo.Replace("#", "").Trim();
 
             // Map back to ORD number format or keep invoice number directly
-            var orderNumber = invoiceNumClean.StartsWith("INV-") 
-                ? invoiceNumClean.Replace("INV-", "ORD-") 
+            var orderNumber = invoiceNumClean.StartsWith("INV-")
+                ? invoiceNumClean.Replace("INV-", "ORD-")
                 : $"ORD-{invoiceNumClean}";
 
             DateTime orderDateToUse = DateTime.UtcNow;
