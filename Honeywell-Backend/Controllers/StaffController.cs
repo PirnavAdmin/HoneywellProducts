@@ -1031,6 +1031,7 @@ namespace Honeywell.Controllers
             await EnsureStaffSchemaAsync();
             string? resolvedEmail = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
                                  ?? User?.FindFirst("email")?.Value
+                                 ?? User?.FindFirst("employeeId")?.Value
                                  ?? User?.Identity?.Name;
 
             if (string.IsNullOrWhiteSpace(resolvedEmail) && !string.IsNullOrWhiteSpace(email))
@@ -1055,18 +1056,35 @@ namespace Honeywell.Controllers
             var allModules = await ModulesStoreHelper.GetStoredModulesAsync(_context);
             var allRoles = await RolesStoreHelper.GetStoredRolesAsync(_context);
             var cleanIdentifier = resolvedEmail.Trim().ToLowerInvariant();
+            string? resolvedEmpId = User?.FindFirst("employeeId")?.Value;
+            var cleanEmpId = resolvedEmpId?.Trim().ToLowerInvariant();
 
             var staff = await _context.Staff.FirstOrDefaultAsync(s =>
                 s.Email.ToLower() == cleanIdentifier ||
-                s.EmployeeId.ToLower() == cleanIdentifier);
+                s.EmployeeId.ToLower() == cleanIdentifier ||
+                (!string.IsNullOrWhiteSpace(cleanEmpId) && s.EmployeeId.ToLower() == cleanEmpId));
 
             if (staff != null)
             {
                 NormalizeStaffEntity(staff);
                 var allowedSet = new HashSet<string>(staff.Permissions, StringComparer.OrdinalIgnoreCase);
+
+                var tokenUser = new User
+                {
+                    Email = string.IsNullOrWhiteSpace(staff.Email) ? staff.EmployeeId : staff.Email,
+                    Role = string.IsNullOrWhiteSpace(staff.Role) ? "Staff" : staff.Role,
+                    FullName = staff.Name,
+                    EmployeeId = staff.EmployeeId,
+                    MobileNumber = string.IsNullOrWhiteSpace(staff.MobileNumber) ? staff.Phone : staff.MobileNumber,
+                    IsActive = staff.IsActive,
+                    PermissionsJson = staff.PermissionsJson
+                };
+                var refreshedToken = _jwtService.GenerateToken(tokenUser);
+
                 return Ok(new
                 {
                     success = true,
+                    token = refreshedToken,
                     staffId = staff.Id,
                     employeeId = staff.EmployeeId,
                     name = staff.Name,
@@ -1089,7 +1107,8 @@ namespace Honeywell.Controllers
 
             var adminUser = await _context.Users.FirstOrDefaultAsync(u =>
                 u.Email.ToLower() == cleanIdentifier ||
-                (u.EmployeeId != null && u.EmployeeId.ToLower() == cleanIdentifier));
+                (u.EmployeeId != null && u.EmployeeId.ToLower() == cleanIdentifier) ||
+                (!string.IsNullOrWhiteSpace(cleanEmpId) && u.EmployeeId != null && u.EmployeeId.ToLower() == cleanEmpId));
 
             if (adminUser == null)
             {
@@ -1121,9 +1140,22 @@ namespace Honeywell.Controllers
 
             var adminAllowedSet = new HashSet<string>(effectivePerms, StringComparer.OrdinalIgnoreCase);
 
+            var tokenAdmin = new User
+            {
+                Email = adminUser.Email,
+                Role = roleName,
+                FullName = adminUser.FullName,
+                EmployeeId = adminUser.EmployeeId,
+                MobileNumber = adminUser.MobileNumber,
+                IsActive = adminUser.IsActive,
+                PermissionsJson = adminUser.PermissionsJson
+            };
+            var adminJwtToken = _jwtService.GenerateToken(tokenAdmin);
+
             return Ok(new
             {
                 success = true,
+                token = adminJwtToken,
                 employeeId = string.IsNullOrWhiteSpace(adminUser.EmployeeId) ? "EMP-0001" : adminUser.EmployeeId,
                 name = adminUser.FullName ?? adminUser.Email?.Split('@')[0] ?? "Admin",
                 email = adminUser.Email,

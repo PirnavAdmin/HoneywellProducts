@@ -128,11 +128,26 @@
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
-.admin-layout {
+  .admin-layout {
     --sidebar-collapsed: 0px;
+    --sidebar-expanded: 260px;
+  }
+  .admin-topbar-area {
+    left: 0 !important;
   }
   .admin-main-content {
-    padding: 1.2rem;
+    left: 0 !important;
+    padding: 1rem 0.85rem;
+  }
+  .admin-sidebar-area {
+    width: 0 !important;
+    transform: translateX(-100%);
+    transition: transform var(--sidebar-duration) cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .admin-layout.sidebar-open .admin-sidebar-area {
+    width: var(--sidebar-expanded) !important;
+    transform: translateX(0);
+    box-shadow: 6px 0 24px rgba(0, 0, 0, 0.25);
   }
 }
 

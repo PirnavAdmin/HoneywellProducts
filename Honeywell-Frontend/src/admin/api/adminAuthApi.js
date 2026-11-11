@@ -126,5 +126,14 @@ export const adminAuthApi = {
       timeout: 15000
     });
     return response.data;
+  },
+
+  // Get Current Authenticated User/Staff Permissions and Refreshed Token
+  async getMyPermissions() {
+    const response = await axios.get(`${getApiDomain()}/api/Auth/me/permissions`, {
+      headers: getAuthHeaders(),
+      timeout: 10000
+    });
+    return response.data;
   }
 };

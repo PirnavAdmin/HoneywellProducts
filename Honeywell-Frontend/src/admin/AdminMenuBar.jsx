@@ -60,6 +60,32 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
     }
   }, [location.pathname]);
 
+  // Listen for real-time permission updates dispatched by AdminLayout or storage changes
+  useEffect(() => {
+    const handlePermissionsUpdated = (e) => {
+      try {
+        if (e?.detail?.permissions && Array.isArray(e.detail.permissions)) {
+          setUserPermissions(e.detail.permissions);
+        } else {
+          const perms = getStoredAdminItem('adminPermissions');
+          setUserPermissions(perms ? JSON.parse(perms) : []);
+        }
+        setUserRole(getEffectiveAdminRole());
+        setAuthType(getEffectiveAuthType());
+      } catch {
+        setUserPermissions([]);
+      }
+    };
+
+    window.addEventListener('admin_permissions_updated', handlePermissionsUpdated);
+    window.addEventListener('storage', handlePermissionsUpdated);
+
+    return () => {
+      window.removeEventListener('admin_permissions_updated', handlePermissionsUpdated);
+      window.removeEventListener('storage', handlePermissionsUpdated);
+    };
+  }, []);
+
   useEffect(() => {
     if (!expanded) {
       setOpenDropdowns({

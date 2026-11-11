@@ -4,6 +4,7 @@ import { ShieldAlert, AlertTriangle } from 'lucide-react';
 import AdminTopBar from './AdminTopBar';
 import AdminMenuBar from './AdminMenuBar';
 import { Toast } from './components/Toast';
+import { adminAuthApi } from './api/adminAuthApi';
 import { 
   isPathAuthorized, 
   getFirstAuthorizedRoute, 
@@ -11,14 +12,20 @@ import {
   getStoredAdminItem,
   getEffectiveAuthType,
   getEffectiveAdminRole,
-  isUserSessionValid
+  isUserSessionValid,
+  extractPermissionsFromUser
 } from '../utils/rbac';
 import './AdminLayout.css';
 
 const AdminLayout = () => {
   const isValidSession = isUserSessionValid();
 
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth > 1024;
+    }
+    return true;
+  });
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -30,6 +37,9 @@ const AdminLayout = () => {
 
   useEffect(() => {
     document.title = 'HONEYWELL PRODUCTS | SMART TECHNOLOGY. STRONGER PROTECTION';
+    if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+      setSidebarExpanded(false);
+    }
   }, [location.pathname]);
 
   // Dynamic 30-minute Inactivity Auto-Lock
@@ -96,19 +106,89 @@ const AdminLayout = () => {
     };
   }, [isValidSession, navigate]);
 
-  const authType = getEffectiveAuthType();
-  const userRole = getEffectiveAdminRole();
+  const [authType, setAuthType] = useState(() => getEffectiveAuthType());
+  const [userRole, setUserRole] = useState(() => getEffectiveAdminRole());
 
-  // Load actual permissions from dynamic session storage without static fallbacks
-  let userPermissions = [];
-  try {
-    const raw = getStoredAdminItem('adminPermissions');
-    if (raw) {
-      userPermissions = JSON.parse(raw);
+  // Load actual permissions from dynamic session storage with real-time sync
+  const [userPermissions, setUserPermissions] = useState(() => {
+    try {
+      const raw = getStoredAdminItem('adminPermissions');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
     }
-  } catch {
-    userPermissions = [];
-  }
+  });
+
+  // Real-time synchronization of staff/admin permissions on mount / refresh and window focus
+  useEffect(() => {
+    if (!isValidSession) return;
+
+    let isMounted = true;
+
+    const syncPermissions = async () => {
+      try {
+        const token = getAdminToken();
+        if (!token) return;
+
+        const data = await adminAuthApi.getMyPermissions();
+        if (!isMounted || !data) return;
+
+        const freshPermissions = extractPermissionsFromUser(data);
+        if (Array.isArray(freshPermissions) && freshPermissions.length > 0) {
+          sessionStorage.setItem('adminPermissions', JSON.stringify(freshPermissions));
+          localStorage.setItem('adminPermissions', JSON.stringify(freshPermissions));
+          setUserPermissions(freshPermissions);
+        }
+
+        if (data.token) {
+          sessionStorage.setItem('adminToken', data.token);
+          localStorage.setItem('adminToken', data.token);
+        }
+
+        if (data.role) {
+          const cleanRole = data.role.toLowerCase().trim();
+          sessionStorage.setItem('adminRole', cleanRole);
+          localStorage.setItem('adminRole', cleanRole);
+          setUserRole(cleanRole);
+        }
+
+        setAuthType(getEffectiveAuthType());
+
+        // Notify sidebar navigation and child views immediately
+        window.dispatchEvent(new CustomEvent('admin_permissions_updated', {
+          detail: { permissions: freshPermissions, role: data.role }
+        }));
+      } catch (err) {
+        if (err?.response?.status === 401) {
+          console.warn('Session expired during permissions sync.');
+        } else {
+          console.warn('Real-time permissions sync failed:', err?.message || err);
+        }
+      }
+    };
+
+    // Sync immediately on initial load / page refresh
+    syncPermissions();
+
+    // Re-sync when switching back to tab
+    const handleFocus = () => {
+      syncPermissions();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncPermissions();
+      }
+    };
+    window.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isValidSession]);
 
   // Intercept data mutations for Manager role (Read-Only)
   useEffect(() => {
