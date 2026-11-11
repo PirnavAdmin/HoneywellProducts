@@ -40,7 +40,7 @@ function ProductDetailsSkeleton() {
       <div className="product-breadcrumbs container" style={{ padding: '12px 1rem' }}>
         <div className="skeleton-line" style={{ width: '220px', height: '14px', borderRadius: '4px' }} />
       </div>
-      <section className="product-detail container" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 420px) minmax(0, 1fr)', gap: '36px', paddingBlock: '16px 40px' }}>
+      <section className="product-detail container" style={{ paddingBlock: '16px 40px' }}>
         <div className="product-gallery">
           <div className="skeleton-pulse" style={{ height: '320px', borderRadius: '14px', background: '#f1f5f9' }} />
           <div className="gallery-thumbs" style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
@@ -511,7 +511,7 @@ export function ProductDetailsContent() {
                       </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))', gap: '12px' }}>
                       {productDocuments.slice(0, 4).map((doc) => (
                         <div
                           key={`ov-${doc.id}`}

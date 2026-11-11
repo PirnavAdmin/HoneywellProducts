@@ -117,6 +117,7 @@ namespace Honeywell.Helpers
             // 6. Resolve permissions for Staff / Manager
             var email = user.FindFirst(ClaimTypes.Email)?.Value
                      ?? user.FindFirst("email")?.Value
+                     ?? user.FindFirst("employeeId")?.Value
                      ?? user.Identity?.Name;
 
             var dbContext = httpContext.RequestServices.GetService<ApplicationDbContext>();
@@ -217,14 +218,9 @@ namespace Honeywell.Helpers
             // Collect all permission descriptors for the user
             var descriptors = new List<ModulePermissionDescriptor>();
 
-            // 1. Parse permissions claim from JWT if available
-            if (!string.IsNullOrWhiteSpace(permissionsClaim))
-            {
-                ParsePermissionsJsonIntoDescriptors(permissionsClaim, descriptors);
-            }
-
-            // 2. If descriptors are empty, query the live database for this authenticated staff user
-            if (descriptors.Count == 0 && db != null && !string.IsNullOrWhiteSpace(email))
+            // 1. Query the live database for this authenticated staff user so that permission updates
+            // take effect immediately without requiring re-login
+            if (db != null && !string.IsNullOrWhiteSpace(email))
             {
                 var cleanEmail = email.Trim().ToLowerInvariant();
                 var staffEntity = await db.Staff.AsNoTracking().FirstOrDefaultAsync(s =>
@@ -259,6 +255,12 @@ namespace Honeywell.Helpers
                         ParsePermissionsJsonIntoDescriptors(staffEntity.PermissionsJson, descriptors);
                     }
                 }
+            }
+
+            // 2. Fall back to parsing permissions claim from JWT if live DB lookup yielded no descriptors (e.g. test tokens)
+            if (descriptors.Count == 0 && !string.IsNullOrWhiteSpace(permissionsClaim))
+            {
+                ParsePermissionsJsonIntoDescriptors(permissionsClaim, descriptors);
             }
 
             // 3. Match requiredModules with descriptors, considering module aliases and action flags

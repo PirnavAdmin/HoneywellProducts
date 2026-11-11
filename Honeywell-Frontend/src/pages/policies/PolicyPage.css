@@ -729,8 +729,12 @@
 }
 
 @media (max-width: 640px) {
+  .policy-layout-grid {
+    padding: 0 12px;
+  }
+
   .policy-section-card {
-    padding: 20px 18px;
+    padding: 20px 14px;
   }
 
   .policy-section-title {
@@ -738,11 +742,15 @@
   }
 
   .policy-highlights-card {
-    padding: 18px 16px;
+    padding: 16px 14px;
+  }
+
+  .policy-highlights-grid {
+    grid-template-columns: 1fr;
   }
 
   .policy-contact-box {
-    padding: 22px 18px;
+    padding: 20px 14px;
   }
 
   .policy-toc-list {

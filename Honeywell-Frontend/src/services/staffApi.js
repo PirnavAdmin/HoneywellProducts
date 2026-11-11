@@ -437,6 +437,27 @@ export async function getPermissionsModules(options = {}) {
   return unwrapList(json);
 }
 
+/**
+ * 14. GET /api/Auth/me/permissions
+ * Fetch live permissions and fresh token for currently authenticated staff/admin.
+ */
+export async function getMyEffectivePermissions(options = {}) {
+  const domain = getApiDomain();
+  const res = await fetch(`${domain}/api/Auth/me/permissions`, {
+    method: 'GET',
+    headers: getHeaders(),
+    signal: options.signal,
+  });
+
+  if (!res.ok) {
+    const errorMsg = await parseErrorMessage(res, `Failed to fetch authenticated permissions (HTTP ${res.status})`);
+    throw new Error(errorMsg);
+  }
+
+  const json = await safeParseJson(res);
+  return unwrapItem(json);
+}
+
 export default {
   getStaffList,
   createStaff,
@@ -452,4 +473,5 @@ export default {
   updateStaffPermissions,
   assignStaffPermissions,
   getPermissionsModules,
+  getMyEffectivePermissions,
 };

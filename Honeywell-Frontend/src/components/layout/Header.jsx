@@ -62,6 +62,18 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Lock body scroll while mobile drawer is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [menuOpen]);
+
   useEffect(() => {
     const closeOnEscape = (event) => {
       if (event.key === 'Escape') {
@@ -132,7 +144,7 @@ export default function Header() {
               to="/products" 
               className={({ isActive }) => `nav-dropdown-trigger ${isActive ? 'active' : ''}`}
               onClick={(e) => {
-                if (window.innerWidth <= 1024) {
+                if (typeof window !== 'undefined' && window.innerWidth <= 992) {
                   e.preventDefault();
                   toggleDropdown('products');
                 }
@@ -153,7 +165,7 @@ export default function Header() {
               to="/solutions" 
               className={({ isActive }) => `nav-dropdown-trigger ${isActive ? 'active' : ''}`}
               onClick={(e) => {
-                if (window.innerWidth <= 1024) {
+                if (typeof window !== 'undefined' && window.innerWidth <= 992) {
                   e.preventDefault();
                   toggleDropdown('solutions');
                 }
@@ -174,7 +186,7 @@ export default function Header() {
               to="/business" 
               className={({ isActive }) => `nav-dropdown-trigger ${isActive ? 'active' : ''}`}
               onClick={(e) => {
-                if (window.innerWidth <= 1024) {
+                if (typeof window !== 'undefined' && window.innerWidth <= 992) {
                   e.preventDefault();
                   toggleDropdown('business');
                 }
@@ -197,7 +209,7 @@ export default function Header() {
               to="/resources" 
               className={({ isActive }) => `nav-dropdown-trigger ${isActive ? 'active' : ''}`}
               onClick={(e) => {
-                if (window.innerWidth <= 1024) {
+                if (typeof window !== 'undefined' && window.innerWidth <= 992) {
                   e.preventDefault();
                   toggleDropdown('resources');
                 }
@@ -225,7 +237,13 @@ export default function Header() {
       </header>
 
       {/* Mobile Navigation Drawer */}
-      <div className={`mobile-drawer ${menuOpen ? 'open' : ''}`} aria-hidden={!menuOpen}>
+      <div 
+        className={`mobile-drawer ${menuOpen ? 'open' : ''}`} 
+        aria-hidden={!menuOpen}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation Menu"
+      >
         <button className="icon-button drawer-close" onClick={() => setMenuOpen(false)} aria-label="Close menu"><X /></button>
         <Brand onClick={closeMenus} />
         <nav aria-label="Mobile navigation" className="mobile-nav-accordion">

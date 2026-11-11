@@ -407,6 +407,19 @@ function AddStaff() {
           setToastMessage(`Error loading staff details: ${err.message}`);
           setToastType('error');
         }
+      } else {
+        // Guarantee clean, empty initial fields when creating a new staff member
+        setFormData({
+          firstName: "",
+          lastName: "",
+          email: "",
+          mobile: "",
+          employeeId: "",
+          role: "",
+          department: "",
+          password: "",
+          confirmPassword: ""
+        });
       }
 
       if (isMounted) setIsLoadingDetails(false);
@@ -709,7 +722,29 @@ function AddStaff() {
       {/* Two-Column Content Grid */}
       <div className="staff-content-grid">
         {/* Left Card: Basic Credentials & Access Password */}
-        <div className="staff-form-card">
+        <form 
+          className="staff-form-card" 
+          autoComplete="off" 
+          onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+        >
+          {/* Hidden inputs to absorb aggressive browser credential autofill */}
+          <div 
+            style={{ 
+              position: 'absolute', 
+              top: '-9999px', 
+              left: '-9999px', 
+              width: '1px', 
+              height: '1px', 
+              opacity: 0, 
+              pointerEvents: 'none', 
+              overflow: 'hidden' 
+            }} 
+            aria-hidden="true"
+          >
+            <input type="text" name="prevent_autofill_username" tabIndex={-1} autoComplete="off" readOnly />
+            <input type="password" name="prevent_autofill_password" tabIndex={-1} autoComplete="new-password" readOnly />
+          </div>
+
           {/* Basic Credentials Section */}
           <h3 className="card-section-title">
             <User size={17} className="section-title-icon" />
@@ -722,7 +757,10 @@ function AddStaff() {
                 First Name <span className="required-star">*</span>
               </label>
               <input
+                type="text"
                 name="firstName"
+                autoComplete="off"
+                data-lpignore="true"
                 placeholder="e.g. John"
                 value={formData.firstName}
                 onChange={handleChange}
@@ -736,7 +774,10 @@ function AddStaff() {
                 Last Name <span className="required-star">*</span>
               </label>
               <input
+                type="text"
                 name="lastName"
+                autoComplete="off"
+                data-lpignore="true"
                 placeholder="e.g. Doe"
                 value={formData.lastName}
                 onChange={handleChange}
@@ -752,7 +793,11 @@ function AddStaff() {
               <input
                 type="email"
                 name="email"
-                placeholder="name@company.com"
+                id="staff-email-input"
+                autoComplete="off"
+                data-lpignore="true"
+                data-form-type="other"
+                placeholder="Enter staff email (e.g. name@company.com)"
                 value={formData.email}
                 onChange={handleChange}
                 className={errors.email ? 'input-error' : ''}
@@ -767,7 +812,10 @@ function AddStaff() {
               <div className={`phone-input-container ${errors.mobile ? 'input-error' : ''}`}>
                 <span className="phone-prefix">+91</span>
                 <input
+                  type="tel"
                   name="mobile"
+                  autoComplete="off"
+                  data-lpignore="true"
                   value={formData.mobile}
                   placeholder="10 digit number"
                   onChange={handleChange}
@@ -781,8 +829,13 @@ function AddStaff() {
                 Employee ID <span className="required-star">*</span>
               </label>
               <input
+                type="text"
                 name="employeeId"
-                placeholder="e.g. EMP-0042"
+                id="staff-employee-id-input"
+                autoComplete="off"
+                data-lpignore="true"
+                data-form-type="other"
+                placeholder="Enter Employee ID (e.g. EMP-0042)"
                 value={formData.employeeId}
                 onChange={handleChange}
                 className={errors.employeeId ? 'input-error' : ''}
@@ -860,7 +913,11 @@ function AddStaff() {
                 <input
                   type={showPassword ? "text" : "password"}
                   name="password"
-                  placeholder={isEditing ? "Leave blank to keep unchanged" : "••••••••"}
+                  id="staff-password-input"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  placeholder={isEditing ? "Leave blank to keep unchanged" : "Enter staff password (min. 6 characters)"}
                   value={formData.password}
                   onChange={handleChange}
                   className={errors.password ? 'input-error' : ''}
@@ -897,7 +954,11 @@ function AddStaff() {
                 <input
                   type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
-                  placeholder={isEditing ? "Confirm if updating" : "Confirm password"}
+                  id="staff-confirm-password-input"
+                  autoComplete="new-password"
+                  data-lpignore="true"
+                  data-form-type="other"
+                  placeholder={isEditing ? "Confirm if updating" : "Re-enter staff password to confirm"}
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   className={errors.confirmPassword ? 'input-error' : ''}
@@ -929,7 +990,7 @@ function AddStaff() {
           <span className="field-hint">
             Must contain at least 7 characters including 1 uppercase letter, 1 digit, and 1 symbol.
           </span>
-        </div>
+        </form>
 
         {/* Right Card: Dynamic Permissions Checklist */}
         <div className="staff-form-card">
