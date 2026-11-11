@@ -291,7 +291,7 @@ export const mapProductFromApi = (
   // ── Images ────────────────────────────────────────────────────────────────
   const rawImages = raw.images || raw.media || [];
   const images = Array.isArray(rawImages)
-    ? rawImages.map((img) => {
+    ? Array.from(new Set(rawImages.map((img) => {
         if (!img) return '';
         if (typeof img === 'string') return resolveImageUrl(img);
         return resolveImageUrl(
@@ -305,7 +305,7 @@ export const mapProductFromApi = (
           img.MediaUrl ||
           ''
         );
-      }).filter(Boolean)
+      }).filter(Boolean)))
     : [];
   const mainImageUrl = images[0] || resolveImageUrl(raw.imageUrl || '');
 
@@ -1002,10 +1002,13 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     )
   ).then((list) => list.filter(Boolean));
 
-  const existingImages = Array.isArray(product.images) && product.images.length > 0
-    ? product.images
-    : (product.image ? [product.image] : []);
-  const mergedImages = [...existingImages, ...fileDataUrls].filter(Boolean);
+  const existingImages = Array.from(new Set(
+    (Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : (product.image ? [product.image] : [])
+    ).filter(Boolean)
+  ));
+  const mergedImages = Array.from(new Set([...existingImages, ...fileDataUrls].filter(Boolean)));
   const primaryImage = mergedImages[0] || product.image || '';
 
   const fd = new FormData();
@@ -1014,6 +1017,9 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     fd.append('id', String(prodId));
     fd.append('ProductId', String(prodId));
   }
+  fd.append('ImagesJson', JSON.stringify(existingImages));
+  fd.append('imagesJson', JSON.stringify(existingImages));
+  fd.append('existingImages', JSON.stringify(existingImages));
   fd.append('Name', product.name || '');
   fd.append('SKU', product.sku || '');
   fd.append('Brand', product.brand || 'Honeywell');

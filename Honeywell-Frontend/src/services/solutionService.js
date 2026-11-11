@@ -1,8 +1,17 @@
 import { API_BASE_URL } from './api';
 import { apiCache } from '../utils/apiCache';
-import { applications } from '../data/solutions';
 import { applicationImages, solutionPortfolioImages } from '../data/imageLibrary';
 import { resolveMediaUrl } from '../utils/apiConfig';
+import { getAdminToken } from '../utils/rbac';
+
+const getAuthHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...extra
+  };
+};
 
 export const mapSolutionFromApi = (raw = {}) => {
   const rawImage = raw.imageUrl || raw.image || raw.mediaUrl || raw.ImageUrl || raw.Image || '';
@@ -26,58 +35,8 @@ export const mapSolutionFromApi = (raw = {}) => {
   };
 };
 
-function getLocalFallbackSolutions() {
-  const customSolutions = [
-    {
-      id: 'home',
-      title: 'Residential & Smart Home Security',
-      description: 'Complete home surveillance and access control for modern residences.',
-      application: 'Residential Security',
-      categoryId: 'cctv-cameras',
-      image: solutionPortfolioImages['home'] || '/assets/images/catalog/solution-residential.jpg',
-      imageUrl: solutionPortfolioImages['home'] || '/assets/images/catalog/solution-residential.jpg',
-      features: ['Smart Wi-Fi Cameras', 'Doorbell Integration', 'Mobile Motion Alerts']
-    },
-    {
-      id: 'office',
-      title: 'Corporate Office & Facility Protection',
-      description: 'Access control, time attendance, and IP video surveillance for modern workplaces.',
-      application: 'Office Security',
-      categoryId: 'networking',
-      image: solutionPortfolioImages['office'] || '/assets/images/catalog/solution-office.jpg',
-      imageUrl: solutionPortfolioImages['office'] || '/assets/images/catalog/solution-office.jpg',
-      features: ['Biometric Entry Control', 'Centralized NVR Recording', 'Visitor Management']
-    },
-    {
-      id: 'retail',
-      title: 'Retail Store & Loss Prevention',
-      description: 'High-definition video monitoring to prevent shoplifting and audit cashier points.',
-      application: 'Retail & POS Security',
-      categoryId: 'dome-camera',
-      image: solutionPortfolioImages['retail'] || '/assets/images/catalog/solution-retail.jpg',
-      imageUrl: solutionPortfolioImages['retail'] || '/assets/images/catalog/solution-retail.jpg',
-      features: ['POS Cashier Overlay', 'Foot-Traffic Analytics', '360° Dome Coverage']
-    },
-    {
-      id: 'factory',
-      title: 'Industrial & Manufacturing Safety',
-      description: 'Heavy-duty explosion-proof cameras and perimeter intrusion monitoring.',
-      application: 'Industrial Security',
-      categoryId: 'ip-camera',
-      image: solutionPortfolioImages['factory'] || '/assets/images/catalog/solution-industrial.jpg',
-      imageUrl: solutionPortfolioImages['factory'] || '/assets/images/catalog/solution-industrial.jpg',
-      features: ['Thermal Perimeter Monitoring', 'Heavy Duty Enclosures', 'Automated AI Alerts']
-    }
-  ];
-
-  return customSolutions;
-}
-
 export const solutionService = {
   async getAll() {
-    if (import.meta.env.VITE_ADMIN_DATA_MODE === 'mock') {
-      return getLocalFallbackSolutions();
-    }
     return await apiCache.fetchWithCache('solutions_all', async () => {
       try {
         const response = await fetch(`${API_BASE_URL}/api/solutions`, {
@@ -86,13 +45,13 @@ export const solutionService = {
         if (response.ok) {
           const data = await response.json();
           const list = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-          if (list.length > 0) return list.map(mapSolutionFromApi);
+          return list.map(mapSolutionFromApi);
         }
       } catch (e) {
-        // Fallthrough to local applications data
+        console.warn('Failed to fetch solutions from backend:', e.message);
       }
 
-      return getLocalFallbackSolutions();
+      return [];
     }, 15 * 60 * 1000);
   },
 
@@ -108,21 +67,10 @@ export const solutionService = {
         return mapSolutionFromApi(data?.data || data);
       }
     } catch (err) {
-      // Quiet fallback
+      console.warn(`Failed to fetch solution ${id}:`, err.message);
     }
 
-    const found = applications.find(a => String(a.id) === String(id));
-    if (!found) return null;
-    return {
-      id: found.id,
-      title: found.name,
-      description: found.description,
-      application: found.name,
-      categoryId: found.categoryId,
-      image: found.image || applicationImages[found.id] || '/honeywell-products-logo.png',
-      imageUrl: found.image || applicationImages[found.id] || '/honeywell-products-logo.png',
-      features: ['Application-led planning', 'Scalable product selection', 'Sales-assisted recommendation']
-    };
+    return null;
   },
 
   // 3. UPLOAD IMAGE
@@ -131,9 +79,7 @@ export const solutionService = {
     formData.append('file', file);
     const response = await fetch(`${API_BASE_URL}/api/solutions/upload-image`, {
       method: 'POST',
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
-      },
+      headers: getAuthHeaders(),
       body: formData,
     });
     if (!response.ok) throw new Error(`Image upload failed (${response.status})`);
@@ -145,11 +91,10 @@ export const solutionService = {
   async create(solutionData) {
     const response = await fetch(`${API_BASE_URL}/api/solutions`, {
       method: 'POST',
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
+      headers: getAuthHeaders({
         'Content-Type': 'application/json',
         'Accept': 'application/json'
-      },
+      }),
       body: JSON.stringify(solutionData)
     });
     if (!response.ok) throw new Error(`Failed to create solution (${response.status})`);
@@ -161,11 +106,10 @@ export const solutionService = {
   async update(id, solutionData) {
     const response = await fetch(`${API_BASE_URL}/api/solutions/${id}`, {
       method: 'PUT',
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
+      headers: getAuthHeaders({
         'Content-Type': 'application/json',
         'Accept': 'application/json'
-      },
+      }),
       body: JSON.stringify(solutionData)
     });
     if (!response.ok) throw new Error(`Failed to update solution ${id} (${response.status})`);
@@ -177,7 +121,7 @@ export const solutionService = {
   async delete(id) {
     const response = await fetch(`${API_BASE_URL}/api/solutions/${id}`, {
       method: 'DELETE',
-      headers: { 'ngrok-skip-browser-warning': 'true' }
+      headers: getAuthHeaders()
     });
     if (!response.ok && response.status !== 204) throw new Error(`Failed to delete solution ${id}`);
     return true;

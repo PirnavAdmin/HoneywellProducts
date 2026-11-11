@@ -2,8 +2,22 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import { ArrowLeft, User, Phone, Mail, MapPin, Building2, CreditCard, Activity, Edit, Plus, X, Search, ChevronDown, ShieldCheck, Briefcase } from 'lucide-react';
 import '../catalog/adminModule.css';
+
+const getAuthHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    ...extra
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 const Customer = () => {
   const navigate = useNavigate();
@@ -43,7 +57,7 @@ const Customer = () => {
   // Fetch all customers for the search/select capability
   useEffect(() => {
     fetch(`${getApiDomain()}/api/Customers`, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
+      headers: getAuthHeaders()
     })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch customers');
@@ -68,7 +82,7 @@ const Customer = () => {
     setLoading(true);
     setError(null);
     fetch(`${getApiDomain()}/api/Customers/${id}`, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
+      headers: getAuthHeaders()
     })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch customer profile');
@@ -136,30 +150,29 @@ const Customer = () => {
     try {
       const res = await fetch(`${getApiDomain()}/api/Customers/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(updatedPayload),
       });
 
-      setProfile(updatedPayload);
-      setShowEditModal(false);
-
-      if (res.ok) {
-        const refreshed = await fetch(`${getApiDomain()}/api/Customers/${id}`, {
-          headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
-        });
-        if (refreshed.ok) {
-          const data = await refreshed.json();
-          setProfile(data);
-          setCustomers(prev => prev.map(c => c.id === data.id ? data : c));
-        }
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to update customer');
       }
+
+      const refreshed = await fetch(`${getApiDomain()}/api/Customers/${id}`, {
+        headers: getAuthHeaders()
+      });
+      if (refreshed.ok) {
+        const data = await refreshed.json();
+        setProfile(data);
+        setCustomers(prev => prev.map(c => c.id === data.id ? data : c));
+      } else {
+        setProfile(updatedPayload);
+      }
+      setShowEditModal(false);
     } catch (err) {
       console.error('Error updating customer:', err);
-      setProfile(updatedPayload);
-      setShowEditModal(false);
+      alert(err.message || 'Failed to update customer');
     }
   };
 
@@ -180,14 +193,17 @@ const Customer = () => {
     try {
       const res = await fetch(`${getApiDomain()}/api/Customers/${id}/advisories`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
 
-      const newLog = {
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to log consultation note');
+      }
+
+      const savedData = await res.json().catch(() => null);
+      const newLog = savedData || {
         id: Date.now(),
         dateCreated: new Date().toISOString(),
         advisoryText,

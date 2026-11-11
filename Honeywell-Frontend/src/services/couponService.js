@@ -1,9 +1,17 @@
 import { apiRequest, API_BASE_URL } from './api';
+import { getAdminToken } from '../utils/rbac';
 
-const DEFAULT_HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
-  'Accept': 'application/json',
-  'Content-Type': 'application/json',
+const getDefaultHeaders = () => {
+  const token = getAdminToken();
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 };
 
 export const mapCouponFromApi = (item) => {
@@ -66,7 +74,7 @@ export const couponService = {
     try {
       const response = await fetch(url, {
         method: 'POST',
-        headers: DEFAULT_HEADERS,
+        headers: getDefaultHeaders(),
         body: JSON.stringify(payload)
       });
 
@@ -164,7 +172,7 @@ export const couponService = {
     const url = `${API_BASE_URL}/api/coupons`;
     const response = await fetch(url, {
       method: 'POST',
-      headers: DEFAULT_HEADERS,
+      headers: getDefaultHeaders(),
       body: JSON.stringify(apiPayload)
     });
 
@@ -204,7 +212,7 @@ export const couponService = {
     const url = `${API_BASE_URL}/api/coupons/${id}`;
     const response = await fetch(url, {
       method: 'PUT',
-      headers: DEFAULT_HEADERS,
+      headers: getDefaultHeaders(),
       body: JSON.stringify(apiPayload)
     });
 
@@ -220,7 +228,7 @@ export const couponService = {
     const url = `${API_BASE_URL}/api/coupons/${id}`;
     const response = await fetch(url, {
       method: 'DELETE',
-      headers: DEFAULT_HEADERS
+      headers: getDefaultHeaders()
     });
 
     if (!response.ok && response.status !== 204) {

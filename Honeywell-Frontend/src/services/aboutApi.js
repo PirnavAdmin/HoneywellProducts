@@ -90,7 +90,7 @@ export const aboutApi = {
           headers: HEADERS,
           timeout: 15000
         });
-        return response.data || DEFAULT_ABOUT_DATA;
+        if (response.data) return response.data;
       } catch (err) {
         // If primary endpoint fails, try alternative alias endpoint
         console.warn('Primary /api/About endpoint failed, attempting alias /api/Settings/about-us...', err.message);
@@ -99,12 +99,13 @@ export const aboutApi = {
             headers: HEADERS,
             timeout: 15000
           });
-          return altResponse.data || DEFAULT_ABOUT_DATA;
+          if (altResponse.data) return altResponse.data;
         } catch (altErr) {
-          console.warn('Both About API endpoints failed, returning default fallback data:', altErr.message);
-          return DEFAULT_ABOUT_DATA;
+          console.error('Both About API endpoints failed:', altErr.message);
+          throw new Error('Unable to fetch About Us configuration from backend API (/api/About and /api/Settings/about-us failed).');
         }
       }
+      throw new Error('No About Us data returned from backend server.');
     }, 15 * 60 * 1000);
   },
 

@@ -6,9 +6,19 @@ import {
   AlignLeft, Linkedin, Twitter, Facebook
 } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import './FooterConfig.css';
 
 const API_URL = `${getApiDomain()}/api/Settings/footer`;
+
+const getHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...extra
+  };
+};
 
 const FooterConfig = () => {
   const [footerData, setFooterData] = useState({
@@ -37,7 +47,7 @@ const FooterConfig = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await axios.get(API_URL, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: getHeaders()
       });
       if (res.data) setFooterData(prev => ({ ...prev, ...res.data }));
     } catch (err) {
@@ -53,7 +63,7 @@ const FooterConfig = () => {
     setMessage({ type: '', text: '' });
     try {
       await axios.put(API_URL, footerData, {
-        headers: { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
+        headers: getHeaders({ 'Content-Type': 'application/json' })
       });
       setMessage({ type: 'success', text: 'Footer configuration saved successfully!' });
       window.dispatchEvent(new Event('footer-config-updated'));

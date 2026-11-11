@@ -9,6 +9,7 @@ import {
   Image as ImageIcon
 } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import './brands.css';
 import { Toast } from '../components/Toast';
 
@@ -22,8 +23,13 @@ const API_BASE = `${API_DOMAIN}/api/Brand`;
 const API_ITEM = (id) =>
   `${API_BASE}/${encodeURIComponent(id)}`;
 
-const API_HEADERS = {
-  'ngrok-skip-browser-warning': 'true',
+const getApiHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...extra
+  };
 };
 
 /* =========================================================
@@ -157,10 +163,9 @@ export const fetchBrands = async () => {
   try {
     const response = await fetch(API_BASE_BRAND, {
       method: 'GET',
-      headers: {
-        ...API_HEADERS,
+      headers: getApiHeaders({
         'Content-Type': 'application/json'
-      }
+      })
     });
 
     if (response.ok) {
@@ -183,10 +188,9 @@ export const fetchBrands = async () => {
   // Fallback endpoint GET /api/Catalog/brands
   const response2 = await fetch(API_BASE_CATALOG, {
     method: 'GET',
-    headers: {
-      ...API_HEADERS,
+    headers: getApiHeaders({
       'Content-Type': 'application/json'
-    }
+    })
   });
 
   if (!response2.ok) {
@@ -224,10 +228,9 @@ export const fetchBrandById = async (id) => {
   try {
     const response = await fetch(urlBrand, {
       method: 'GET',
-      headers: {
-        ...API_HEADERS,
+      headers: getApiHeaders({
         'Content-Type': 'application/json'
-      }
+      })
     });
 
     if (response.ok) {
@@ -242,10 +245,9 @@ export const fetchBrandById = async (id) => {
   // Fallback endpoint GET /api/Catalog/brands/{id}
   const response2 = await fetch(urlCatalog, {
     method: 'GET',
-    headers: {
-      ...API_HEADERS,
+    headers: getApiHeaders({
       'Content-Type': 'application/json'
-    }
+    })
   });
 
   if (!response2.ok) {
@@ -393,7 +395,7 @@ export const createBrand = async (brand) => {
   try {
     const response = await fetch(urlBrand, {
       method: 'POST',
-      headers: API_HEADERS,
+      headers: getApiHeaders(),
       body: formData
     });
 
@@ -409,7 +411,7 @@ export const createBrand = async (brand) => {
   // Fallback to POST /api/Catalog/brands
   const response2 = await fetch(urlCatalog, {
     method: 'POST',
-    headers: API_HEADERS,
+    headers: getApiHeaders(),
     body: formData
   });
 
@@ -453,7 +455,7 @@ export const updateBrand = async (brand) => {
   try {
     const response = await fetch(urlBrand, {
       method: 'PUT',
-      headers: API_HEADERS,
+      headers: getApiHeaders(),
       body: formData
     });
 
@@ -469,7 +471,7 @@ export const updateBrand = async (brand) => {
   // Fallback to PUT /api/Catalog/brands/{id}
   const response2 = await fetch(urlCatalog, {
     method: 'PUT',
-    headers: API_HEADERS,
+    headers: getApiHeaders(),
     body: formData
   });
 

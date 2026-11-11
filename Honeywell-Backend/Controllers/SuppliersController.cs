@@ -21,14 +21,14 @@ namespace Honeywell.Controllers
         }
 
         [HttpGet]
-        [AuthorizeModule(PermissionAction.View, "suppliers", "procurement")]
+        [AuthorizeModule(PermissionAction.View, "suppliers", "procurement", "catalog")]
         public async Task<ActionResult<IEnumerable<Supplier>>> GetAll()
         {
             return await _context.Suppliers.AsNoTracking().ToListAsync();
         }
 
         [HttpGet("{id}")]
-        [AuthorizeModule(PermissionAction.View, "suppliers", "procurement")]
+        [AuthorizeModule(PermissionAction.View, "suppliers", "procurement", "catalog")]
         public async Task<ActionResult<Supplier>> GetById(int id)
         {
             var supplier = await _context.Suppliers.AsNoTracking().FirstOrDefaultAsync(s => s.Id == id);

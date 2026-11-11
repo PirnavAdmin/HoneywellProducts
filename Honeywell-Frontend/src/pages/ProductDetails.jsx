@@ -248,9 +248,10 @@ export function ProductDetailsContent() {
     );
   }
 
-  const gallery = Array.isArray(product.gallery) && product.gallery.length > 0
+  const rawGallery = Array.isArray(product.gallery) && product.gallery.length > 0
     ? product.gallery
-    : [product.image].filter(Boolean);
+    : (Array.isArray(product.images) && product.images.length > 0 ? product.images : [product.image].filter(Boolean));
+  const gallery = Array.from(new Set(rawGallery.filter(Boolean)));
 
   const rawSpecifications = product.specifications || product.specificationsObj || [];
   const specifications = Array.isArray(rawSpecifications)
@@ -330,7 +331,7 @@ export function ProductDetailsContent() {
         <div className="product-gallery">
           <div className="gallery-main">
             <OptimizedImage
-              src={(!gallery[image] && !product.image) || String(gallery[image] || product.image).toLowerCase().includes('placeholder') ? '/honeywell-products-logo.png' : (gallery[image] || product.image)}
+              src={gallery[image] || product.image || ''}
               alt={productNameText}
               loading="eager"
               fetchPriority="high"
@@ -342,7 +343,7 @@ export function ProductDetailsContent() {
               {gallery.map((src, index) => (
                 <button key={`${src}-${index}`} className={index === image ? 'active' : ''} onClick={() => setImage(index)} aria-label={`View image ${index + 1}`}>
                   <OptimizedImage
-                    src={(!src || String(src).toLowerCase().includes('placeholder')) ? '/honeywell-products-logo.png' : src}
+                    src={src || ''}
                     alt=""
                     loading="lazy"
                     decoding="async"

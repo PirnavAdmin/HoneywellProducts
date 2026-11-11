@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
 
-const DEFAULT_FALLBACK = '/honeywell-products-logo.png';
-
 export default function OptimizedImage({
   src,
   alt = '',
@@ -10,7 +8,7 @@ export default function OptimizedImage({
   loading = 'lazy',
   fetchPriority = undefined,
   decoding = 'async',
-  fallbackSrc = DEFAULT_FALLBACK,
+  fallbackSrc = '',
   aspectRatio,
   onLoad,
   onError,
@@ -19,9 +17,9 @@ export default function OptimizedImage({
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
-  // Normalize image source
+  // Normalize image source without hardcoded brand logo substitution
   const imageSrc = (!src || String(src).toLowerCase().includes('placeholder'))
-    ? fallbackSrc
+    ? (fallbackSrc || '')
     : src;
 
   const [currentSrc, setCurrentSrc] = useState(imageSrc);
@@ -38,9 +36,11 @@ export default function OptimizedImage({
   };
 
   const handleError = (e) => {
-    if (!hasError && currentSrc !== fallbackSrc) {
+    if (!hasError) {
       setHasError(true);
-      setCurrentSrc(fallbackSrc);
+      if (fallbackSrc && currentSrc !== fallbackSrc) {
+        setCurrentSrc(fallbackSrc);
+      }
     }
     if (onError) onError(e);
   };

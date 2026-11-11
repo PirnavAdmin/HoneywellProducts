@@ -7,10 +7,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 const API_PROXY_TARGET =
   process.env.VITE_API_PROXY_TARGET ||
   process.env.VITE_API_BASE_URL ||
-  'https://drab-smoking-unstaffed.ngrok-free.dev ';
+  'https://drab-smoking-unstaffed.ngrok-free.dev';
 
 const MEDIA_PROXY_TARGET =
-  'https://honeywellproducts.com';
+  process.env.VITE_MEDIA_PROXY_TARGET ||
+  API_PROXY_TARGET;
 
 function staticSiteWorker() {
   return {
@@ -74,7 +75,10 @@ export default defineConfig({
       '/uploads': {
         target: MEDIA_PROXY_TARGET,
         changeOrigin: true,
-        secure: true,
+        secure: !MEDIA_PROXY_TARGET.includes('localhost') && !MEDIA_PROXY_TARGET.includes('127.0.0.1'),
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+        },
       },
     },
   },

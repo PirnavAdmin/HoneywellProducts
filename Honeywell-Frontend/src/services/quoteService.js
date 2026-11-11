@@ -69,16 +69,28 @@ export const quoteService = {
     }
   },
 
-  /** PUT /api/Enquiry/bulk-quotes/{id} — Update status or details */
-  async update(id, updateData) {
-    // Return updated object cleanly
-    const current = await this.getById(id) || {};
-    return { ...current, ...updateData };
+  /** PUT /api/Enquiry/bulk-quotes/{id} — Update bulk quote request details/status */
+  async update(id, updateData = {}) {
+    const parsedQty = updateData.quantity != null ? parseInt(updateData.quantity, 10) : undefined;
+    const body = {
+      status: updateData.status,
+      quantity: !isNaN(parsedQty) && parsedQty > 0 ? parsedQty : undefined,
+      requirement: updateData.requirement !== undefined ? updateData.requirement : (updateData.message !== undefined ? updateData.message : undefined),
+      location: updateData.location !== undefined ? updateData.location : undefined
+    };
+
+    return await apiRequest(`/api/Enquiry/bulk-quotes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    });
   },
 
-  /** DELETE /api/Enquiry/bulk-quotes/{id} — Remove quote */
+  /** DELETE /api/Enquiry/bulk-quotes/{id} — Delete a bulk quote request */
   async delete(id) {
-    return true;
+    const res = await apiRequest(`/api/Enquiry/bulk-quotes/${id}`, {
+      method: 'DELETE'
+    });
+    return res || true;
   }
 };
 

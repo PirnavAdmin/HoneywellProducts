@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 
 export const BASE_URL = getApiDomain();
 
@@ -12,6 +13,14 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+api.interceptors.request.use((config) => {
+  const token = getAdminToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}, (error) => Promise.reject(error));
 
 export const mapStockItemFromApi = (raw = {}) => {
   const currentStock = Number(raw.currentStock ?? raw.stockQuantity ?? raw.stock ?? 0);

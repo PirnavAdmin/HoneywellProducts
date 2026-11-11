@@ -54,15 +54,28 @@ export const enquiryService = {
     return data;
   },
 
-  /** PUT update status */
-  async update(id, updateData) {
-    const current = await this.getById(id) || {};
-    return { ...current, ...updateData };
+  /** PUT /api/Enquiry/product-enquiries/{id} — Update enquiry details/status */
+  async update(id, updateData = {}) {
+    const body = {
+      status: updateData.status,
+      product: updateData.product || updateData.productName || undefined,
+      name: updateData.name || updateData.customerName || undefined,
+      mobileNumber: updateData.mobileNumber || updateData.mobile || updateData.phone || undefined,
+      email: updateData.email !== undefined ? updateData.email : undefined
+    };
+
+    return await apiRequest(`/api/Enquiry/product-enquiries/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    });
   },
 
-  /** DELETE */
+  /** DELETE /api/Enquiry/product-enquiries/{id} — Delete an enquiry */
   async delete(id) {
-    return true;
+    const res = await apiRequest(`/api/Enquiry/product-enquiries/${id}`, {
+      method: 'DELETE'
+    });
+    return res || true;
   }
 };
 

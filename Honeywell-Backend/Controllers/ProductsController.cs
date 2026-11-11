@@ -669,6 +669,10 @@ namespace Honeywell.Controllers
             var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".webp", ".gif", ".jfif", ".svg", ".bmp" };
 
             var imagesFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "images");
+            if (!Directory.Exists(imagesFolder) && Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "Honeywell-Backend", "wwwroot")))
+            {
+                imagesFolder = Path.Combine(Directory.GetCurrentDirectory(), "Honeywell-Backend", "wwwroot", "uploads", "images");
+            }
             Directory.CreateDirectory(imagesFolder);
 
             // 1. Collect all uploaded IFormFiles without duplicates (keyed by FileName + Length)

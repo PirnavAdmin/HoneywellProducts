@@ -5,9 +5,19 @@ import {
   FileText, Code2, ShieldCheck, TriangleAlert, Info
 } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import './DescriptionManager.css';
 
 const API_URL = `${getApiDomain()}/api/Settings/description-manager`;
+
+const getHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...extra
+  };
+};
 
 /* ── Character counter helper ── */
 const CharCount = ({ value, max }) => {
@@ -69,7 +79,7 @@ const DescriptionManager = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await axios.get(API_URL, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: getHeaders()
       });
       if (res.data) setDescData(prev => ({ ...prev, ...res.data }));
     } catch (err) {
@@ -85,12 +95,13 @@ const DescriptionManager = () => {
     setMessage({ type: '', text: '' });
     try {
       await axios.put(API_URL, descData, {
-        headers: { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
+        headers: getHeaders({ 'Content-Type': 'application/json' })
       });
       setMessage({ type: 'success', text: 'Description templates updated successfully!' });
     } catch (err) {
       console.error('Save Description Settings error:', err);
-      setMessage({ type: 'success', text: 'Description templates saved successfully.' });
+      const errMsg = err.response?.data?.message || err.message || 'Failed to update description templates.';
+      setMessage({ type: 'error', text: errMsg });
     } finally {
       setSaving(false);
     }

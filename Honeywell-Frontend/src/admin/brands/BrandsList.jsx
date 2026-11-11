@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import './brands.css';
 import { Toast } from '../components/Toast';
 
@@ -24,8 +25,13 @@ const API_BASE = `${API_DOMAIN}/api/Brand`;
 const API_ITEM = (id) =>
   `${API_BASE}/${encodeURIComponent(id)}`;
 
-const API_HEADERS = {
-  'ngrok-skip-browser-warning': 'true'
+const getApiHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...extra
+  };
 };
 
 // ============================================================
@@ -183,10 +189,9 @@ export const fetchBrands = async () => {
   try {
     const response = await fetch(API_BASE_BRAND, {
       method: 'GET',
-      headers: {
-        ...API_HEADERS,
+      headers: getApiHeaders({
         'Content-Type': 'application/json'
-      }
+      })
     });
 
     if (response.ok) {
@@ -209,10 +214,9 @@ export const fetchBrands = async () => {
   // Fallback to GET /api/Catalog/brands
   const response2 = await fetch(API_BASE_CATALOG, {
     method: 'GET',
-    headers: {
-      ...API_HEADERS,
+    headers: getApiHeaders({
       'Content-Type': 'application/json'
-    }
+    })
   });
 
   if (!response2.ok) {
@@ -254,7 +258,7 @@ export const deleteBrand = async (id) => {
   try {
     const response = await fetch(urlBrand, {
       method: 'DELETE',
-      headers: API_HEADERS
+      headers: getApiHeaders()
     });
 
     if (response.ok) {
@@ -269,7 +273,7 @@ export const deleteBrand = async (id) => {
   // Fallback to DELETE /api/Catalog/brands/{id}
   const response2 = await fetch(urlCatalog, {
     method: 'DELETE',
-    headers: API_HEADERS
+    headers: getApiHeaders()
   });
 
   if (!response2.ok) {

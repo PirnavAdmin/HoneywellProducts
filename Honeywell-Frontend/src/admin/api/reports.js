@@ -64,21 +64,13 @@ export const updateReportSettings = async (settings) => {
     defaultCurrency: String(settings?.defaultCurrency || 'INR')
   };
 
-  try {
-    const res = await fetch(`${getApiDomain()}/api/Reports/settings`, {
-      method: 'PUT',
-      headers: getHeaders(),
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) throw new Error(`Status ${res.status}`);
-    return await res.json();
-  } catch (err) {
-    console.warn('Backend PUT /api/Reports/settings failed, persisting locally:', err.message);
-    return {
-      message: 'Report settings updated successfully.',
-      settings: payload
-    };
-  }
+  const res = await fetch(`${getApiDomain()}/api/Reports/settings`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error(`Failed to update report settings (${res.status})`);
+  return await res.json();
 };
 
 /**
@@ -86,18 +78,10 @@ export const updateReportSettings = async (settings) => {
  * DELETE /api/Reports/cache
  */
 export const clearReportCache = async () => {
-  try {
-    const res = await fetch(`${getApiDomain()}/api/Reports/cache`, {
-      method: 'DELETE',
-      headers: getHeaders(),
-    });
-    if (!res.ok) throw new Error(`Status ${res.status}`);
-    return await res.json();
-  } catch (err) {
-    console.warn('Backend DELETE /api/Reports/cache failed:', err.message);
-    return {
-      message: 'Analytics report cache cleared successfully.',
-      clearedAt: new Date().toISOString()
-    };
-  }
+  const res = await fetch(`${getApiDomain()}/api/Reports/cache`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to clear report cache (${res.status})`);
+  return await res.json();
 };

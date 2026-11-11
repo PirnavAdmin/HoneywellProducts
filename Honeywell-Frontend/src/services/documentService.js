@@ -2,13 +2,6 @@ import axios from 'axios';
 import { getApiDomain } from '../utils/apiConfig';
 import { apiCache } from '../utils/apiCache';
 import { getAdminToken } from '../utils/rbac';
-import {
-  saveDocFile,
-  getDocFile,
-  deleteDocFile,
-  getLocalMetadataList,
-  saveLocalMetadataList,
-} from '../utils/documentStorage';
 
 const BASE_URL = getApiDomain();
 
@@ -54,31 +47,8 @@ export const documentService = {
    * Supports search, productId, categoryId, category, status, page, pageSize
    */
   async getAll(params = {}) {
-    let apiList = [];
-    try {
-      const response = await api.get('/api/documents', { params });
-      apiList = unwrapList(response);
-    } catch {
-      apiList = [];
-    }
-
-    // Merge with locally stored metadata
-    const stored = getLocalMetadataList();
-    const mergedMap = new Map();
-
-    // 1. Add API items
-    apiList.forEach((item) => {
-      if (item && item.id) mergedMap.set(String(item.id), item);
-    });
-
-    // 2. Merge local items
-    stored.forEach((item) => {
-      if (item && item.id && !mergedMap.has(String(item.id))) {
-        mergedMap.set(String(item.id), item);
-      }
-    });
-
-    let result = Array.from(mergedMap.values());
+    const response = await api.get('/api/documents', { params });
+    let result = unwrapList(response);
 
     // Apply client filters if needed
     if (params.productId) {
@@ -99,42 +69,21 @@ export const documentService = {
    */
   async getByProductId(productId) {
     if (!productId) return [];
-    let list = [];
-
-    // 1. Try dedicated product endpoint
     try {
       const response = await api.get(`/api/products/${productId}/documents`);
-      list = unwrapList(response);
+      const list = unwrapList(response);
+      if (list.length > 0) return list;
     } catch {
-      list = [];
+      // Fallback to query param on /api/documents
     }
 
-    // 2. Fallback: Try general documents endpoint with productId query param
-    if (list.length === 0) {
-      try {
-        const response = await api.get('/api/documents', { params: { productId } });
-        list = unwrapList(response);
-      } catch {
-        list = [];
-      }
+    try {
+      const response = await api.get('/api/documents', { params: { productId } });
+      return unwrapList(response);
+    } catch (err) {
+      console.warn(`Failed to fetch documents for product ${productId}:`, err.message);
+      return [];
     }
-
-    // 3. Fallback: Merge with local storage uploads for this product
-    const stored = getLocalMetadataList().filter(
-      (d) => String(d.productId) === String(productId)
-    );
-
-    const mergedMap = new Map();
-    list.forEach((item) => {
-      if (item && item.id) mergedMap.set(String(item.id), item);
-    });
-    stored.forEach((item) => {
-      if (item && item.id && !mergedMap.has(String(item.id))) {
-        mergedMap.set(String(item.id), item);
-      }
-    });
-
-    return Array.from(mergedMap.values());
   },
 
   /**
@@ -142,16 +91,9 @@ export const documentService = {
    */
   async getById(id) {
     if (!id) return null;
-    try {
-      const response = await api.get(`/api/documents/${id}`);
-      const item = unwrapItem(response);
-      if (item && item.id) return item;
-    } catch {
-      // Fallback
-    }
-
-    const stored = getLocalMetadataList();
-    return stored.find((d) => String(d.id) === String(id)) || null;
+    const response = await api.get(`/api/documents/${id}`);
+    const item = unwrapItem(response);
+    return (item && item.id) ? item : null;
   },
 
   /**
@@ -216,95 +158,28 @@ export const documentService = {
    * POST /api/products/{productId}/documents
    */
   async create(productId, docData, file) {
-    let savedItem = null;
-
-    // 1. Try backend upload
-    try {
-      const fd = this.buildFormData(productId, docData, file, false);
-      const response = await api.post(`/api/products/${productId}/documents`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      savedItem = unwrapItem(response);
-    } catch (err) {
-      console.warn('Backend document upload failed, using storage sync fallback:', err.message);
-    }
-
-    const docId = savedItem?.id || Date.now();
-
-    // 2. Persist binary file in IndexedDB
-    if (file) {
-      await saveDocFile(docId, file);
-    }
-
-    // 3. Persist metadata in localStorage
-    const docRecord = {
-      id: docId,
-      productId: Number(productId),
-      productName: docData.productName || '',
-      category: docData.category,
-      title: docData.title,
-      description: docData.description || '',
-      revision: docData.revision || '',
-      language: docData.language || 'English',
-      documentDate: docData.documentDate || new Date().toISOString(),
-      status: docData.status || 'Active',
-      sortOrder: docData.sortOrder || 0,
-      fileUrl: savedItem?.fileUrl || `/api/documents/${docId}/download`,
-      originalFileName: file?.name || savedItem?.originalFileName || `${docData.title}.pdf`,
-      fileSize: file?.size || savedItem?.fileSize || 0,
-      mimeType: 'application/pdf',
-      downloadCount: 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      hasLocalFile: Boolean(file),
-    };
-
-    const current = getLocalMetadataList();
-    const updated = [docRecord, ...current.filter((d) => String(d.id) !== String(docId))];
-    saveLocalMetadataList(updated);
+    const fd = this.buildFormData(productId, docData, file, false);
+    const response = await api.post(`/api/products/${productId}/documents`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const savedItem = unwrapItem(response);
 
     apiCache.invalidate('documents');
     apiCache.invalidate('products');
     apiCache.invalidate(`product_${productId}`);
 
-    return docRecord;
+    return savedItem;
   },
 
   /**
    * PUT /api/documents/{id}
    */
   async update(id, docData, file = null, keepExistingFile = true) {
-    let savedItem = null;
-
-    if (file) {
-      await saveDocFile(id, file);
-    }
-
-    try {
-      const fd = this.buildFormData(docData.productId, docData, file, keepExistingFile);
-      const response = await api.put(`/api/documents/${id}`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      savedItem = unwrapItem(response);
-    } catch (err) {
-      console.warn('Backend document update failed, syncing locally:', err.message);
-    }
-
-    const current = getLocalMetadataList();
-    const existing = current.find((d) => String(d.id) === String(id));
-    const updatedRecord = {
-      ...(existing || {}),
-      ...(savedItem || {}),
-      ...docData,
-      id: Number(id),
-      originalFileName: file?.name || savedItem?.originalFileName || existing?.originalFileName || `${docData.title}.pdf`,
-      fileSize: file?.size || savedItem?.fileSize || existing?.fileSize || 0,
-      hasLocalFile: Boolean(file || existing?.hasLocalFile),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const nextList = [updatedRecord, ...current.filter((d) => String(d.id) !== String(id))];
-    saveLocalMetadataList(nextList);
+    const fd = this.buildFormData(docData.productId, docData, file, keepExistingFile);
+    const response = await api.put(`/api/documents/${id}`, fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    const savedItem = unwrapItem(response);
 
     apiCache.invalidate('documents');
     apiCache.invalidate('products');
@@ -312,54 +187,33 @@ export const documentService = {
       apiCache.invalidate(`product_${docData.productId}`);
     }
 
-    return updatedRecord;
+    return savedItem;
   },
 
   /**
    * DELETE /api/documents/{id}
    */
-  async delete(id) {
-    try {
-      await api.delete(`/api/documents/${id}`);
-    } catch (err) {
-      console.warn('Backend document delete failed, removing locally:', err.message);
-    }
-
-    await deleteDocFile(id);
-
-    const current = getLocalMetadataList();
-    const target = current.find((d) => String(d.id) === String(id));
-    const nextList = current.filter((d) => String(d.id) !== String(id));
-    saveLocalMetadataList(nextList);
+  async delete(id, productId = null) {
+    const response = await api.delete(`/api/documents/${id}`);
 
     apiCache.invalidate('documents');
     apiCache.invalidate('products');
-    if (target?.productId) {
-      apiCache.invalidate(`product_${target.productId}`);
+    if (productId) {
+      apiCache.invalidate(`product_${productId}`);
     }
 
-    return true;
+    return response?.data || true;
   },
 
   /**
    * PATCH /api/documents/{id}/status
    */
   async updateStatus(id, status) {
-    try {
-      await api.patch(`/api/documents/${id}/status`, { status });
-    } catch (err) {
-      console.warn('Backend document status update failed, syncing locally:', err.message);
-    }
-
-    const current = getLocalMetadataList();
-    const updated = current.map((d) =>
-      String(d.id) === String(id) ? { ...d, status, updatedAt: new Date().toISOString() } : d
-    );
-    saveLocalMetadataList(updated);
+    const response = await api.patch(`/api/documents/${id}/status`, { status });
 
     apiCache.invalidate('documents');
     apiCache.invalidate('products');
-    return { id, status };
+    return response?.data || { id, status };
   },
 
   /**
@@ -378,62 +232,25 @@ export const documentService = {
 
   /**
    * Open PDF preview in a new browser tab
-   * Seamlessly checks IndexedDB for local file first, then falls back to backend stream
    */
   async openPreview(id) {
-    try {
-      const localFile = await getDocFile(id);
-      if (localFile) {
-        const blobUrl = URL.createObjectURL(localFile);
-        window.open(blobUrl, '_blank', 'noopener,noreferrer');
-        return true;
-      }
-    } catch (e) {
-      console.warn('Could not load local file for preview:', e);
-    }
-
     window.open(this.getViewUrl(id), '_blank', 'noopener,noreferrer');
     return true;
   },
 
   /**
    * Trigger download programmatically
-   * Seamlessly checks IndexedDB for local file first, then falls back to backend stream
    */
   async download(id, fileName = 'document.pdf') {
     const finalName = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
-
-    try {
-      const localFile = await getDocFile(id);
-      if (localFile) {
-        const blobUrl = URL.createObjectURL(localFile);
-        const link = document.createElement('a');
-        link.href = blobUrl;
-        link.download = finalName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
-        return true;
-      }
-    } catch (e) {
-      console.warn('Could not load local file for download:', e);
-    }
-
-    try {
-      const downloadUrl = this.getDownloadUrl(id);
-      const link = document.createElement('a');
-      link.href = downloadUrl;
-      link.download = finalName;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      return true;
-    } catch (err) {
-      console.warn(`Download trigger failed for id ${id}:`, err);
-      window.open(this.getDownloadUrl(id), '_blank', 'noopener,noreferrer');
-      return true;
-    }
+    const downloadUrl = this.getDownloadUrl(id);
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = finalName;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    return true;
   },
 };

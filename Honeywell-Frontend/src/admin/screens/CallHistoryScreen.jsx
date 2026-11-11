@@ -2,8 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Phone, Search, Plus, Calendar, AlertCircle, RefreshCw, Star, X, Edit2, Trash2, Clock, UserCheck, MessageSquare, ChevronDown } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import { AnimatedEditButton, OutlookDeleteButton } from '../components/ActionButtons';
 import '../catalog/adminModule.css';
+
+const getAuthHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    ...extra
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 export const formatFollowUpDate = (dateVal, isLead = false) => {
   if (!dateVal) {
@@ -94,10 +107,7 @@ const CallHistoryScreen = () => {
       if (priorityFilter !== 'All Priorities') params.append('priority', priorityFilter);
 
       const res = await fetch(`${getApiDomain()}/api/CallHistory?${params.toString()}`, {
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
-          'Accept': 'application/json'
-        }
+        headers: getAuthHeaders({ 'Accept': 'application/json' })
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
@@ -253,10 +263,7 @@ const CallHistoryScreen = () => {
 
       const res = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
 
@@ -280,7 +287,7 @@ const CallHistoryScreen = () => {
     try {
       const res = await fetch(`${getApiDomain()}/api/CallHistory/${id}`, {
         method: 'DELETE',
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: getAuthHeaders()
       });
       if (res.ok) {
         setCalls(prev => prev.filter(c => String(c.id) !== String(id)));

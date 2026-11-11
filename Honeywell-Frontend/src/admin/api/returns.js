@@ -61,6 +61,7 @@ export const getReturnsConfig = async () => {
 // GET /api/Returns/check-eligibility?query={query} and POST fallback
 export const checkReturnEligibility = async (orderItemId) => {
   const raw = String(orderItemId || '').trim();
+  const clean = raw.replace(/^(Order\s*#*|#)+/i, '').replace(/[.,;:\s]+$/, '').trim();
   if (!raw) {
     return {
       eligible: false,

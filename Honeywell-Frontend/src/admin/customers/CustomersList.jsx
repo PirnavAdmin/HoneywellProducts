@@ -3,8 +3,22 @@ import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, MapPin, Eye, Plus, X, RefreshCw, Mail, Phone, UserCheck } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import { OutlookDeleteButton, AnimatedEditButton, AnimatedViewButton, Pagination } from '../components/ActionButtons';
 import '../catalog/adminModule.css';
+
+const getAuthHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    'Accept': 'application/json',
+    ...extra
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
 
 const CustomersList = () => {
   const navigate = useNavigate();
@@ -46,7 +60,7 @@ const CustomersList = () => {
     else setIsRefreshing(true);
 
     fetch(`${getApiDomain()}/api/Customers`, {
-      headers: { 'ngrok-skip-browser-warning': 'true', 'Accept': 'application/json' }
+      headers: getAuthHeaders()
     })
       .then(res => {
         if (!res.ok) throw new Error('Failed to fetch customers');
@@ -88,7 +102,7 @@ const CustomersList = () => {
     try {
       const res = await fetch(`${getApiDomain()}/api/Customers/${id}`, {
         method: 'DELETE',
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: getAuthHeaders()
       });
       if (!res.ok) throw new Error('Delete failed');
       setCustomers(prev => prev.filter(c => c.id !== id));
@@ -138,14 +152,14 @@ const CustomersList = () => {
     try {
       const res = await fetch(`${getApiDomain()}/api/Customers`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error('Failed to create customer');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to create customer');
+      }
       const data = await res.json();
       setCustomers(prev => [{ ...data, type: newCustomer.type, role: newCustomer.type, customerType: newCustomer.type }, ...prev]);
       setShowAddModal(false);
@@ -166,12 +180,7 @@ const CustomersList = () => {
       });
     } catch (err) {
       console.error('Error creating customer:', err);
-      const fallbackCustomer = {
-        id: Date.now(),
-        ...payload
-      };
-      setCustomers(prev => [fallbackCustomer, ...prev]);
-      setShowAddModal(false);
+      alert(err.message || 'Failed to create customer');
     }
   };
 
@@ -231,24 +240,21 @@ const CustomersList = () => {
     try {
       const res = await fetch(`${getApiDomain()}/api/Customers/${editingCustomer.id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true'
-        },
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error('Failed to update customer');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        throw new Error(errorData?.message || 'Failed to update customer');
+      }
       
       setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...payload } : c));
       setShowEditModal(false);
       setEditingCustomer(null);
     } catch (err) {
       console.error('Error updating customer:', err);
-      // Fallback
-      setCustomers(prev => prev.map(c => c.id === editingCustomer.id ? { ...c, ...payload } : c));
-      setShowEditModal(false);
-      setEditingCustomer(null);
+      alert(err.message || 'Failed to update customer');
     } finally {
       setIsUpdating(false);
     }

@@ -8,9 +8,7 @@ import {
   isPathAuthorized, 
   getFirstAuthorizedRoute, 
   clearUserSession, 
-  getStoredAdminItem, 
-  getAdminToken, 
-  isTokenValid,
+  getStoredAdminItem,
   getEffectiveAuthType,
   getEffectiveAdminRole,
   isUserSessionValid

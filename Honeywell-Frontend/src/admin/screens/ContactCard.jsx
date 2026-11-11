@@ -5,9 +5,19 @@ import {
   CheckCircle, AlertCircle, Building2
 } from 'lucide-react';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import './ContactCard.css';
 
 const API_URL = `${getApiDomain()}/api/Settings/contact-card`;
+
+const getHeaders = (extra = {}) => {
+  const token = getAdminToken();
+  return {
+    'ngrok-skip-browser-warning': 'true',
+    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...extra
+  };
+};
 
 const ContactCard = () => {
   const [formData, setFormData] = useState({
@@ -31,7 +41,7 @@ const ContactCard = () => {
     setMessage({ type: '', text: '' });
     try {
       const res = await axios.get(API_URL, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: getHeaders()
       });
       if (res.data) {
         setFormData(prev => ({ ...prev, ...res.data }));
@@ -49,12 +59,13 @@ const ContactCard = () => {
     setMessage({ type: '', text: '' });
     try {
       await axios.put(API_URL, formData, {
-        headers: { 'ngrok-skip-browser-warning': 'true', 'Content-Type': 'application/json' }
+        headers: getHeaders({ 'Content-Type': 'application/json' })
       });
       setMessage({ type: 'success', text: 'Contact card details updated successfully!' });
     } catch (err) {
       console.error('Save Contact Card error:', err);
-      setMessage({ type: 'success', text: 'Contact card details saved successfully.' });
+      const errMsg = err.response?.data?.message || err.message || 'Failed to update contact card details.';
+      setMessage({ type: 'error', text: errMsg });
     } finally {
       setSaving(false);
     }

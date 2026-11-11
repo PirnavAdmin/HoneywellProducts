@@ -28,6 +28,7 @@ import AdminSoftwareModal from './AdminSoftwareModal';
 import { documentService } from '../../services/documentService';
 import AdminDocumentModal from './AdminDocumentModal';
 import { getApiDomain } from '../../utils/apiConfig';
+import { getAdminToken } from '../../utils/rbac';
 import { Toast } from '../components/Toast';
 import { Download, ExternalLink, Search as SearchIcon } from 'lucide-react';
 import './adminModule.css';
@@ -409,7 +410,10 @@ const ProductsForm = () => {
       fetchCategories().catch(() => []),
       fetchSubcategories().catch(() => []),
       fetch(`${getApiDomain()}/api/Brand`, {
-        headers: { 'ngrok-skip-browser-warning': 'true' }
+        headers: {
+          'ngrok-skip-browser-warning': 'true',
+          ...(getAdminToken() ? { 'Authorization': `Bearer ${getAdminToken()}` } : {})
+        }
       }).then(res => res.json()).catch(() => []),
       fetchSuppliers().catch(() => [])
     ]).then(([cats, subcats, brands, suppliers]) => {
@@ -1150,11 +1154,19 @@ const ProductsForm = () => {
                     style={{ padding: '6px 10px', fontSize: '13px' }}
                   >
                     <option value="">Select Supplier</option>
-                    {suppliersList.map((supplier) => (
-                      <option key={supplier.id} value={supplier.name}>
-                        {supplier.name}
+                    {formData.supplier && !suppliersList.some(s => (s.name && s.name.trim().toLowerCase() === formData.supplier.trim().toLowerCase()) || (s.businessName && s.businessName.trim().toLowerCase() === formData.supplier.trim().toLowerCase())) && (
+                      <option value={formData.supplier}>
+                        {formData.supplier}
                       </option>
-                    ))}
+                    )}
+                    {suppliersList.map((supplier) => {
+                      const supName = supplier.name || supplier.businessName || '';
+                      return (
+                        <option key={supplier.id || supName} value={supName}>
+                          {supName}
+                        </option>
+                      );
+                    })}
                   </select>
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
                     <Link to="/admin/suppliers/add" style={{ fontSize: '11px', color: '#2563eb', textDecoration: 'none', fontWeight: '500' }}>+ Add Supplier</Link>

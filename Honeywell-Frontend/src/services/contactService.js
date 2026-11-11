@@ -55,15 +55,26 @@ export const contactService = {
     return data;
   },
 
-  /** PUT status update */
-  async update(id, updateData) {
-    const current = await this.getById(id) || {};
-    return { ...current, ...updateData };
+  /** PUT /api/Enquiry/contact-us/{id} — Update contact submission details/status */
+  async update(id, updateData = {}) {
+    const body = {
+      status: updateData.status,
+      message: updateData.message !== undefined ? updateData.message : undefined,
+      enquiryType: updateData.enquiryType || updateData.type || undefined
+    };
+
+    return await apiRequest(`/api/Enquiry/contact-us/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    });
   },
 
-  /** DELETE */
+  /** DELETE /api/Enquiry/contact-us/{id} — Delete a contact submission */
   async delete(id) {
-    return true;
+    const res = await apiRequest(`/api/Enquiry/contact-us/${id}`, {
+      method: 'DELETE'
+    });
+    return res || true;
   }
 };
 

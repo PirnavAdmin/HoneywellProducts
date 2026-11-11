@@ -654,8 +654,8 @@ export const clearUserSession = () => {
     'adminLastActivity'
   ];
   keys.forEach((key) => {
-    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key); } catch {}
-    try { if (typeof localStorage !== 'undefined') localStorage.removeItem(key); } catch {}
+    try { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key); } catch (_e) { /* ignore */ }
+    try { if (typeof localStorage !== 'undefined') localStorage.removeItem(key); } catch (_e) { /* ignore */ }
   });
 };
 

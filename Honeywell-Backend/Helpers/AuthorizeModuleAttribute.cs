@@ -417,7 +417,7 @@ namespace Honeywell.Helpers
         {
             string? modName = defaultModName;
 
-            if (elem.TryGetProperty("moduleName", out var mn) || elem.TryGetProperty("ModuleName", out mn) || elem.TryGetProperty("name", out mn))
+            if (elem.TryGetProperty("moduleName", out var mn) || elem.TryGetProperty("ModuleName", out mn) || elem.TryGetProperty("name", out mn) || elem.TryGetProperty("module", out mn) || elem.TryGetProperty("Module", out mn))
             {
                 modName = mn.GetString();
             }
