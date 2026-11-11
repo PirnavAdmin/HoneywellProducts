@@ -64,7 +64,7 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   useEffect(() => {
     const handlePermissionsUpdated = (e) => {
       try {
-        if (e?.detail?.permissions && Array.isArray(e.detail.permissions)) {
+        if (Array.isArray(e?.detail?.permissions)) {
           setUserPermissions(e.detail.permissions);
         } else {
           const perms = getStoredAdminItem('adminPermissions');

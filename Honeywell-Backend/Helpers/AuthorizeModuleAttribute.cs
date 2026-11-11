@@ -115,10 +115,14 @@ namespace Honeywell.Helpers
             }
 
             // 6. Resolve permissions for Staff / Manager
-            var email = user.FindFirst(ClaimTypes.Email)?.Value
-                     ?? user.FindFirst("email")?.Value
-                     ?? user.FindFirst("employeeId")?.Value
-                     ?? user.Identity?.Name;
+            var email = new[]
+            {
+                user.FindFirst(ClaimTypes.Email)?.Value,
+                user.FindFirst("email")?.Value,
+                user.FindFirst("employeeId")?.Value,
+                user.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                user.Identity?.Name
+            }.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
             var dbContext = httpContext.RequestServices.GetService<ApplicationDbContext>();
             var permissionsClaim = user.FindFirst("permissions")?.Value;
@@ -217,18 +221,20 @@ namespace Honeywell.Helpers
         {
             // Collect all permission descriptors for the user
             var descriptors = new List<ModulePermissionDescriptor>();
+            bool userFoundInDb = false;
 
             // 1. Query the live database for this authenticated staff user so that permission updates
             // take effect immediately without requiring re-login
             if (db != null && !string.IsNullOrWhiteSpace(email))
             {
-                var cleanEmail = email.Trim().ToLowerInvariant();
+                var cleanIdentifier = email.Trim().ToLowerInvariant();
                 var staffEntity = await db.Staff.AsNoTracking().FirstOrDefaultAsync(s =>
-                    s.Email.ToLower() == cleanEmail ||
-                    s.EmployeeId.ToLower() == cleanEmail);
+                    s.Email.ToLower() == cleanIdentifier ||
+                    s.EmployeeId.ToLower() == cleanIdentifier);
 
                 if (staffEntity != null)
                 {
+                    userFoundInDb = true;
                     if (!staffEntity.IsActive) return false;
 
                     if (staffEntity.PermissionsJson == null)
@@ -255,10 +261,28 @@ namespace Honeywell.Helpers
                         ParsePermissionsJsonIntoDescriptors(staffEntity.PermissionsJson, descriptors);
                     }
                 }
+                else
+                {
+                    // Fallback to admin_user table if not found in Staff table
+                    var userEntity = await db.Users.AsNoTracking().FirstOrDefaultAsync(u =>
+                        u.Email.ToLower() == cleanIdentifier ||
+                        (u.EmployeeId != null && u.EmployeeId.ToLower() == cleanIdentifier));
+
+                    if (userEntity != null)
+                    {
+                        userFoundInDb = true;
+                        if (!userEntity.IsActive) return false;
+
+                        if (!string.IsNullOrWhiteSpace(userEntity.PermissionsJson))
+                        {
+                            ParsePermissionsJsonIntoDescriptors(userEntity.PermissionsJson, descriptors);
+                        }
+                    }
+                }
             }
 
-            // 2. Fall back to parsing permissions claim from JWT if live DB lookup yielded no descriptors (e.g. test tokens)
-            if (descriptors.Count == 0 && !string.IsNullOrWhiteSpace(permissionsClaim))
+            // 2. Fall back to parsing permissions claim from JWT ONLY if live DB lookup did not find the user (e.g. test tokens)
+            if (!userFoundInDb && !string.IsNullOrWhiteSpace(permissionsClaim))
             {
                 ParsePermissionsJsonIntoDescriptors(permissionsClaim, descriptors);
             }
