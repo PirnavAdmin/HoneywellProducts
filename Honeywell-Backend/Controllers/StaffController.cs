@@ -60,6 +60,91 @@ namespace Honeywell.Controllers
             _jwtService = jwtService;
         }
 
+        // Checks email uniqueness across Customers, Staff and admin_user.
+        // The current staff member's own admin_user mirror is excluded during updates.
+        private async Task<bool> IsStaffEmailAlreadyUsedAsync(
+            string? email,
+            int? excludeStaffId = null,
+            string? linkedEmployeeId = null,
+            string? linkedStaffEmail = null)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+                return false;
+
+            var cleanEmail = email.Trim().ToLowerInvariant();
+
+            var customerExists = await _context.Customers.AnyAsync(c =>
+                c.Email != null && c.Email.ToLower() == cleanEmail);
+
+            if (customerExists)
+                return true;
+
+            var staffExists = await _context.Staff.AnyAsync(s =>
+                s.Id != (excludeStaffId ?? 0) &&
+                s.Email != null &&
+                s.Email.ToLower() == cleanEmail);
+
+            if (staffExists)
+                return true;
+
+            var adminExists = await _context.Users.AnyAsync(u =>
+                u.Email.ToLower() == cleanEmail &&
+                !(
+                    (!string.IsNullOrWhiteSpace(linkedEmployeeId) &&
+                     u.EmployeeId == linkedEmployeeId) ||
+                    (!string.IsNullOrWhiteSpace(linkedStaffEmail) &&
+                     u.Email.ToLower() == linkedStaffEmail.Trim().ToLower())
+                ));
+
+            return adminExists;
+        }
+
+        // Checks mobile uniqueness across Customers, GrowerUser, Staff and admin_user.
+        // The current staff member's own admin_user mirror is excluded during updates.
+        private async Task<bool> IsStaffMobileAlreadyUsedAsync(
+            string? mobile,
+            int? excludeStaffId = null,
+            string? linkedEmployeeId = null,
+            string? linkedStaffEmail = null)
+        {
+            if (string.IsNullOrWhiteSpace(mobile))
+                return false;
+
+            var cleanMobile = mobile.Trim();
+
+            var customerExists = await _context.Customers.AnyAsync(c =>
+                c.Phone != null && c.Phone.Trim() == cleanMobile);
+
+            if (customerExists)
+                return true;
+
+            var growerExists = await _context.GrowerUsers.AnyAsync(u =>
+                u.Phone.Trim() == cleanMobile);
+
+            if (growerExists)
+                return true;
+
+            var staffExists = await _context.Staff.AnyAsync(s =>
+                s.Id != (excludeStaffId ?? 0) &&
+                ((s.Phone != null && s.Phone.Trim() == cleanMobile) ||
+                 (s.MobileNumber != null && s.MobileNumber.Trim() == cleanMobile)));
+
+            if (staffExists)
+                return true;
+
+            var adminExists = await _context.Users.AnyAsync(u =>
+                u.MobileNumber != null &&
+                u.MobileNumber.Trim() == cleanMobile &&
+                !(
+                    (!string.IsNullOrWhiteSpace(linkedEmployeeId) &&
+                     u.EmployeeId == linkedEmployeeId) ||
+                    (!string.IsNullOrWhiteSpace(linkedStaffEmail) &&
+                     u.Email.ToLower() == linkedStaffEmail.Trim().ToLower())
+                ));
+
+            return adminExists;
+        }
+
         private static void NormalizeStaffEntity(Staff s)
         {
             if (string.IsNullOrWhiteSpace(s.EmployeeId) && s.Id > 0)
@@ -353,6 +438,43 @@ namespace Honeywell.Controllers
             if (string.IsNullOrWhiteSpace(staff.MobileNumber) && !string.IsNullOrWhiteSpace(staff.Phone))
                 staff.MobileNumber = staff.Phone.Trim();
 
+            // Normalize contact details before checking duplicates.
+            if (!string.IsNullOrWhiteSpace(staff.Email))
+                staff.Email = staff.Email.Trim().ToLowerInvariant();
+
+            if (!string.IsNullOrWhiteSpace(staff.Phone))
+                staff.Phone = staff.Phone.Trim();
+
+            if (!string.IsNullOrWhiteSpace(staff.MobileNumber))
+                staff.MobileNumber = staff.MobileNumber.Trim();
+
+            // Keep Phone and MobileNumber aligned because both represent this staff member's mobile.
+            if (string.IsNullOrWhiteSpace(staff.Phone) && !string.IsNullOrWhiteSpace(staff.MobileNumber))
+                staff.Phone = staff.MobileNumber;
+            if (string.IsNullOrWhiteSpace(staff.MobileNumber) && !string.IsNullOrWhiteSpace(staff.Phone))
+                staff.MobileNumber = staff.Phone;
+
+            if (await IsStaffEmailAlreadyUsedAsync(staff.Email))
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = "This email address is already registered with another account."
+                });
+            }
+
+            if (await IsStaffMobileAlreadyUsedAsync(staff.Phone) ||
+                (!string.IsNullOrWhiteSpace(staff.MobileNumber) &&
+                 !string.Equals(staff.MobileNumber, staff.Phone, StringComparison.Ordinal) &&
+                 await IsStaffMobileAlreadyUsedAsync(staff.MobileNumber)))
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = "This mobile number is already registered with another account."
+                });
+            }
+
             if (string.IsNullOrWhiteSpace(staff.Role))
                 staff.Role = "staff";
 
@@ -407,6 +529,15 @@ namespace Honeywell.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] Staff updateData)
         {
+            if (updateData == null)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid staff update payload."
+                });
+            }
+
             var staff = await FindStaffAsync(id);
             if (staff == null)
             {
@@ -427,8 +558,57 @@ namespace Honeywell.Controllers
             else if (!string.IsNullOrWhiteSpace(updateData.FirstName) || !string.IsNullOrWhiteSpace(updateData.LastName))
                 staff.Name = $"{staff.FirstName} {staff.LastName}".Trim();
 
+            // Preserve the current staff identity so its admin_user mirror is not
+            // mistaken for a separate account during duplicate validation.
+            var existingEmployeeId = staff.EmployeeId;
+            var existingStaffEmail = staff.Email;
+
+            var requestedEmail = !string.IsNullOrWhiteSpace(updateData.Email)
+                ? updateData.Email.Trim().ToLowerInvariant()
+                : staff.Email;
+
+            var requestedMobile = !string.IsNullOrWhiteSpace(updateData.Phone)
+                ? updateData.Phone.Trim()
+                : !string.IsNullOrWhiteSpace(updateData.MobileNumber)
+                    ? updateData.MobileNumber.Trim()
+                    : staff.Phone;
+
+            if (await IsStaffEmailAlreadyUsedAsync(
+                requestedEmail,
+                staff.Id,
+                existingEmployeeId,
+                existingStaffEmail))
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = "This email address is already registered with another account."
+                });
+            }
+
+            if (await IsStaffMobileAlreadyUsedAsync(
+                requestedMobile,
+                staff.Id,
+                existingEmployeeId,
+                existingStaffEmail) ||
+                (!string.IsNullOrWhiteSpace(updateData.Phone) &&
+                 !string.IsNullOrWhiteSpace(updateData.MobileNumber) &&
+                 !string.Equals(updateData.Phone.Trim(), updateData.MobileNumber.Trim(), StringComparison.Ordinal) &&
+                 await IsStaffMobileAlreadyUsedAsync(
+                     updateData.MobileNumber,
+                     staff.Id,
+                     existingEmployeeId,
+                     existingStaffEmail)))
+            {
+                return Conflict(new
+                {
+                    success = false,
+                    message = "This mobile number is already registered with another account."
+                });
+            }
+
             if (!string.IsNullOrWhiteSpace(updateData.Email))
-                staff.Email = updateData.Email.Trim();
+                staff.Email = updateData.Email.Trim().ToLowerInvariant();
 
             if (!string.IsNullOrWhiteSpace(updateData.Phone))
             {
@@ -1648,6 +1828,4 @@ namespace Honeywell.Controllers
         }
     }
 }
-
-
 

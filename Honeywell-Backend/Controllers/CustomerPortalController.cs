@@ -76,33 +76,101 @@ namespace Honeywell.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] CustomerRegisterDto dto)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.EmailOrPhone) || string.IsNullOrWhiteSpace(dto.Password))
+            if (dto == null ||
+                string.IsNullOrWhiteSpace(dto.EmailOrPhone) ||
+                string.IsNullOrWhiteSpace(dto.Password))
             {
-                return BadRequest(new { success = false, message = "Full Name, Email/Phone, and Password are required." });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Email/Mobile and Password are required."
+                });
             }
 
-            var identifier = dto.EmailOrPhone.Trim().ToLower();
-            var existing = await _context.Customers
-                .FirstOrDefaultAsync(c => (c.Email != null && c.Email.ToLower() == identifier) || c.Phone == identifier);
+            var identifier = dto.EmailOrPhone.Trim();
+            var isEmail = identifier.Contains("@");
 
-            if (existing != null)
+            // Resolve both contact details, whether the user starts with email or mobile.
+            var email = (isEmail ? identifier : dto.Email)?.Trim().ToLowerInvariant();
+            var phone = (isEmail ? dto.Phone : identifier)?.Trim();
+
+            if (string.IsNullOrWhiteSpace(email)) email = null;
+            if (string.IsNullOrWhiteSpace(phone)) phone = null;
+
+            if (email == null && phone == null)
             {
-                return BadRequest(new { success = false, message = "An account with this Email or Phone already exists." });
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "A valid email address or mobile number is required."
+                });
             }
 
-            var nameParts = (dto.FullName ?? "").Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-            var firstName = nameParts.Length > 0 ? nameParts[0] : (dto.FullName ?? "");
+            // Check email across customer, admin-user and staff accounts.
+            if (email != null)
+            {
+                var customerEmailExists = await _context.Customers.AnyAsync(c =>
+                    c.Email != null && c.Email.Trim().ToLower() == email);
+
+                if (customerEmailExists)
+                    return Conflict(new { success = false, message = "This email address is already registered." });
+
+                var adminEmailExists = await _context.Users.AnyAsync(u =>
+                    u.Email != null && u.Email.Trim().ToLower() == email);
+
+                if (adminEmailExists)
+                    return Conflict(new { success = false, message = "This email address is already registered." });
+
+                var staffEmailExists = await _context.Staff.AnyAsync(s =>
+                    s.Email != null && s.Email.Trim().ToLower() == email);
+
+                if (staffEmailExists)
+                    return Conflict(new { success = false, message = "This email address is already registered." });
+            }
+
+            // Check mobile across customer, admin-user, staff and GrowerUser accounts.
+            if (phone != null)
+            {
+                var customerPhoneExists = await _context.Customers.AnyAsync(c =>
+                    c.Phone != null && c.Phone.Trim() == phone);
+
+                if (customerPhoneExists)
+                    return Conflict(new { success = false, message = "This mobile number is already registered." });
+
+                var adminMobileExists = await _context.Users.AnyAsync(u =>
+                    u.MobileNumber != null && u.MobileNumber.Trim() == phone);
+
+                if (adminMobileExists)
+                    return Conflict(new { success = false, message = "This mobile number is already registered." });
+
+                var staffMobileExists = await _context.Staff.AnyAsync(s =>
+                    (s.Phone != null && s.Phone.Trim() == phone) ||
+                    (s.MobileNumber != null && s.MobileNumber.Trim() == phone));
+
+                if (staffMobileExists)
+                    return Conflict(new { success = false, message = "This mobile number is already registered." });
+
+                var growerMobileExists = await _context.GrowerUsers.AnyAsync(g =>
+                    g.Phone != null && g.Phone.Trim() == phone);
+
+                if (growerMobileExists)
+                    return Conflict(new { success = false, message = "This mobile number is already registered." });
+            }
+
+            var nameParts = (dto.FullName ?? "")
+                .Trim()
+                .Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+
+            var firstName = nameParts.Length > 0 ? nameParts[0] : "";
             var lastName = nameParts.Length > 1 ? nameParts[1] : "";
-
-            var isEmail = dto.EmailOrPhone.Contains("@");
 
             var newCustomer = new Customer
             {
-                Name = dto.FullName ?? "Customer",
+                Name = string.IsNullOrWhiteSpace(dto.FullName) ? "Customer" : dto.FullName.Trim(),
                 FirstName = firstName,
                 LastName = lastName,
-                Email = isEmail ? dto.EmailOrPhone : (dto.Email ?? ""),
-                Phone = !isEmail ? dto.EmailOrPhone : (dto.Phone ?? ""),
+                Email = email,
+                Phone = phone,
                 Password = dto.Password,
                 Role = "CUSTOMER ACCOUNT",
                 Status = "Active",
@@ -119,6 +187,7 @@ namespace Honeywell.Controllers
             await _context.SaveChangesAsync();
 
             var token = _jwtService.GenerateTokenForCustomer(newCustomer);
+
             return Ok(new
             {
                 success = true,
@@ -145,9 +214,9 @@ namespace Honeywell.Controllers
                 customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email != null && c.Email.ToLower() == email.Trim().ToLower());
             }
 
-            if (customer == null && User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name))
+            if (customer == null && HttpContext.User.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(HttpContext.User.Identity?.Name))
             {
-                var ident = User.Identity.Name.Trim().ToLower();
+                var ident = HttpContext.User.Identity!.Name!.Trim().ToLowerInvariant();
                 customer = await _context.Customers.FirstOrDefaultAsync(c => (c.Email != null && c.Email.ToLower() == ident) || c.Phone == ident);
             }
 
@@ -161,16 +230,16 @@ namespace Honeywell.Controllers
                 return NotFound(new { success = false, message = "Customer profile not found." });
             }
 
-            var displayName = !string.IsNullOrWhiteSpace(customer.Name) 
-                ? customer.Name 
+            var displayName = !string.IsNullOrWhiteSpace(customer.Name)
+                ? customer.Name
                 : (!string.IsNullOrWhiteSpace(customer.Email) ? customer.Email.Split('@')[0] : "Customer");
 
-            var firstName = !string.IsNullOrWhiteSpace(customer.FirstName) 
-                ? customer.FirstName 
+            var firstName = !string.IsNullOrWhiteSpace(customer.FirstName)
+                ? customer.FirstName
                 : (!string.IsNullOrWhiteSpace(customer.Name) ? customer.Name.Split(' ')[0] : "");
 
-            var lastName = !string.IsNullOrWhiteSpace(customer.LastName) 
-                ? customer.LastName 
+            var lastName = !string.IsNullOrWhiteSpace(customer.LastName)
+                ? customer.LastName
                 : (customer.Name != null && customer.Name.Contains(' ') ? customer.Name.Split(' ', 2)[1] : "");
 
             var shippingAddress = customer.ShippingAddressJson;
@@ -239,9 +308,9 @@ namespace Honeywell.Controllers
                 customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email != null && c.Email.ToLower() == email.Trim().ToLower());
             }
 
-            if (customer == null && User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name))
+            if (customer == null && HttpContext.User.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(HttpContext.User.Identity?.Name))
             {
-                var ident = User.Identity.Name.Trim().ToLower();
+                var ident = HttpContext.User.Identity!.Name!.Trim().ToLowerInvariant();
                 customer = await _context.Customers.FirstOrDefaultAsync(c => (c.Email != null && c.Email.ToLower() == ident) || c.Phone == ident);
             }
 
@@ -255,16 +324,16 @@ namespace Honeywell.Controllers
                 return NotFound(new { success = false, message = "Customer profile not found." });
             }
 
-            var displayName = !string.IsNullOrWhiteSpace(customer.Name) 
-                ? customer.Name 
+            var displayName = !string.IsNullOrWhiteSpace(customer.Name)
+                ? customer.Name
                 : (!string.IsNullOrWhiteSpace(customer.Email) ? customer.Email.Split('@')[0] : "Customer");
 
-            var firstName = !string.IsNullOrWhiteSpace(customer.FirstName) 
-                ? customer.FirstName 
+            var firstName = !string.IsNullOrWhiteSpace(customer.FirstName)
+                ? customer.FirstName
                 : (!string.IsNullOrWhiteSpace(customer.Name) ? customer.Name.Split(' ')[0] : "");
 
-            var lastName = !string.IsNullOrWhiteSpace(customer.LastName) 
-                ? customer.LastName 
+            var lastName = !string.IsNullOrWhiteSpace(customer.LastName)
+                ? customer.LastName
                 : (customer.Name != null && customer.Name.Contains(' ') ? customer.Name.Split(' ', 2)[1] : "");
 
             return Ok(new
@@ -288,36 +357,92 @@ namespace Honeywell.Controllers
         [HttpPut("profile")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateCustomerProfileDto dto, [FromQuery] int? customerId)
         {
+            if (dto == null)
+                return BadRequest(new { success = false, message = "Profile details are required." });
+
             Customer? customer = null;
+
             if (customerId.HasValue && customerId.Value > 0)
             {
                 customer = await _context.Customers.FindAsync(customerId.Value);
             }
-            else if (dto != null && !string.IsNullOrWhiteSpace(dto.EmailAddress))
+            else if (!string.IsNullOrWhiteSpace(dto.EmailAddress))
             {
-                customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email != null && c.Email.ToLower() == dto.EmailAddress.Trim().ToLower());
+                var lookupEmail = dto.EmailAddress.Trim().ToLowerInvariant();
+                customer = await _context.Customers.FirstOrDefaultAsync(c =>
+                    c.Email != null && c.Email.Trim().ToLower() == lookupEmail);
             }
 
             if (customer == null)
-            {
-                customer = await _context.Customers.FirstOrDefaultAsync();
-            }
-
-            if (customer == null)
-            {
                 return NotFound(new { success = false, message = "Customer profile not found." });
+
+            var newEmail = !string.IsNullOrWhiteSpace(dto.EmailAddress)
+                ? dto.EmailAddress.Trim().ToLowerInvariant()
+                : customer.Email?.Trim().ToLowerInvariant();
+
+            var newPhone = !string.IsNullOrWhiteSpace(dto.MobileNumber)
+                ? dto.MobileNumber.Trim()
+                : customer.Phone?.Trim();
+
+            if (!string.IsNullOrWhiteSpace(dto.EmailAddress))
+            {
+                var customerEmailExists = await _context.Customers.AnyAsync(c =>
+                    c.Id != customer.Id &&
+                    c.Email != null &&
+                    c.Email.Trim().ToLower() == newEmail);
+
+                var adminEmailExists = await _context.Users.AnyAsync(u =>
+                    u.Email != null && u.Email.Trim().ToLower() == newEmail);
+
+                var staffEmailExists = await _context.Staff.AnyAsync(s =>
+                    s.Email != null && s.Email.Trim().ToLower() == newEmail);
+
+                if (customerEmailExists || adminEmailExists || staffEmailExists)
+                    return Conflict(new { success = false, message = "This email address is already registered." });
             }
 
-            if (dto != null)
+            if (!string.IsNullOrWhiteSpace(dto.MobileNumber))
             {
-                if (!string.IsNullOrWhiteSpace(dto.FirstName)) customer.FirstName = dto.FirstName;
-                if (!string.IsNullOrWhiteSpace(dto.LastName)) customer.LastName = dto.LastName;
-                customer.Name = $"{customer.FirstName} {customer.LastName}".Trim();
-                if (!string.IsNullOrWhiteSpace(dto.EmailAddress)) customer.Email = dto.EmailAddress;
-                if (!string.IsNullOrWhiteSpace(dto.MobileNumber)) customer.Phone = dto.MobileNumber;
-                if (!string.IsNullOrWhiteSpace(dto.Gender)) customer.Gender = dto.Gender;
-                if (!string.IsNullOrWhiteSpace(dto.CompanyOrganization)) customer.CompanyOrganization = dto.CompanyOrganization;
+                var customerPhoneExists = await _context.Customers.AnyAsync(c =>
+                    c.Id != customer.Id &&
+                    c.Phone != null &&
+                    c.Phone.Trim() == newPhone);
+
+                var adminMobileExists = await _context.Users.AnyAsync(u =>
+                    u.MobileNumber != null && u.MobileNumber.Trim() == newPhone);
+
+                var staffMobileExists = await _context.Staff.AnyAsync(s =>
+                    (s.Phone != null && s.Phone.Trim() == newPhone) ||
+                    (s.MobileNumber != null && s.MobileNumber.Trim() == newPhone));
+
+                var growerMobileExists = await _context.GrowerUsers.AnyAsync(g =>
+                    g.Id != customer.UserId &&
+                    g.Phone != null &&
+                    g.Phone.Trim() == newPhone);
+
+                if (customerPhoneExists || adminMobileExists || staffMobileExists || growerMobileExists)
+                    return Conflict(new { success = false, message = "This mobile number is already registered." });
             }
+
+            if (!string.IsNullOrWhiteSpace(dto.FirstName))
+                customer.FirstName = dto.FirstName.Trim();
+
+            if (!string.IsNullOrWhiteSpace(dto.LastName))
+                customer.LastName = dto.LastName.Trim();
+
+            customer.Name = $"{customer.FirstName} {customer.LastName}".Trim();
+
+            if (!string.IsNullOrWhiteSpace(dto.EmailAddress))
+                customer.Email = newEmail;
+
+            if (!string.IsNullOrWhiteSpace(dto.MobileNumber))
+                customer.Phone = newPhone;
+
+            if (!string.IsNullOrWhiteSpace(dto.Gender))
+                customer.Gender = dto.Gender;
+
+            if (!string.IsNullOrWhiteSpace(dto.CompanyOrganization))
+                customer.CompanyOrganization = dto.CompanyOrganization;
 
             await _context.SaveChangesAsync();
 
@@ -456,9 +581,9 @@ namespace Honeywell.Controllers
                 customer = await _context.Customers.FindAsync(customerId.Value);
             }
 
-            if (customer == null && User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name))
+            if (customer == null && HttpContext.User.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(HttpContext.User.Identity?.Name))
             {
-                var ident = User.Identity.Name.Trim().ToLower();
+                var ident = HttpContext.User.Identity!.Name!.Trim().ToLowerInvariant();
                 customer = await _context.Customers.FirstOrDefaultAsync(c => (c.Email != null && c.Email.ToLower() == ident) || c.Phone == ident);
             }
 
@@ -550,9 +675,9 @@ namespace Honeywell.Controllers
                 customer = await _context.Customers.FirstOrDefaultAsync(c => c.Email != null && c.Email.ToLower() == targetEmail);
             }
 
-            if (customer == null && User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name))
+            if (customer == null && HttpContext.User.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(HttpContext.User.Identity?.Name))
             {
-                var ident = User.Identity.Name.Trim().ToLower();
+                var ident = HttpContext.User.Identity!.Name!.Trim().ToLowerInvariant();
                 customer = await _context.Customers.FirstOrDefaultAsync(c => (c.Email != null && c.Email.ToLower() == ident) || c.Phone == ident);
             }
 
@@ -607,9 +732,9 @@ namespace Honeywell.Controllers
                 var clean = targetPhone.Trim();
                 customer = await _context.Customers.FirstOrDefaultAsync(c => c.Phone != null && c.Phone.Contains(clean));
             }
-            else if (User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name))
+            else if (HttpContext.User.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(HttpContext.User.Identity?.Name))
             {
-                var ident = User.Identity.Name.Trim().ToLower();
+                var ident = HttpContext.User.Identity!.Name!.Trim().ToLowerInvariant();
                 customer = await _context.Customers.FirstOrDefaultAsync(c => (c.Email != null && c.Email.ToLower() == ident) || c.Phone == ident);
             }
 
@@ -671,8 +796,8 @@ namespace Honeywell.Controllers
                     quantity = firstItem.Quantity,
                     price = firstItem.Price,
                     priceFormatted = $"${firstItem.Price:F2}",
-                    imageUrl = string.IsNullOrWhiteSpace(firstItem.ImageUrl) 
-                        ? "https://honeywellproducts.com/images/placeholder.png" 
+                    imageUrl = string.IsNullOrWhiteSpace(firstItem.ImageUrl)
+                        ? "https://honeywellproducts.com/images/placeholder.png"
                         : firstItem.ImageUrl
                 } : null;
 
@@ -751,13 +876,13 @@ namespace Honeywell.Controllers
             var customer = await _context.Customers.FindAsync(order.CustomerId);
 
             // Customer Ownership & Authorization Verification (IDOR Protection)
-            if (User?.Identity?.IsAuthenticated == true)
+            if (HttpContext.User.Identity?.IsAuthenticated == true)
             {
-                bool isAdmin = User.IsInRole("Admin") || User.IsInRole("SuperAdmin") || User.HasClaim("role", "Admin") || User.HasClaim("role", "SuperAdmin");
+                bool isAdmin = HttpContext.User.IsInRole("Admin") || HttpContext.User.IsInRole("SuperAdmin") || HttpContext.User.HasClaim("role", "Admin") || HttpContext.User.HasClaim("role", "SuperAdmin");
                 if (!isAdmin)
                 {
-                    string? authCustId = User.FindFirst("customerId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                    string? authEmail = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value ?? User.Identity?.Name;
+                    string? authCustId = HttpContext.User.FindFirst("customerId")?.Value ?? HttpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                    string? authEmail = HttpContext.User.FindFirst(ClaimTypes.Email)?.Value ?? HttpContext.User.FindFirst("email")?.Value ?? User.Identity?.Name;
 
                     bool isOwner = (authCustId != null && order.CustomerId.ToString() == authCustId) ||
                                    (authEmail != null && customer != null && !string.IsNullOrEmpty(customer.Email) && customer.Email.ToLower() == authEmail.ToLower());
@@ -948,9 +1073,9 @@ namespace Honeywell.Controllers
                     .FirstOrDefaultAsync(c => (c.Email != null && c.Email.ToLower() == identifier) || c.Phone == identifier);
             }
 
-            if (customer == null && User?.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(User.Identity.Name))
+            if (customer == null && HttpContext.User.Identity?.IsAuthenticated == true && !string.IsNullOrWhiteSpace(HttpContext.User.Identity?.Name))
             {
-                var ident = User.Identity.Name.Trim().ToLower();
+                var ident = HttpContext.User.Identity!.Name!.Trim().ToLowerInvariant();
                 customer = await _context.Customers.FirstOrDefaultAsync(c => (c.Email != null && c.Email.ToLower() == ident) || c.Phone == ident);
             }
 

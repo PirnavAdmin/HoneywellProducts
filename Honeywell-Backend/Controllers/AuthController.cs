@@ -155,11 +155,14 @@ namespace Honeywell.Controllers
 
         // Resend OTP
         [HttpPost("resend-otp")]
-        public async Task<IActionResult> ResendOtp(
-            ResendOtpDto dto)
+        public async Task<IActionResult> ResendOtp(ResendOtpDto dto)
         {
-            var result =
-                await _authService.ResendOtpAsync(dto.Email);
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email))
+            {
+                return BadRequest(new { success = false, message = "Email is required." });
+            }
+
+            var result = await _authService.ResendOtpAsync(dto.Email);
 
             if (!result)
             {
@@ -177,12 +180,14 @@ namespace Honeywell.Controllers
 
         // Forgot Password
         [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword(
-            ForgotPasswordDto dto)
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto)
         {
-            var result =
-                await _authService
-                    .ForgotPasswordAsync(dto.Email);
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email))
+            {
+                return BadRequest(new { success = false, message = "Email is required." });
+            }
+
+            var result = await _authService.ForgotPasswordAsync(dto.Email);
 
             if (!result)
             {
@@ -200,9 +205,15 @@ namespace Honeywell.Controllers
 
         // Reset Password
         [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword(
-            ResetPasswordDto dto)
+        public async Task<IActionResult> ResetPassword(ResetPasswordDto dto)
         {
+            if (dto == null ||
+                string.IsNullOrWhiteSpace(dto.NewPassword) ||
+                string.IsNullOrWhiteSpace(dto.ConfirmPassword))
+            {
+                return BadRequest(new { success = false, message = "New password and confirm password are required." });
+            }
+
             if (dto.NewPassword != dto.ConfirmPassword)
             {
                 return BadRequest(new
@@ -211,9 +222,7 @@ namespace Honeywell.Controllers
                 });
             }
 
-            var result =
-                await _authService
-                    .ResetPasswordAsync(dto);
+            var result = await _authService.ResetPasswordAsync(dto);
 
             if (!result)
             {
@@ -232,31 +241,77 @@ namespace Honeywell.Controllers
         // Create User (SuperAdmin only)
         [Authorize(Roles = "SuperAdmin")]
         [HttpPost("create-user")]
-        public async Task<IActionResult> CreateUser(
-            CreateUserDto dto)
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
         {
+            // Validate request
+            if (dto == null)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Invalid request data."
+                });
+            }
+
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(dto.Email) ||
+                string.IsNullOrWhiteSpace(dto.Password) ||
+                string.IsNullOrWhiteSpace(dto.ConfirmPassword) ||
+                string.IsNullOrWhiteSpace(dto.Role))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Email, password, confirm password and role are required."
+                });
+            }
+
+            // Validate email format
+            if (!new System.ComponentModel.DataAnnotations.EmailAddressAttribute()
+                .IsValid(dto.Email.Trim()))
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Please enter a valid email address."
+                });
+            }
+
+            // Validate password confirmation
             if (dto.Password != dto.ConfirmPassword)
             {
                 return BadRequest(new
                 {
-                    Message = "Passwords do not match"
+                    success = false,
+                    message = "Passwords do not match."
                 });
             }
 
-            var result =
-                await _authService.CreateUserAsync(dto);
+            // Normalize input
+            dto.Email = dto.Email.Trim().ToLowerInvariant();
+            dto.Role = dto.Role.Trim();
+
+            if (!string.IsNullOrWhiteSpace(dto.MobileNumber))
+            {
+                dto.MobileNumber = dto.MobileNumber.Trim();
+            }
+
+            // Create user through AuthService
+            var result = await _authService.CreateUserAsync(dto);
 
             if (!result)
             {
-                return BadRequest(new
+                return Conflict(new
                 {
-                    Message = "User already exists"
+                    success = false,
+                    message = "This email address or mobile number is already registered."
                 });
             }
 
             return Ok(new
             {
-                Message = "User Created Successfully"
+                success = true,
+                message = "User created successfully."
             });
         }
 
@@ -294,7 +349,7 @@ namespace Honeywell.Controllers
 
             if (user == null)
             {
-                user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == "bhargavakurapati49@gmail.com") 
+                user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == "bhargavakurapati49@gmail.com")
                        ?? await _context.Users.FirstOrDefaultAsync();
             }
 

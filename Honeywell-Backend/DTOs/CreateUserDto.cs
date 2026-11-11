@@ -2,12 +2,11 @@ namespace Honeywell.DTOs
 {
     public class CreateUserDto
     {
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string ConfirmPassword { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
 
-        public string Password { get; set; }
-
-        public string ConfirmPassword { get; set; }
-
-        public string Role { get; set; } // SuperAdmin or Admin
+        public string? MobileNumber { get; set; }
     }
 }
