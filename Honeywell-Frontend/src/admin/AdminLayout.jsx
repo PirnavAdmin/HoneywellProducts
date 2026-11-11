@@ -110,6 +110,7 @@ const AdminLayout = () => {
 
   const [authType, setAuthType] = useState(() => getEffectiveAuthType());
   const [userRole, setUserRole] = useState(() => getEffectiveAdminRole());
+  const [isInitialSyncing, setIsInitialSyncing] = useState(true);
 
   // Load actual permissions from dynamic session storage with real-time sync
   const [userPermissions, setUserPermissions] = useState(() => {
@@ -136,7 +137,7 @@ const AdminLayout = () => {
         if (!isMounted || !data) return;
 
         const freshPermissions = extractPermissionsFromUser(data);
-        if (Array.isArray(freshPermissions) && freshPermissions.length > 0) {
+        if (Array.isArray(freshPermissions)) {
           sessionStorage.setItem('adminPermissions', JSON.stringify(freshPermissions));
           localStorage.setItem('adminPermissions', JSON.stringify(freshPermissions));
           setUserPermissions(freshPermissions);
@@ -165,6 +166,10 @@ const AdminLayout = () => {
           console.warn('Session expired during permissions sync.');
         } else {
           console.warn('Real-time permissions sync failed:', err?.message || err);
+        }
+      } finally {
+        if (isMounted) {
+          setIsInitialSyncing(false);
         }
       }
     };
@@ -262,6 +267,10 @@ const AdminLayout = () => {
 
         {allowed ? (
           <Outlet />
+        ) : isInitialSyncing ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '300px' }}>
+            <span style={{ color: '#64748b', fontSize: '14px' }}>Verifying permissions...</span>
+          </div>
         ) : (
           <div className="access-denied-view">
             <ShieldAlert size={64} className="text-red-500" />

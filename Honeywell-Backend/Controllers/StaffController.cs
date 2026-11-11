@@ -163,8 +163,7 @@ namespace Honeywell.Controllers
                 if (!string.IsNullOrWhiteSpace(staff.EmployeeId))
                     user.EmployeeId = staff.EmployeeId;
                 user.IsActive = staff.IsActive;
-                if (!string.IsNullOrWhiteSpace(staff.PermissionsJson))
-                    user.PermissionsJson = staff.PermissionsJson;
+                user.PermissionsJson = staff.PermissionsJson;
             }
         }
 
@@ -849,10 +848,14 @@ namespace Honeywell.Controllers
         public async Task<IActionResult> GetMyEffectivePermissions([FromQuery] string? email = null)
         {
             await EnsureStaffSchemaAsync();
-            string? resolvedEmail = User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
-                                 ?? User?.FindFirst("email")?.Value
-                                 ?? User?.FindFirst("employeeId")?.Value
-                                 ?? User?.Identity?.Name;
+            string? resolvedEmail = new[]
+            {
+                User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value,
+                User?.FindFirst("email")?.Value,
+                User?.FindFirst("employeeId")?.Value,
+                User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value,
+                User?.Identity?.Name
+            }.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
             if (string.IsNullOrWhiteSpace(resolvedEmail) && !string.IsNullOrWhiteSpace(email))
             {

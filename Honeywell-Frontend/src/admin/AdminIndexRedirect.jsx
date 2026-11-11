@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { 
   getFirstAuthorizedRoute, 
@@ -17,18 +17,36 @@ const AdminIndexRedirect = () => {
     return <Navigate to="/admin/login" replace />;
   }
 
-  const authType = getEffectiveAuthType();
-  const userRole = getEffectiveAdminRole();
-
-  let userPermissions = [];
-  try {
-    const raw = getStoredAdminItem('adminPermissions');
-    if (raw) {
-      userPermissions = JSON.parse(raw);
+  const [authType, setAuthType] = useState(() => getEffectiveAuthType());
+  const [userRole, setUserRole] = useState(() => getEffectiveAdminRole());
+  const [userPermissions, setUserPermissions] = useState(() => {
+    try {
+      const raw = getStoredAdminItem('adminPermissions');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
     }
-  } catch {
-    userPermissions = [];
-  }
+  });
+
+  useEffect(() => {
+    const handleUpdate = (e) => {
+      if (Array.isArray(e?.detail?.permissions)) {
+        setUserPermissions(e.detail.permissions);
+      } else {
+        const raw = getStoredAdminItem('adminPermissions');
+        setUserPermissions(raw ? JSON.parse(raw) : []);
+      }
+      setAuthType(getEffectiveAuthType());
+      setUserRole(getEffectiveAdminRole());
+    };
+
+    window.addEventListener('admin_permissions_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('admin_permissions_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
 
   const targetRoute = getFirstAuthorizedRoute(userPermissions, userRole, authType);
   if (targetRoute) {
