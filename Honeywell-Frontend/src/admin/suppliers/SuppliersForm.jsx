@@ -15,6 +15,18 @@ import { supplierCategories } from './SuppliersList';
 import '../catalog/adminModule.css';
 import { Toast } from '../components/Toast';
 import { fetchSupplier, createSupplier, updateSupplier } from './suppliersApi';
+import {
+  validateSupplierForm,
+  validateSupplierName,
+  validateContactPerson,
+  validateProductLines,
+  validatePhone,
+  validateEmail,
+  validateCity,
+  validateLeadTime,
+  validateAddress
+} from '../utils/supplierValidation';
+import { validateGstin } from '../utils/gstinValidator';
 
 const initialSupplier = {
   name: '',
@@ -36,6 +48,7 @@ const SuppliersForm = () => {
   const { id } = useParams();
   const isEditing = Boolean(id);
   const [supplier, setSupplier] = useState(initialSupplier);
+  const [errors, setErrors] = useState({});
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState('success');
@@ -64,52 +77,145 @@ const SuppliersForm = () => {
   };
 
   const completionScore = useMemo(() => {
-    const requiredFields = ['name', 'contactPerson', 'email', 'phone', 'city', 'address'];
+    const requiredFields = ['name', 'contactPerson', 'productLines', 'email', 'phone', 'city', 'address'];
     const completed = requiredFields.filter((field) => isValidFieldValue(supplier[field])).length;
     return Math.round((completed / requiredFields.length) * 100);
   }, [supplier]);
 
+  const validateSingleField = (field, val) => {
+    let result = { isValid: true, error: '' };
+    switch (field) {
+      case 'name':
+        result = validateSupplierName(val);
+        break;
+      case 'contactPerson':
+        result = validateContactPerson(val);
+        break;
+      case 'productLines':
+        result = validateProductLines(val);
+        break;
+      case 'email':
+        result = validateEmail(val);
+        break;
+      case 'phone':
+        result = validatePhone(val);
+        break;
+      case 'city':
+        result = validateCity(val);
+        break;
+      case 'leadTime':
+        result = validateLeadTime(val);
+        break;
+      case 'address':
+        result = validateAddress(val);
+        break;
+      case 'gstin':
+        result = validateGstin(val, false);
+        break;
+      default:
+        break;
+    }
+    return result;
+  };
+
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setSupplier((prev) => ({ ...prev, [name]: value }));
+    const finalValue = name === 'gstin' ? value.toUpperCase() : value;
+    setSupplier((prev) => ({ ...prev, [name]: finalValue }));
+
+    // Instant real-time dynamic validation as the user types
+    const result = validateSingleField(name, finalValue);
+    setErrors((prev) => {
+      if (!result.isValid) {
+        return { ...prev, [name]: result.error };
+      } else {
+        const next = { ...prev };
+        delete next[name];
+        return next;
+      }
+    });
+  };
+
+  const handleBlur = (field) => {
+    // Validate on blur when shifting between fields
+    const result = validateSingleField(field, supplier[field]);
+    setErrors((prev) => {
+      if (!result.isValid) {
+        return { ...prev, [field]: result.error };
+      } else {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      }
+    });
   };
 
   const handleSubmit = async (event) => {
     if (event && event.preventDefault) event.preventDefault();
+    if (isSaving) return; // Prevent duplicate API submissions
 
-    const requiredFields = ['name', 'contactPerson', 'email', 'phone', 'city', 'address'];
-    const hasInvalidRequired = requiredFields.some((field) => !isValidFieldValue(supplier[field]));
+    // Client-side validation across all fields
+    const validationResult = validateSupplierForm(supplier);
+    if (!validationResult.isValid) {
+      setErrors(validationResult.errors);
 
-    if (hasInvalidRequired) {
-      setToastMessage('Please fill in all required fields (asterisk fields cannot be left blank).');
+      // Focus first invalid field in logical tab order
+      const fieldOrder = [
+        'name',
+        'contactPerson',
+        'category',
+        'status',
+        'gstin',
+        'productLines',
+        'email',
+        'phone',
+        'city',
+        'leadTime',
+        'address',
+        'paymentTerms',
+        'notes'
+      ];
+      const firstInvalidKey = fieldOrder.find((k) => validationResult.errors[k]);
+      if (firstInvalidKey) {
+        const el = document.getElementById(firstInvalidKey);
+        if (el) el.focus();
+      }
+
+      setToastMessage('Please correct the highlighted validation errors.');
       setToastType('warning');
       return;
     }
 
-    // Phone / Mobile validation
-    const cleanPhone = String(supplier.phone || '').replace(/^\+?91\s*/, '').replace(/\D/g, '');
-    if (!cleanPhone || cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
-      setToastMessage('Please enter a valid 10-digit mobile number starting with 6, 7, 8, or 9 (e.g. 9876543210).');
-      setToastType('warning');
-      return;
-    }
-    
+    const trimmedSupplier = {
+      ...supplier,
+      name: supplier.name ? supplier.name.trim() : '',
+      contactPerson: supplier.contactPerson ? supplier.contactPerson.trim() : '',
+      productLines: supplier.productLines ? supplier.productLines.trim() : '',
+      email: supplier.email ? supplier.email.trim().toLowerCase() : '',
+      phone: supplier.phone ? supplier.phone.trim() : '',
+      city: supplier.city ? supplier.city.trim() : '',
+      address: supplier.address ? supplier.address.trim() : '',
+      gstin: supplier.gstin ? supplier.gstin.trim().toUpperCase() : '',
+      leadTime: supplier.leadTime ? supplier.leadTime.trim() : '',
+      notes: supplier.notes ? supplier.notes.trim() : ''
+    };
+
     setIsSaving(true);
     try {
-      let saved = supplier;
+      let saved = trimmedSupplier;
       if (id) {
-        saved = await updateSupplier(id, supplier);
-        setToastMessage(`${supplier.name} has been updated.`);
+        saved = await updateSupplier(id, trimmedSupplier);
+        setToastMessage(`${trimmedSupplier.name} has been updated.`);
       } else {
-        saved = await createSupplier(supplier);
-        setToastMessage(`${supplier.name} has been submitted for onboarding review.`);
+        saved = await createSupplier(trimmedSupplier);
+        setToastMessage(`${trimmedSupplier.name} has been submitted for onboarding review.`);
       }
       setToastType('success');
-      
+
       const payloadToSend = {
-        ...supplier,
+        ...trimmedSupplier,
         id: String(id || saved?.id || ''),
-        status: supplier.status || 'Pending'
+        status: trimmedSupplier.status || 'Pending'
       };
 
       setTimeout(() => {
@@ -122,7 +228,25 @@ const SuppliersForm = () => {
       }, 700);
     } catch (err) {
       console.error('Failed to save supplier:', err);
-      setToastMessage('Failed to save supplier details: ' + (err.message || 'Unknown error'));
+      // Handle structured backend validation errors
+      const responseErrors = err.response?.data?.errors;
+      if (responseErrors && typeof responseErrors === 'object') {
+        const backendErrors = {};
+        for (const [key, msgs] of Object.entries(responseErrors)) {
+          const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+          backendErrors[camelKey] = Array.isArray(msgs) ? msgs[0] : String(msgs);
+        }
+        setErrors((prev) => ({ ...prev, ...backendErrors }));
+        const firstKey = Object.keys(backendErrors)[0];
+        if (firstKey) {
+          const el = document.getElementById(firstKey);
+          if (el) el.focus();
+        }
+        setToastMessage(err.response?.data?.message || 'Please fix the highlighted errors returned by the server.');
+      } else {
+        const msg = err.response?.data?.message || err.message || 'Failed to save supplier profile. Please try again.';
+        setToastMessage(msg);
+      }
       setToastType('warning');
       setIsSaving(false);
     }
@@ -130,6 +254,7 @@ const SuppliersForm = () => {
 
   const handleReset = () => {
     setSupplier(initialSupplier);
+    setErrors({});
   };
 
   return (
@@ -218,7 +343,7 @@ const SuppliersForm = () => {
       </section>
 
       {/* Main 2-Column Form Layout (65% / 35%) */}
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
+      <form onSubmit={handleSubmit} noValidate style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '20px', width: '100%', boxSizing: 'border-box' }}>
         
         {/* Left Column: Form Fields */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
@@ -231,7 +356,7 @@ const SuppliersForm = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="name" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Supplier Name <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -240,14 +365,29 @@ const SuppliersForm = () => {
                   type="text"
                   value={supplier.name}
                   onChange={handleChange}
-                  placeholder="e.g. KisanKraft Ltd."
-                  required
-                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
+                  onBlur={() => handleBlur('name')}
+                  placeholder="e.g. Honeywell Technologies"
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px',
+                    border: errors.name ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {errors.name && (
+                  <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                    {errors.name}
+                  </span>
+                )}
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="contactPerson" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Contact Person <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -256,14 +396,29 @@ const SuppliersForm = () => {
                   type="text"
                   value={supplier.contactPerson}
                   onChange={handleChange}
+                  onBlur={() => handleBlur('contactPerson')}
                   placeholder="Procurement contact name"
-                  required
-                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px',
+                    border: errors.contactPerson ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {errors.contactPerson && (
+                  <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                    {errors.contactPerson}
+                  </span>
+                )}
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="category" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Category
                 </label>
                 <select
@@ -281,7 +436,7 @@ const SuppliersForm = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="status" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Approval Status
                 </label>
                 <select
@@ -300,7 +455,7 @@ const SuppliersForm = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="gstin" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   GSTIN / Tax ID
                 </label>
                 <input
@@ -309,13 +464,29 @@ const SuppliersForm = () => {
                   type="text"
                   value={supplier.gstin}
                   onChange={handleChange}
-                  placeholder="Optional tax registration"
-                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
+                  onBlur={() => handleBlur('gstin')}
+                  placeholder="15-character GSTIN (e.g. 29ABCDE1234F1Z5)"
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px',
+                    border: errors.gstin ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {errors.gstin && (
+                  <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                    {errors.gstin}
+                  </span>
+                )}
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="productLines" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Product Lines <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -324,10 +495,25 @@ const SuppliersForm = () => {
                   type="text"
                   value={supplier.productLines}
                   onChange={handleChange}
-                  placeholder="Tillers, pumps, drip kits"
-                  required
-                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
+                  onBlur={() => handleBlur('productLines')}
+                  placeholder="Enter supplier product lines"
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px',
+                    border: errors.productLines ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {errors.productLines && (
+                  <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                    {errors.productLines}
+                  </span>
+                )}
               </div>
             </div>
           </section>
@@ -340,7 +526,7 @@ const SuppliersForm = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="email" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Email Address <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -349,14 +535,29 @@ const SuppliersForm = () => {
                   type="email"
                   value={supplier.email}
                   onChange={handleChange}
+                  onBlur={() => handleBlur('email')}
                   placeholder="orders@supplier.com"
-                  required
-                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px',
+                    border: errors.email ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {errors.email && (
+                  <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                    {errors.email}
+                  </span>
+                )}
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="phone" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Phone Number <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -365,14 +566,29 @@ const SuppliersForm = () => {
                   type="tel"
                   value={supplier.phone}
                   onChange={handleChange}
+                  onBlur={() => handleBlur('phone')}
                   placeholder="+91 98765-43210"
-                  required
-                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px',
+                    border: errors.phone ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {errors.phone && (
+                  <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                    {errors.phone}
+                  </span>
+                )}
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="city" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   City / Region <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <input
@@ -381,14 +597,29 @@ const SuppliersForm = () => {
                   type="text"
                   value={supplier.city}
                   onChange={handleChange}
+                  onBlur={() => handleBlur('city')}
                   placeholder="City, State"
-                  required
-                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px',
+                    border: errors.city ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {errors.city && (
+                  <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                    {errors.city}
+                  </span>
+                )}
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="leadTime" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Average Lead Time
                 </label>
                 <input
@@ -397,14 +628,30 @@ const SuppliersForm = () => {
                   type="text"
                   value={supplier.leadTime}
                   onChange={handleChange}
-                  placeholder="e.g. 4-6 days"
-                  style={{ width: '100%', height: '38px', padding: '0 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', boxSizing: 'border-box' }}
+                  onBlur={() => handleBlur('leadTime')}
+                  placeholder="e.g. 7 (days)"
+                  style={{
+                    width: '100%',
+                    height: '38px',
+                    padding: '0 12px',
+                    border: errors.leadTime ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    boxSizing: 'border-box'
+                  }}
                 />
+                {errors.leadTime && (
+                  <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                    {errors.leadTime}
+                  </span>
+                )}
               </div>
             </div>
 
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+              <label htmlFor="address" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                 Registered Address <span style={{ color: '#ef4444' }}>*</span>
               </label>
               <textarea
@@ -412,11 +659,26 @@ const SuppliersForm = () => {
                 name="address"
                 value={supplier.address}
                 onChange={handleChange}
+                onBlur={() => handleBlur('address')}
                 placeholder="Street, industrial area, city, state, PIN"
-                required
                 rows={3}
-                style={{ width: '100%', padding: '8px 12px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12.5px', outline: 'none', background: '#ffffff', resize: 'none', boxSizing: 'border-box' }}
+                style={{
+                  width: '100%',
+                  padding: '8px 12px',
+                  border: errors.address ? '1px solid #ef4444' : '1px solid #cbd5e1',
+                  borderRadius: '8px',
+                  fontSize: '12.5px',
+                  outline: 'none',
+                  background: '#ffffff',
+                  resize: 'none',
+                  boxSizing: 'border-box'
+                }}
               />
+              {errors.address && (
+                <span style={{ color: '#ef4444', fontSize: '11px', marginTop: '4px', fontWeight: 500, display: 'block' }}>
+                  {errors.address}
+                </span>
+              )}
             </div>
           </section>
 
@@ -433,7 +695,7 @@ const SuppliersForm = () => {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="paymentTerms" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Payment Terms
                 </label>
                 <select
@@ -453,7 +715,7 @@ const SuppliersForm = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                <label htmlFor="notes" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                   Internal Notes
                 </label>
                 <textarea
@@ -498,7 +760,7 @@ const SuppliersForm = () => {
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Truck size={15} style={{ color: '#10b981', flexShrink: 0 }} />
-                <span>{supplier.leadTime || 'Lead time not specified'}</span>
+                <span>{supplier.leadTime ? `${supplier.leadTime} days` : 'Lead time not specified'}</span>
               </div>
             </div>
           </section>
@@ -570,4 +832,3 @@ const SuppliersForm = () => {
 };
 
 export default SuppliersForm;
-

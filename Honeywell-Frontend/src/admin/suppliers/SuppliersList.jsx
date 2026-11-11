@@ -75,7 +75,14 @@ const SupplierStatusBadge = ({ status }) => {
 
 const SuppliersList = () => {
   const location = useLocation();
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(location.search).get('search') || '');
+
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get('search');
+    if (q !== null) {
+      setSearchTerm(q);
+    }
+  }, [location.search]);
   const [statusFilter, setStatusFilter] = useState('All');
 
   // Popup detail state

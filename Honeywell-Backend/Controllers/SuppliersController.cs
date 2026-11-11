@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -43,9 +44,60 @@ namespace Honeywell.Controllers
         [AuthorizeModule(PermissionAction.Add, "suppliers", "procurement")]
         public async Task<ActionResult<Supplier>> Create([FromBody] Supplier supplier)
         {
-            if (string.IsNullOrEmpty(supplier.Name))
+            if (supplier == null)
             {
-                return BadRequest(new { Message = "Supplier Name is required." });
+                return BadRequest(new { Success = false, Message = "Supplier payload is required." });
+            }
+
+            // Fallback for businessName
+            if (string.IsNullOrWhiteSpace(supplier.Name) && !string.IsNullOrWhiteSpace(supplier.BusinessName))
+            {
+                supplier.Name = supplier.BusinessName;
+            }
+
+            // Fallback for productLines vs ProductCategory
+            string effectiveProductLines = !string.IsNullOrWhiteSpace(supplier.ProductLines)
+                ? supplier.ProductLines
+                : (supplier.ProductCategory ?? string.Empty);
+
+            var (isValid, errors, normalizedGstin, normalizedPhone) = SupplierValidationHelper.ValidateSupplier(
+                supplier.Name,
+                supplier.ContactPerson,
+                supplier.Phone,
+                supplier.Email,
+                supplier.City,
+                supplier.Address,
+                supplier.Gstin,
+                effectiveProductLines,
+                supplier.LeadTime
+            );
+
+            if (!isValid)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Validation failed for supplier.",
+                    Errors = errors
+                });
+            }
+
+            // Normalize and trim fields
+            supplier.Name = supplier.Name.Trim();
+            supplier.ContactPerson = supplier.ContactPerson.Trim();
+            supplier.Email = supplier.Email.Trim();
+            supplier.Phone = normalizedPhone ?? supplier.Phone.Trim();
+            supplier.LeadTime = supplier.LeadTime?.Trim();
+            supplier.City = supplier.City?.Trim() ?? string.Empty;
+            supplier.Address = supplier.Address.Trim();
+            supplier.Gstin = normalizedGstin;
+            if (string.IsNullOrWhiteSpace(supplier.ProductCategory) && !string.IsNullOrWhiteSpace(supplier.ProductLines))
+            {
+                supplier.ProductCategory = supplier.ProductLines.Trim();
+            }
+            if (!string.IsNullOrWhiteSpace(supplier.PaymentTerms))
+            {
+                supplier.CommercialTerms = supplier.PaymentTerms.Trim();
             }
 
             _context.Suppliers.Add(supplier);
@@ -86,17 +138,36 @@ namespace Honeywell.Controllers
                 return BadRequest(new { Success = false, Message = "Full Name, Business Name, and Mobile Number are required." });
             }
 
+            string? normalizedGstin = null;
+            if (!string.IsNullOrWhiteSpace(request.GstinNumber))
+            {
+                var gstinCheck = GstinValidator.Validate(request.GstinNumber, isRequired: false);
+                if (!gstinCheck.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = gstinCheck.ErrorMessage ?? "Invalid GSTIN.",
+                        Errors = new Dictionary<string, string[]>
+                        {
+                            { "Gstin", new[] { gstinCheck.ErrorMessage ?? "Enter a valid 15-character GSTIN." } }
+                        }
+                    });
+                }
+                normalizedGstin = gstinCheck.NormalizedGstin;
+            }
+
             string trackingId = "SEL" + new Random().Next(100000, 999999).ToString();
 
             var supplier = new Supplier
             {
-                Name = request.BusinessName,
-                ContactPerson = request.FullName,
-                Phone = request.MobileNumber,
-                Email = request.EmailAddress,
-                Address = request.BusinessAddress,
-                Gstin = request.GstinNumber,
-                ProductCategory = request.ProductCategory,
+                Name = request.BusinessName.Trim(),
+                ContactPerson = request.FullName.Trim(),
+                Phone = Regex.Replace(request.MobileNumber.Trim(), @"\D", ""),
+                Email = request.EmailAddress.Trim(),
+                Address = request.BusinessAddress.Trim(),
+                Gstin = normalizedGstin,
+                ProductCategory = request.ProductCategory.Trim(),
                 TrackingId = trackingId,
                 Status = "Pending",
                 IsActive = false // requires verification
@@ -191,24 +262,66 @@ namespace Honeywell.Controllers
         [AuthorizeModule(PermissionAction.Edit, "suppliers", "procurement")]
         public async Task<IActionResult> Update(int id, [FromBody] Supplier updateData)
         {
+            if (updateData == null)
+            {
+                return BadRequest(new { Success = false, Message = "Supplier payload is required." });
+            }
+
             var supplier = await _context.Suppliers.FindAsync(id);
             if (supplier == null)
             {
-                return NotFound(new { Message = "Supplier not found." });
+                return NotFound(new { Success = false, Message = "Supplier not found." });
             }
 
-            supplier.Name = updateData.Name;
-            supplier.ContactPerson = updateData.ContactPerson;
-            supplier.Phone = updateData.Phone;
-            supplier.Email = updateData.Email;
-            supplier.Address = updateData.Address;
+            // Fallback for businessName
+            if (string.IsNullOrWhiteSpace(updateData.Name) && !string.IsNullOrWhiteSpace(updateData.BusinessName))
+            {
+                updateData.Name = updateData.BusinessName;
+            }
+
+            string effectiveProductLines = !string.IsNullOrWhiteSpace(updateData.ProductLines)
+                ? updateData.ProductLines
+                : (updateData.ProductCategory ?? supplier.ProductCategory ?? string.Empty);
+
+            var (isValid, errors, normalizedGstin, normalizedPhone) = SupplierValidationHelper.ValidateSupplier(
+                updateData.Name,
+                updateData.ContactPerson,
+                updateData.Phone,
+                updateData.Email,
+                updateData.City,
+                updateData.Address,
+                updateData.Gstin,
+                effectiveProductLines,
+                updateData.LeadTime
+            );
+
+            if (!isValid)
+            {
+                return BadRequest(new
+                {
+                    Success = false,
+                    Message = "Validation failed for supplier.",
+                    Errors = errors
+                });
+            }
+
+            supplier.Name = updateData.Name.Trim();
+            supplier.ContactPerson = updateData.ContactPerson.Trim();
+            supplier.Phone = normalizedPhone ?? updateData.Phone.Trim();
+            supplier.LeadTime = updateData.LeadTime?.Trim();
+            supplier.Email = updateData.Email.Trim();
+            supplier.Address = updateData.Address.Trim();
             supplier.ProductCount = updateData.ProductCount;
             supplier.PerformanceRating = updateData.PerformanceRating;
-            supplier.CommercialTerms = updateData.CommercialTerms;
-            supplier.Gstin = updateData.Gstin;
-            supplier.ProductCategory = updateData.ProductCategory;
+            supplier.CommercialTerms = !string.IsNullOrWhiteSpace(updateData.PaymentTerms)
+                ? updateData.PaymentTerms.Trim()
+                : updateData.CommercialTerms;
+            supplier.Gstin = normalizedGstin;
+            supplier.ProductCategory = !string.IsNullOrWhiteSpace(updateData.ProductCategory)
+                ? updateData.ProductCategory.Trim()
+                : effectiveProductLines.Trim();
             supplier.Status = updateData.Status;
-            supplier.City = updateData.City;
+            supplier.City = updateData.City?.Trim() ?? string.Empty;
             supplier.LeadTime = updateData.LeadTime;
             supplier.IsActive = updateData.IsActive;
 
@@ -224,7 +337,7 @@ namespace Honeywell.Controllers
             _context.Notifications.Add(notification);
 
             await _context.SaveChangesAsync();
-            return NoContent();
+            return Ok(new { Success = true, Message = "Supplier profile updated successfully.", Data = supplier });
         }
 
         [HttpDelete("{id}")]

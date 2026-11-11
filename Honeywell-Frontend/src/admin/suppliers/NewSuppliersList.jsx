@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   Search, 
   Filter, 
@@ -32,8 +33,16 @@ const categoryLabels = {
 };
 
 const NewSuppliersList = () => {
+  const location = useLocation();
   const [registrations, setRegistrations] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(location.search).get('search') || '');
+
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get('search');
+    if (q !== null) {
+      setSearchTerm(q);
+    }
+  }, [location.search]);
   const [statusFilter, setStatusFilter] = useState('All');
   const [categoryFilter, setCategoryFilter] = useState('All');
 

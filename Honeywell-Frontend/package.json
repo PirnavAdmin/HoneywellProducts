@@ -14,7 +14,8 @@
     "test": "node --test src/admin/__tests__/notifications.test.js src/__tests__/policies.test.js src/__tests__/paymentService.test.js",
     "test:payment": "node --test src/__tests__/paymentService.test.js",
     "test:policies": "node --test src/__tests__/policies.test.js",
-    "test:faqs": "node --test src/__tests__/faqs.test.js"
+    "test:faqs": "node --test src/__tests__/faqs.test.js",
+    "test:notifications": "node --test src/admin/__tests__/notificationRouting.test.js"
   },
   "dependencies": {
     "@cashfreepayments/cashfree-js": "^1.0.7",

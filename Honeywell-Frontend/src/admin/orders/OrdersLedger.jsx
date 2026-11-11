@@ -841,7 +841,14 @@ const OrdersLedger = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(location.search).get('search') || '');
+
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get('search');
+    if (q !== null) {
+      setSearchTerm(q);
+    }
+  }, [location.search]);
   const [dateFilter, setDateFilter] = useState('All'); // 'All', 'Today', 'Week', 'Month', 'Custom'
   
   // Custom dates state

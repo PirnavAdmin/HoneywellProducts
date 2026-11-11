@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { Check, Filter, Plus, Search, X, AlertTriangle } from 'lucide-react';
 import { getCategoryName, getSubcategoryName } from './catalogStore';
 import { deleteProduct as deleteProductApi, fetchCategories, fetchProducts, fetchSubcategories, searchProducts, computeStockStatus } from './productsApi';
@@ -60,10 +60,18 @@ const getStatusBadgeStyle = (status) => {
 };
 
 const ProductsList = () => {
+  const location = useLocation();
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [products, setProducts] = useState([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => new URLSearchParams(location.search).get('search') || '');
+
+  useEffect(() => {
+    const q = new URLSearchParams(location.search).get('search');
+    if (q !== null) {
+      setSearchTerm(q);
+    }
+  }, [location.search]);
   const [selectedCategoryId, setSelectedCategoryId] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [isLoading, setIsLoading] = useState(true);

@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Honeywell.Models
 {
@@ -22,5 +23,15 @@ namespace Honeywell.Models
         public string? City { get; set; }
         public string? LeadTime { get; set; }
         public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected
+
+        // Unmapped helper properties for incoming payload compatibility without schema alterations
+        [NotMapped]
+        public string? ProductLines { get; set; }
+
+        [NotMapped]
+        public string? BusinessName { get; set; }
+
+        [NotMapped]
+        public string? PaymentTerms { get; set; }
     }
 }

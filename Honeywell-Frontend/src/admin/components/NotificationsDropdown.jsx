@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Bell, 
   AlertTriangle, 
@@ -27,8 +28,10 @@ import {
   deleteNotification, 
   clearAllNotifications 
 } from '../api/notifications';
+import { getNotificationRoute } from '../utils/notificationRouting';
 
 const NotificationsDropdown = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -270,6 +273,27 @@ const NotificationsDropdown = () => {
     }
   };
 
+  // Handle card click: mark as read if unread, close dropdown, and navigate to target route
+  const handleNotificationClick = (notif, e) => {
+    if (e) {
+      e.stopPropagation();
+    }
+
+    // 1. Close dropdown
+    setIsOpen(false);
+
+    // 2. Mark as read if currently unread
+    if (!notif.isRead) {
+      handleMarkAsRead(notif.id);
+    }
+
+    // 3. Resolve destination route and navigate
+    const targetRoute = getNotificationRoute(notif);
+    if (targetRoute) {
+      navigate(targetRoute);
+    }
+  };
+
   // PUT /api/Notifications/mark-all-read
   const handleMarkAllRead = async (e) => {
     if (e) e.stopPropagation();
@@ -500,16 +524,19 @@ const NotificationsDropdown = () => {
                   <div 
                     key={notif.id} 
                     className={`notification-item ${!notif.isRead ? 'unread' : ''}`}
-                    onClick={() => handleMarkAsRead(notif.id)}
+                    onClick={(e) => handleNotificationClick(notif, e)}
                     style={{
                       opacity: isMutating ? 0.6 : 1,
-                      cursor: notif.isRead ? 'default' : 'pointer'
+                      cursor: 'pointer'
                     }}
                     role="button"
                     tabIndex={0}
+                    title="Click to open respective page"
+                    aria-label={`${notif.title}: ${notif.message}. Click to open page.`}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
-                        handleMarkAsRead(notif.id);
+                        e.preventDefault();
+                        handleNotificationClick(notif, e);
                       }
                     }}
                   >
@@ -527,7 +554,7 @@ const NotificationsDropdown = () => {
                           type="button"
                           className="unread-dot"
                           onClick={(e) => handleMarkAsRead(notif.id, e)}
-                          title="Mark as read"
+                          title="Mark as read without leaving page"
                           aria-label="Mark as read"
                           style={{
                             position: 'static',
