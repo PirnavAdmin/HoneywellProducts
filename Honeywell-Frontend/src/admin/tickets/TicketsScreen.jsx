@@ -256,8 +256,9 @@ const TicketsScreen = () => {
       });
       // Refresh tickets list
       setTickets(prev => prev.map(t => t.id === updated.id ? updated : t));
-      setSelectedTicket(updated);
-      showToast(`Ticket ${updated.ticketNo} updated successfully!`);
+      // Close modal on successful update
+      setSelectedTicket(null);
+      showToast(`Ticket ${updated.ticketNo || selectedTicket.ticketNo} updated successfully!`);
     } catch (err) {
       console.error(err);
       showToast("Failed to save changes. Please check server logs.", "error");

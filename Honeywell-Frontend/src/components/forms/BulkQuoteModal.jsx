@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { CheckCircle2, Clock } from 'lucide-react';
 import Modal from '../common/Modal';
 import { useUI } from '../../context/UIContext';
 import { quoteService } from '../../services/quoteService';
@@ -196,14 +197,73 @@ export default function BulkQuoteModal() {
       open={quoteOpen}
       onClose={close}
       title={status === 'success' ? 'Quote request received' : 'Request a bulk quote'}
-      eyebrow="B2B / PROJECT REQUIREMENT"
-      size="wide"
+      eyebrow={status === 'success' ? null : 'B2B / PROJECT REQUIREMENT'}
+      size={status === 'success' ? 'compact' : 'wide'}
+      hideHeader={status === 'success'}
     >
       {status === 'success' ? (
-        <div className="success-state">
-          <span>✓</span>
-          <p>Thank you. Our sales team will review your bulk requirement and contact you soon.</p>
-          <button className="button" onClick={close}>Done</button>
+        <div className="quote-success-view">
+          <div className="quote-success-badge-wrapper">
+            <div className="quote-success-icon-box">
+              <CheckCircle2 size={36} strokeWidth={2.2} className="quote-success-svg" />
+            </div>
+          </div>
+
+          <h2 className="quote-success-title">Quote Request Received</h2>
+
+          <p className="quote-success-subtitle">
+            Thank you{form.name ? `, ${form.name.trim().split(' ')[0]}` : ''}! Your bulk quotation request has been submitted. Our enterprise sales team will review your specifications and reach out within <strong>24 business hours</strong>.
+          </p>
+
+          <div className="quote-success-card">
+            <div className="quote-success-card-top">
+              <span className="quote-card-heading">REQUEST SUMMARY</span>
+              <span className="quote-status-pill">
+                <span className="quote-status-dot"></span> In Review
+              </span>
+            </div>
+
+            <div className="quote-details-list">
+              {form.product && (
+                <div className="quote-detail-item">
+                  <span className="detail-label">Product</span>
+                  <span className="detail-value highlight">{form.product}</span>
+                </div>
+              )}
+              {form.quantity && (
+                <div className="quote-detail-item">
+                  <span className="detail-label">Quantity</span>
+                  <span className="detail-value">{form.quantity} {Number(form.quantity) > 1 ? 'Units' : 'Unit'}</span>
+                </div>
+              )}
+              {form.companyName && (
+                <div className="quote-detail-item">
+                  <span className="detail-label">Company</span>
+                  <span className="detail-value">{form.companyName}</span>
+                </div>
+              )}
+              {form.location && (
+                <div className="quote-detail-item">
+                  <span className="detail-label">Location</span>
+                  <span className="detail-value">{form.location}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="quote-turnaround-bar">
+              <Clock size={15} />
+              <span>Expected response: <strong>Within 24 business hours</strong></span>
+            </div>
+          </div>
+
+          <div className="quote-success-footer">
+            <button type="button" className="button quote-success-btn" onClick={close}>
+              Done
+            </button>
+            <p className="quote-urgent-note">
+              Need immediate technical assistance? <a href="/contact" onClick={close}>Contact Sales Desk</a>
+            </p>
+          </div>
         </div>
       ) : (
         <form className="form-grid" onSubmit={submit} noValidate>

@@ -1753,9 +1753,302 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .check-field { display: grid; grid-template-columns: 18px 1fr; gap: 10px; color: var(--grey-700); font-size: 13px; }
 .check-field small { grid-column: 2; }
 .check-field input { width: 17px; height: 17px; accent-color: var(--red); }
-.success-state { min-height: 220px; display: grid; place-items: center; align-content: center; text-align: center; }
-.success-state > span { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: #e5f4ea; color: #147638; font-size: 24px; }
-.success-state p { max-width: 480px; color: var(--grey-700); line-height: 1.6; font-size: 13.5px; }
+.modal.compact {
+  width: min(500px, 100%);
+  max-width: 500px;
+}
+.modal.no-header {
+  padding: 36px 32px 32px;
+}
+.modal.no-header .modal-close-floating {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #f1f5f9;
+  color: #64748b;
+  cursor: pointer;
+  transition: all .18s ease;
+  z-index: 20;
+}
+.modal.no-header .modal-close-floating:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.success-state {
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px 16px;
+}
+.success-state > span {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #ecfdf5;
+  color: #059669;
+  border: 2px solid #a7f3d0;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.16);
+  font-size: 24px;
+  margin-bottom: 14px;
+}
+.success-state h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+.success-state p {
+  max-width: 480px;
+  color: #64748b;
+  line-height: 1.6;
+  font-size: 14px;
+  margin: 0 0 18px;
+}
+
+/* Professional Quote & Enquiry Success View */
+.quote-success-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 4px 0 0;
+  animation: successFadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes successFadeSlideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.quote-success-badge-wrapper {
+  position: relative;
+  margin-bottom: 18px;
+}
+
+.quote-success-icon-box {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: #ecfdf5;
+  border: 2px solid #a7f3d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #059669;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.16), 0 0 0 8px #f0fdf4;
+  position: relative;
+  z-index: 2;
+}
+
+.quote-success-svg {
+  color: #059669;
+}
+
+.quote-success-title {
+  margin: 0 0 8px;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+}
+
+.quote-success-subtitle {
+  margin: 0 0 20px;
+  color: #64748b;
+  font-size: 13.5px;
+  line-height: 1.55;
+  max-width: 420px;
+}
+
+.quote-success-subtitle strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+.quote-success-card {
+  width: 100%;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 22px;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.quote-success-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.quote-card-heading {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.quote-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #e0f2fe;
+  color: #0284c7;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.quote-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0284c7;
+  display: inline-block;
+  animation: pulseDot 2s infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
+}
+
+.quote-details-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quote-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.quote-detail-item .detail-label {
+  color: #64748b;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.quote-detail-item .detail-value {
+  color: #1e293b;
+  font-weight: 600;
+  text-align: right;
+  word-break: break-word;
+}
+
+.quote-detail-item .detail-value.highlight {
+  color: #0f172a;
+}
+
+.quote-turnaround-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+  color: #475569;
+  font-size: 12px;
+}
+
+.quote-turnaround-bar strong {
+  color: #0f172a;
+}
+
+.quote-success-footer {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.quote-success-btn {
+  width: 100%;
+  height: 44px;
+  background: var(--red);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(18, 104, 165, 0.22);
+  transition: all 0.18s ease;
+}
+
+.quote-success-btn:hover {
+  background: var(--red-dark);
+  box-shadow: 0 6px 16px rgba(18, 104, 165, 0.32);
+  transform: translateY(-1px);
+}
+
+.quote-success-btn:active {
+  transform: translateY(0);
+}
+
+.quote-urgent-note {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.quote-urgent-note a {
+  color: var(--red);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease;
+}
+
+.quote-urgent-note a:hover {
+  color: var(--red-dark);
+}
+
+@media (max-width: 600px) {
+  .modal.no-header {
+    padding: 28px 20px 24px;
+  }
+  .quote-success-title {
+    font-size: 20px;
+  }
+  .quote-success-card {
+    padding: 14px 14px;
+  }
+}
 @keyframes fadeIn { from { opacity: 0; } }
 @keyframes modalIn { from { opacity: 0; transform: translateY(18px); } }
 

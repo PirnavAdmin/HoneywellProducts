@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, AlertCircle, X } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, X, ServerOff, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { formatApiError, pingServer } from '../utils/apiError';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { adminAuthApi } from './api/adminAuthApi';
 import { staffLogin, getStaffPermissions } from '../services/staffApi';
 import {
   clearUserSession,
   cleanupLegacyLocalStorage,
-  extractPermissionsFromUser,
-  getFirstAuthorizedRoute,
-  parseJwtPayload,
-  setStoredAdminSession
+  extractPermissionsFromUser
 } from '../utils/rbac';
 import { validateEmail, validatePassword as validateStrictPassword, validateEmployeeId } from '../utils/validators';
 import adminPortalImage from '../assets/images/products-hero.png';
@@ -42,6 +40,32 @@ const AdminLoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errorInfo, setErrorInfo] = useState(null);
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [serverRestored, setServerRestored] = useState(false);
+
+  const clearErrors = () => {
+    setError('');
+    setErrorInfo(null);
+    setServerRestored(false);
+  };
+
+  const handleRetryConnection = async () => {
+    setIsRetrying(true);
+    try {
+      const isOnline = await pingServer();
+      if (isOnline) {
+        setServerRestored(true);
+        setError('');
+        setErrorInfo(null);
+      }
+    } catch {
+      // keep offline state
+    } finally {
+      setIsRetrying(false);
+    }
+  };
 
   // Field-specific validation states
   const [emailError, setEmailError] = useState('');
@@ -58,6 +82,7 @@ const AdminLoginPage = () => {
     cleanupLegacyLocalStorage();
     if (location.state?.message) {
       setError(location.state.message);
+      setErrorInfo({ isOffline: false, message: location.state.message });
     }
   }, [location.state]);
 
@@ -111,7 +136,7 @@ const AdminLoginPage = () => {
   const handleIdentifierChange = (e) => {
     const val = e.target.value;
     setIdentifier(val);
-    if (error) setError('');
+    if (errorInfo) clearErrors();
     if (emailTouched) {
       setEmailError(validateIdentifier(val));
     }
@@ -127,7 +152,7 @@ const AdminLoginPage = () => {
   const handlePasswordChange = (e) => {
     const val = e.target.value;
     setPassword(val);
-    if (error) setError('');
+    if (errorInfo) clearErrors();
     if (passwordTouched) {
       setPasswordError(validatePassword(val));
     }
@@ -143,7 +168,7 @@ const AdminLoginPage = () => {
   const handleModeChange = (mode) => {
     if (mode === authMode) return;
     setAuthMode(mode);
-    setError('');
+    clearErrors();
     setEmailError('');
     setPasswordError('');
     setEmailTouched(false);
@@ -167,7 +192,7 @@ const AdminLoginPage = () => {
     }
 
     setIsLoading(true);
-    setError('');
+    clearErrors();
 
     // Clear any previous user's session and permissions to prevent permission leakage
     clearUserSession();
@@ -185,7 +210,6 @@ const AdminLoginPage = () => {
         const response = await staffLogin(staffPayload);
 
         // Extract token and user data from real backend response
-        const token = response?.token || response?.accessToken || response?.Token;
         const staffData = response?.staff || response?.data || response?.user || response;
         const name =
           staffData?.name ||
@@ -210,7 +234,9 @@ const AdminLoginPage = () => {
 
         const staffEmail = (staffData?.email || (isEmail ? identifier.trim() : '')).trim().toLowerCase();
         if (!staffEmail) {
-          setError('No registered email address found for this staff member to send the verification OTP.');
+          const msg = 'No registered email address found for this staff member to send the verification OTP.';
+          setError(msg);
+          setErrorInfo({ isOffline: false, message: msg });
           return;
         }
 
@@ -250,7 +276,9 @@ const AdminLoginPage = () => {
       return;
     } catch (err) {
       console.error('Real Login Error:', err);
-      setError(getLoginErrorMessage(err));
+      const formatted = formatApiError(err, getLoginErrorMessage(err));
+      setError(formatted.message);
+      setErrorInfo(formatted);
     } finally {
       setIsLoading(false);
     }
@@ -311,12 +339,64 @@ const AdminLoginPage = () => {
               : 'Enter your registered email to continue to your dashboard.'}
           </p>
 
-          {error && (
+          {/* Server Offline / General Alert Banner */}
+          {errorInfo && errorInfo.isOffline ? (
+            <div className="admin-server-offline-card" role="alert">
+              <div className="admin-offline-header">
+                <div className="admin-offline-icon-box">
+                  <ServerOff size={17} className="admin-offline-icon" />
+                </div>
+                <div className="admin-offline-title-wrap">
+                  <span className="admin-offline-title">{errorInfo.title || 'Server Temporarily Offline'}</span>
+                  <span className="admin-offline-badge">Service Unavailable</span>
+                </div>
+              </div>
+
+              <p className="admin-offline-message">
+                {errorInfo.message}
+              </p>
+
+              <div className="admin-offline-actions">
+                <button
+                  type="button"
+                  className="admin-offline-retry-btn"
+                  onClick={handleRetryConnection}
+                  disabled={isRetrying}
+                >
+                  <RefreshCw size={13} className={isRetrying ? 'spin-icon' : ''} />
+                  <span>{isRetrying ? 'Checking…' : 'Retry Connection'}</span>
+                </button>
+
+                {errorInfo.diagnostic && (
+                  <button
+                    type="button"
+                    className="admin-offline-details-toggle"
+                    onClick={() => setShowDiagnostic((v) => !v)}
+                  >
+                    {showDiagnostic ? 'Hide diagnostic' : 'Diagnostic info'}
+                  </button>
+                )}
+              </div>
+
+              {showDiagnostic && errorInfo.diagnostic && (
+                <div className="admin-offline-diagnostic">
+                  <code>{errorInfo.diagnostic}</code>
+                </div>
+              )}
+
+              {serverRestored && (
+                <div className="admin-offline-restored">
+                  <CheckCircle2 size={13} />
+                  <span>Connection restored! You can now log in.</span>
+                </div>
+              )}
+            </div>
+          ) : (errorInfo?.message || error) ? (
             <div className="admin-login-alert" role="alert">
               <AlertCircle size={15} className="admin-alert-icon" />
-              <span>{error}</span>
+              <span>{errorInfo?.message || error}</span>
             </div>
-          )}
+          ) : null}
 
           <div className="admin-form-container">
             <form onSubmit={handleLogin} noValidate>

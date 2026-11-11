@@ -32,8 +32,19 @@ const safeParseJson = async (response) => {
 
 const parseErrorMessage = async (response, defaultMsg) => {
   try {
+    if ([502, 503, 504].includes(response?.status)) {
+      return 'The backend server is temporarily offline or unreachable. Please verify that the server is running and try again.';
+    }
     const text = await response.text();
     if (!text) return defaultMsg;
+    if (
+      text.includes('ERR_NGROK') ||
+      text.includes('ngrok') ||
+      text.includes('upstream web service') ||
+      text.includes('localhost:5119')
+    ) {
+      return 'The backend server is temporarily offline or unreachable. Please verify that the server is running and try again.';
+    }
     try {
       const parsed = JSON.parse(text);
       if (parsed.errors && typeof parsed.errors === 'object') {

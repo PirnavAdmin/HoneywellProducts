@@ -18,11 +18,22 @@ const RESEND_WAIT  = 120; // seconds before they can resend (synchronized with O
 
 const getApiErrorMessage = (err, fallback) => {
   if (err.code === 'ECONNABORTED') {
-    return 'Request timed out. Please check that the admin auth API is running and try again.';
+    return 'Request timed out. Please check that the backend server is running and try again.';
   }
 
   if (!err.response) {
-    return 'Unable to connect to the admin auth API. Please check the server or ngrok tunnel.';
+    return 'Unable to connect to the authentication server. Please ensure the server is online and try again.';
+  }
+
+  const rawData = typeof err.response?.data === 'string' ? err.response.data : '';
+  if (
+    [502, 503, 504].includes(err.response?.status) ||
+    rawData.includes('ERR_NGROK') ||
+    rawData.includes('ngrok') ||
+    rawData.includes('upstream web service') ||
+    rawData.includes('localhost:5119')
+  ) {
+    return 'The authentication server is temporarily offline. Please verify that the server is running and try again.';
   }
 
   return (

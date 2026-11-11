@@ -7,6 +7,7 @@ import './SignInModal.css';
 import { useAuth } from '../../context/AuthContext';
 import { forgotPassword as forgotPasswordApi } from '../../services/customerApi';
 import { validateEmailOrPhone, validatePassword, validateConfirmPassword, validateName } from '../../utils/validators';
+import { formatApiError } from '../../utils/apiError';
 
 export default function SignInModal({ isOpen, onClose, initialMode = 'login', onSuccess }) {
   const [authMode, setAuthMode] = useState(initialMode);
@@ -160,7 +161,7 @@ export default function SignInModal({ isOpen, onClose, initialMode = 'login', on
       console.error('Sign In error:', err);
       setGeneralAlert({
         type: 'error',
-        message: err.message || 'The email or password is incorrect. Please try again.'
+        message: formatApiError(err, 'The email or password is incorrect. Please try again.').message
       });
     } finally {
       setIsLoading(false);
@@ -182,7 +183,7 @@ export default function SignInModal({ isOpen, onClose, initialMode = 'login', on
     } catch (err) {
       setGeneralAlert({
         type: 'error',
-        message: err.message || 'Failed to send reset email. Please try again.'
+        message: formatApiError(err, 'Failed to send reset email. Please try again.').message
       });
     }
   };

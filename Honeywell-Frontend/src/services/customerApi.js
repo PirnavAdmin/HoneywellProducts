@@ -29,6 +29,18 @@ async function handleResponse(res) {
     data = await res.text();
   }
   if (!res.ok) {
+    if (
+      [502, 503, 504].includes(res.status) ||
+      (typeof data === 'string' &&
+        (data.includes('ERR_NGROK') ||
+          data.includes('ngrok') ||
+          data.includes('upstream web service') ||
+          data.includes('localhost:5119')))
+    ) {
+      throw new Error(
+        'The backend server is temporarily offline or unreachable. Please try again shortly.'
+      );
+    }
     const msg =
       (data && (data.message || data.Message || data.title || data.Title || data.error)) ||
       (typeof data === 'string' ? data : null) ||

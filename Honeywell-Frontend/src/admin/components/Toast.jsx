@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle2, AlertTriangle, X } from 'lucide-react';
 
 export const Toast = ({ message, type = 'success', onClose, duration = 4000 }) => {
@@ -37,19 +38,20 @@ export const Toast = ({ message, type = 'success', onClose, duration = 4000 }) =
 
   const style = getStyles();
 
-  return (
+  const toastElement = (
     <div
+      className="admin-toast-portal-item"
       style={{
         position: 'fixed',
-        top: '80px',
+        top: '84px',
         right: '24px',
         backgroundColor: style.bg,
         border: style.border,
         color: style.color,
         padding: '12px 18px',
         borderRadius: '8px',
-        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
-        zIndex: 9999,
+        boxShadow: '0 10px 25px -3px rgba(0, 0, 0, 0.18), 0 4px 6px -4px rgba(0, 0, 0, 0.1)',
+        zIndex: 99999999, // Ensure it always floats in foreground above modals and backdrops
         display: 'flex',
         alignItems: 'center',
         gap: '10px',
@@ -89,5 +91,6 @@ export const Toast = ({ message, type = 'success', onClose, duration = 4000 }) =
       `}</style>
     </div>
   );
-};
 
+  return typeof document !== 'undefined' ? createPortal(toastElement, document.body) : toastElement;
+};

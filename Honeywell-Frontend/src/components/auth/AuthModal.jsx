@@ -6,6 +6,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { forgotPassword as forgotPasswordApi } from '../../services/customerApi';
 import { validateEmailOrPhone, validatePassword, validateConfirmPassword, validateName } from '../../utils/validators';
+import { formatApiError } from '../../utils/apiError';
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSuccess }) {
   const [authMode, setAuthMode] = useState(initialMode);
@@ -157,7 +158,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
       console.error('Sign In error:', err);
       setGeneralAlert({
         type: 'error',
-        message: err.message || 'Authentication failed. Please verify your credentials and try again.'
+        message: formatApiError(err, 'Authentication failed. Please verify your credentials and try again.').message
       });
     } finally {
       setIsLoading(false);
@@ -179,7 +180,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onSu
     } catch (err) {
       setGeneralAlert({
         type: 'error',
-        message: err.message || 'Failed to send reset email. Please try again.'
+        message: formatApiError(err, 'Failed to send reset email. Please try again.').message
       });
     }
   };
