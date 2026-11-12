@@ -1025,6 +1025,8 @@ namespace Honeywell.Controllers
         // 4. GET /api/Auth/me/permissions (under Staff in Swagger)
         [AuthorizeModule]
         [HttpGet("/api/Auth/me/permissions")]
+        [HttpGet("/api/Staff/my-permissions")]
+        [HttpGet("my-permissions")]
         public async Task<IActionResult> GetMyEffectivePermissions([FromQuery] string? email = null)
         {
             await EnsureStaffSchemaAsync();
@@ -1062,7 +1064,7 @@ namespace Honeywell.Controllers
             string? resolvedEmpId = User?.FindFirst("employeeId")?.Value;
             var cleanEmpId = resolvedEmpId?.Trim().ToLowerInvariant();
 
-            var staff = await _context.Staff.FirstOrDefaultAsync(s =>
+            var staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s =>
                 s.Email.ToLower() == cleanIdentifier ||
                 s.EmployeeId.ToLower() == cleanIdentifier ||
                 (!string.IsNullOrWhiteSpace(cleanEmpId) && s.EmployeeId.ToLower() == cleanEmpId));
@@ -1108,7 +1110,7 @@ namespace Honeywell.Controllers
                 });
             }
 
-            var adminUser = await _context.Users.FirstOrDefaultAsync(u =>
+            var adminUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u =>
                 u.Email.ToLower() == cleanIdentifier ||
                 (u.EmployeeId != null && u.EmployeeId.ToLower() == cleanIdentifier) ||
                 (!string.IsNullOrWhiteSpace(cleanEmpId) && u.EmployeeId != null && u.EmployeeId.ToLower() == cleanEmpId));
