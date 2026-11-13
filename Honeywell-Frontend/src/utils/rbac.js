@@ -483,11 +483,10 @@ export const getFirstAuthorizedRoute = (userPermissions = [], userRole = '', aut
 export const extractPermissionsFromUser = (userData) => {
   if (!userData) return [];
 
-  // Direct permissions field
-  const raw = userData.permissions ?? userData.Permissions ?? userData.staffPermissions ?? userData.modulePermissions;
-
-  if (Array.isArray(raw)) {
-    return raw.map(p => {
+  // 1. Direct permissions array check (e.g. ['catalog', 'orders & sales'])
+  const direct = userData.permissions ?? userData.Permissions;
+  if (Array.isArray(direct) && direct.length > 0) {
+    return direct.map(p => {
       if (typeof p === 'string') return p.trim().toLowerCase();
       if (p && typeof p === 'object') {
         const isAllowed = p.isAllowed ?? p.IsAllowed ?? p.canView ?? p.CanView ?? true;
@@ -500,10 +499,33 @@ export const extractPermissionsFromUser = (userData) => {
     }).filter(Boolean);
   }
 
-  if (raw && typeof raw === 'object') {
-    return Object.entries(raw)
+  // 2. Structured modulePermissions / staffPermissions array check (e.g. [{ moduleName: 'catalog', isAllowed: true }])
+  const modulePerms = userData.modulePermissions ?? userData.ModulePermissions ?? userData.staffPermissions ?? userData.StaffPermissions;
+  if (Array.isArray(modulePerms) && modulePerms.length > 0) {
+    return modulePerms.map(p => {
+      if (typeof p === 'string') return p.trim().toLowerCase();
+      if (p && typeof p === 'object') {
+        const isAllowed = p.isAllowed ?? p.IsAllowed ?? p.canView ?? p.CanView ?? false;
+        if (isAllowed) {
+          const name = p.moduleName || p.ModuleName || (p.module && (p.module.moduleName || p.module.ModuleName)) || '';
+          return name.trim().toLowerCase();
+        }
+      }
+      return null;
+    }).filter(Boolean);
+  }
+
+  // 3. Object dictionary check (e.g. { catalog: true, orders: false })
+  const obj = direct || modulePerms || userData.permissions || userData.modulePermissions;
+  if (obj && typeof obj === 'object' && !Array.isArray(obj)) {
+    return Object.entries(obj)
       .filter(([_, allowed]) => Boolean(allowed))
       .map(([modName]) => modName.trim().toLowerCase());
+  }
+
+  // 4. Fallback if direct was explicitly an empty array []
+  if (Array.isArray(direct)) {
+    return [];
   }
 
   return [];

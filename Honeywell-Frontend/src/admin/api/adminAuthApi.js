@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { getApiDomain } from '../../utils/apiConfig';
-import { getAdminToken } from '../../utils/rbac';
+import { getAdminToken, getStoredAdminItem } from '../../utils/rbac';
 
 const HEADERS = {
   'ngrok-skip-browser-warning': 'true',
@@ -129,10 +129,12 @@ export const adminAuthApi = {
   },
 
   // Get Current Authenticated User/Staff Permissions and Refreshed Token
-  async getMyPermissions() {
-    const response = await axios.get(`${getApiDomain()}/api/Auth/me/permissions`, {
+  async getMyPermissions(email) {
+    const activeEmail = email || getStoredAdminItem('adminEmail') || '';
+    const query = activeEmail ? `?email=${encodeURIComponent(activeEmail.trim())}` : '';
+    const response = await axios.get(`${getApiDomain()}/api/Auth/me/permissions${query}`, {
       headers: getAuthHeaders(),
-      timeout: 10000
+      timeout: 12000
     });
     return response.data;
   }
