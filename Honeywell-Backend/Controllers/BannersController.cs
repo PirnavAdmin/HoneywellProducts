@@ -160,9 +160,11 @@ namespace Honeywell.Controllers
         // POST: api/Banners/upload-image
         [AuthorizeModule(PermissionAction.Add, "banners", "marketing")]
         [HttpPost("upload-image")]
-        public async Task<IActionResult> UploadBannerImage(IFormFile file)
+        [Consumes("multipart/form-data")]
+        public async Task<IActionResult> UploadBannerImage(IFormFile? file)
         {
-            if (file == null || file.Length == 0)
+            var targetFile = file ?? Request.Form.Files.FirstOrDefault();
+            if (targetFile == null || targetFile.Length == 0)
             {
                 return BadRequest(new { Message = "No file uploaded." });
             }
@@ -173,16 +175,16 @@ namespace Honeywell.Controllers
                 Directory.CreateDirectory(uploadsFolder);
             }
 
-            var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
+            var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(targetFile.FileName)}";
             var filePath = Path.Combine(uploadsFolder, fileName);
 
             using (var stream = new FileStream(filePath, FileMode.Create))
             {
-                await file.CopyToAsync(stream);
+                await targetFile.CopyToAsync(stream);
             }
 
             var imageUrl = $"/uploads/banners/{fileName}";
-            return Ok(new { ImageUrl = imageUrl });
+            return Ok(new { ImageUrl = imageUrl, imageUrl = imageUrl });
         }
     }
 }

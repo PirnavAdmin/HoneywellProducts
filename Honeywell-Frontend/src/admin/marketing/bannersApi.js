@@ -351,6 +351,15 @@ export const uploadBannerImage = async (file) => {
   const bannerUploadUrl = domain ? `${domain.replace(/\/$/, '')}/api/Banners/upload-image` : '/api/Banners/upload-image';
   const fallbackUploadUrl = domain ? `${domain.replace(/\/$/, '')}/api/Category/upload-image` : '/api/Category/upload-image';
 
+  const token = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('adminToken') : null) || 
+                (typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null);
+
+  const uploadHeaders = {
+    'ngrok-skip-browser-warning': 'true',
+    Accept: 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {})
+  };
+
   const formData = new FormData();
   formData.append('file', file);
   formData.append('image', file);
@@ -358,12 +367,9 @@ export const uploadBannerImage = async (file) => {
 
   try {
     const response = await axios.post(bannerUploadUrl, formData, {
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: uploadHeaders,
     });
-    const url = response.data?.imageUrl || response.data?.url || response.data?.image || response.data?.path || '';
+    const url = response.data?.imageUrl || response.data?.ImageUrl || response.data?.url || response.data?.image || response.data?.path || '';
     if (url) return url;
   } catch (err) {
     console.warn('Banner upload primary route error, attempting fallback route:', err?.message);
@@ -372,12 +378,9 @@ export const uploadBannerImage = async (file) => {
   // Fallback to Category/upload-image which is verified active on backend
   try {
     const fallbackResponse = await axios.post(fallbackUploadUrl, formData, {
-      headers: {
-        'ngrok-skip-browser-warning': 'true',
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: uploadHeaders,
     });
-    const finalUrl = fallbackResponse.data?.imageUrl || fallbackResponse.data?.url || fallbackResponse.data?.image || fallbackResponse.data?.path || '';
+    const finalUrl = fallbackResponse.data?.imageUrl || fallbackResponse.data?.ImageUrl || fallbackResponse.data?.url || fallbackResponse.data?.image || fallbackResponse.data?.path || '';
     if (finalUrl) return finalUrl;
   } catch (fallbackErr) {
     console.error('All banner upload routes failed:', fallbackErr);

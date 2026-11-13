@@ -117,6 +117,10 @@ const BannersList = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.title?.trim()) {
+      alert('Please enter a Banner Title.');
+      return;
+    }
     if (!formData.imageUrl) {
       alert('Please upload an image or provide an Image URL.');
       return;
