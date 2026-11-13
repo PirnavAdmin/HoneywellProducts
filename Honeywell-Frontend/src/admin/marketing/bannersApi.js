@@ -184,7 +184,7 @@ export const fetchActiveBanners = async (type = '') => {
             (b.bannerType && b.bannerType.toLowerCase() === typeLower) ||
             (typeLower !== 'hero' && b.targetUrl && b.targetUrl.toLowerCase().includes(`type=${typeLower}`))
           );
-          if (matched.length > 0) return matched;
+          return matched;
         }
         return mapped;
       }
@@ -192,7 +192,7 @@ export const fetchActiveBanners = async (type = '') => {
       console.warn('Fetch Active Banners Error:', err.message);
     }
     return [];
-  }, 10 * 60 * 1000);
+  }, 60 * 1000);
 };
 
 /**

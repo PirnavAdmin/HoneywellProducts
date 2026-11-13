@@ -114,110 +114,215 @@ export default function BlogDetails() {
   };
 
   return (
-    <article className="blog-details-page">
-      {/* Breadcrumbs */}
-      <div className="product-breadcrumbs container">
-        <Link to="/">Home</Link>
-        <ChevronRight size={14} />
-        <Link to="/">Market Trends</Link>
-        <ChevronRight size={14} />
-        <span>{blog.title}</span>
-      </div>
-
-      {/* Featured Cover Banner */}
-      <header className="blog-hero-banner" style={{ background: '#0f172a', color: '#ffffff', padding: '40px 0 60px', position: 'relative', overflow: 'hidden' }}>
-        <div className="container" style={{ position: 'relative', zIndex: 2 }}>
+    <article className="blog-details-page" style={{ background: '#ffffff', minHeight: '100vh' }}>
+      {/* Top Navigation & Breadcrumbs Bar */}
+      <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', padding: '14px 0' }}>
+        <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', maxWidth: '960px' }}>
           <button
             onClick={() => navigate(-1)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              background: 'rgba(255,255,255,0.12)',
-              color: '#ffffff',
-              border: '1px solid rgba(255,255,255,0.2)',
+              background: '#ffffff',
+              color: '#0f172a',
+              border: '1px solid #cbd5e1',
               borderRadius: '6px',
               padding: '6px 14px',
               fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
-              marginBottom: '24px',
-              backdropFilter: 'blur(4px)',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+              transition: 'all 0.15s ease'
             }}
           >
-            <ArrowLeft size={16} /> Back
+            <ArrowLeft size={16} /> Back to Articles
           </button>
 
-          <div style={{ maxWidth: '850px' }}>
-            <span style={{ display: 'inline-block', background: '#e30613', color: '#ffffff', padding: '4px 12px', borderRadius: '4px', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '16px' }}>
+          <div className="breadcrumbs" style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#64748b', fontWeight: 500 }}>
+            <Link to="/" style={{ color: '#64748b', textDecoration: 'none' }}>Home</Link>
+            <ChevronRight size={13} />
+            <Link to="/resources" style={{ color: '#64748b', textDecoration: 'none' }}>Resources</Link>
+            <ChevronRight size={13} />
+            <span style={{ color: '#e30613', fontWeight: 600 }}>{category}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Container */}
+      <div className="container" style={{ padding: '36px 1rem 80px', maxWidth: '960px' }}>
+        {/* Article Header */}
+        <header style={{ marginBottom: '28px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+            <span style={{
+              display: 'inline-block',
+              background: '#e30613',
+              color: '#ffffff',
+              padding: '4px 12px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.06em'
+            }}>
               {category}
             </span>
+          </div>
 
-            <h1 style={{ fontSize: '32px', fontWeight: 800, lineHeight: 1.2, color: '#ffffff', marginBottom: '20px' }}>
-              {blog.title}
-            </h1>
+          <h1 style={{
+            fontSize: 'clamp(26px, 3.5vw, 36px)',
+            fontWeight: 800,
+            lineHeight: 1.25,
+            color: '#0f172a',
+            margin: '0 0 18px 0',
+            letterSpacing: '-0.02em'
+          }}>
+            {blog.title}
+          </h1>
 
-            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '20px', fontSize: '14px', color: '#cbd5e1' }}>
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            paddingBottom: '20px',
+            borderBottom: '1px solid #e2e8f0',
+            fontSize: '14px',
+            color: '#64748b'
+          }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '18px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <User size={16} color="#38bdf8" /> <strong>{author}</strong>
+                <User size={16} color="#0284c7" />
+                <strong style={{ color: '#1e293b' }}>{author}</strong>
               </span>
               <span>•</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Calendar size={16} color="#38bdf8" /> {formattedDate}
+                <Calendar size={16} color="#0284c7" />
+                {formattedDate}
               </span>
             </div>
-          </div>
-        </div>
-      </header>
 
-      {/* Main Container */}
-      <div className="container" style={{ padding: '40px 1rem 80px', maxWidth: '900px' }}>
+            <button
+              onClick={handleShare}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#f1f5f9',
+                color: '#334155',
+                border: '1px solid #e2e8f0',
+                padding: '6px 14px',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'background 0.15s ease'
+              }}
+            >
+              <Share2 size={15} /> Share
+            </button>
+          </div>
+        </header>
+
         {/* Featured Cover Image */}
-        <div style={{ width: '100%', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 20px rgba(0,0,0,0.1)', marginBottom: '32px', marginTop: '-60px', position: 'relative', zIndex: 3, background: '#f8fafc' }}>
-          <img
-            src={coverUrl}
-            alt={blog.title}
-            style={{ width: '100%', maxHeight: '480px', objectFit: 'cover', display: 'block' }}
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = '/honeywell-products-logo.png';
-            }}
-          />
-        </div>
+        {coverUrl && (
+          <div style={{
+            width: '100%',
+            borderRadius: '12px',
+            overflow: 'hidden',
+            boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.08)',
+            border: '1px solid #e2e8f0',
+            marginBottom: '36px',
+            background: '#f8fafc'
+          }}>
+            <img
+              src={coverUrl}
+              alt={blog.title}
+              style={{
+                width: '100%',
+                maxHeight: '480px',
+                objectFit: 'cover',
+                display: 'block'
+              }}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/honeywell-products-logo.png';
+              }}
+            />
+          </div>
+        )}
 
         {/* Short Summary Highlight Box */}
         {summary && (
-          <div style={{ background: '#f0f9ff', borderLeft: '4px solid #0284c7', borderRadius: '0 8px 8px 0', padding: '20px 24px', marginBottom: '36px' }}>
-            <h3 style={{ fontSize: '13px', textTransform: 'uppercase', color: '#0369a1', fontWeight: 800, letterSpacing: '0.05em', margin: '0 0 8px' }}>
-              Short Summary
+          <div style={{
+            background: '#f0f9ff',
+            borderLeft: '4px solid #0284c7',
+            borderRadius: '0 8px 8px 0',
+            padding: '20px 24px',
+            marginBottom: '36px'
+          }}>
+            <h3 style={{
+              fontSize: '12px',
+              textTransform: 'uppercase',
+              color: '#0369a1',
+              fontWeight: 800,
+              letterSpacing: '0.06em',
+              margin: '0 0 8px'
+            }}>
+              Summary Overview
             </h3>
-            <p style={{ fontSize: '16px', lineHeight: 1.6, color: '#0c4a6e', margin: 0, fontWeight: 500 }}>
+            <p style={{
+              fontSize: '16px',
+              lineHeight: 1.65,
+              color: '#0c4a6e',
+              margin: 0,
+              fontWeight: 500
+            }}>
               {summary}
             </p>
           </div>
         )}
 
         {/* Full Content Description */}
-        <div className="blog-full-description" style={{ fontSize: '16px', lineHeight: 1.8, color: '#334155' }}>
-          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', marginBottom: '16px' }}>
-            Full Content Description
-          </h2>
-
+        <div className="blog-full-description" style={{ fontSize: '17px', lineHeight: 1.85, color: '#334155' }}>
           {fullContent.split('\n\n').map((paragraph, index) => (
-            <p key={index} style={{ marginBottom: '20px' }}>
+            <p key={index} style={{ marginBottom: '22px' }}>
               {paragraph}
             </p>
           ))}
         </div>
 
         {/* Article Toolbar / Share */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', borderBottom: '1px solid #e2e8f0', padding: '16px 0', margin: '40px 0' }}>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          borderTop: '1px solid #e2e8f0',
+          borderBottom: '1px solid #e2e8f0',
+          padding: '16px 0',
+          margin: '40px 0',
+          flexWrap: 'wrap',
+          gap: '12px'
+        }}>
           <span style={{ fontSize: '14px', color: '#64748b', fontWeight: 600 }}>
             Category: <strong style={{ color: '#0f172a' }}>{category}</strong>
           </span>
           <button
             onClick={handleShare}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#f1f5f9', color: '#334155', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: '#f1f5f9',
+              color: '#334155',
+              border: '1px solid #e2e8f0',
+              padding: '8px 16px',
+              borderRadius: '6px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
           >
             <Share2 size={16} /> Share Article
           </button>

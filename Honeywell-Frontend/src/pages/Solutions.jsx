@@ -11,11 +11,7 @@ import { usePageBanner } from '../hooks/usePageBanner';
 const DEFAULT_FALLBACK_IMG = '/honeywell-products-logo.png';
  
 export default function Solutions() {
-  const { banner } = usePageBanner(
-    'Solutions',
-    'Protect What Matters',
-    'Start with your environment, then explore suitable product categories with our sales team.'
-  );
+  const { banner } = usePageBanner('Solutions');
  
   useDocumentTitle('Security Solutions', 'Explore solution starting points for homes, offices, retail, warehouses, factories and outdoor sites.');
   const [params] = useSearchParams();
@@ -49,12 +45,14 @@ export default function Solutions() {
  
   return (
     <>
-      <PageHero
-        eyebrow="SECURITY SOLUTIONS"
-        title={banner.title}
-        description={banner.description}
-        image={banner.image}
-      />
+      {banner && banner.isDynamic && (
+        <PageHero
+          eyebrow="SECURITY SOLUTIONS"
+          title={banner.title}
+          description={banner.description}
+          image={banner.image}
+        />
+      )}
  
       {selectedApplication ? (
         <section className="selected-solution">
@@ -72,8 +70,6 @@ export default function Solutions() {
       ) : (
         <section className="section">
           <div className="container">
-            <SectionHeading eyebrow="SOLUTION PORTFOLIO" title="Complete Security Solutions" description="These solution concepts guide early discovery; final product suitability requires project review." />
- 
             {loading ? (
               <div className="empty-state large" style={{ padding: '4rem 1rem' }}>
                 <Loader2 size={36} style={{ animation: 'spin 1s linear infinite', color: '#1268a5' }} />
@@ -87,33 +83,38 @@ export default function Solutions() {
                 <p>{error}</p>
               </div>
             ) : solutionsList.length > 0 ? (
-              <div className="solution-grid solution-page-grid">
-                {solutionsList.map((solution) => (
-                  <article className="solution-card" key={solution.id}>
-                    <img
-                      src={(!solution.image || String(solution.image).toLowerCase().includes('placeholder')) ? DEFAULT_FALLBACK_IMG : solution.image}
-                      alt={`${solution.title} environment`}
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = DEFAULT_FALLBACK_IMG;
-                      }}
-                    />
-                    <div>
-                      <small>{solution.application}</small>
-                      <h3>{solution.title}</h3>
-                      <p>{solution.description}</p>
-                      <ul>
-                        {(solution.features || ['Application-led planning', 'Scalable product selection', 'Sales-assisted recommendation']).map((feat, idx) => (
-                          <li key={idx}><Check size={15} /> {feat}</li>
-                        ))}
-                      </ul>
-                      <Link to={`/products?category=${solution.categoryId}`}>
-                        View Suggested Products <ArrowRight size={16} />
-                      </Link>
-                    </div>
-                  </article>
-                ))}
-              </div>
+              <>
+                {!banner && (
+                  <SectionHeading eyebrow="SOLUTION PORTFOLIO" title="Complete Security Solutions" description="These solution concepts guide early discovery; final product suitability requires project review." />
+                )}
+                <div className="solution-grid solution-page-grid">
+                  {solutionsList.map((solution) => (
+                    <article className="solution-card" key={solution.id}>
+                      <img
+                        src={(!solution.image || String(solution.image).toLowerCase().includes('placeholder')) ? DEFAULT_FALLBACK_IMG : solution.image}
+                        alt={`${solution.title} environment`}
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = DEFAULT_FALLBACK_IMG;
+                        }}
+                      />
+                      <div>
+                        <small>{solution.application}</small>
+                        <h3>{solution.title}</h3>
+                        <p>{solution.description}</p>
+                        <ul>
+                          {(solution.features || ['Application-led planning', 'Scalable product selection', 'Sales-assisted recommendation']).map((feat, idx) => (
+                            <li key={idx}><Check size={15} /> {feat}</li>
+                          ))}
+                        </ul>
+                        <Link to={`/products?category=${solution.categoryId}`}>
+                          View Suggested Products <ArrowRight size={16} />
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="empty-state large">
                 <h2>No Solutions Found</h2>

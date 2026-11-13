@@ -15,7 +15,7 @@ const getCachedBanner = (pageType) => {
     const raw = window.sessionStorage.getItem(key);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' && parsed.title ? parsed : null;
+    return parsed && typeof parsed === 'object' && parsed.isDynamic && (parsed.title || parsed.image) ? parsed : null;
   } catch {
     return null;
   }
@@ -30,34 +30,23 @@ const setCachedBanner = (pageType, bannerData) => {
   } catch {}
 };
 
-export function usePageBanner(
-  pageType,
-  defaultTitle = '',
-  defaultDescription = '',
-  defaultImage = ''
-) {
-  // Initialize with cached banner if available to prevent flash of old/default content on reload
+export function usePageBanner(pageType) {
+  // Initialize with cached dynamic banner if available
   const [banner, setBanner] = useState(() => {
-    const cached = getCachedBanner(pageType);
-    if (cached) {
-      return cached;
-    }
-    return {
-      title: defaultTitle,
-      description: defaultDescription,
-      image: defaultImage,
-      isDynamic: false
-    };
+    return getCachedBanner(pageType);
   });
 
-  const [loading, setLoading] = useState(() => !getCachedBanner(pageType));
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
 
     const loadBanner = async () => {
       if (!pageType) {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setBanner(null);
+          setLoading(false);
+        }
         return;
       }
 
@@ -65,7 +54,14 @@ export function usePageBanner(
         // Request ONLY the banner type required by this page
         const banners = await bannerService.getActiveBanners(pageType);
 
-        if (!mounted || !Array.isArray(banners)) {
+        if (!mounted) return;
+
+        if (!Array.isArray(banners) || banners.length === 0) {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            const key = getBannerStorageKey(pageType);
+            if (key) window.sessionStorage.removeItem(key);
+          }
+          if (mounted) setBanner(null);
           return;
         }
 
@@ -87,18 +83,13 @@ export function usePageBanner(
         });
 
         if (!matched) {
-          // If no active custom banner exists, clear stale cache and restore defaults
+          // If no active custom banner exists, clear stale cache and remove banner
           if (typeof window !== 'undefined' && window.sessionStorage) {
             const key = getBannerStorageKey(pageType);
             if (key) window.sessionStorage.removeItem(key);
           }
           if (mounted) {
-            setBanner({
-              title: defaultTitle,
-              description: defaultDescription,
-              image: defaultImage,
-              isDynamic: false
-            });
+            setBanner(null);
           }
           return;
         }
@@ -120,17 +111,25 @@ export function usePageBanner(
         const rawDescription =
           matched.subtitle ||
           matched.description ||
-          defaultDescription;
+          '';
 
         const description = String(rawDescription)
           .replace(/\[Type:\w+\]/gi, '')
+          .replace(/\[(?:Cta|Btn):\s*[^\]]+\]/gi, '')
+          .replace(/\[Sec:\s*[^\]]+\]/gi, '')
           .trim();
 
         const latestBanner = {
-          title: matched.title || defaultTitle,
-          description: description || defaultDescription,
-          image: image || defaultImage,
-          isDynamic: Boolean(image)
+          id: matched.id,
+          title: matched.title || '',
+          subtitle: description,
+          description: description,
+          image: image || '',
+          bannerType: matched.bannerType || pageType,
+          ctaText: matched.ctaText || '',
+          secondaryType: matched.secondaryType || '',
+          targetUrl: matched.targetUrl || '',
+          isDynamic: true
         };
 
         if (mounted) {
@@ -139,9 +138,16 @@ export function usePageBanner(
         }
       } catch (error) {
         console.warn(
-          `[usePageBanner] Failed to load ${pageType} banner`,
-          error
+          `[usePageBanner] Could not load ${pageType} banner from API (server may be offline):`,
+          error.message
         );
+        if (mounted) {
+          setBanner(null);
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            const key = getBannerStorageKey(pageType);
+            if (key) window.sessionStorage.removeItem(key);
+          }
+        }
       } finally {
         if (mounted) {
           setLoading(false);
@@ -160,7 +166,7 @@ export function usePageBanner(
       mounted = false;
       window.removeEventListener('banners-updated', handleBannerUpdate);
     };
-  }, [pageType, defaultTitle, defaultDescription, defaultImage]);
+  }, [pageType]);
 
   return {
     banner,

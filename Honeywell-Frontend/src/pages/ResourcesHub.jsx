@@ -12,11 +12,7 @@ import { getBlogs, resolveBlogImageUrl } from '../services/blogApi';
 import { getSupportConfig } from '../services/settingsApi';
 
 export default function ResourcesHub() {
-  const { banner } = usePageBanner(
-    'Resources',
-    'Honeywell Resources & Learning Hub',
-    'Technical whitepapers, software downloads, and security articles.'
-  );
+  const { banner } = usePageBanner('Resources');
 
   // ── State for all 3 APIs ──
   const [software, setSoftware] = useState([]);
@@ -103,13 +99,15 @@ export default function ResourcesHub() {
 
   return (
     <>
-      <PageHero
-        pageType="Resources"
-        eyebrow="RESOURCES &amp; LEARNING"
-        title={banner.title}
-        description={banner.description}
-        image={banner.image}
-      />
+      {banner && banner.isDynamic && (
+        <PageHero
+          pageType="Resources"
+          eyebrow="RESOURCES &amp; LEARNING"
+          title={banner.title}
+          description={banner.description}
+          image={banner.image}
+        />
+      )}
 
       {/* ── Quick Nav Cards ── */}
       <section className="section">

@@ -102,10 +102,10 @@ export const aboutApi = {
           if (altResponse.data) return altResponse.data;
         } catch (altErr) {
           console.error('Both About API endpoints failed:', altErr.message);
-          throw new Error('Unable to fetch About Us configuration from backend API (/api/About and /api/Settings/about-us failed).');
+          throw new Error('Unable to connect to the server. Please try again later.');
         }
       }
-      throw new Error('No About Us data returned from backend server.');
+      throw new Error('Unable to connect to the server. Please try again later.');
     }, 15 * 60 * 1000);
   },
 

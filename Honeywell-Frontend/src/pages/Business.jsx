@@ -44,17 +44,7 @@ const empty = { companyName: '', gstin: '', contactPerson: '', mobile: '', email
  
 export default function Business() {
 
-      const { banner } = usePageBanner(
-
-    'Business',
-
-    'Grow Your Business With Honeywell Products',
-
-    'Explore partnership pathways for distribution, installation, system integration and channel sales.',
-
-    ''
-
-     );
+  const { banner } = usePageBanner('Business');
  
   useDocumentTitle('Business & Partner Opportunities', 'Explore distributor, dealer, installer, reseller, integrator and channel partner pathways.');
 
@@ -177,17 +167,14 @@ export default function Business() {
  
   return (
 <>
-<PageHero
-
-  eyebrow="BUSINESS"
-
-  title={banner.title}
-
-  description={banner.description}
-
-  image={banner.image}
-
-   />
+  {banner && banner.isDynamic && (
+    <PageHero
+      eyebrow="BUSINESS"
+      title={banner.title}
+      description={banner.description}
+      image={banner.image}
+    />
+  )}
 <section className="section business-intro">
 <div className="container">
 <SectionHeading

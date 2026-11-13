@@ -4,35 +4,8 @@ import { Link } from 'react-router-dom';
 import { useUI } from '../../context/UIContext';
 import { bannerService } from '../../services/bannerService';
 import { resolveBannerImage } from '../../admin/marketing/bannersApi';
-import heroPoster from '../../assets/images/cctv-hero-poster.jpg';
-import solarHero from '../../assets/images/smart-security-sustainable-future.png';
 
 const HERO_SLIDES_CACHE_KEY = 'home_hero_slides';
-
-const defaultHeroSlides = [
-  {
-    id: 'default-1',
-    eyebrow: 'INTELLIGENT SURVEILLANCE • COMMERCIAL SECURITY',
-    title: 'Advanced AI Surveillance & Security Systems',
-    text: 'High-definition network cameras, smart video analytics, and unified surveillance infrastructure for enterprise protection.',
-    primary: 'EXPLORE PRODUCTS',
-    to: '/products',
-    secondary: 'GET A QUOTE',
-    quote: true,
-    image: heroPoster
-  },
-  {
-    id: 'default-2',
-    eyebrow: 'SMART SECURITY • SUSTAINABLE FUTURE',
-    title: 'Solar Powered Security & Off-Grid Solutions',
-    text: 'Clean energy integrated CCTV systems designed for agricultural, perimeter and remote industrial monitoring.',
-    primary: 'EXPLORE SOLAR KITS',
-    to: '/products?category=solar-kit',
-    secondary: 'CONTACT SALES',
-    quote: false,
-    image: solarHero
-  }
-];
 
 const getCachedHeroSlides = () => {
   if (typeof window === 'undefined' || !window.sessionStorage) return null;
@@ -40,7 +13,9 @@ const getCachedHeroSlides = () => {
     const raw = window.sessionStorage.getItem(HERO_SLIDES_CACHE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null;
+    if (!Array.isArray(parsed) || parsed.length === 0) return null;
+    const valid = parsed.filter(s => s && s.isDynamic && !String(s.id).startsWith('default-'));
+    return valid.length > 0 ? valid : null;
   } catch {
     return null;
   }
@@ -192,10 +167,9 @@ export default function HeroCarousel() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   
-  // Instant mount using persistent cache or default slides (0ms delay on refresh)
+  // Instant mount using persistent cache of dynamic slides if available
   const [slides, setSlides] = useState(() => {
-    const cached = getCachedHeroSlides();
-    return cached || defaultHeroSlides;
+    return getCachedHeroSlides() || [];
   });
   
   const [isLoading, setIsLoading] = useState(() => !getCachedHeroSlides());
@@ -218,7 +192,7 @@ export default function HeroCarousel() {
           const actions = getHeroSlideActions(b, idx);
           return {
             id: b.id || idx,
-            eyebrow: b.eyebrow || b.tag || b.badge || 'TECHNOLOGY • SECURITY • RELIABILITY',
+            eyebrow: b.eyebrow || b.tag || b.badge || '',
             title: b.title || '',
             text: b.subtitle || b.description || '',
             primary: actions.primary,
@@ -227,7 +201,8 @@ export default function HeroCarousel() {
             quote: actions.quote,
             secondaryTo: actions.secondaryTo,
             showSecondary: actions.showSecondary,
-            image: resolveBannerImage(b.imageUrl)
+            image: resolveBannerImage(b.imageUrl),
+            isDynamic: true
           };
         });
 
@@ -239,9 +214,18 @@ export default function HeroCarousel() {
           const preloader = new Image();
           preloader.src = liveSlides[0].image;
         }
+      } else {
+        setSlides([]);
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          window.sessionStorage.removeItem(HERO_SLIDES_CACHE_KEY);
+        }
       }
     } catch (err) {
-      console.warn('[HeroCarousel] Could not load dynamic banners from API:', err);
+      console.warn('[HeroCarousel] Could not load dynamic banners from API (server may be offline):', err?.message);
+      setSlides([]);
+      if (typeof window !== 'undefined' && window.sessionStorage) {
+        window.sessionStorage.removeItem(HERO_SLIDES_CACHE_KEY);
+      }
     } finally {
       if (isMountedRef.current) {
         setIsLoading(false);
@@ -283,24 +267,6 @@ export default function HeroCarousel() {
 
   const move = (direction) =>
     setActive((value) => (value + direction + slides.length) % slides.length);
-
-  if (isLoading && slides.length === 0) {
-    return (
-      <section
-        className="hero-carousel"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '450px'
-        }}
-      >
-        <div style={{ color: '#94a3b8', fontSize: '14px', fontWeight: 600 }}>
-          Loading banners...
-        </div>
-      </section>
-    );
-  }
 
   if (slides.length === 0) {
     return null;

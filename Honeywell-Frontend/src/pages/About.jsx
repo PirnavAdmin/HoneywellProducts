@@ -64,12 +64,7 @@ const getIconComponent = (iconName) => {
 };
  
 export default function About() {
-      const { banner: pageBanner } = usePageBanner(
-    'About',
-    'Security Technology With a Clear Purpose',
-    '',
-    ''
-  );
+  const { banner: pageBanner } = usePageBanner('About');
  
   useDocumentTitle('About Us', 'Learn about the HONEYWELL PRODUCTS company profile, vision, mission, portfolio and leadership.');
  
@@ -106,16 +101,16 @@ export default function About() {
  
   if (error || !aboutData) {
     return (
-<div className="container section" style={{ textAlign: 'center', padding: '80px 20px' }}>
-<AlertCircle size={48} color="var(--red, #d32f2f)" style={{ marginBottom: '16px' }} />
-<h2>Failed to Load About Us Content</h2>
-<p style={{ color: 'var(--grey-700)', marginBottom: '24px' }}>
-          {error || 'Unable to fetch About Us configuration from the backend API.'}
-</p>
-<button className="button" onClick={fetchAboutData} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
-<RefreshCw size={16} /> Try Again
-</button>
-</div>
+      <div className="container section" style={{ textAlign: 'center', padding: '80px 20px' }}>
+        <AlertCircle size={48} color="var(--red, #d32f2f)" style={{ marginBottom: '16px' }} />
+        <h2>About Us Information Unavailable</h2>
+        <p style={{ color: 'var(--grey-700)', marginBottom: '24px' }}>
+          Unable to connect to the server. Please try again later.
+        </p>
+        <button className="button" onClick={fetchAboutData} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+          <RefreshCw size={16} /> Try Again
+        </button>
+      </div>
     );
   }
  
@@ -132,13 +127,13 @@ export default function About() {
   return (
 <>
       {/* ── 1. Hero Section ── */}
-      {hero && (
-<PageHero
-   eyebrow={pageBanner.title ? 'ABOUT US' : (hero.eyebrow || 'ABOUT US')}
-   title={pageBanner.title || hero.title || 'Security Technology With a Clear Purpose'}
-   description={pageBanner.description || hero.description || ''}
-   image={pageBanner.image || heroImageSrc}
-   />
+      {((pageBanner && pageBanner.isDynamic) || (hero && (hero.title || hero.image))) && (
+        <PageHero
+          eyebrow={pageBanner?.eyebrow || hero?.eyebrow || 'ABOUT US'}
+          title={pageBanner?.title || hero?.title || ''}
+          description={pageBanner?.description || hero?.description || ''}
+          image={pageBanner?.image || heroImageSrc || ''}
+        />
       )}
  
       {/* ── 2. Company Overview ── */}

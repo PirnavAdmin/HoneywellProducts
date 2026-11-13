@@ -199,12 +199,7 @@ export default function Products() {
 
 
 
-   const { banner } = usePageBanner(
-  'Products',
-  'Products',
-  'Search and filter professional surveillance, recording, networking and solar-security product categories.',
-  ''
-  );
+  const { banner } = usePageBanner('Products');
   useDocumentTitle('Products', 'Explore professional surveillance, recording, networking and security product categories.');
   const { priceVisibility } = useSettings();
   const [params] = useSearchParams();
@@ -735,12 +730,14 @@ export default function Products() {
 
 
   return <>
-   <PageHero
-  eyebrow="PRODUCT CATALOGUE"
-  title={banner.title}
-  description={banner.description}
-  image={banner.image}
-   />
+  {banner && banner.isDynamic && (
+    <PageHero
+      eyebrow="PRODUCT CATALOGUE"
+      title={banner.title}
+      description={banner.description}
+      image={banner.image}
+    />
+  )}
    <section className="catalogue section">
       <div className="container">
         <button className="filter-toggle" onClick={() => setFiltersOpen(true)}><SlidersHorizontal size={18} /> FILTER PRODUCTS</button>

@@ -26,17 +26,7 @@ const empty = { name: '', mobile: '', email: '', company: '', enquiryType: '', m
  
 export default function Contact() {
 
-    const { banner } = usePageBanner(
-
-    'Contact',
-
-    'Talk to Our Team',
-
-    'Send a product, sales, support or business enquiry to Honeywell.',
-
-    ''
-
-    );
+  const { banner } = usePageBanner('Contact');
 
   useDocumentTitle('Contact Us', 'Send a product, sales, dealer, distributor or support enquiry.');
 
@@ -201,17 +191,14 @@ export default function Contact() {
  
   return (
 <>
-<PageHero
-
-  eyebrow="CONTACT US"
-
-  title={banner.title}
-
-  description={banner.description}
-
-  image={banner.image}
-
-   />
+  {banner && banner.isDynamic && (
+    <PageHero
+      eyebrow="CONTACT US"
+      title={banner.title}
+      description={banner.description}
+      image={banner.image}
+    />
+  )}
 <section className="section contact-section">
 <div className="container contact-layout">
 <div className="contact-copy">
