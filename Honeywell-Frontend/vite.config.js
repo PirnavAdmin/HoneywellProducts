@@ -1,17 +1,8 @@
 
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { sites } from '@openai/sites-vite-plugin';
 import { mkdir, writeFile } from 'node:fs/promises';
-
-const API_PROXY_TARGET =
-  process.env.VITE_API_PROXY_TARGET ||
-  process.env.VITE_API_BASE_URL ||
-  'https://drab-smoking-unstaffed.ngrok-free.dev';
-
-const MEDIA_PROXY_TARGET =
-  process.env.VITE_MEDIA_PROXY_TARGET ||
-  API_PROXY_TARGET;
 
 function staticSiteWorker() {
   return {
@@ -48,38 +39,56 @@ function staticSiteWorker() {
   };
 }
 
-export default defineConfig({
-  plugins: [
-    react(),
-    sites(),
-    staticSiteWorker(),
-  ],
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
 
-  server: {
-    host: '127.0.0.1',
-    port: 5173,
+  const API_PROXY_TARGET =
+    env.VITE_API_PROXY_TARGET ||
+    env.VITE_API_BASE_URL ||
+    process.env.VITE_API_PROXY_TARGET ||
+    process.env.VITE_API_BASE_URL ||
+    'https://drab-smoking-unstaffed.ngrok-free.dev';
 
-    proxy: {
-      // Backend API requests
-      '/api': {
-        target: API_PROXY_TARGET,
-        changeOrigin: true,
-        secure: true,
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
+  const MEDIA_PROXY_TARGET =
+    env.VITE_MEDIA_PROXY_TARGET ||
+    env.VITE_MEDIA_BASE_URL ||
+    process.env.VITE_MEDIA_PROXY_TARGET ||
+    process.env.VITE_MEDIA_BASE_URL ||
+    'https://honeywellproducts.com';
+
+  return {
+    plugins: [
+      react(),
+      sites(),
+      staticSiteWorker(),
+    ],
+
+    server: {
+      host: '127.0.0.1',
+      port: 5173,
+
+      proxy: {
+        // Backend API requests
+        '/api': {
+          target: API_PROXY_TARGET,
+          changeOrigin: true,
+          secure: true,
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+          },
         },
-      },
 
-      // Blog images, banners, product images,
-      // CEO Corner, Company Overview and other uploads
-      '/uploads': {
-        target: MEDIA_PROXY_TARGET,
-        changeOrigin: true,
-        secure: !MEDIA_PROXY_TARGET.includes('localhost') && !MEDIA_PROXY_TARGET.includes('127.0.0.1'),
-        headers: {
-          'ngrok-skip-browser-warning': 'true',
+        // Blog images, banners, product images,
+        // CEO Corner, Company Overview and other uploads
+        '/uploads': {
+          target: MEDIA_PROXY_TARGET,
+          changeOrigin: true,
+          secure: !MEDIA_PROXY_TARGET.includes('localhost') && !MEDIA_PROXY_TARGET.includes('127.0.0.1'),
+          headers: {
+            'ngrok-skip-browser-warning': 'true',
+          },
         },
       },
     },
-  },
+  };
 });

@@ -20,6 +20,7 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useUI } from '../context/UIContext';
 import { socialLinks } from '../config/socialLinks';
 import OptimizedImage from '../components/common/OptimizedImage';
+import { resolveMediaUrl } from '../utils/apiConfig';
 import businessImage from '../assets/images/capital-park2.jpg';
 
 const reasons = [
@@ -178,15 +179,17 @@ export default function Home() {
           {categoriesList.map((category, idx) => {
             const subCount = getSubcategoryCount(category);
             const countLabel = subCount === 1 ? '1 Subcategory' : `${subCount} Subcategories`;
-            const imageSrc = (!category.image && !category.imageUrl) || String(category.image || category.imageUrl).toLowerCase().includes('placeholder')
+            const rawCatImg = category.image || category.imageUrl;
+            const imageSrc = (!rawCatImg || String(rawCatImg).toLowerCase().includes('placeholder'))
               ? '/honeywell-products-logo.png'
-              : (category.image || category.imageUrl);
+              : (resolveMediaUrl(rawCatImg) || '/honeywell-products-logo.png');
 
             return (
               <Link key={category.id} to={`/products?category=${category.id}`} className="category-card">
                 <OptimizedImage
                   src={imageSrc}
                   alt={`${category.name} product category`}
+                  fallbackSrc="/honeywell-products-logo.png"
                   loading={idx < 4 ? 'eager' : 'lazy'}
                   fetchPriority={idx < 2 ? 'high' : undefined}
                   decoding="async"

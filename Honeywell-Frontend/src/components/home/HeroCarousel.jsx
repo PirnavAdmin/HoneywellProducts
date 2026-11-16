@@ -4,8 +4,35 @@ import { Link } from 'react-router-dom';
 import { useUI } from '../../context/UIContext';
 import { bannerService } from '../../services/bannerService';
 import { resolveBannerImage } from '../../admin/marketing/bannersApi';
+import heroPoster from '../../assets/images/cctv-hero-poster.jpg';
+import solarHero from '../../assets/images/smart-security-sustainable-future.png';
 
 const HERO_SLIDES_CACHE_KEY = 'home_hero_slides';
+
+const defaultHeroSlides = [
+  {
+    id: 'default-1',
+    eyebrow: 'INTELLIGENT SURVEILLANCE • COMMERCIAL SECURITY',
+    title: 'Advanced AI Surveillance & Security Systems',
+    text: 'High-definition network cameras, smart video analytics, and unified surveillance infrastructure for enterprise protection.',
+    primary: 'EXPLORE PRODUCTS',
+    to: '/products',
+    secondary: 'GET A QUOTE',
+    quote: true,
+    image: heroPoster
+  },
+  {
+    id: 'default-2',
+    eyebrow: 'SMART SECURITY • SUSTAINABLE FUTURE',
+    title: 'Solar Powered Security & Off-Grid Solutions',
+    text: 'Clean energy integrated CCTV systems designed for agricultural, perimeter and remote industrial monitoring.',
+    primary: 'EXPLORE SOLAR KITS',
+    to: '/products?category=solar-kit',
+    secondary: 'CONTACT SALES',
+    quote: false,
+    image: solarHero
+  }
+];
 
 const getCachedHeroSlides = () => {
   if (typeof window === 'undefined' || !window.sessionStorage) return null;
@@ -167,9 +194,9 @@ export default function HeroCarousel() {
   const [active, setActive] = useState(0);
   const [paused, setPaused] = useState(false);
   
-  // Instant mount using persistent cache of dynamic slides if available
+  // Instant mount using persistent cache of dynamic slides if available, falling back to default slides
   const [slides, setSlides] = useState(() => {
-    return getCachedHeroSlides() || [];
+    return getCachedHeroSlides() || defaultHeroSlides;
   });
   
   const [isLoading, setIsLoading] = useState(() => !getCachedHeroSlides());
@@ -215,14 +242,14 @@ export default function HeroCarousel() {
           preloader.src = liveSlides[0].image;
         }
       } else {
-        setSlides([]);
+        setSlides(defaultHeroSlides);
         if (typeof window !== 'undefined' && window.sessionStorage) {
           window.sessionStorage.removeItem(HERO_SLIDES_CACHE_KEY);
         }
       }
     } catch (err) {
       console.warn('[HeroCarousel] Could not load dynamic banners from API (server may be offline):', err?.message);
-      setSlides([]);
+      setSlides((prev) => (prev && prev.length > 0 ? prev : defaultHeroSlides));
       if (typeof window !== 'undefined' && window.sessionStorage) {
         window.sessionStorage.removeItem(HERO_SLIDES_CACHE_KEY);
       }
