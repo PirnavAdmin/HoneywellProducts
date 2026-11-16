@@ -14,12 +14,19 @@ import {
   getEffectiveAdminRole 
 } from '../utils/rbac';
 
-const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
+const AdminMenuBar = ({ 
+  expanded = false, 
+  onToggleSidebar,
+  permissions: propPermissions,
+  role: propRole,
+  authType: propAuthType
+}) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [userRole, setUserRole] = useState(() => getEffectiveAdminRole());
-  const [authType, setAuthType] = useState(() => getEffectiveAuthType());
+  const [userRole, setUserRole] = useState(() => propRole || getEffectiveAdminRole());
+  const [authType, setAuthType] = useState(() => propAuthType || getEffectiveAuthType());
   const [userPermissions, setUserPermissions] = useState(() => {
+    if (Array.isArray(propPermissions)) return propPermissions;
     try {
       const perms = getStoredAdminItem('adminPermissions');
       return perms ? JSON.parse(perms) : [];
@@ -27,6 +34,19 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
       return [];
     }
   });
+
+  // Keep internal state synchronized with prop updates in real-time
+  useEffect(() => {
+    if (Array.isArray(propPermissions)) {
+      setUserPermissions(propPermissions);
+    }
+    if (propRole) {
+      setUserRole(propRole);
+    }
+    if (propAuthType) {
+      setAuthType(propAuthType);
+    }
+  }, [propPermissions, propRole, propAuthType]);
 
   const [openDropdowns, setOpenDropdowns] = useState({
     catalog: false,
@@ -131,7 +151,10 @@ const AdminMenuBar = ({ expanded = false, onToggleSidebar }) => {
   };
 
   const hasAccess = (moduleName) => {
-    return hasModuleAccess(moduleName, userPermissions, userRole, authType);
+    const activePerms = Array.isArray(propPermissions) ? propPermissions : userPermissions;
+    const activeRole = propRole || userRole;
+    const activeType = propAuthType || authType;
+    return hasModuleAccess(moduleName, activePerms, activeRole, activeType);
   };
 
   return (

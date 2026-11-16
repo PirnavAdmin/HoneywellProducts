@@ -1039,18 +1039,17 @@ namespace Honeywell.Controllers
                 User?.Identity?.Name
             }.FirstOrDefault(v => !string.IsNullOrWhiteSpace(v));
 
-            if (string.IsNullOrWhiteSpace(resolvedEmail) && !string.IsNullOrWhiteSpace(email))
+            var userRole = User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
+                        ?? User?.FindFirst("role")?.Value;
+            var isAdministrativeCaller = !string.IsNullOrWhiteSpace(userRole) &&
+                (userRole.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
+                 userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
+                 userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase));
+
+            // If an Admin/SuperAdmin provides an email query parameter, inspect that specific target user's permissions
+            if (isAdministrativeCaller && !string.IsNullOrWhiteSpace(email))
             {
-                // Only allow query param if caller is legitimate SuperAdmin/Admin
-                var userRole = User?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value
-                            ?? User?.FindFirst("role")?.Value;
-                if (!string.IsNullOrWhiteSpace(userRole) &&
-                    (userRole.Equals("SuperAdmin", StringComparison.OrdinalIgnoreCase) ||
-                     userRole.Equals("Admin", StringComparison.OrdinalIgnoreCase) ||
-                     userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase)))
-                {
-                    resolvedEmail = email;
-                }
+                resolvedEmail = email;
             }
 
             if (string.IsNullOrWhiteSpace(resolvedEmail))
@@ -1065,9 +1064,9 @@ namespace Honeywell.Controllers
             var cleanEmpId = resolvedEmpId?.Trim().ToLowerInvariant();
 
             var staff = await _context.Staff.AsNoTracking().FirstOrDefaultAsync(s =>
-                s.Email.ToLower() == cleanIdentifier ||
-                s.EmployeeId.ToLower() == cleanIdentifier ||
-                (!string.IsNullOrWhiteSpace(cleanEmpId) && s.EmployeeId.ToLower() == cleanEmpId));
+                (s.Email != null && s.Email.ToLower() == cleanIdentifier) ||
+                (s.EmployeeId != null && s.EmployeeId.ToLower() == cleanIdentifier) ||
+                (!string.IsNullOrWhiteSpace(cleanEmpId) && s.EmployeeId != null && s.EmployeeId.ToLower() == cleanEmpId));
 
             if (staff != null)
             {
@@ -1111,7 +1110,7 @@ namespace Honeywell.Controllers
             }
 
             var adminUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u =>
-                u.Email.ToLower() == cleanIdentifier ||
+                (u.Email != null && u.Email.ToLower() == cleanIdentifier) ||
                 (u.EmployeeId != null && u.EmployeeId.ToLower() == cleanIdentifier) ||
                 (!string.IsNullOrWhiteSpace(cleanEmpId) && u.EmployeeId != null && u.EmployeeId.ToLower() == cleanEmpId));
 

@@ -13,7 +13,8 @@ import {
   getEffectiveAuthType,
   getEffectiveAdminRole,
   isUserSessionValid,
-  extractPermissionsFromUser
+  extractPermissionsFromUser,
+  getAdminToken
 } from '../utils/rbac';
 import './AdminLayout.css';
 
@@ -120,7 +121,7 @@ const AdminLayout = () => {
     }
   });
 
-  // Real-time synchronization of staff/admin permissions on mount / refresh and window focus
+  // Real-time dynamic synchronization of staff/admin permissions on mount / refresh, window focus, and background interval
   useEffect(() => {
     if (!isValidSession) return;
 
@@ -133,6 +134,16 @@ const AdminLayout = () => {
 
         const data = await adminAuthApi.getMyPermissions();
         if (!isMounted || !data) return;
+
+        // Check if account has been deactivated in the database
+        if (data.isActive === false) {
+          clearUserSession();
+          navigate('/admin/login', { 
+            replace: true, 
+            state: { reason: 'deactivated', message: 'Your staff account is inactive. Please contact an administrator.' } 
+          });
+          return;
+        }
 
         const freshPermissions = extractPermissionsFromUser(data);
         if (Array.isArray(freshPermissions)) {
@@ -160,8 +171,8 @@ const AdminLayout = () => {
           detail: { permissions: freshPermissions, role: data.role }
         }));
       } catch (err) {
-        if (err?.response?.status === 401) {
-          console.warn('Session expired during permissions sync.');
+        if (err?.response?.status === 401 || err?.response?.status === 403) {
+          console.warn('Session expired or access revoked during permissions sync.');
         } else {
           console.warn('Real-time permissions sync failed:', err?.message || err);
         }
@@ -188,12 +199,18 @@ const AdminLayout = () => {
     };
     window.addEventListener('visibilitychange', handleVisibility);
 
+    // Periodic dynamic synchronization every 20 seconds to catch admin permission updates in real time
+    const pollInterval = setInterval(() => {
+      syncPermissions();
+    }, 20000);
+
     return () => {
       isMounted = false;
+      clearInterval(pollInterval);
       window.removeEventListener('focus', handleFocus);
       window.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [isValidSession]);
+  }, [isValidSession, navigate]);
 
   // Intercept data mutations for Manager role (Read-Only)
   useEffect(() => {
@@ -249,7 +266,13 @@ const AdminLayout = () => {
       )}
 
       <aside className="admin-sidebar-area">
-        <AdminMenuBar expanded={sidebarExpanded} onToggleSidebar={toggleSidebar} />
+        <AdminMenuBar 
+          expanded={sidebarExpanded} 
+          onToggleSidebar={toggleSidebar} 
+          permissions={userPermissions}
+          role={userRole}
+          authType={authType}
+        />
       </aside>
       <header className="admin-topbar-area">
         <AdminTopBar onToggleSidebar={toggleSidebar} sidebarExpanded={sidebarExpanded} />
