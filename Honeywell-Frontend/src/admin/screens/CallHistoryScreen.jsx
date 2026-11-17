@@ -79,9 +79,10 @@ export const formatLocalTime = (date) => {
 export const combineLocalDateTime = (dateStr, timeStr) => {
   if (!dateStr) return null;
   const time = timeStr && timeStr.trim() ? timeStr.trim() : '10:00';
-  const localDate = new Date(`${dateStr}T${time}:00`);
-  if (isNaN(localDate.getTime())) return null;
-  return localDate.toISOString();
+  const parts = time.split(':');
+  const hh = (parts[0] || '10').padStart(2, '0');
+  const mm = (parts[1] || '00').padStart(2, '0');
+  return `${dateStr.trim()}T${hh}:${mm}:00`;
 };
 
 export const formatFollowUpDate = (dateVal) => {
@@ -89,9 +90,24 @@ export const formatFollowUpDate = (dateVal) => {
   if (typeof dateVal === 'string') {
     const trimmed = dateVal.trim();
     if (!trimmed || trimmed === '—' || trimmed.toLowerCase() === 'none') return '—';
-    // If it is already in human IST format (e.g. "18 Nov 2026, 10:00 AM"), preserve it cleanly
+    // If it is already in human format (e.g. "18 Nov 2026, 03:00 PM"), preserve it cleanly
     if (/^\d{1,2}\s+[A-Za-z]{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+(AM|PM|am|pm)$/i.test(trimmed)) {
       return trimmed;
+    }
+    // If it is a local ISO format "YYYY-MM-DDTHH:mm:ss" without trailing Z
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(trimmed) && !trimmed.endsWith('Z')) {
+      const [dPart, tPart] = trimmed.split('T');
+      const [y, m, d] = dPart.split('-').map(Number);
+      const [hh, mm] = tPart.split(':').map(Number);
+      const localDate = new Date(y, m - 1, d, hh, mm);
+      return localDate.toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
     }
   }
 
@@ -338,20 +354,32 @@ const CallHistoryScreen = () => {
     let cbTime = '10:00';
     const rawCb = c.callbackIso || c.CallbackIso || c.callback || c.Callback || c.callbackTime || c.CallbackTime;
     if (rawCb && rawCb !== '—') {
-      const d = new Date(rawCb);
-      if (!isNaN(d.getTime())) {
-        cbDate = formatLocalDate(d);
-        cbTime = formatLocalTime(d);
+      if (typeof rawCb === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawCb)) {
+        const [dPart, tPart] = rawCb.split('T');
+        cbDate = dPart;
+        cbTime = tPart.slice(0, 5);
+      } else {
+        const d = new Date(rawCb);
+        if (!isNaN(d.getTime())) {
+          cbDate = formatLocalDate(d);
+          cbTime = formatLocalTime(d);
+        }
       }
     }
     let lcDate = '';
     let lcTime = '';
     const rawLc = c.lastCallIso || c.LastCallIso || c.lastCall || c.LastCall || c.lastCallTime || c.LastCallTime;
     if (rawLc && rawLc !== '—') {
-      const d = new Date(rawLc);
-      if (!isNaN(d.getTime())) {
-        lcDate = formatLocalDate(d);
-        lcTime = formatLocalTime(d);
+      if (typeof rawLc === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawLc)) {
+        const [dPart, tPart] = rawLc.split('T');
+        lcDate = dPart;
+        lcTime = tPart.slice(0, 5);
+      } else {
+        const d = new Date(rawLc);
+        if (!isNaN(d.getTime())) {
+          lcDate = formatLocalDate(d);
+          lcTime = formatLocalTime(d);
+        }
       }
     }
 
@@ -385,7 +413,10 @@ const CallHistoryScreen = () => {
     if (formData.callbackDate) {
       finalCallbackIso = combineLocalDateTime(formData.callbackDate, formData.callbackTime);
       if (finalCallbackIso) {
-        const selectedDate = new Date(finalCallbackIso);
+        const [dPart, tPart] = finalCallbackIso.split('T');
+        const [y, m, d] = dPart.split('-').map(Number);
+        const [hh, mm] = tPart.split(':').map(Number);
+        const selectedDate = new Date(y, m - 1, d, hh, mm);
         const now = new Date();
         // Allow up to 10 minutes in past to accommodate clock-skew
         if (selectedDate.getTime() < now.getTime() - 600000) {
@@ -395,10 +426,12 @@ const CallHistoryScreen = () => {
       }
     }
 
-    let lastCallIso = new Date().toISOString();
+    let lastCallIso = null;
     if (formData.lastCallDate) {
-      const lc = combineLocalDateTime(formData.lastCallDate, formData.lastCallTime || '10:00');
-      if (lc) lastCallIso = lc;
+      lastCallIso = combineLocalDateTime(formData.lastCallDate, formData.lastCallTime || '10:00');
+    } else {
+      const now = new Date();
+      lastCallIso = combineLocalDateTime(formatLocalDate(now), formatLocalTime(now));
     }
 
     setSubmitting(true);
