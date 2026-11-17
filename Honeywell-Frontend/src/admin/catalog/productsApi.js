@@ -1216,6 +1216,40 @@ export const saveProduct = async (product, imageFiles = [], videoFile = null, po
     setStoredCostPrice(targetId, costVal);
   }
 
+  // Automatic cross-environment sync:
+  // When a product with newly uploaded images is saved locally, sync the images to the live server
+  // so the live server writes the image files to its own disk too!
+  const isLocalOrigin = typeof window !== 'undefined' && !window.location.hostname.includes('honeywellproducts.com');
+  if (isLocalOrigin && fileDataUrls.length > 0 && targetId) {
+    (async () => {
+      try {
+        const liveToken = (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('adminToken') : null) ||
+                          (typeof localStorage !== 'undefined' ? localStorage.getItem('adminToken') : null);
+        const syncPayload = {
+          id: Number(targetId),
+          productName: product.name || '',
+          sku: product.sku || '',
+          brand: product.brand || 'Honeywell',
+          imageUrl: fileDataUrls[0],
+          image: fileDataUrls[0],
+          images: fileDataUrls,
+        };
+        await axios({
+          method: 'PUT',
+          url: `https://honeywellproducts.com/api/products/${targetId}`,
+          data: syncPayload,
+          headers: {
+            'Content-Type': 'application/json',
+            ...(liveToken ? { Authorization: `Bearer ${liveToken}` } : {}),
+          },
+          timeout: 45000,
+        });
+      } catch (syncErr) {
+        console.warn('[Sync Notice] Background live server sync:', syncErr?.message || syncErr);
+      }
+    })();
+  }
+
   // If deletedReviewIds provided, delete them in parallel
   if (Array.isArray(product.deletedReviewIds) && product.deletedReviewIds.length > 0) {
     await Promise.all(

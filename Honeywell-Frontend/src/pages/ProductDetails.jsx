@@ -336,6 +336,7 @@ export function ProductDetailsContent() {
               loading="eager"
               fetchPriority="high"
               decoding="async"
+              fallbackSrc="/honeywell-products-logo.png"
             />
           </div>
           {gallery.length > 1 && (
@@ -347,6 +348,7 @@ export function ProductDetailsContent() {
                     alt=""
                     loading="lazy"
                     decoding="async"
+                    fallbackSrc="/honeywell-products-logo.png"
                   />
                 </button>
               ))}

@@ -1216,6 +1216,52 @@ app.Use(async (context, next) =>
 });
 
 app.UseHttpsRedirection();
+
+// Cross-environment image proxy fallback:
+// If request is for an uploaded file or image and it does not exist on local disk,
+// fetch it from the live server (https://honeywellproducts.com), save it to local disk, and serve it!
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value ?? "";
+    if (path.StartsWith("/uploads/", StringComparison.OrdinalIgnoreCase) ||
+        path.StartsWith("/images/", StringComparison.OrdinalIgnoreCase))
+    {
+        var webRoot = app.Environment.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var localFilePath = Path.Combine(webRoot, path.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+
+        if (!System.IO.File.Exists(localFilePath) &&
+            !string.Equals(context.Request.Host.Host, "honeywellproducts.com", StringComparison.OrdinalIgnoreCase) &&
+            !context.Request.Host.Host.Contains("honeywellproducts.com", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var liveUrl = "https://honeywellproducts.com" + path;
+                using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(15) };
+                var response = await client.GetAsync(liveUrl);
+                if (response.IsSuccessStatusCode)
+                {
+                    var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                    var dir = Path.GetDirectoryName(localFilePath);
+                    if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                    await System.IO.File.WriteAllBytesAsync(localFilePath, fileBytes);
+
+                    var contentType = response.Content.Headers.ContentType?.ToString() ?? "image/webp";
+                    context.Response.ContentType = contentType;
+                    context.Response.StatusCode = 200;
+                    context.Response.Headers["Cache-Control"] = "public, max-age=604800";
+                    await context.Response.Body.WriteAsync(fileBytes);
+                    return;
+                }
+            }
+            catch
+            {
+                // Fall through to standard pipeline
+            }
+        }
+    }
+    await next();
+});
+
 app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = ctx =>

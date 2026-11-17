@@ -54,7 +54,7 @@ export default defineConfig(({ mode }) => {
     env.VITE_MEDIA_BASE_URL ||
     process.env.VITE_MEDIA_PROXY_TARGET ||
     process.env.VITE_MEDIA_BASE_URL ||
-    'https://honeywellproducts.com';
+    API_PROXY_TARGET;
 
   return {
     plugins: [

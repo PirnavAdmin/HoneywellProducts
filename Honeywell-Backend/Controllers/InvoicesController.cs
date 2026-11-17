@@ -309,7 +309,7 @@ namespace Honeywell.Controllers
                     Client = o.Customer?.Name ?? "Walk-in Customer",
                     CustomerRole = displayCustType,
                     CustomerType = displayCustType,
-                    Email = o.Customer?.Email ?? "N/A",
+                    Email = !string.IsNullOrWhiteSpace(o.Customer?.Email) ? o.Customer.Email : "",
                     Date = o.OrderDate.ToString("yyyy-MM-dd"),
                     Billed = $"Rs. {o.FinalAmount:N0}",
                     SubTotal = o.TotalAmount,
@@ -330,9 +330,53 @@ namespace Honeywell.Controllers
             });
         }
 
+        private async Task<string> ComputeNextInvoiceNumberAsync()
+        {
+            int nextSeq = 1;
+            var existingNumbers = await _context.Orders
+                .Select(o => o.OrderNumber)
+                .ToListAsync();
+
+            foreach (var num in existingNumbers)
+            {
+                var clean = num.Replace("ORD-", "").Replace("INV-", "").Trim();
+                // Match 1 to 5 digit serial numbers (e.g. 001, 1, 002, 10, etc.)
+                // Excludes long timestamps (> 10000) or random legacy identifiers
+                if (int.TryParse(clean, out int parsedVal) && parsedVal >= 1 && parsedVal < 10000)
+                {
+                    if (parsedVal >= nextSeq)
+                    {
+                        nextSeq = parsedVal + 1;
+                    }
+                }
+            }
+
+            var invoiceNum = $"INV-{nextSeq:D3}";
+            var orderNum = $"ORD-{nextSeq:D3}";
+
+            while (existingNumbers.Contains(orderNum) || existingNumbers.Contains(invoiceNum) ||
+                   existingNumbers.Contains($"ORD-{nextSeq}") || existingNumbers.Contains($"INV-{nextSeq}"))
+            {
+                nextSeq++;
+                invoiceNum = $"INV-{nextSeq:D3}";
+                orderNum = $"ORD-{nextSeq:D3}";
+            }
+
+            return invoiceNum;
+        }
+
+        // GET: api/Invoices/next-number
+        [AuthorizeModule(PermissionAction.View, "orders", "invoices")]
+        [HttpGet("next-number")]
+        public async Task<IActionResult> GetNextInvoiceNumber()
+        {
+            var nextInvoiceNo = await ComputeNextInvoiceNumberAsync();
+            return Ok(new { NextInvoiceNumber = nextInvoiceNo });
+        }
+
         // GET: api/Invoices/5
         [AuthorizeModule(PermissionAction.View, "orders", "invoices")]
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
             var order = await _context.Orders
@@ -373,7 +417,7 @@ namespace Honeywell.Controllers
                 Id = order.Id,
                 InvoiceId = invoiceId,
                 Client = order.Customer?.Name ?? "Walk-in Customer",
-                Email = order.Customer?.Email ?? "N/A",
+                Email = !string.IsNullOrWhiteSpace(order.Customer?.Email) ? order.Customer.Email : "",
                 Phone = order.Customer?.Phone ?? "",
                 Address = order.ShippingAddress ?? order.Customer?.Address ?? "",
                 ShippingAddress = order.ShippingAddress ?? order.Customer?.Address ?? "",
@@ -411,24 +455,34 @@ namespace Honeywell.Controllers
                 return BadRequest(new { Message = "Client Name is required." });
             }
 
-            // 1. Lookup or create customer by phone/email
+            // 1. Lookup or create customer
             var clientNameTrimmed = request.ClientName.Trim();
             var contactTrimmed = request.ContactNo?.Trim() ?? string.Empty;
             var emailTrimmed = request.EmailAddress?.Trim() ?? string.Empty;
-
-            Customer? customer = null;
-            if (!string.IsNullOrEmpty(contactTrimmed) || !string.IsNullOrEmpty(emailTrimmed))
-            {
-                customer = await _context.Customers.FirstOrDefaultAsync(c =>
-                    (!string.IsNullOrEmpty(contactTrimmed) && c.Phone == contactTrimmed) ||
-                    (!string.IsNullOrEmpty(emailTrimmed) && c.Email != null && c.Email.ToLower() == emailTrimmed.ToLower()));
-            }
 
             var resolvedType = !string.IsNullOrWhiteSpace(request.CustomerType)
                 && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
                 && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase)
                 ? request.CustomerType.Trim()
                 : "Customer Account";
+
+            Customer? customer = null;
+
+            // Check if customer exists matching the client name AND contact/email
+            if (!string.IsNullOrEmpty(contactTrimmed) || !string.IsNullOrEmpty(emailTrimmed))
+            {
+                customer = await _context.Customers.FirstOrDefaultAsync(c =>
+                    c.Name != null && c.Name.ToLower() == clientNameTrimmed.ToLower() &&
+                    ((!string.IsNullOrEmpty(contactTrimmed) && c.Phone == contactTrimmed) ||
+                     (!string.IsNullOrEmpty(emailTrimmed) && c.Email != null && c.Email.ToLower() == emailTrimmed.ToLower())));
+            }
+
+            // If not found by name + contact, check if unique non-empty email matches
+            if (customer == null && !string.IsNullOrEmpty(emailTrimmed))
+            {
+                customer = await _context.Customers.FirstOrDefaultAsync(c =>
+                    c.Email != null && c.Email.ToLower() == emailTrimmed.ToLower());
+            }
 
             if (customer == null)
             {
@@ -458,18 +512,27 @@ namespace Honeywell.Controllers
             }
             else
             {
-                if (!string.IsNullOrWhiteSpace(request.CustomerType)
-                    && !request.CustomerType.Equals("Grower", StringComparison.OrdinalIgnoreCase)
-                    && !request.CustomerType.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
+                // Ensure customer details accurately reflect the invoice client
+                customer.Name = clientNameTrimmed;
+                var nameParts = clientNameTrimmed.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+                customer.FirstName = nameParts.Length > 0 ? nameParts[0] : clientNameTrimmed;
+                customer.LastName = nameParts.Length > 1 ? nameParts[1] : "";
+
+                if (!string.IsNullOrEmpty(contactTrimmed))
                 {
-                    customer.Role = request.CustomerType.Trim();
-                    await _context.SaveChangesAsync();
+                    customer.Phone = contactTrimmed;
                 }
-                else if (string.IsNullOrWhiteSpace(customer.Role) || customer.Role.Equals("Grower", StringComparison.OrdinalIgnoreCase) || customer.Role.Equals("Farmer", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(emailTrimmed))
                 {
-                    customer.Role = "Customer Account";
-                    await _context.SaveChangesAsync();
+                    customer.Email = emailTrimmed;
                 }
+                if (!string.IsNullOrWhiteSpace(request.Address ?? request.BillingAddress))
+                {
+                    customer.Address = request.Address ?? request.BillingAddress ?? string.Empty;
+                }
+
+                customer.Role = resolvedType;
+                await _context.SaveChangesAsync();
             }
 
             // 2. Create Order as backing store for the invoice
@@ -489,14 +552,34 @@ namespace Honeywell.Controllers
                 }
             }
 
-            var invoiceNumClean = string.IsNullOrEmpty(request.InvoiceNo)
-                ? $"INV-{new Random().Next(100000, 999999)}"
-                : request.InvoiceNo.Replace("#", "").Trim();
+            // Determine sequential and unique invoice number (honoring request.InvoiceNo if provided)
+            string invoiceNumClean;
+            if (!string.IsNullOrWhiteSpace(request.InvoiceNo))
+            {
+                var trimmed = request.InvoiceNo.Trim();
+                if (!trimmed.StartsWith("INV-", StringComparison.OrdinalIgnoreCase))
+                {
+                    trimmed = $"INV-{trimmed}";
+                }
+                invoiceNumClean = trimmed;
+            }
+            else
+            {
+                invoiceNumClean = await ComputeNextInvoiceNumberAsync();
+            }
 
-            // Map back to ORD number format or keep invoice number directly
-            var orderNumber = invoiceNumClean.StartsWith("INV-")
-                ? invoiceNumClean.Replace("INV-", "ORD-")
-                : $"ORD-{invoiceNumClean}";
+            var rawSeq = invoiceNumClean.Replace("INV-", "").Trim();
+            var orderNumber = $"ORD-{rawSeq}";
+
+            // Ensure order number uniqueness against existing orders
+            var ordCandidate = orderNumber;
+            var invCandidate = invoiceNumClean;
+            if (await _context.Orders.AnyAsync(o => o.OrderNumber == ordCandidate || o.OrderNumber == invCandidate))
+            {
+                invoiceNumClean = await ComputeNextInvoiceNumberAsync();
+                rawSeq = invoiceNumClean.Replace("INV-", "").Trim();
+                orderNumber = $"ORD-{rawSeq}";
+            }
 
             DateTime orderDateToUse = DateTime.UtcNow;
             if (request.Date.HasValue)
@@ -574,7 +657,7 @@ namespace Honeywell.Controllers
                 Id = order.Id,
                 InvoiceId = invoiceId,
                 Client = clientNameTrimmed,
-                Email = customer.Email,
+                Email = customer.Email ?? "",
                 Date = order.OrderDate.ToString("yyyy-MM-dd"),
                 Billed = $"Rs. {order.FinalAmount:N0}",
                 Status = request.PaymentStatus ?? "Unpaid"

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Search, Printer, Trash2, CheckCircle2, AlertCircle, RefreshCw, 
   Plus, X, Filter, RotateCcw, FileText, CheckCircle, Clock, 
@@ -11,12 +12,15 @@ import { Toast } from '../components/Toast';
 import './invoices.css';
 
 const normalizeInvoiceId = (raw) => {
-  if (!raw || typeof raw !== 'string') return '';
-  let clean = raw.trim().replace(/^#+/, '');
+  if (raw === null || raw === undefined) return '';
+  let clean = String(raw).trim().replace(/^#+/, '');
   while (/^(INV-|ORD-|INV|ORD)/i.test(clean)) {
     clean = clean.replace(/^(INV-|ORD-)/i, '').replace(/^(INV|ORD)[-\s]*/i, '').trim();
   }
   if (!clean) return '';
+  if (/^\d{1,2}$/.test(clean)) {
+    clean = clean.padStart(3, '0');
+  }
   return `INV-${clean}`;
 };
 
@@ -56,6 +60,19 @@ const InvoicesList = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [toast, setToast] = useState(null);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  // Close delete modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && invoiceToDelete && !deleting) {
+        setInvoiceToDelete(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [invoiceToDelete, deleting]);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,10 +121,13 @@ const InvoicesList = () => {
             ? 'Paid'
             : 'Unpaid';
 
+        const rawInvoiceNo = inv.invoiceId || inv.InvoiceId || inv.invoiceNo || inv.InvoiceNo || inv.orderNumber || inv.OrderNumber;
+        const normalizedId = normalizeInvoiceId(rawInvoiceNo) || (inv.id ? `INV-${String(inv.id).padStart(3, '0')}` : 'INV-001');
+
         return {
           ...inv,
           id: inv.id ?? inv.Id,
-          invoiceId: normalizeInvoiceId(inv.invoiceId),
+          invoiceId: normalizedId,
           billed: `Rs. ${billedNum.toLocaleString('en-IN')}`,
           billedNum: billedNum,
           status: resolvedStatus
@@ -157,14 +177,22 @@ const InvoicesList = () => {
     }
   };
 
-  const handleDeleteInvoice = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this invoice?')) return;
+  const handleOpenDeleteModal = (inv) => {
+    setInvoiceToDelete(inv);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!invoiceToDelete) return;
+    setDeleting(true);
     try {
-      await deleteInvoice(id);
-      showToast('Invoice marked as cancelled.', 'success');
+      await deleteInvoice(invoiceToDelete.id);
+      showToast(`Invoice ${invoiceToDelete.invoiceId || 'INV-' + invoiceToDelete.id} marked as cancelled.`, 'success');
+      setInvoiceToDelete(null);
       fetchInvoicesData(searchTerm, true);
     } catch (err) {
       showToast(`Error cancelling invoice: ${err.message}`, 'error');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -179,6 +207,8 @@ const InvoicesList = () => {
       if (!order) {
         order = invoices.find(inv => inv.id === id) || { id };
       }
+
+      const computedInvoiceId = normalizeInvoiceId(order.invoiceId || order.InvoiceId || order.invoiceNo || order.InvoiceNo || order.orderNumber || order.OrderNumber) || (order.id ? `INV-${String(order.id).padStart(3, '0')}` : 'INV-001');
 
       const parseCurrencyValue = (val) => {
         if (typeof val === 'number') return val;
@@ -288,7 +318,7 @@ const InvoicesList = () => {
         <!DOCTYPE html>
         <html>
           <head>
-            <title>${docTitle} - ${order.invoiceId}</title>
+            <title>${docTitle} - ${computedInvoiceId}</title>
             <style>
               @page { size: A4 portrait; margin: 12mm; }
               body {
@@ -357,7 +387,7 @@ const InvoicesList = () => {
               <div class="info-grid">
                 <div class="info-block">
                   <div class="info-block-title">Invoice & Order Details</div>
-                  <div class="info-row"><span class="info-label">Invoice No:</span><span class="info-val">${order.invoiceId}</span></div>
+                  <div class="info-row"><span class="info-label">Invoice No:</span><span class="info-val">${computedInvoiceId}</span></div>
                   <div class="info-row"><span class="info-label">Invoice Date:</span><span class="info-val">${order.date || 'Recent'}</span></div>
                   <div class="info-row"><span class="info-label">Order Ref ID:</span><span class="info-val">ORD-${order.id}</span></div>
                 </div>
@@ -448,7 +478,7 @@ const InvoicesList = () => {
       `);
       doc.close();
       try {
-        doc.title = `${docTitle} - ${order.invoiceId}`;
+        doc.title = `${docTitle} - ${computedInvoiceId}`;
       } catch (e) {}
       setTimeout(() => {
         printWin.focus();
@@ -809,7 +839,7 @@ const InvoicesList = () => {
                           {!isCancelled && (
                             <button
                               type="button"
-                              onClick={() => handleDeleteInvoice(inv.id)}
+                              onClick={() => handleOpenDeleteModal(inv)}
                               className="action-icon-btn action-delete"
                               title="Cancel / Void Invoice"
                             >
@@ -838,6 +868,76 @@ const InvoicesList = () => {
           </div>
         )}
       </div>
+
+      {/* ── Centered Delete / Cancel Confirmation Modal ── */}
+      {invoiceToDelete && createPortal(
+        <div
+          className="invoice-modal-backdrop"
+          onClick={() => !deleting && setInvoiceToDelete(null)}
+        >
+          <div
+            className="invoice-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="invoice-modal-close"
+              onClick={() => !deleting && setInvoiceToDelete(null)}
+              aria-label="Close modal"
+              disabled={deleting}
+            >
+              <X size={18} />
+            </button>
+
+            <div className="invoice-modal-header">
+              <div className="invoice-modal-icon-wrap">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="invoice-modal-title">Cancel Invoice</h3>
+                <span className="invoice-modal-badge">Void / Cancel</span>
+              </div>
+            </div>
+
+            <p className="invoice-modal-desc">
+              Are you sure you want to cancel invoice{' '}
+              <strong>{invoiceToDelete.invoiceId || `INV-${invoiceToDelete.id}`}</strong>
+              {invoiceToDelete.client ? ` for "${invoiceToDelete.client}"` : ''}? 
+              This will update its status to cancelled and void further payment tracking.
+            </p>
+
+            <div className="invoice-modal-actions">
+              <button
+                type="button"
+                className="invoice-modal-btn invoice-modal-btn-cancel"
+                onClick={() => setInvoiceToDelete(null)}
+                disabled={deleting}
+              >
+                Keep Invoice
+              </button>
+              <button
+                type="button"
+                className="invoice-modal-btn invoice-modal-btn-delete"
+                onClick={handleConfirmDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <>
+                    <RefreshCw size={14} className="spin-icon" />
+                    Cancelling...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={14} />
+                    Yes, Cancel Invoice
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

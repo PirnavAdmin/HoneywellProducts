@@ -53,6 +53,51 @@ export async function getInvoices(search = '') {
 }
 
 /**
+ * GET /api/Invoices/next-number
+ * Fetch upcoming auto-generated sequential invoice number (e.g. INV-001)
+ * Includes resilient client-side sequence computation if endpoint is temporarily unreachable.
+ */
+export async function getNextInvoiceNumber() {
+  try {
+    const res = await fetch(`${getBaseUrl()}/next-number`, {
+      headers: getHeaders(),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const num = data?.nextInvoiceNumber || data?.NextInvoiceNumber;
+      if (num) {
+        return { nextInvoiceNumber: num };
+      }
+    }
+  } catch (err) {
+    console.warn('Backend /next-number unavailable, computing client-side:', err);
+  }
+
+  // Resilient fallback: Scan existing invoices to compute the next serial number
+  try {
+    const listData = await getInvoices();
+    const invoices = listData?.invoices || [];
+    let maxSeq = 0;
+    for (const inv of invoices) {
+      const raw = inv.invoiceId || inv.InvoiceId || inv.orderNumber || inv.OrderNumber || inv.invoiceNo || '';
+      const clean = String(raw).replace(/^(INV-|ORD-|INV|ORD)/i, '').replace(/[^0-9]/g, '');
+      const val = parseInt(clean, 10);
+      // Only consider serial numbers below 10000 (ignoring random 6-digit legacy IDs and timestamps)
+      if (!isNaN(val) && val >= 1 && val < 10000) {
+        if (val > maxSeq) {
+          maxSeq = val;
+        }
+      }
+    }
+    const nextNum = `INV-${String(maxSeq + 1).padStart(3, '0')}`;
+    return { nextInvoiceNumber: nextNum };
+  } catch (fallbackErr) {
+    console.warn('Fallback sequence computation failed:', fallbackErr);
+    return { nextInvoiceNumber: 'INV-001' };
+  }
+}
+
+/**
  * GET /api/Invoices/{id}
  * Fetch single invoice by ID
  */

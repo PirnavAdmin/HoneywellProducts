@@ -34,6 +34,22 @@ import { Download, ExternalLink, Search as SearchIcon } from 'lucide-react';
 import './adminModule.css';
 import './ProductsForm.css';
 
+const handleImageFallbackError = (e) => {
+  const cur = e.currentTarget?.src || '';
+  if (cur.includes('/uploads/')) {
+    const uploadPath = cur.slice(cur.indexOf('/uploads/'));
+    if (cur.includes('honeywellproducts.com')) {
+      e.currentTarget.src = `https://drab-smoking-unstaffed.ngrok-free.dev${uploadPath}`;
+    } else if (cur.includes('ngrok-free.dev')) {
+      e.currentTarget.src = `https://honeywellproducts.com${uploadPath}`;
+    } else {
+      e.currentTarget.src = `https://honeywellproducts.com${uploadPath}`;
+    }
+  } else {
+    e.currentTarget.src = '/honeywell-products-logo.png';
+  }
+};
+
 const resolveImageUrl = (url) => {
   if (!url || typeof url !== 'string') return '';
   const trimmed = url.trim().replace(/\\/g, '/');
@@ -2020,7 +2036,7 @@ const ProductsForm = () => {
                     {/* Render saved existing images */}
                     {formData.images && formData.images.map((url, idx) => (
                       <div key={`existing-${idx}`} className="product-media-thumb-wrap" style={{ position: 'relative', width: '65px', height: '65px', border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden' }}>
-                        <img src={resolveImageUrl(url)} alt="saved preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={resolveImageUrl(url)} alt="saved preview" onError={handleImageFallbackError} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         <button
                           type="button"
                           onClick={(e) => {
@@ -2145,7 +2161,7 @@ const ProductsForm = () => {
                   {posterPreview ? (
                     <img src={posterPreview} alt="Poster Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   ) : formData.posterUrl || formData.posterImage || formData.poster ? (
-                    <img src={resolveImageUrl(formData.posterUrl || formData.posterImage || formData.poster)} alt="Poster Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    <img src={resolveImageUrl(formData.posterUrl || formData.posterImage || formData.poster)} alt="Poster Preview" onError={handleImageFallbackError} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   ) : (
                     <FileText size={28} style={{ color: '#1268a5' }} />
                   )}
@@ -2199,7 +2215,7 @@ const ProductsForm = () => {
             <div className="catalog-modal-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
               {formData.images && formData.images.map((url, idx) => (
                 <div key={`modal-existing-${idx}`} style={{ position: 'relative' }}>
-                  <img src={resolveImageUrl(url)} alt="saved preview" style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #eee' }} />
+                  <img src={resolveImageUrl(url)} alt="saved preview" onError={handleImageFallbackError} style={{ width: '100%', height: '200px', objectFit: 'cover', borderRadius: '8px', border: '1px solid #eee' }} />
                   <span style={{ position: 'absolute', bottom: '6px', left: '6px', background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px' }}>Saved Image</span>
                 </div>
               ))}

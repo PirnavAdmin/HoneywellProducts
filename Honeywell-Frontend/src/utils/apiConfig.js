@@ -10,6 +10,7 @@ export const getApiDomain = () => API_BASE_URL;
 
 const LIVE_MEDIA_BASE_URL = (
   import.meta.env.VITE_MEDIA_BASE_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
   'https://honeywellproducts.com'
 ).replace(/\/+$/, '');
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Save, AlertCircle, RefreshCw, Plus, Trash2, CreditCard, ShieldCheck } from 'lucide-react';
-import { createInvoice } from '../../services/invoicesApi';
+import { createInvoice, getNextInvoiceNumber } from '../../services/invoicesApi';
 import { fetchProducts } from '../catalog/productsApi';
 import './invoices.css';
 
@@ -43,6 +43,29 @@ const AddInvoice = () => {
       }
     };
     loadProducts();
+  }, []);
+
+  const [nextInvoiceNo, setNextInvoiceNo] = useState('INV-001');
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadNextInvoiceNumber = async () => {
+      try {
+        const data = await getNextInvoiceNumber();
+        const num = data?.nextInvoiceNumber || data?.NextInvoiceNumber;
+        if (num && isMounted) {
+          setNextInvoiceNo(num);
+          setFormData(prev => ({
+            ...prev,
+            invoiceNo: num
+          }));
+        }
+      } catch (err) {
+        console.warn('Failed to load next invoice number', err);
+      }
+    };
+    loadNextInvoiceNumber();
+    return () => { isMounted = false; };
   }, []);
 
   const [totalAmount, setTotalAmount] = useState(0);
@@ -195,8 +218,14 @@ const AddInvoice = () => {
     setError('');
     
     try {
+      const invoiceNumberToSubmit = nextInvoiceNo || (formData.invoiceNo || '').trim() || 'INV-001';
       const payload = {
         ...formData,
+        invoiceNo: invoiceNumberToSubmit,
+        invoiceNumber: invoiceNumberToSubmit,
+        clientName: (formData.clientName || '').trim(),
+        contactNo: (formData.contactNo || '').replace(/[\s\-\+\(\)]/g, '').slice(-10),
+        emailAddress: (formData.emailAddress || '').trim().toLowerCase(),
         customerType: formData.customerType,
         type: formData.customerType,
         role: formData.customerType,
@@ -255,17 +284,40 @@ const AddInvoice = () => {
             
             <div className="form-input-row-2">
               <div className="form-input-field">
-                <label>Invoice Number (Optional)</label>
-                <input
-                  type="text"
-                  name="invoiceNo"
-                  placeholder="e.g. INV-10045"
-                  value={formData.invoiceNo}
-                  onChange={handleChange}
-                />
+                <label>Invoice Number</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="text"
+                    value={nextInvoiceNo}
+                    readOnly
+                    disabled
+                    style={{
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      fontWeight: 700,
+                      cursor: 'not-allowed',
+                      border: '1px solid #cbd5e1'
+                    }}
+                  />
+                  <span style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    color: '#0284c7',
+                    background: '#e0f2fe',
+                    padding: '2px 8px',
+                    borderRadius: '4px',
+                    pointerEvents: 'none'
+                  }}>
+                    Auto
+                  </span>
+                </div>
               </div>
               <div className="form-input-field">
-                <label>Invoice Date</label>
+                <label>Invoice Date <span style={{ color: '#ef4444' }}>*</span></label>
                 <input
                   type="date"
                   name="date"
