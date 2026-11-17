@@ -22,6 +22,35 @@ namespace Honeywell.Controllers
             _context = context;
         }
 
+        private static readonly TimeZoneInfo IstZone = ResolveIstTimeZone();
+
+        private static TimeZoneInfo ResolveIstTimeZone()
+        {
+            try { return TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"); }
+            catch
+            {
+                try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata"); }
+                catch
+                {
+                    return TimeZoneInfo.CreateCustomTimeZone("IST", TimeSpan.FromHours(5.5), "India Standard Time", "India Standard Time");
+                }
+            }
+        }
+
+        private static DateTime ToIst(DateTime utcDateTime)
+        {
+            var utc = utcDateTime.Kind == DateTimeKind.Unspecified 
+                ? DateTime.SpecifyKind(utcDateTime, DateTimeKind.Utc) 
+                : utcDateTime.ToUniversalTime();
+            return TimeZoneInfo.ConvertTimeFromUtc(utc, IstZone);
+        }
+
+        private static string? FormatToIst(DateTime? utcDateTime)
+        {
+            if (!utcDateTime.HasValue) return null;
+            return ToIst(utcDateTime.Value).ToString("dd MMM yyyy, hh:mm tt");
+        }
+
         // GET: api/CallHistory
         [AuthorizeModule(PermissionAction.View, "call history", "support", "tickets", "customers")]
         [HttpGet]
@@ -30,26 +59,28 @@ namespace Honeywell.Controllers
             [FromQuery] string? status,
             [FromQuery] string? priority)
         {
-            var todayUtc = DateTime.UtcNow.Date;
-            var tomorrowUtc = todayUtc.AddDays(1);
+            var nowIst = ToIst(DateTime.UtcNow);
+            var todayIstDate = nowIst.Date;
+            var todayIstStartUtc = TimeZoneInfo.ConvertTimeToUtc(todayIstDate, IstZone);
+            var todayIstEndUtc = todayIstStartUtc.AddDays(1);
 
-            // Fast aggregate counts executed directly in MySQL without loading all records into memory
+            // Fast aggregate counts executed directly in MySQL
             int totalCalls = await _context.CallLogs.CountAsync();
             int todayFollowUps = await _context.CallLogs.CountAsync(c => 
-                c.Status == "Follow-Up" && 
+                c.Status.ToLower().Contains("follow") && 
                 c.CallbackTime.HasValue && 
-                c.CallbackTime.Value >= todayUtc && 
-                c.CallbackTime.Value < tomorrowUtc
+                c.CallbackTime.Value >= todayIstStartUtc && 
+                c.CallbackTime.Value < todayIstEndUtc
             );
-            int totalFollowUps = await _context.CallLogs.CountAsync(c => c.Status == "Follow-Up");
+            int totalFollowUps = await _context.CallLogs.CountAsync(c => c.Status.ToLower().Contains("follow"));
             int qualifiedLeads = await _context.CallLogs.CountAsync(c => c.IsQualifiedLead);
 
             var query = _context.CallLogs.AsNoTracking().AsQueryable();
 
             // Apply search keywords (Customer Name, Rep, Phone, Email, Notes)
-            if (!string.IsNullOrEmpty(search))
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                var s = search.ToLower();
+                var s = search.Trim().ToLower();
                 query = query.Where(c => 
                     c.CustomerName.ToLower().Contains(s) || 
                     c.CalledByRep.ToLower().Contains(s) || 
@@ -59,18 +90,37 @@ namespace Honeywell.Controllers
                 );
             }
 
-            // Apply status filters
-            if (!string.IsNullOrEmpty(status) && !status.Equals("All Statuses", StringComparison.OrdinalIgnoreCase))
+            // Apply status filters resiliently across variants
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All Statuses", StringComparison.OrdinalIgnoreCase))
             {
-                var stLower = status.ToLower();
-                query = query.Where(c => c.Status.ToLower() == stLower);
+                var st = status.Trim().ToLowerInvariant();
+                if (st.Contains("follow"))
+                {
+                    query = query.Where(c => c.Status.ToLower().Contains("follow"));
+                }
+                else if (st.Contains("complete"))
+                {
+                    query = query.Where(c => c.Status.ToLower().Contains("complete"));
+                }
+                else if (st.Contains("busy"))
+                {
+                    query = query.Where(c => c.Status.ToLower().Contains("busy"));
+                }
+                else if (st.Contains("answer"))
+                {
+                    query = query.Where(c => c.Status.ToLower().Contains("answer"));
+                }
+                else
+                {
+                    query = query.Where(c => c.Status.ToLower() == st);
+                }
             }
 
-            // Apply priority filters
-            if (!string.IsNullOrEmpty(priority) && !priority.Equals("All Priorities", StringComparison.OrdinalIgnoreCase))
+            // Apply priority filters resiliently
+            if (!string.IsNullOrWhiteSpace(priority) && !priority.Equals("All Priorities", StringComparison.OrdinalIgnoreCase))
             {
-                var prLower = priority.ToLower();
-                query = query.Where(c => c.Priority.ToLower() == prLower);
+                var pr = priority.Trim().ToLowerInvariant();
+                query = query.Where(c => c.Priority != null && c.Priority.ToLower() == pr);
             }
 
             var logs = await query.OrderByDescending(c => c.LastCallTime).ToListAsync();
@@ -78,16 +128,19 @@ namespace Honeywell.Controllers
             var formattedLogs = logs.Select(c => new
             {
                 c.Id,
+                id = c.Id,
                 CustomerName = c.CustomerName,
                 CalledByRep = c.CalledByRep,
                 CustomerPhone = c.CustomerPhone,
                 CustomerEmail = c.CustomerEmail,
-                Status = c.Status, // e.g. "Follow-Up", "Completed"
-                Priority = c.Priority.ToUpper(), // "HIGH", "MEDIUM", "LOW"
+                Status = c.Status,
+                Priority = (c.Priority ?? "LOW").ToUpper(),
                 NotesSummary = c.NotesSummary,
-                LastCall = c.LastCallTime.ToString("dd MMM yyyy, hh:mm tt"),
-                Callback = c.CallbackTime.HasValue ? c.CallbackTime.Value.ToString("dd MMM yyyy, hh:mm tt") : null,
-                IsTodayFollowUp = c.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase) && c.CallbackTime.HasValue && c.CallbackTime.Value.Date == todayUtc,
+                LastCall = FormatToIst(c.LastCallTime),
+                LastCallIso = c.LastCallTime.ToString("o"),
+                Callback = FormatToIst(c.CallbackTime),
+                CallbackIso = c.CallbackTime?.ToString("o"),
+                IsTodayFollowUp = c.Status.ToLower().Contains("follow") && c.CallbackTime.HasValue && c.CallbackTime.Value >= todayIstStartUtc && c.CallbackTime.Value < todayIstEndUtc,
                 IsQualifiedLead = c.IsQualifiedLead
             }).ToList();
 
@@ -134,26 +187,34 @@ namespace Honeywell.Controllers
             _context.CallLogs.Add(log);
             await _context.SaveChangesAsync();
 
-            var todayUtc = DateTime.UtcNow.Date;
+            var nowIst = ToIst(DateTime.UtcNow);
+            var todayIstDate = nowIst.Date;
+            var todayIstStartUtc = TimeZoneInfo.ConvertTimeToUtc(todayIstDate, IstZone);
+            var todayIstEndUtc = todayIstStartUtc.AddDays(1);
+
             return Ok(new
             {
                 Message = "Call log created successfully.",
                 Id = log.Id,
+                id = log.Id,
                 CustomerName = log.CustomerName,
                 Status = log.Status,
                 Log = new
                 {
                     log.Id,
+                    id = log.Id,
                     CustomerName = log.CustomerName,
                     CalledByRep = log.CalledByRep,
                     CustomerPhone = log.CustomerPhone,
                     CustomerEmail = log.CustomerEmail,
                     Status = log.Status,
-                    Priority = log.Priority.ToUpper(),
+                    Priority = (log.Priority ?? "LOW").ToUpper(),
                     NotesSummary = log.NotesSummary,
-                    LastCall = log.LastCallTime.ToString("dd MMM yyyy, hh:mm tt"),
-                    Callback = log.CallbackTime.HasValue ? log.CallbackTime.Value.ToString("dd MMM yyyy, hh:mm tt") : null,
-                    IsTodayFollowUp = log.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase) && log.CallbackTime.HasValue && log.CallbackTime.Value.Date == todayUtc,
+                    LastCall = FormatToIst(log.LastCallTime),
+                    LastCallIso = log.LastCallTime.ToString("o"),
+                    Callback = FormatToIst(log.CallbackTime),
+                    CallbackIso = log.CallbackTime?.ToString("o"),
+                    IsTodayFollowUp = log.Status.ToLower().Contains("follow") && log.CallbackTime.HasValue && log.CallbackTime.Value >= todayIstStartUtc && log.CallbackTime.Value < todayIstEndUtc,
                     IsQualifiedLead = log.IsQualifiedLead
                 }
             });
@@ -193,26 +254,34 @@ namespace Honeywell.Controllers
             if (request.IsQualifiedLead.HasValue) log.IsQualifiedLead = request.IsQualifiedLead.Value;
 
             await _context.SaveChangesAsync();
-            var todayUtc = DateTime.UtcNow.Date;
+            var nowIst = ToIst(DateTime.UtcNow);
+            var todayIstDate = nowIst.Date;
+            var todayIstStartUtc = TimeZoneInfo.ConvertTimeToUtc(todayIstDate, IstZone);
+            var todayIstEndUtc = todayIstStartUtc.AddDays(1);
+
             return Ok(new
             {
                 Message = "Call log updated successfully.",
                 Id = log.Id,
+                id = log.Id,
                 CustomerName = log.CustomerName,
                 Status = log.Status,
                 Log = new
                 {
                     log.Id,
+                    id = log.Id,
                     CustomerName = log.CustomerName,
                     CalledByRep = log.CalledByRep,
                     CustomerPhone = log.CustomerPhone,
                     CustomerEmail = log.CustomerEmail,
                     Status = log.Status,
-                    Priority = log.Priority.ToUpper(),
+                    Priority = (log.Priority ?? "LOW").ToUpper(),
                     NotesSummary = log.NotesSummary,
-                    LastCall = log.LastCallTime.ToString("dd MMM yyyy, hh:mm tt"),
-                    Callback = log.CallbackTime.HasValue ? log.CallbackTime.Value.ToString("dd MMM yyyy, hh:mm tt") : null,
-                    IsTodayFollowUp = log.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase) && log.CallbackTime.HasValue && log.CallbackTime.Value.Date == todayUtc,
+                    LastCall = FormatToIst(log.LastCallTime),
+                    LastCallIso = log.LastCallTime.ToString("o"),
+                    Callback = FormatToIst(log.CallbackTime),
+                    CallbackIso = log.CallbackTime?.ToString("o"),
+                    IsTodayFollowUp = log.Status.ToLower().Contains("follow") && log.CallbackTime.HasValue && log.CallbackTime.Value >= todayIstStartUtc && log.CallbackTime.Value < todayIstEndUtc,
                     IsQualifiedLead = log.IsQualifiedLead
                 }
             });

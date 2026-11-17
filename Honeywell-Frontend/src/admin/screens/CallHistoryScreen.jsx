@@ -86,8 +86,19 @@ export const combineLocalDateTime = (dateStr, timeStr) => {
 
 export const formatFollowUpDate = (dateVal) => {
   if (!dateVal) return '—';
+  if (typeof dateVal === 'string') {
+    const trimmed = dateVal.trim();
+    if (!trimmed || trimmed === '—' || trimmed.toLowerCase() === 'none') return '—';
+    // If it is already in human IST format (e.g. "18 Nov 2026, 10:00 AM"), preserve it cleanly
+    if (/^\d{1,2}\s+[A-Za-z]{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+(AM|PM|am|pm)$/i.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
   const d = new Date(dateVal);
-  if (isNaN(d.getTime()) || d.getFullYear() < 2020) return '—';
+  if (isNaN(d.getTime()) || d.getFullYear() < 2020) {
+    return typeof dateVal === 'string' && dateVal.trim() ? dateVal.trim() : '—';
+  }
 
   return d.toLocaleString('en-IN', {
     day: '2-digit',
@@ -140,8 +151,8 @@ const CallHistoryScreen = () => {
     isQualifiedLead: false
   });
 
-  const fetchLogs = async () => {
-    setLoading(true);
+  const fetchLogs = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams();
@@ -159,7 +170,8 @@ const CallHistoryScreen = () => {
       const formattedCalls = rawCalls.map((c, idx) => {
         const actualId = c.id ?? c.Id ?? c._id ?? `call-${idx}`;
         const isLead = Boolean(c.isQualifiedLead ?? c.IsQualifiedLead);
-        const rawCb = c.callback || c.Callback || c.callbackTime || c.CallbackTime || c.nextFollowUp;
+        const rawCb = c.callbackIso || c.CallbackIso || c.callback || c.Callback || c.callbackTime || c.CallbackTime || c.nextFollowUp;
+        const rawLastCall = c.lastCallIso || c.LastCallIso || c.lastCall || c.LastCall || c.lastCallTime || c.LastCallTime;
         return {
           ...c,
           id: actualId,
@@ -169,10 +181,11 @@ const CallHistoryScreen = () => {
           customerEmail: c.customerEmail || c.CustomerEmail || '',
           calledByRep: c.calledByRep || c.CalledByRep || 'Admin Rep',
           status: c.status || c.Status || 'Completed',
-          priority: c.priority || c.Priority || 'Low',
+          priority: (c.priority || c.Priority || 'LOW').toUpperCase(),
           notesSummary: c.notesSummary || c.NotesSummary || '',
-          lastCall: c.lastCall || c.LastCall || '',
+          lastCall: typeof rawLastCall === 'string' && rawLastCall.includes(' ') && !rawLastCall.includes('T') ? rawLastCall : formatFollowUpDate(rawLastCall),
           isQualifiedLead: isLead,
+          callback: rawCb,
           callbackFormatted: formatFollowUpDate(rawCb)
         };
       });
@@ -186,15 +199,57 @@ const CallHistoryScreen = () => {
       });
     } catch (err) {
       console.error("Error fetching call logs:", err);
-      setError('Could not fetch call history from server.');
+      if (!silent) setError('Could not fetch call history from server.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLogs();
+    fetchLogs(false);
   }, [searchTerm, statusFilter, priorityFilter]);
+
+  // Dynamic client-side filtering for 0-ms responsiveness and instant sync
+  const displayedCalls = React.useMemo(() => {
+    return calls.filter(c => {
+      // Search keyword filter
+      if (searchTerm && searchTerm.trim()) {
+        const q = searchTerm.trim().toLowerCase();
+        const matchName = (c.customerName || c.CustomerName || '').toLowerCase().includes(q);
+        const matchPhone = (c.customerPhone || c.CustomerPhone || '').includes(q);
+        const matchEmail = (c.customerEmail || c.CustomerEmail || '').toLowerCase().includes(q);
+        const matchRep = (c.calledByRep || c.CalledByRep || '').toLowerCase().includes(q);
+        const matchNotes = (c.notesSummary || c.NotesSummary || '').toLowerCase().includes(q);
+        if (!matchName && !matchPhone && !matchEmail && !matchRep && !matchNotes) return false;
+      }
+
+      // Status filter
+      if (statusFilter && statusFilter !== 'All Statuses') {
+        const s = (c.status || c.Status || '').toLowerCase();
+        const f = statusFilter.toLowerCase();
+        if (f.includes('follow')) {
+          if (!s.includes('follow')) return false;
+        } else if (f.includes('complete')) {
+          if (!s.includes('complete')) return false;
+        } else if (f.includes('answer')) {
+          if (!s.includes('answer')) return false;
+        } else if (f.includes('busy')) {
+          if (!s.includes('busy')) return false;
+        } else if (s !== f) {
+          return false;
+        }
+      }
+
+      // Priority filter
+      if (priorityFilter && priorityFilter !== 'All Priorities') {
+        const p = (c.priority || c.Priority || '').toLowerCase();
+        const f = priorityFilter.toLowerCase();
+        if (p !== f) return false;
+      }
+
+      return true;
+    });
+  }, [calls, searchTerm, statusFilter, priorityFilter]);
 
   // Helper: next business day at 10:00 AM in local time
   const getNextBusinessDayAt10AM = () => {
@@ -281,8 +336,8 @@ const CallHistoryScreen = () => {
     setEditingId(actualId);
     let cbDate = '';
     let cbTime = '10:00';
-    const rawCb = c.callback || c.Callback;
-    if (rawCb) {
+    const rawCb = c.callbackIso || c.CallbackIso || c.callback || c.Callback || c.callbackTime || c.CallbackTime;
+    if (rawCb && rawCb !== '—') {
       const d = new Date(rawCb);
       if (!isNaN(d.getTime())) {
         cbDate = formatLocalDate(d);
@@ -291,8 +346,8 @@ const CallHistoryScreen = () => {
     }
     let lcDate = '';
     let lcTime = '';
-    const rawLc = c.lastCall || c.LastCall;
-    if (rawLc) {
+    const rawLc = c.lastCallIso || c.LastCallIso || c.lastCall || c.LastCall || c.lastCallTime || c.LastCallTime;
+    if (rawLc && rawLc !== '—') {
       const d = new Date(rawLc);
       if (!isNaN(d.getTime())) {
         lcDate = formatLocalDate(d);
@@ -338,9 +393,6 @@ const CallHistoryScreen = () => {
           return;
         }
       }
-    } else if (formData.isQualifiedLead || formData.status === 'Follow-Up' || formData.priority === 'High') {
-      const cb = getNextBusinessDayAt10AM();
-      finalCallbackIso = cb.toISOString();
     }
 
     let lastCallIso = new Date().toISOString();
@@ -363,7 +415,7 @@ const CallHistoryScreen = () => {
         notesSummary: formData.notesSummary?.trim() || '',
         lastCallTime: lastCallIso,
         callbackTime: finalCallbackIso,
-        callbackTimeSpecified: Boolean(finalCallbackIso),
+        callbackTimeSpecified: true,
         isQualifiedLead: formData.isQualifiedLead
       };
 
@@ -403,11 +455,11 @@ const CallHistoryScreen = () => {
         customerEmail: rawLog.customerEmail || rawLog.CustomerEmail || formData.customerEmail,
         calledByRep: rawLog.calledByRep || rawLog.CalledByRep || formData.calledByRep,
         status: rawLog.status || rawLog.Status || formData.status,
-        priority: rawLog.priority || rawLog.Priority || formData.priority,
+        priority: (rawLog.priority || rawLog.Priority || formData.priority || 'LOW').toUpperCase(),
         notesSummary: rawLog.notesSummary || rawLog.NotesSummary || formData.notesSummary,
         lastCall: rawLog.lastCall || rawLog.LastCall || lastCallIso,
         isQualifiedLead: isLead,
-        callbackFormatted: formatFollowUpDate(rawLog.callback || rawLog.Callback || finalCallbackIso)
+        callbackFormatted: formatFollowUpDate(rawLog.callbackIso || rawLog.CallbackIso || rawLog.callback || rawLog.Callback || finalCallbackIso)
       };
 
       setCalls(prev => {
@@ -423,8 +475,8 @@ const CallHistoryScreen = () => {
         qualifiedLeads: (isLead && !currentEditingId) ? prev.qualifiedLeads + 1 : prev.qualifiedLeads
       }));
 
-      // Background synchronization
-      fetchLogs();
+      // Background silent synchronization without table loading flash
+      fetchLogs(true);
     } catch (err) {
       setFormError(err.message || 'Error occurred while saving log.');
       setSubmitting(false);
@@ -490,7 +542,9 @@ const CallHistoryScreen = () => {
 
         setCallToDelete(null);
         setDeleteError('');
-        fetchLogs();
+        
+        // Background silent synchronization without full-screen table loading flash
+        fetchLogs(true);
       }
     } catch (err) {
       console.error('Delete call log error:', err);
@@ -856,7 +910,7 @@ const CallHistoryScreen = () => {
           {/* Refresh Button */}
           <button 
             type="button"
-            onClick={fetchLogs} 
+            onClick={() => fetchLogs(false)} 
             style={{
               backgroundColor: '#059669',
               color: '#ffffff',
@@ -900,13 +954,13 @@ const CallHistoryScreen = () => {
                     <RefreshCw size={20} className="animate-spin inline-block mr-2 text-emerald-600" /> Loading CRM interaction logs...
                   </td>
                 </tr>
-              ) : calls.length > 0 ? (
-                calls.map((c) => {
+              ) : displayedCalls.length > 0 ? (
+                displayedCalls.map((c) => {
                   const priorityUpper = (c.priority || 'LOW').toUpperCase();
                   const statusUpper = (c.status || 'COMPLETED').toUpperCase();
 
                   return (
-                    <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
+                    <tr key={c.id || c.Id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
                       
                       {/* Customer Column (3 Lines) */}
                       <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
