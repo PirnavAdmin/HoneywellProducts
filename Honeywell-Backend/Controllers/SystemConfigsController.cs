@@ -85,9 +85,7 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     key = "business_hero",
-                    Key = "business_hero",
                     value = defaultHeroValue,
-                    Value = defaultHeroValue,
                     data = defaultHeroValue
                 });
             }
@@ -107,14 +105,12 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     key = "contact_hero",
-                    Key = "contact_hero",
                     eyebrow = "CONTACT US",
                     title = "Talk to Our Team",
                     subtitle = "Send a product, sales, support or business enquiry to Honeywell.",
                     description = "Send a product, sales, support or business enquiry to Honeywell.",
                     backgroundImage = "/uploads/about/hero.jpg",
                     value = defaultContactHeroValue,
-                    Value = defaultContactHeroValue,
                     data = defaultContactHeroValue
                 });
             }
@@ -132,12 +128,10 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     key = "solutions_header",
-                    Key = "solutions_header",
                     eyebrow = "SOLUTIONS",
                     title = "Honeywell Enterprise & Commercial Security Solutions",
                     subtitle = "Tailored security, surveillance, and smart scanning architectures built for modern business requirements.",
                     value = defaultSolutionsHeaderValue,
-                    Value = defaultSolutionsHeaderValue,
                     data = defaultSolutionsHeaderValue
                 });
             }
@@ -155,9 +149,7 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     key = "contact_card",
-                    Key = "contact_card",
-                    value = defaultContact,
-                    Value = defaultContact
+                    value = defaultContact
                 });
             }
 
@@ -173,9 +165,7 @@ namespace Honeywell.Controllers
                 return Ok(new
                 {
                     key = "product_price_visibility",
-                    Key = "product_price_visibility",
                     value = defaultPriceVis,
-                    Value = defaultPriceVis,
                     data = defaultPriceVis
                 });
             }
@@ -287,9 +277,7 @@ namespace Honeywell.Controllers
             {
                 id = config.Id,
                 key = config.Key,
-                Key = config.Key,
                 value = parsedValue,
-                Value = parsedValue,
                 updatedAt = config.UpdatedAt
             };
         }
