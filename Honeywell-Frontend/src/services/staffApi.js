@@ -454,9 +454,14 @@ export async function getPermissionsModules(options = {}) {
  */
 export async function getMyEffectivePermissions(options = {}) {
   const domain = getApiDomain();
-  const res = await fetch(`${domain}/api/Auth/me/permissions`, {
+  const res = await fetch(`${domain}/api/Auth/me/permissions?_t=${Date.now()}`, {
     method: 'GET',
-    headers: getHeaders(),
+    headers: {
+      ...getHeaders(),
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    },
     signal: options.signal,
   });
 

@@ -131,9 +131,21 @@ export const adminAuthApi = {
   // Get Current Authenticated User/Staff Permissions and Refreshed Token
   async getMyPermissions(email) {
     const activeEmail = email || getStoredAdminItem('adminEmail') || '';
-    const query = activeEmail ? `?email=${encodeURIComponent(activeEmail.trim())}` : '';
-    const response = await axios.get(`${getApiDomain()}/api/Auth/me/permissions${query}`, {
-      headers: getAuthHeaders(),
+    const params = new URLSearchParams();
+    if (activeEmail) {
+      params.append('email', activeEmail.trim());
+    }
+    // Prevent browser & reverse-proxy caching on page refresh and polling
+    params.append('_t', Date.now().toString());
+
+    const queryString = `?${params.toString()}`;
+    const response = await axios.get(`${getApiDomain()}/api/Auth/me/permissions${queryString}`, {
+      headers: {
+        ...getAuthHeaders(),
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      },
       timeout: 12000
     });
     return response.data;

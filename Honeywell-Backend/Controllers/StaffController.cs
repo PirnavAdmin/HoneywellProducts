@@ -942,10 +942,15 @@ namespace Honeywell.Controllers
         }
 
         // 2. GET /api/Staff/{id}/permissions
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         [HttpGet("{id}/permissions")]
         [AuthorizeModule(PermissionAction.View, "staff")]
         public async Task<IActionResult> GetStaffPermissions(string id)
         {
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
             var staff = await FindStaffAsync(id);
             if (staff == null)
             {
@@ -1024,11 +1029,16 @@ namespace Honeywell.Controllers
 
         // 4. GET /api/Auth/me/permissions (under Staff in Swagger)
         [AuthorizeModule]
+        [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         [HttpGet("/api/Auth/me/permissions")]
         [HttpGet("/api/Staff/my-permissions")]
         [HttpGet("my-permissions")]
         public async Task<IActionResult> GetMyEffectivePermissions([FromQuery] string? email = null)
         {
+            Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+            Response.Headers["Pragma"] = "no-cache";
+            Response.Headers["Expires"] = "0";
+
             await EnsureStaffSchemaAsync();
             string? resolvedEmail = new[]
             {
