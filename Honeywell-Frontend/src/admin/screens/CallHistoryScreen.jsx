@@ -57,6 +57,47 @@ export const formatTimeDisplay = (timeStr) => {
   return `${String(hour12).padStart(2, '0')}:${mm} ${ampm}`;
 };
 
+export const parseDateTimeStringToParts = (str) => {
+  if (!str || typeof str !== 'string') return null;
+  const trimmed = str.trim();
+  if (!trimmed || trimmed === '—' || trimmed.toLowerCase() === 'none') return null;
+
+  // 1. Local or ISO string: "2026-11-19T10:00:00"
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    const [dPart, tPart] = trimmed.split('T');
+    let time = '10:00';
+    if (tPart) time = tPart.slice(0, 5);
+    return { date: dPart, time };
+  }
+
+  // 2. Human format: "19 Nov 2026, 10:00 AM" or "19 Nov 2026 10:00 am"
+  const match = trimmed.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})(?:,\s*|\s+)(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/i);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const monthName = match[2].toLowerCase();
+    const year = match[3];
+    let hour = parseInt(match[4], 10);
+    const minute = match[5].padStart(2, '0');
+    const ampm = (match[6] || '').toUpperCase();
+    const months = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+    const month = months[monthName] || '01';
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    const time = `${String(hour).padStart(2, '0')}:${minute}`;
+    return { date: `${year}-${month}-${day}`, time };
+  }
+
+  // 3. Fallback via Date object
+  const d = new Date(trimmed);
+  if (!isNaN(d.getTime())) {
+    return {
+      date: formatLocalDate(d),
+      time: formatLocalTime(d)
+    };
+  }
+  return null;
+};
+
 export const formatLocalDate = (date) => {
   if (!date) return '';
   const d = date instanceof Date ? date : new Date(date);
@@ -94,11 +135,10 @@ export const formatFollowUpDate = (dateVal) => {
     if (/^\d{1,2}\s+[A-Za-z]{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+(AM|PM|am|pm)$/i.test(trimmed)) {
       return trimmed;
     }
-    // If it is a local ISO format "YYYY-MM-DDTHH:mm:ss" without trailing Z
-    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(trimmed) && !trimmed.endsWith('Z')) {
-      const [dPart, tPart] = trimmed.split('T');
-      const [y, m, d] = dPart.split('-').map(Number);
-      const [hh, mm] = tPart.split(':').map(Number);
+    const parts = parseDateTimeStringToParts(trimmed);
+    if (parts) {
+      const [y, m, d] = parts.date.split('-').map(Number);
+      const [hh, mm] = parts.time.split(':').map(Number);
       const localDate = new Date(y, m - 1, d, hh, mm);
       return localDate.toLocaleString('en-IN', {
         day: '2-digit',
@@ -175,9 +215,15 @@ const CallHistoryScreen = () => {
       if (searchTerm.trim()) params.append('search', searchTerm.trim());
       if (statusFilter !== 'All Statuses') params.append('status', statusFilter);
       if (priorityFilter !== 'All Priorities') params.append('priority', priorityFilter);
+      params.append('_t', String(Date.now())); // Bypass browser HTTP caching
 
       const res = await fetch(`${getApiDomain()}/api/CallHistory?${params.toString()}`, {
-        headers: getAuthHeaders({ 'Accept': 'application/json' })
+        cache: 'no-store',
+        headers: getAuthHeaders({ 
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        })
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
@@ -188,6 +234,15 @@ const CallHistoryScreen = () => {
         const isLead = Boolean(c.isQualifiedLead ?? c.IsQualifiedLead);
         const rawCb = c.callbackIso || c.CallbackIso || c.callback || c.Callback || c.callbackTime || c.CallbackTime || c.nextFollowUp;
         const rawLastCall = c.lastCallIso || c.LastCallIso || c.lastCall || c.LastCall || c.lastCallTime || c.LastCallTime;
+        
+        const formattedLastCall = typeof rawLastCall === 'string' && /^\d{1,2}\s+[A-Za-z]{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+(AM|PM|am|pm)$/i.test(rawLastCall.trim()) 
+          ? rawLastCall.trim() 
+          : formatFollowUpDate(rawLastCall);
+
+        const formattedCallback = typeof rawCb === 'string' && /^\d{1,2}\s+[A-Za-z]{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+(AM|PM|am|pm)$/i.test(rawCb.trim())
+          ? rawCb.trim()
+          : formatFollowUpDate(rawCb);
+
         return {
           ...c,
           id: actualId,
@@ -199,10 +254,10 @@ const CallHistoryScreen = () => {
           status: c.status || c.Status || 'Completed',
           priority: (c.priority || c.Priority || 'LOW').toUpperCase(),
           notesSummary: c.notesSummary || c.NotesSummary || '',
-          lastCall: typeof rawLastCall === 'string' && rawLastCall.includes(' ') && !rawLastCall.includes('T') ? rawLastCall : formatFollowUpDate(rawLastCall),
+          lastCall: formattedLastCall,
           isQualifiedLead: isLead,
           callback: rawCb,
-          callbackFormatted: formatFollowUpDate(rawCb)
+          callbackFormatted: formattedCallback
         };
       });
 
@@ -354,32 +409,20 @@ const CallHistoryScreen = () => {
     let cbTime = '10:00';
     const rawCb = c.callbackIso || c.CallbackIso || c.callback || c.Callback || c.callbackTime || c.CallbackTime;
     if (rawCb && rawCb !== '—') {
-      if (typeof rawCb === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawCb)) {
-        const [dPart, tPart] = rawCb.split('T');
-        cbDate = dPart;
-        cbTime = tPart.slice(0, 5);
-      } else {
-        const d = new Date(rawCb);
-        if (!isNaN(d.getTime())) {
-          cbDate = formatLocalDate(d);
-          cbTime = formatLocalTime(d);
-        }
+      const parts = parseDateTimeStringToParts(rawCb);
+      if (parts) {
+        cbDate = parts.date;
+        cbTime = parts.time;
       }
     }
     let lcDate = '';
     let lcTime = '';
     const rawLc = c.lastCallIso || c.LastCallIso || c.lastCall || c.LastCall || c.lastCallTime || c.LastCallTime;
     if (rawLc && rawLc !== '—') {
-      if (typeof rawLc === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(rawLc)) {
-        const [dPart, tPart] = rawLc.split('T');
-        lcDate = dPart;
-        lcTime = tPart.slice(0, 5);
-      } else {
-        const d = new Date(rawLc);
-        if (!isNaN(d.getTime())) {
-          lcDate = formatLocalDate(d);
-          lcTime = formatLocalTime(d);
-        }
+      const parts = parseDateTimeStringToParts(rawLc);
+      if (parts) {
+        lcDate = parts.date;
+        lcTime = parts.time;
       }
     }
 
@@ -479,20 +522,26 @@ const CallHistoryScreen = () => {
       const rawLog = resData.log || resData.Log || resData;
       const actualId = rawLog.id ?? rawLog.Id ?? resData.id ?? resData.Id ?? currentEditingId ?? Date.now();
       const isLead = Boolean(rawLog.isQualifiedLead ?? rawLog.IsQualifiedLead ?? formData.isQualifiedLead);
+      const formattedLastCall = formatFollowUpDate(lastCallIso);
+      const formattedCallback = formatFollowUpDate(finalCallbackIso);
+
       const newLog = {
         ...rawLog,
         id: actualId,
         Id: actualId,
-        customerName: rawLog.customerName || rawLog.CustomerName || formData.customerName,
-        customerPhone: rawLog.customerPhone || rawLog.CustomerPhone || formData.customerPhone,
-        customerEmail: rawLog.customerEmail || rawLog.CustomerEmail || formData.customerEmail,
-        calledByRep: rawLog.calledByRep || rawLog.CalledByRep || formData.calledByRep,
-        status: rawLog.status || rawLog.Status || formData.status,
-        priority: (rawLog.priority || rawLog.Priority || formData.priority || 'LOW').toUpperCase(),
-        notesSummary: rawLog.notesSummary || rawLog.NotesSummary || formData.notesSummary,
-        lastCall: rawLog.lastCall || rawLog.LastCall || lastCallIso,
+        customerName: formData.customerName.trim(),
+        customerPhone: formData.customerPhone.trim(),
+        customerEmail: formData.customerEmail?.trim() || '',
+        calledByRep: formData.calledByRep?.trim() || 'Admin Rep',
+        status: formData.status,
+        priority: (formData.priority || 'LOW').toUpperCase(),
+        notesSummary: formData.notesSummary?.trim() || '',
+        lastCall: formattedLastCall,
+        lastCallIso: lastCallIso,
         isQualifiedLead: isLead,
-        callbackFormatted: formatFollowUpDate(rawLog.callbackIso || rawLog.CallbackIso || rawLog.callback || rawLog.Callback || finalCallbackIso)
+        callback: finalCallbackIso,
+        callbackIso: finalCallbackIso,
+        callbackFormatted: formattedCallback
       };
 
       setCalls(prev => {
@@ -508,8 +557,10 @@ const CallHistoryScreen = () => {
         qualifiedLeads: (isLead && !currentEditingId) ? prev.qualifiedLeads + 1 : prev.qualifiedLeads
       }));
 
-      // Background silent synchronization without table loading flash
-      fetchLogs(true);
+      // Background silent synchronization with short delay so DB commits cleanly
+      setTimeout(() => {
+        fetchLogs(true);
+      }, 300);
     } catch (err) {
       setFormError(err.message || 'Error occurred while saving log.');
       setSubmitting(false);
