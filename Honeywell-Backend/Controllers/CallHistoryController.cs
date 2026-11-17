@@ -30,26 +30,21 @@ namespace Honeywell.Controllers
             [FromQuery] string? status,
             [FromQuery] string? priority)
         {
-            var query = _context.CallLogs.AsQueryable();
-
-            // Calculate card metrics across all logged calls
-            var allCalls = await _context.CallLogs.ToListAsync();
             var todayUtc = DateTime.UtcNow.Date;
+            var tomorrowUtc = todayUtc.AddDays(1);
 
-            int totalCalls = allCalls.Count;
-            
-            // Due callback today
-            int todayFollowUps = allCalls.Count(c => 
-                c.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase) && 
+            // Fast aggregate counts executed directly in MySQL without loading all records into memory
+            int totalCalls = await _context.CallLogs.CountAsync();
+            int todayFollowUps = await _context.CallLogs.CountAsync(c => 
+                c.Status == "Follow-Up" && 
                 c.CallbackTime.HasValue && 
-                c.CallbackTime.Value.Date == todayUtc
+                c.CallbackTime.Value >= todayUtc && 
+                c.CallbackTime.Value < tomorrowUtc
             );
+            int totalFollowUps = await _context.CallLogs.CountAsync(c => c.Status == "Follow-Up");
+            int qualifiedLeads = await _context.CallLogs.CountAsync(c => c.IsQualifiedLead);
 
-            // Total follow-ups
-            int totalFollowUps = allCalls.Count(c => c.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase));
-            
-            // Qualified leads count
-            int qualifiedLeads = allCalls.Count(c => c.IsQualifiedLead);
+            var query = _context.CallLogs.AsNoTracking().AsQueryable();
 
             // Apply search keywords (Customer Name, Rep, Phone, Email, Notes)
             if (!string.IsNullOrEmpty(search))
@@ -139,12 +134,28 @@ namespace Honeywell.Controllers
             _context.CallLogs.Add(log);
             await _context.SaveChangesAsync();
 
+            var todayUtc = DateTime.UtcNow.Date;
             return Ok(new
             {
                 Message = "Call log created successfully.",
                 Id = log.Id,
                 CustomerName = log.CustomerName,
-                Status = log.Status
+                Status = log.Status,
+                Log = new
+                {
+                    log.Id,
+                    CustomerName = log.CustomerName,
+                    CalledByRep = log.CalledByRep,
+                    CustomerPhone = log.CustomerPhone,
+                    CustomerEmail = log.CustomerEmail,
+                    Status = log.Status,
+                    Priority = log.Priority.ToUpper(),
+                    NotesSummary = log.NotesSummary,
+                    LastCall = log.LastCallTime.ToString("dd MMM yyyy, hh:mm tt"),
+                    Callback = log.CallbackTime.HasValue ? log.CallbackTime.Value.ToString("dd MMM yyyy, hh:mm tt") : null,
+                    IsTodayFollowUp = log.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase) && log.CallbackTime.HasValue && log.CallbackTime.Value.Date == todayUtc,
+                    IsQualifiedLead = log.IsQualifiedLead
+                }
             });
         }
 
@@ -182,7 +193,29 @@ namespace Honeywell.Controllers
             if (request.IsQualifiedLead.HasValue) log.IsQualifiedLead = request.IsQualifiedLead.Value;
 
             await _context.SaveChangesAsync();
-            return NoContent();
+            var todayUtc = DateTime.UtcNow.Date;
+            return Ok(new
+            {
+                Message = "Call log updated successfully.",
+                Id = log.Id,
+                CustomerName = log.CustomerName,
+                Status = log.Status,
+                Log = new
+                {
+                    log.Id,
+                    CustomerName = log.CustomerName,
+                    CalledByRep = log.CalledByRep,
+                    CustomerPhone = log.CustomerPhone,
+                    CustomerEmail = log.CustomerEmail,
+                    Status = log.Status,
+                    Priority = log.Priority.ToUpper(),
+                    NotesSummary = log.NotesSummary,
+                    LastCall = log.LastCallTime.ToString("dd MMM yyyy, hh:mm tt"),
+                    Callback = log.CallbackTime.HasValue ? log.CallbackTime.Value.ToString("dd MMM yyyy, hh:mm tt") : null,
+                    IsTodayFollowUp = log.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase) && log.CallbackTime.HasValue && log.CallbackTime.Value.Date == todayUtc,
+                    IsQualifiedLead = log.IsQualifiedLead
+                }
+            });
         }
 
         // DELETE: api/CallHistory/5
@@ -193,12 +226,12 @@ namespace Honeywell.Controllers
             var log = await _context.CallLogs.FindAsync(id);
             if (log == null)
             {
-                return NotFound(new { Message = "Call log not found." });
+                return Ok(new { success = true, message = "Call log removed or already deleted." });
             }
 
             _context.CallLogs.Remove(log);
             await _context.SaveChangesAsync();
-            return NoContent();
+            return Ok(new { success = true, message = "Call log deleted successfully." });
         }
 
         public class CallLogCreateRequest

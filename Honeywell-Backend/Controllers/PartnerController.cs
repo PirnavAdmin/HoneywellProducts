@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -278,14 +279,70 @@ namespace Honeywell.Controllers
             var yearsInBusiness = dto.YearsInBusiness?.Trim();
             var address = dto.Address?.Trim();
             var description = dto.Description?.Trim();
-            bool agreedToTerms = dto.AgreedToTerms ?? true;
+            bool agreedToTerms = dto.AgreedToTerms == true;
+
+            if (dto.AgreedToTerms != true)
+            {
+                return BadRequest(new { success = false, message = "You must agree to the Terms & Conditions to submit your application." });
+            }
 
             if (string.IsNullOrWhiteSpace(companyName) || string.IsNullOrWhiteSpace(contactPerson) || 
                 string.IsNullOrWhiteSpace(mobile) || string.IsNullOrWhiteSpace(email) || 
                 string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(state) || 
-                string.IsNullOrWhiteSpace(address))
+                string.IsNullOrWhiteSpace(address) || string.IsNullOrWhiteSpace(yearsInBusiness))
             {
-                return BadRequest(new { success = false, message = "Company Name, Contact Person, Mobile, Email, City, State, and Address are required." });
+                return BadRequest(new { success = false, message = "Business Name, Contact Person, Mobile, Email, City, State, Experience in Business, and Address are required." });
+            }
+
+            if (companyName.Length < 2 || SupplierValidationHelper.IsGibberish(companyName))
+            {
+                return BadRequest(new { success = false, message = "Please enter a valid business/company name." });
+            }
+
+            if (contactPerson.Length < 2 || SupplierValidationHelper.IsGibberish(contactPerson, true))
+            {
+                return BadRequest(new { success = false, message = "Please enter a valid contact person name." });
+            }
+
+            var cleanMobile = Regex.Replace(mobile, @"\D", "");
+            if (cleanMobile.Length != 10 || !Regex.IsMatch(cleanMobile, @"^[6-9]\d{9}$") || Regex.IsMatch(cleanMobile, @"^(\d)\1{9}$"))
+            {
+                return BadRequest(new { success = false, message = "Please enter a valid 10-digit mobile number." });
+            }
+
+            if (email.Length > 254 || !Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
+            {
+                return BadRequest(new { success = false, message = "Please enter a valid email address." });
+            }
+
+            if (city.Length < 2 || SupplierValidationHelper.IsGibberish(city))
+            {
+                return BadRequest(new { success = false, message = "Please enter a valid city or region." });
+            }
+
+            if (state.Length < 2 || SupplierValidationHelper.IsGibberish(state))
+            {
+                return BadRequest(new { success = false, message = "Please enter a valid state or province." });
+            }
+
+            if (yearsInBusiness.Length > 50 || SupplierValidationHelper.IsGibberish(yearsInBusiness))
+            {
+                return BadRequest(new { success = false, message = "Please enter valid business experience." });
+            }
+
+            if (address.Length < 5 || SupplierValidationHelper.IsGibberish(address))
+            {
+                return BadRequest(new { success = false, message = "Please enter a valid address." });
+            }
+
+            if (!string.IsNullOrWhiteSpace(gstin))
+            {
+                var gstinCheck = GstinValidator.Validate(gstin, false);
+                if (!gstinCheck.IsValid)
+                {
+                    return BadRequest(new { success = false, message = gstinCheck.ErrorMessage ?? "Please enter a valid 15-character GSTIN." });
+                }
+                gstin = gstinCheck.NormalizedGstin;
             }
 
             var application = new PartnerApplication

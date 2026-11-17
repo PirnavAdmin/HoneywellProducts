@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
-import { Download, Printer, X, FileText } from 'lucide-react';
+import { Download, Printer, X, FileText, ExternalLink, Check } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
-export default function PartnerTermsModal({ isOpen, onClose, partnerData }) {
+export default function PartnerTermsModal({ isOpen, onClose, partnerData, onAccept }) {
   useEffect(() => {
     if (isOpen) {
       document.body.classList.add('modal-open');
@@ -87,7 +87,13 @@ export default function PartnerTermsModal({ isOpen, onClose, partnerData }) {
       doc.setFontSize(9);
       doc.setTextColor(50, 50, 50);
 
-      const lines = doc.splitTextToSize(sec.content, contentWidth);
+      const rawContent = Array.isArray(sec.paragraphs)
+        ? sec.paragraphs.join('\n\n')
+        : Array.isArray(sec.content)
+        ? sec.content.join('\n\n')
+        : sec.content || '';
+
+      const lines = doc.splitTextToSize(rawContent, contentWidth);
       lines.forEach((line) => {
         if (y + 5 > pageHeight - margin) {
           doc.addPage();
@@ -100,8 +106,9 @@ export default function PartnerTermsModal({ isOpen, onClose, partnerData }) {
       y += 3.5;
     });
 
-    // Disclaimer Box
-    const discLines = doc.splitTextToSize(partnerData.disclaimer, contentWidth - 8);
+    // Disclaimer / Summary Box
+    const disclaimerText = partnerData.disclaimer || partnerData.summary || '';
+    const discLines = doc.splitTextToSize(disclaimerText, contentWidth - 8);
     const discHeight = 10 + discLines.length * 4;
 
     if (y + discHeight > pageHeight - margin) {
@@ -137,14 +144,14 @@ export default function PartnerTermsModal({ isOpen, onClose, partnerData }) {
       doc.setFontSize(8);
       doc.setTextColor(140, 140, 140);
       doc.text(
-        `Page ${i} of ${pageCount}  |  Honeywell Products — ${partnerData.partnerType} Terms & Conditions`,
+        `Page ${i} of ${pageCount}  |  Honeywell Products — ${partnerData.partnerType || 'Commercial'} Terms & Conditions`,
         pageWidth / 2,
         pageHeight - 7,
         { align: 'center' }
       );
     }
 
-    doc.save(partnerData.pdfFilename);
+    doc.save(partnerData.pdfFilename || 'Honeywell_Terms_and_Conditions.pdf');
   };
 
   return (
@@ -167,7 +174,11 @@ export default function PartnerTermsModal({ isOpen, onClose, partnerData }) {
             </span>
             <div>
               <h2 id="partner-terms-title">{partnerData.title}</h2>
-              <p className="partner-terms-date">Last Updated: {partnerData.lastUpdated}</p>
+              <p className="partner-terms-date">
+                {partnerData.eyebrow ? `${partnerData.eyebrow}  •  ` : ''}
+                {partnerData.effectiveDate ? `Effective: ${partnerData.effectiveDate}  •  ` : ''}
+                Last Updated: {partnerData.lastUpdated}
+              </p>
             </div>
           </div>
           <button
@@ -189,19 +200,50 @@ export default function PartnerTermsModal({ isOpen, onClose, partnerData }) {
             <hr />
           </div>
 
+          {partnerData.summary && (
+            <div style={{ padding: '12px 16px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '13px', lineHeight: '1.6', color: '#0369a1' }}>
+              <strong>Official Overview:</strong> {partnerData.summary}
+            </div>
+          )}
+
+          {partnerData.keyHighlights && partnerData.keyHighlights.length > 0 && (
+            <div style={{ padding: '14px 18px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px' }}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#334155' }}>
+                Key Highlights
+              </h4>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12.5px', color: '#475569', lineHeight: '1.6' }}>
+                {partnerData.keyHighlights.map((hl, i) => (
+                  <li key={i} style={{ marginBottom: '4px' }}>{hl}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <div className="partner-terms-sections">
             {partnerData.sections.map((sec) => (
               <article key={sec.id} className="partner-terms-section-item">
                 <h3>{sec.title}</h3>
-                <p>{sec.content}</p>
+                {Array.isArray(sec.paragraphs) ? (
+                  sec.paragraphs.map((p, idx) => (
+                    <p key={idx} style={{ marginBottom: '8px' }}>{p}</p>
+                  ))
+                ) : Array.isArray(sec.content) ? (
+                  sec.content.map((p, idx) => (
+                    <p key={idx} style={{ marginBottom: '8px' }}>{p}</p>
+                  ))
+                ) : (
+                  <p>{sec.content}</p>
+                )}
               </article>
             ))}
           </div>
 
-          <div className="partner-terms-disclaimer-box">
-            <h4>Important Notice</h4>
-            <p>{partnerData.disclaimer}</p>
-          </div>
+          {partnerData.disclaimer && (
+            <div className="partner-terms-disclaimer-box">
+              <h4>Important Notice</h4>
+              <p>{partnerData.disclaimer}</p>
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}
@@ -221,14 +263,39 @@ export default function PartnerTermsModal({ isOpen, onClose, partnerData }) {
             >
               <Download size={16} /> Download PDF
             </button>
+            <a
+              href="/terms-and-conditions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="button outline partner-terms-btn"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}
+              title="Open the official Terms & Conditions page in a new tab"
+            >
+              <ExternalLink size={15} /> Open Full Page ↗
+            </a>
           </div>
-          <button
-            className="button outline partner-terms-btn partner-terms-btn-close"
-            onClick={onClose}
-            type="button"
-          >
-            Close
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {onAccept && (
+              <button
+                className="button partner-terms-btn"
+                style={{ background: '#10b981', borderColor: '#10b981', color: '#ffffff', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                onClick={() => {
+                  onAccept();
+                  onClose();
+                }}
+                type="button"
+              >
+                <Check size={16} /> I Agree to Terms
+              </button>
+            )}
+            <button
+              className="button outline partner-terms-btn partner-terms-btn-close"
+              onClick={onClose}
+              type="button"
+            >
+              Close
+            </button>
+          </div>
         </footer>
       </div>
     </div>

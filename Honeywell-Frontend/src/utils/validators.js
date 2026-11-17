@@ -326,3 +326,233 @@ export const isValidPassword = (password) => validatePassword(password) === '';
 export const isValidName = (name) => validateName(name) === '';
 export const isValidPhone = (phone) => validatePhone(phone) === '';
 export const isValidEmployeeId = (id) => validateEmployeeId(id) === '';
+
+/**
+ * Detects keyboard-mashed or gibberish text strings (e.g. "havjsajkhbkas", "szjhabhxabhb",
+ * "asjahhsabhsjhgbsabakssauyjskjana", "ashjsajhsabhsabkhaskhsaisj", "asdfasdfasdf")
+ * while preserving legitimate Indian, Western, and International company, city, and personal names.
+ */
+export const isGibberishText = (str, isContactPerson = false) => {
+  if (!str) return false;
+  const clean = String(str).trim();
+
+  // 1. Triple or more identical consecutive letters (e.g. ggg, aaaa, zzz)
+  if (/([a-zA-Z])\1{2,}/i.test(clean)) {
+    return true;
+  }
+
+  // 2. Repetitive n-grams repeated 3+ times (e.g. ghghgh, asdfasdfasdf, gjgjgj)
+  if (/([a-zA-Z]{2,4})\1{2,}/i.test(clean)) {
+    return true;
+  }
+
+  // Split into words by common delimiters
+  const words = clean.split(/[\s\-&'.,()/]+/).filter((w) => w.length > 0);
+
+  for (const word of words) {
+    const lettersOnly = word.replace(/[^a-zA-Z\u00C0-\u024F]/g, '');
+    if (lettersOnly.length === 0) continue;
+
+    // Single unspaced word too long (real human or company name words rarely exceed 22 letters)
+    if (lettersOnly.length > 22) {
+      return true;
+    }
+
+    // Acronyms (2 to 5 all-uppercase letters like BHEL, HDFC, TCS, 3M) are allowed
+    const isAllUpper = lettersOnly === lettersOnly.toUpperCase() && lettersOnly.length <= 5;
+    if (isAllUpper) continue;
+
+    // Words with length >= 4 must have at least one vowel
+    const vowels = lettersOnly.match(/[aeiouyAEIOUY\u00C0-\u024F]/g) || [];
+    if (lettersOnly.length >= 4 && vowels.length === 0) {
+      return true;
+    }
+
+    // 5 or more consecutive consonants is unnatural in natural place/human names
+    if (/[bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXZ]{5,}/i.test(lettersOnly)) {
+      return true;
+    }
+
+    // Rare consonant combinations (z, x, q, j) in clusters of 3+ consonants
+    if (
+      /[bcdfghjklmnpqrstvwxz]*[zxqj][bcdfghjklmnpqrstvwxz]{2,}/i.test(lettersOnly) ||
+      /[bcdfghjklmnpqrstvwxz]{2,}[zxqj][bcdfghjklmnpqrstvwxz]*/i.test(lettersOnly)
+    ) {
+      return true;
+    }
+
+    // Unnatural consonant clusters at start of word (4+ consonants)
+    if (/^[bcdfghjklmnpqrstvwxz]{4,}/i.test(lettersOnly)) {
+      return true;
+    }
+
+    // Check for low character diversity in words of length >= 8
+    if (lettersOnly.length >= 8) {
+      const consonants = lettersOnly.toLowerCase().replace(/[aeiouy\u00C0-\u024F]/g, '');
+      const consonantCounts = {};
+      for (const ch of consonants) {
+        consonantCounts[ch] = (consonantCounts[ch] || 0) + 1;
+      }
+      const maxConsonantFreq = Math.max(0, ...Object.values(consonantCounts));
+      if (maxConsonantFreq / lettersOnly.length >= 0.35) {
+        return true;
+      }
+
+      const charCounts = {};
+      for (const ch of lettersOnly.toLowerCase()) {
+        charCounts[ch] = (charCounts[ch] || 0) + 1;
+      }
+      if (Object.keys(charCounts).length <= 4 && lettersOnly.length >= 10) {
+        return true;
+      }
+    }
+  }
+
+  if (isContactPerson) {
+    const allLetters = clean.replace(/[^a-zA-Z\u00C0-\u024F]/g, '');
+    const vowels = allLetters.match(/[aeiouyAEIOUY\u00C0-\u024F]/g) || [];
+    if (allLetters.length >= 4 && vowels.length === 0) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+/**
+ * Validates Business / Company Name
+ */
+export const validateBusinessName = (name, fieldLabel = 'Business Name') => {
+  const val = (name ?? '').trim();
+  if (!val) {
+    return `${fieldLabel} is required.`;
+  }
+  if (val.length < 2) {
+    return `${fieldLabel} must be at least 2 characters.`;
+  }
+  if (val.length > 150) {
+    return `${fieldLabel} cannot exceed 150 characters.`;
+  }
+  if (/^\d+$/.test(val)) {
+    return `${fieldLabel} cannot consist solely of numbers.`;
+  }
+  if (/^[^a-zA-Z0-9]+$/.test(val)) {
+    return `${fieldLabel} cannot consist solely of special characters.`;
+  }
+  if (isGibberishText(val)) {
+    return `Please enter a valid ${fieldLabel.toLowerCase()} (e.g. Honeywell Technologies).`;
+  }
+  return '';
+};
+
+/**
+ * Validates City / Region
+ */
+export const validateCity = (city, fieldLabel = 'City') => {
+  const val = (city ?? '').trim();
+  if (!val) {
+    return `${fieldLabel} is required.`;
+  }
+  if (val.length < 2) {
+    return `${fieldLabel} must be at least 2 characters.`;
+  }
+  if (val.length > 100) {
+    return `${fieldLabel} cannot exceed 100 characters.`;
+  }
+  if (/^\d+$/.test(val)) {
+    return `${fieldLabel} cannot consist solely of numbers.`;
+  }
+  if (/^[^a-zA-Z0-9]+$/.test(val)) {
+    return `${fieldLabel} cannot consist solely of special characters.`;
+  }
+  const letters = val.match(/[a-zA-Z\u00C0-\u024F]/g) || [];
+  if (letters.length < 2) {
+    return `Please enter a valid ${fieldLabel.toLowerCase()}.`;
+  }
+  if (isGibberishText(val)) {
+    return `Please enter a valid ${fieldLabel.toLowerCase()} or region (e.g. Hyderabad).`;
+  }
+  return '';
+};
+
+/**
+ * Validates State / Province
+ */
+export const validateState = (state, fieldLabel = 'State') => {
+  const val = (state ?? '').trim();
+  if (!val) {
+    return `${fieldLabel} is required.`;
+  }
+  if (val.length < 2) {
+    return `${fieldLabel} must be at least 2 characters.`;
+  }
+  if (val.length > 100) {
+    return `${fieldLabel} cannot exceed 100 characters.`;
+  }
+  if (/^\d+$/.test(val)) {
+    return `${fieldLabel} cannot consist solely of numbers.`;
+  }
+  if (/^[^a-zA-Z0-9]+$/.test(val)) {
+    return `${fieldLabel} cannot consist solely of special characters.`;
+  }
+  const letters = val.match(/[a-zA-Z\u00C0-\u024F]/g) || [];
+  if (letters.length < 2) {
+    return `Please enter a valid ${fieldLabel.toLowerCase()}.`;
+  }
+  if (isGibberishText(val)) {
+    return `Please enter a valid ${fieldLabel.toLowerCase()} or province (e.g. Telangana).`;
+  }
+  return '';
+};
+
+/**
+ * Validates Experience in Business
+ */
+export const validateExperience = (exp, fieldLabel = 'Experience in Business') => {
+  const val = (exp ?? '').trim();
+  if (!val) {
+    return `${fieldLabel} is required.`;
+  }
+  if (val.length > 50) {
+    return `${fieldLabel} cannot exceed 50 characters.`;
+  }
+  // If single unbroken word > 15 chars with no space or digits, reject keyboard smash
+  if (!/[\s0-9]/.test(val) && val.length > 15) {
+    return `Please enter valid business experience (e.g. 5 years or Since 2018).`;
+  }
+  if (isGibberishText(val)) {
+    return `Please enter valid business experience (e.g. 5 years or Since 2018).`;
+  }
+  return '';
+};
+
+/**
+ * Validates Address
+ */
+export const validateAddress = (address, fieldLabel = 'Address') => {
+  const val = (address ?? '').trim();
+  if (!val) {
+    return `${fieldLabel} is required.`;
+  }
+  if (val.length < 5) {
+    return `${fieldLabel} must be at least 5 characters long.`;
+  }
+  if (val.length > 500) {
+    return `${fieldLabel} cannot exceed 500 characters.`;
+  }
+  const alphaNumCount = (val.match(/[a-zA-Z0-9]/g) || []).length;
+  if (alphaNumCount < 3) {
+    return `Please enter a valid complete ${fieldLabel.toLowerCase()}.`;
+  }
+  if (/^[^a-zA-Z0-9]+$/.test(val)) {
+    return `${fieldLabel} cannot consist solely of special characters.`;
+  }
+  // Single unbroken string > 20 chars with no spaces or street delimiters
+  if (!/[\s,.\-#\/()':;]/.test(val) && val.length > 20) {
+    return `Please enter a valid complete ${fieldLabel.toLowerCase()} (e.g. Street, locality, city).`;
+  }
+  if (isGibberishText(val)) {
+    return `Please enter a valid ${fieldLabel.toLowerCase()}.`;
+  }
+  return '';
+};
