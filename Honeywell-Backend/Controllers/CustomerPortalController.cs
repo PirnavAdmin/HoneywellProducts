@@ -107,51 +107,51 @@ namespace Honeywell.Controllers
             }
 
             // Check email across customer, admin-user and staff accounts.
-            if (email != null)
+            if (!string.IsNullOrWhiteSpace(email))
             {
                 var customerEmailExists = await _context.Customers.AnyAsync(c =>
-                    c.Email != null && c.Email.Trim().ToLower() == email);
+                    !string.IsNullOrEmpty(c.Email) && c.Email.Trim().ToLower() == email);
 
                 if (customerEmailExists)
                     return Conflict(new { success = false, message = "This email address is already registered." });
 
                 var adminEmailExists = await _context.Users.AnyAsync(u =>
-                    u.Email != null && u.Email.Trim().ToLower() == email);
+                    !string.IsNullOrEmpty(u.Email) && u.Email.Trim().ToLower() == email);
 
                 if (adminEmailExists)
                     return Conflict(new { success = false, message = "This email address is already registered." });
 
                 var staffEmailExists = await _context.Staff.AnyAsync(s =>
-                    s.Email != null && s.Email.Trim().ToLower() == email);
+                    !string.IsNullOrEmpty(s.Email) && s.Email.Trim().ToLower() == email);
 
                 if (staffEmailExists)
                     return Conflict(new { success = false, message = "This email address is already registered." });
             }
 
             // Check mobile across customer, admin-user, staff and GrowerUser accounts.
-            if (phone != null)
+            if (!string.IsNullOrWhiteSpace(phone))
             {
                 var customerPhoneExists = await _context.Customers.AnyAsync(c =>
-                    c.Phone != null && c.Phone.Trim() == phone);
+                    !string.IsNullOrEmpty(c.Phone) && c.Phone.Trim() == phone);
 
                 if (customerPhoneExists)
                     return Conflict(new { success = false, message = "This mobile number is already registered." });
 
                 var adminMobileExists = await _context.Users.AnyAsync(u =>
-                    u.MobileNumber != null && u.MobileNumber.Trim() == phone);
+                    !string.IsNullOrEmpty(u.MobileNumber) && u.MobileNumber.Trim() == phone);
 
                 if (adminMobileExists)
                     return Conflict(new { success = false, message = "This mobile number is already registered." });
 
                 var staffMobileExists = await _context.Staff.AnyAsync(s =>
-                    (s.Phone != null && s.Phone.Trim() == phone) ||
-                    (s.MobileNumber != null && s.MobileNumber.Trim() == phone));
+                    (!string.IsNullOrEmpty(s.Phone) && s.Phone.Trim() == phone) ||
+                    (!string.IsNullOrEmpty(s.MobileNumber) && s.MobileNumber.Trim() == phone));
 
                 if (staffMobileExists)
                     return Conflict(new { success = false, message = "This mobile number is already registered." });
 
                 var growerMobileExists = await _context.GrowerUsers.AnyAsync(g =>
-                    g.Phone != null && g.Phone.Trim() == phone);
+                    !string.IsNullOrEmpty(g.Phone) && g.Phone.Trim() == phone);
 
                 if (growerMobileExists)
                     return Conflict(new { success = false, message = "This mobile number is already registered." });
@@ -169,8 +169,8 @@ namespace Honeywell.Controllers
                 Name = string.IsNullOrWhiteSpace(dto.FullName) ? "Customer" : dto.FullName.Trim(),
                 FirstName = firstName,
                 LastName = lastName,
-                Email = email,
-                Phone = phone,
+                Email = email ?? string.Empty,
+                Phone = phone ?? string.Empty,
                 Password = dto.Password,
                 Role = "CUSTOMER ACCOUNT",
                 Status = "Active",
