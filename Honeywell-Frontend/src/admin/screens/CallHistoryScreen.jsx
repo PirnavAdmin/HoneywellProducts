@@ -18,13 +18,129 @@ const getAuthHeaders = (extra = {}) => {
   return headers;
 };
 
-export const formatFollowUpDate = (dateVal, isLead = false) => {
-  if (!dateVal) {
-    if (isLead) {
-      const nextDay = new Date();
-      nextDay.setDate(nextDay.getDate() + 1);
-      nextDay.setHours(10, 0, 0, 0);
-      return nextDay.toLocaleString('en-IN', {
+export const TIME_SLOTS = [
+  { value: '08:00', label: '08:00 AM' },
+  { value: '08:30', label: '08:30 AM' },
+  { value: '09:00', label: '09:00 AM' },
+  { value: '09:30', label: '09:30 AM' },
+  { value: '10:00', label: '10:00 AM' },
+  { value: '10:30', label: '10:30 AM' },
+  { value: '11:00', label: '11:00 AM' },
+  { value: '11:30', label: '11:30 AM' },
+  { value: '12:00', label: '12:00 PM' },
+  { value: '12:30', label: '12:30 PM' },
+  { value: '13:00', label: '01:00 PM' },
+  { value: '13:30', label: '01:30 PM' },
+  { value: '14:00', label: '02:00 PM' },
+  { value: '14:30', label: '02:30 PM' },
+  { value: '15:00', label: '03:00 PM' },
+  { value: '15:30', label: '03:30 PM' },
+  { value: '16:00', label: '04:00 PM' },
+  { value: '16:30', label: '04:30 PM' },
+  { value: '17:00', label: '05:00 PM' },
+  { value: '17:30', label: '05:30 PM' },
+  { value: '18:00', label: '06:00 PM' },
+  { value: '18:30', label: '06:30 PM' },
+  { value: '19:00', label: '07:00 PM' },
+  { value: '19:30', label: '07:30 PM' },
+  { value: '20:00', label: '08:00 PM' },
+];
+
+export const formatTimeDisplay = (timeStr) => {
+  if (!timeStr) return '10:00 AM';
+  const parts = timeStr.split(':');
+  const h = parseInt(parts[0], 10);
+  if (isNaN(h)) return timeStr;
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  const ampm = h < 12 ? 'AM' : 'PM';
+  const mm = parts[1] ? parts[1].padStart(2, '0') : '00';
+  return `${String(hour12).padStart(2, '0')}:${mm} ${ampm}`;
+};
+
+export const parseDateTimeStringToParts = (str) => {
+  if (!str || typeof str !== 'string') return null;
+  const trimmed = str.trim();
+  if (!trimmed || trimmed === '—' || trimmed.toLowerCase() === 'none') return null;
+
+  // 1. Local or ISO string: "2026-11-19T10:00:00"
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    const [dPart, tPart] = trimmed.split('T');
+    let time = '10:00';
+    if (tPart) time = tPart.slice(0, 5);
+    return { date: dPart, time };
+  }
+
+  // 2. Human format: "19 Nov 2026, 10:00 AM" or "19 Nov 2026 10:00 am"
+  const match = trimmed.match(/^(\d{1,2})\s+([A-Za-z]{3})\s+(\d{4})(?:,\s*|\s+)(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?$/i);
+  if (match) {
+    const day = match[1].padStart(2, '0');
+    const monthName = match[2].toLowerCase();
+    const year = match[3];
+    let hour = parseInt(match[4], 10);
+    const minute = match[5].padStart(2, '0');
+    const ampm = (match[6] || '').toUpperCase();
+    const months = { jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06', jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12' };
+    const month = months[monthName] || '01';
+    if (ampm === 'PM' && hour < 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    const time = `${String(hour).padStart(2, '0')}:${minute}`;
+    return { date: `${year}-${month}-${day}`, time };
+  }
+
+  // 3. Fallback via Date object
+  const d = new Date(trimmed);
+  if (!isNaN(d.getTime())) {
+    return {
+      date: formatLocalDate(d),
+      time: formatLocalTime(d)
+    };
+  }
+  return null;
+};
+
+export const formatLocalDate = (date) => {
+  if (!date) return '';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+export const formatLocalTime = (date) => {
+  if (!date) return '10:00';
+  const d = date instanceof Date ? date : new Date(date);
+  if (isNaN(d.getTime())) return '10:00';
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
+};
+
+export const combineLocalDateTime = (dateStr, timeStr) => {
+  if (!dateStr) return null;
+  const time = timeStr && timeStr.trim() ? timeStr.trim() : '10:00';
+  const parts = time.split(':');
+  const hh = (parts[0] || '10').padStart(2, '0');
+  const mm = (parts[1] || '00').padStart(2, '0');
+  return `${dateStr.trim()}T${hh}:${mm}:00`;
+};
+
+export const formatFollowUpDate = (dateVal) => {
+  if (!dateVal) return '—';
+  if (typeof dateVal === 'string') {
+    const trimmed = dateVal.trim();
+    if (!trimmed || trimmed === '—' || trimmed.toLowerCase() === 'none') return '—';
+    // If it is already in human format (e.g. "18 Nov 2026, 03:00 PM"), preserve it cleanly
+    if (/^\d{1,2}\s+[A-Za-z]{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+(AM|PM|am|pm)$/i.test(trimmed)) {
+      return trimmed;
+    }
+    const parts = parseDateTimeStringToParts(trimmed);
+    if (parts) {
+      const [y, m, d] = parts.date.split('-').map(Number);
+      const [hh, mm] = parts.time.split(':').map(Number);
+      const localDate = new Date(y, m - 1, d, hh, mm);
+      return localDate.toLocaleString('en-IN', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
@@ -33,25 +149,11 @@ export const formatFollowUpDate = (dateVal, isLead = false) => {
         hour12: true
       });
     }
-    return '—';
   }
 
   const d = new Date(dateVal);
   if (isNaN(d.getTime()) || d.getFullYear() < 2020) {
-    if (isLead) {
-      const nextDay = new Date();
-      nextDay.setDate(nextDay.getDate() + 1);
-      nextDay.setHours(10, 0, 0, 0);
-      return nextDay.toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true
-      });
-    }
-    return '—';
+    return typeof dateVal === 'string' && dateVal.trim() ? dateVal.trim() : '—';
   }
 
   return d.toLocaleString('en-IN', {
@@ -84,6 +186,12 @@ const CallHistoryScreen = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
   const [highPriorityAutoApplied, setHighPriorityAutoApplied] = useState(false);
+
+  // Custom Delete Confirmation Popup state
+  const [callToDelete, setCallToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
   const [formData, setFormData] = useState({
     customerName: '',
     customerPhone: '',
@@ -92,34 +200,64 @@ const CallHistoryScreen = () => {
     status: 'Completed',
     priority: 'Low',
     notesSummary: '',
+    lastCallDate: '',
     lastCallTime: '',
-    callbackTime: '',
+    callbackDate: '',
+    callbackTime: '10:00',
     isQualifiedLead: false
   });
 
-  const fetchLogs = async () => {
-    setLoading(true);
+  const fetchLogs = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const params = new URLSearchParams();
       if (searchTerm.trim()) params.append('search', searchTerm.trim());
       if (statusFilter !== 'All Statuses') params.append('status', statusFilter);
       if (priorityFilter !== 'All Priorities') params.append('priority', priorityFilter);
+      params.append('_t', String(Date.now())); // Bypass browser HTTP caching
 
       const res = await fetch(`${getApiDomain()}/api/CallHistory?${params.toString()}`, {
-        headers: getAuthHeaders({ 'Accept': 'application/json' })
+        cache: 'no-store',
+        headers: getAuthHeaders({ 
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        })
       });
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
       const data = await res.json();
       
       const rawCalls = data.calls || data.Calls || [];
-      const formattedCalls = rawCalls.map(c => {
-        const isLead = Boolean(c.isQualifiedLead || c.status === 'Follow-Up');
-        const rawCb = c.callback || c.callbackTime || c.nextFollowUp;
+      const formattedCalls = rawCalls.map((c, idx) => {
+        const actualId = c.id ?? c.Id ?? c._id ?? `call-${idx}`;
+        const isLead = Boolean(c.isQualifiedLead ?? c.IsQualifiedLead);
+        const rawCb = c.callbackIso || c.CallbackIso || c.callback || c.Callback || c.callbackTime || c.CallbackTime || c.nextFollowUp;
+        const rawLastCall = c.lastCallIso || c.LastCallIso || c.lastCall || c.LastCall || c.lastCallTime || c.LastCallTime;
+        
+        const formattedLastCall = typeof rawLastCall === 'string' && /^\d{1,2}\s+[A-Za-z]{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+(AM|PM|am|pm)$/i.test(rawLastCall.trim()) 
+          ? rawLastCall.trim() 
+          : formatFollowUpDate(rawLastCall);
+
+        const formattedCallback = typeof rawCb === 'string' && /^\d{1,2}\s+[A-Za-z]{3}\s+\d{4},\s+\d{1,2}:\d{2}\s+(AM|PM|am|pm)$/i.test(rawCb.trim())
+          ? rawCb.trim()
+          : formatFollowUpDate(rawCb);
+
         return {
           ...c,
+          id: actualId,
+          Id: actualId,
+          customerName: c.customerName || c.CustomerName || '',
+          customerPhone: c.customerPhone || c.CustomerPhone || '',
+          customerEmail: c.customerEmail || c.CustomerEmail || '',
+          calledByRep: c.calledByRep || c.CalledByRep || 'Admin Rep',
+          status: c.status || c.Status || 'Completed',
+          priority: (c.priority || c.Priority || 'LOW').toUpperCase(),
+          notesSummary: c.notesSummary || c.NotesSummary || '',
+          lastCall: formattedLastCall,
           isQualifiedLead: isLead,
-          callbackFormatted: formatFollowUpDate(rawCb, isLead)
+          callback: rawCb,
+          callbackFormatted: formattedCallback
         };
       });
 
@@ -132,24 +270,84 @@ const CallHistoryScreen = () => {
       });
     } catch (err) {
       console.error("Error fetching call logs:", err);
-      setError('Could not fetch call history from server.');
+      if (!silent) setError('Could not fetch call history from server.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLogs();
+    fetchLogs(false);
   }, [searchTerm, statusFilter, priorityFilter]);
 
-  // Helper: next business day at 10:00 AM ISO string
+  // Dynamic client-side filtering for 0-ms responsiveness and instant sync
+  const displayedCalls = React.useMemo(() => {
+    return calls.filter(c => {
+      // Search keyword filter
+      if (searchTerm && searchTerm.trim()) {
+        const q = searchTerm.trim().toLowerCase();
+        const matchName = (c.customerName || c.CustomerName || '').toLowerCase().includes(q);
+        const matchPhone = (c.customerPhone || c.CustomerPhone || '').includes(q);
+        const matchEmail = (c.customerEmail || c.CustomerEmail || '').toLowerCase().includes(q);
+        const matchRep = (c.calledByRep || c.CalledByRep || '').toLowerCase().includes(q);
+        const matchNotes = (c.notesSummary || c.NotesSummary || '').toLowerCase().includes(q);
+        if (!matchName && !matchPhone && !matchEmail && !matchRep && !matchNotes) return false;
+      }
+
+      // Status filter
+      if (statusFilter && statusFilter !== 'All Statuses') {
+        const s = (c.status || c.Status || '').toLowerCase();
+        const f = statusFilter.toLowerCase();
+        if (f.includes('follow')) {
+          if (!s.includes('follow')) return false;
+        } else if (f.includes('complete')) {
+          if (!s.includes('complete')) return false;
+        } else if (f.includes('answer')) {
+          if (!s.includes('answer')) return false;
+        } else if (f.includes('busy')) {
+          if (!s.includes('busy')) return false;
+        } else if (s !== f) {
+          return false;
+        }
+      }
+
+      // Priority filter
+      if (priorityFilter && priorityFilter !== 'All Priorities') {
+        const p = (c.priority || c.Priority || '').toLowerCase();
+        const f = priorityFilter.toLowerCase();
+        if (p !== f) return false;
+      }
+
+      return true;
+    });
+  }, [calls, searchTerm, statusFilter, priorityFilter]);
+
+  // Helper: next business day at 10:00 AM in local time
   const getNextBusinessDayAt10AM = () => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
-    // Skip Saturday (6) and Sunday (0)
     while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
     d.setHours(10, 0, 0, 0);
     return d;
+  };
+
+  const setQuickCallback = (daysFromNow, timeStr = '10:00') => {
+    const d = new Date();
+    d.setDate(d.getDate() + daysFromNow);
+    setFormData(prev => ({
+      ...prev,
+      callbackDate: formatLocalDate(d),
+      callbackTime: timeStr,
+      status: prev.status === 'Completed' ? 'Follow-Up' : prev.status
+    }));
+  };
+
+  const clearCallbackSchedule = () => {
+    setFormData(prev => ({
+      ...prev,
+      callbackDate: '',
+      callbackTime: '10:00'
+    }));
   };
 
   const handleInputChange = (e) => {
@@ -159,13 +357,19 @@ const CallHistoryScreen = () => {
     setFormData(prev => {
       const updated = { ...prev, [name]: newVal };
 
+      // Ensure valid time when a date is selected
+      if (name === 'callbackDate' && newVal && !prev.callbackTime) {
+        updated.callbackTime = '10:00';
+      }
+
       // HIGH priority auto-workflow: upgrade status + schedule callback
       if (name === 'priority' && newVal === 'High') {
         const statusNeedsUpgrade = prev.status === 'Completed' || prev.status === 'Pending' || prev.status === 'No Answer' || prev.status === 'Busy';
         if (statusNeedsUpgrade) updated.status = 'Follow-Up';
-        if (!prev.callbackTime) {
+        if (!prev.callbackDate) {
           const cb = getNextBusinessDayAt10AM();
-          updated.callbackTime = cb.toISOString().slice(0, 16);
+          updated.callbackDate = formatLocalDate(cb);
+          updated.callbackTime = '10:00';
         }
         setHighPriorityAutoApplied(true);
       } else if (name === 'priority' && newVal !== 'High') {
@@ -178,6 +382,7 @@ const CallHistoryScreen = () => {
 
   const handleOpenAddModal = () => {
     setEditingId(null);
+    const now = new Date();
     setFormData({
       customerName: '',
       customerPhone: '',
@@ -186,8 +391,10 @@ const CallHistoryScreen = () => {
       status: 'Completed',
       priority: 'Low',
       notesSummary: '',
-      lastCallTime: '',
-      callbackTime: '',
+      lastCallDate: formatLocalDate(now),
+      lastCallTime: formatLocalTime(now),
+      callbackDate: '',
+      callbackTime: '10:00',
       isQualifiedLead: false
     });
     setHighPriorityAutoApplied(false);
@@ -196,18 +403,42 @@ const CallHistoryScreen = () => {
   };
 
   const handleOpenEditModal = (c) => {
-    setEditingId(c.id);
+    const actualId = c.id ?? c.Id ?? c._id;
+    setEditingId(actualId);
+    let cbDate = '';
+    let cbTime = '10:00';
+    const rawCb = c.callbackIso || c.CallbackIso || c.callback || c.Callback || c.callbackTime || c.CallbackTime;
+    if (rawCb && rawCb !== '—') {
+      const parts = parseDateTimeStringToParts(rawCb);
+      if (parts) {
+        cbDate = parts.date;
+        cbTime = parts.time;
+      }
+    }
+    let lcDate = '';
+    let lcTime = '';
+    const rawLc = c.lastCallIso || c.LastCallIso || c.lastCall || c.LastCall || c.lastCallTime || c.LastCallTime;
+    if (rawLc && rawLc !== '—') {
+      const parts = parseDateTimeStringToParts(rawLc);
+      if (parts) {
+        lcDate = parts.date;
+        lcTime = parts.time;
+      }
+    }
+
     setFormData({
-      customerName: c.customerName || '',
-      customerPhone: c.customerPhone || '',
-      customerEmail: c.customerEmail || '',
-      calledByRep: c.calledByRep || 'Admin Rep',
-      status: c.status || 'Completed',
-      priority: c.priority || 'Low',
-      notesSummary: c.notesSummary || '',
-      lastCallTime: c.lastCall ? new Date(c.lastCall).toISOString().slice(0, 16) : '',
-      callbackTime: c.callback ? new Date(c.callback).toISOString().slice(0, 16) : '',
-      isQualifiedLead: Boolean(c.isQualifiedLead)
+      customerName: c.customerName || c.CustomerName || '',
+      customerPhone: c.customerPhone || c.CustomerPhone || '',
+      customerEmail: c.customerEmail || c.CustomerEmail || '',
+      calledByRep: c.calledByRep || c.CalledByRep || 'Admin Rep',
+      status: c.status || c.Status || 'Completed',
+      priority: c.priority || c.Priority || 'Low',
+      notesSummary: c.notesSummary || c.NotesSummary || '',
+      lastCallDate: lcDate,
+      lastCallTime: lcTime,
+      callbackDate: cbDate,
+      callbackTime: cbTime,
+      isQualifiedLead: Boolean(c.isQualifiedLead ?? c.IsQualifiedLead)
     });
     setHighPriorityAutoApplied(false);
     setFormError('');
@@ -221,27 +452,35 @@ const CallHistoryScreen = () => {
       return;
     }
 
-    if (formData.callbackTime) {
-      const selectedDate = new Date(formData.callbackTime);
-      const now = new Date();
-      if (selectedDate.getTime() < now.getTime() - 60000) {
-        setFormError('Callback time cannot be in the past. Please select a future date and time.');
-        return;
+    let finalCallbackIso = null;
+    if (formData.callbackDate) {
+      finalCallbackIso = combineLocalDateTime(formData.callbackDate, formData.callbackTime);
+      if (finalCallbackIso) {
+        const [dPart, tPart] = finalCallbackIso.split('T');
+        const [y, m, d] = dPart.split('-').map(Number);
+        const [hh, mm] = tPart.split(':').map(Number);
+        const selectedDate = new Date(y, m - 1, d, hh, mm);
+        const now = new Date();
+        // Allow up to 10 minutes in past to accommodate clock-skew
+        if (selectedDate.getTime() < now.getTime() - 600000) {
+          setFormError('Callback schedule cannot be in the past. Please select a future date and time.');
+          return;
+        }
       }
+    }
+
+    let lastCallIso = null;
+    if (formData.lastCallDate) {
+      lastCallIso = combineLocalDateTime(formData.lastCallDate, formData.lastCallTime || '10:00');
+    } else {
+      const now = new Date();
+      lastCallIso = combineLocalDateTime(formatLocalDate(now), formatLocalTime(now));
     }
 
     setSubmitting(true);
     setFormError('');
 
     try {
-      let finalCallbackIso = null;
-      if (formData.callbackTime) {
-        finalCallbackIso = new Date(formData.callbackTime).toISOString();
-      } else if (formData.isQualifiedLead || formData.status === 'Follow-Up' || formData.priority === 'High') {
-        // HIGH priority always gets a callback scheduled automatically
-        finalCallbackIso = getNextBusinessDayAt10AM().toISOString();
-      }
-
       const payload = {
         customerName: formData.customerName.trim(),
         customerPhone: formData.customerPhone.trim(),
@@ -250,9 +489,9 @@ const CallHistoryScreen = () => {
         status: formData.status,
         priority: formData.priority,
         notesSummary: formData.notesSummary?.trim() || '',
-        lastCallTime: formData.lastCallTime ? new Date(formData.lastCallTime).toISOString() : new Date().toISOString(),
+        lastCallTime: lastCallIso,
         callbackTime: finalCallbackIso,
-        callbackTimeSpecified: Boolean(finalCallbackIso),
+        callbackTimeSpecified: true,
         isQualifiedLead: formData.isQualifiedLead
       };
 
@@ -272,31 +511,130 @@ const CallHistoryScreen = () => {
         throw new Error(errData.message || `Failed to ${editingId ? 'update' : 'create'} call log.`);
       }
 
+      const resData = await res.json().catch(() => ({}));
+
+      // Immediate modal dismissal and optimistic UI update
       setIsModalOpen(false);
+      const currentEditingId = editingId;
       setEditingId(null);
-      fetchLogs();
+      setSubmitting(false);
+
+      const rawLog = resData.log || resData.Log || resData;
+      const actualId = rawLog.id ?? rawLog.Id ?? resData.id ?? resData.Id ?? currentEditingId ?? Date.now();
+      const isLead = Boolean(rawLog.isQualifiedLead ?? rawLog.IsQualifiedLead ?? formData.isQualifiedLead);
+      const formattedLastCall = formatFollowUpDate(lastCallIso);
+      const formattedCallback = formatFollowUpDate(finalCallbackIso);
+
+      const newLog = {
+        ...rawLog,
+        id: actualId,
+        Id: actualId,
+        customerName: formData.customerName.trim(),
+        customerPhone: formData.customerPhone.trim(),
+        customerEmail: formData.customerEmail?.trim() || '',
+        calledByRep: formData.calledByRep?.trim() || 'Admin Rep',
+        status: formData.status,
+        priority: (formData.priority || 'LOW').toUpperCase(),
+        notesSummary: formData.notesSummary?.trim() || '',
+        lastCall: formattedLastCall,
+        lastCallIso: lastCallIso,
+        isQualifiedLead: isLead,
+        callback: finalCallbackIso,
+        callbackIso: finalCallbackIso,
+        callbackFormatted: formattedCallback
+      };
+
+      setCalls(prev => {
+        if (currentEditingId) {
+          return prev.map(c => String(c.id ?? c.Id) === String(currentEditingId) ? newLog : c);
+        } else {
+          return [newLog, ...prev];
+        }
+      });
+      setMetrics(prev => ({
+        ...prev,
+        totalCalls: currentEditingId ? prev.totalCalls : prev.totalCalls + 1,
+        qualifiedLeads: (isLead && !currentEditingId) ? prev.qualifiedLeads + 1 : prev.qualifiedLeads
+      }));
+
+      // Background silent synchronization with short delay so DB commits cleanly
+      setTimeout(() => {
+        fetchLogs(true);
+      }, 300);
     } catch (err) {
       setFormError(err.message || 'Error occurred while saving log.');
-    } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDeleteCall = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this CRM call log entry?')) return;
+  const handleOpenDeleteModal = (call) => {
+    setCallToDelete(call);
+    setDeleteError('');
+  };
+
+  const confirmDeleteCall = async () => {
+    if (!callToDelete) return;
+    const targetId = callToDelete.id ?? callToDelete.Id ?? callToDelete._id;
+    const isLead = Boolean(callToDelete.isQualifiedLead ?? callToDelete.IsQualifiedLead);
+    const isFollowUp = (callToDelete.status || callToDelete.Status || '').toLowerCase().includes('follow');
+    setDeleting(true);
+    setDeleteError('');
+
     try {
-      const res = await fetch(`${getApiDomain()}/api/CallHistory/${id}`, {
-        method: 'DELETE',
-        headers: getAuthHeaders()
-      });
-      if (res.ok) {
-        setCalls(prev => prev.filter(c => String(c.id) !== String(id)));
+      let isSuccess = false;
+
+      // Only attempt remote delete if targetId is a valid server ID
+      if (targetId && !String(targetId).startsWith('local-') && !String(targetId).startsWith('call-')) {
+        const res = await fetch(`${getApiDomain()}/api/CallHistory/${targetId}`, {
+          method: 'DELETE',
+          headers: getAuthHeaders({ 'Accept': 'application/json' })
+        });
+
+        if (res.ok || res.status === 404) {
+          isSuccess = true;
+        } else {
+          let errMsg = 'Failed to delete call log.';
+          try {
+            const errData = await res.json();
+            errMsg = errData.message || errData.Message || errData.title || errMsg;
+          } catch (_) {}
+          setDeleteError(errMsg);
+          setDeleting(false);
+          return;
+        }
       } else {
-        alert('Failed to delete call log.');
+        isSuccess = true;
+      }
+
+      if (isSuccess) {
+        // Dynamic, real-time optimistic UI update
+        setCalls(prev => prev.filter(c => {
+          const cId = c.id ?? c.Id ?? c._id;
+          if (targetId && cId) {
+            return String(cId) !== String(targetId);
+          }
+          return (c.customerName || c.CustomerName) !== (callToDelete.customerName || callToDelete.CustomerName) ||
+                 (c.customerPhone || c.CustomerPhone) !== (callToDelete.customerPhone || callToDelete.CustomerPhone);
+        }));
+
+        setMetrics(prev => ({
+          ...prev,
+          totalCalls: Math.max(0, prev.totalCalls - 1),
+          qualifiedLeads: isLead ? Math.max(0, prev.qualifiedLeads - 1) : prev.qualifiedLeads,
+          totalFollowUps: isFollowUp ? Math.max(0, prev.totalFollowUps - 1) : prev.totalFollowUps
+        }));
+
+        setCallToDelete(null);
+        setDeleteError('');
+        
+        // Background silent synchronization without full-screen table loading flash
+        fetchLogs(true);
       }
     } catch (err) {
       console.error('Delete call log error:', err);
-      alert('Error deleting call log.');
+      setDeleteError(err.message || 'Network error while attempting to delete.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -656,7 +994,7 @@ const CallHistoryScreen = () => {
           {/* Refresh Button */}
           <button 
             type="button"
-            onClick={fetchLogs} 
+            onClick={() => fetchLogs(false)} 
             style={{
               backgroundColor: '#059669',
               color: '#ffffff',
@@ -700,13 +1038,13 @@ const CallHistoryScreen = () => {
                     <RefreshCw size={20} className="animate-spin inline-block mr-2 text-emerald-600" /> Loading CRM interaction logs...
                   </td>
                 </tr>
-              ) : calls.length > 0 ? (
-                calls.map((c) => {
+              ) : displayedCalls.length > 0 ? (
+                displayedCalls.map((c) => {
                   const priorityUpper = (c.priority || 'LOW').toUpperCase();
                   const statusUpper = (c.status || 'COMPLETED').toUpperCase();
 
                   return (
-                    <tr key={c.id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
+                    <tr key={c.id || c.Id} style={{ borderBottom: '1px solid #f1f5f9', backgroundColor: '#ffffff' }}>
                       
                       {/* Customer Column (3 Lines) */}
                       <td style={{ padding: '16px 20px', verticalAlign: 'top' }}>
@@ -858,7 +1196,7 @@ const CallHistoryScreen = () => {
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeleteCall(c.id)}
+                            onClick={() => handleOpenDeleteModal(c)}
                             title="Delete Log"
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b', padding: '2px' }}
                           >
@@ -1002,28 +1340,104 @@ const CallHistoryScreen = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Callback Schedule (Optional)</label>
-                  <input 
-                    type="datetime-local" 
-                    name="callbackTime" 
-                    value={formData.callbackTime} 
-                    onChange={handleInputChange} 
-                    min={new Date().toISOString().slice(0, 16)}
-                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff' }} 
-                  />
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>
+                    Callback Schedule (Optional)
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '8px' }}>
+                    <input 
+                      type="date" 
+                      name="callbackDate" 
+                      value={formData.callbackDate || ''} 
+                      onChange={handleInputChange} 
+                      min={formatLocalDate(new Date())}
+                      style={{ width: '100%', padding: '10px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a' }} 
+                      title="Select callback date"
+                    />
+                    <select 
+                      name="callbackTime" 
+                      value={formData.callbackTime || '10:00'} 
+                      onChange={handleInputChange} 
+                      style={{ width: '100%', padding: '10px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a', cursor: 'pointer' }} 
+                      title="Select callback time"
+                    >
+                      {formData.callbackTime && !TIME_SLOTS.some(s => s.value === formData.callbackTime) && (
+                        <option value={formData.callbackTime}>
+                          {formatTimeDisplay(formData.callbackTime)}
+                        </option>
+                      )}
+                      {TIME_SLOTS.map((slot) => (
+                        <option key={slot.value} value={slot.value}>
+                          {slot.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  {/* Quick-schedule chips */}
+                  <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setQuickCallback(1, '10:00')} 
+                      style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Tomorrow 10 AM
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setQuickCallback(2, '10:00')} 
+                      style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      In 2 Days
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setQuickCallback(7, '10:00')} 
+                      style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#f8fafc', color: '#334155', cursor: 'pointer', fontWeight: 600 }}
+                    >
+                      Next Week
+                    </button>
+                    {(formData.callbackDate || (formData.callbackTime && formData.callbackTime !== '10:00')) && (
+                      <button 
+                        type="button" 
+                        onClick={clearCallbackSchedule} 
+                        style={{ fontSize: '11px', padding: '4px 8px', borderRadius: '6px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontWeight: 700 }}
+                      >
+                        ✕ Clear
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {editingId && (
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '6px' }}>Last Call Time</label>
-                  <input 
-                    type="datetime-local" 
-                    name="lastCallTime" 
-                    value={formData.lastCallTime} 
-                    onChange={handleInputChange} 
-                    style={{ width: '100%', padding: '10px 14px', fontSize: '13.5px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff' }} 
-                  />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '8px' }}>
+                    <input 
+                      type="date" 
+                      name="lastCallDate" 
+                      value={formData.lastCallDate || ''} 
+                      onChange={handleInputChange} 
+                      style={{ width: '100%', padding: '10px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a' }} 
+                    />
+                    <select 
+                      name="lastCallTime" 
+                      value={formData.lastCallTime || '10:00'} 
+                      onChange={handleInputChange} 
+                      style={{ width: '100%', padding: '10px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '10px', outline: 'none', backgroundColor: '#ffffff', color: '#0f172a', cursor: 'pointer' }} 
+                    >
+                      {formData.lastCallTime && !TIME_SLOTS.some(s => s.value === formData.lastCallTime) && (
+                        <option value={formData.lastCallTime}>
+                          {formatTimeDisplay(formData.lastCallTime)}
+                        </option>
+                      )}
+                      {TIME_SLOTS.map((slot) => (
+                        <option key={slot.value} value={slot.value}>
+                          {slot.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
@@ -1070,6 +1484,146 @@ const CallHistoryScreen = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Custom In-App Delete Confirmation Modal (Small Popup) */}
+      {callToDelete && createPortal(
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.6)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          zIndex: 9999999
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)',
+            maxWidth: '430px',
+            width: '100%',
+            padding: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '16px',
+            animation: 'fadeIn 0.15s ease-out'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fee2e2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ef4444',
+                flexShrink: 0
+              }}>
+                <Trash2 size={22} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: '#0f172a' }}>
+                  Delete {callToDelete.isQualifiedLead ? 'Lead' : 'Call Log'}
+                </h3>
+                <span style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Confirm Deletion
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCallToDelete(null)}
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  border: '1px solid #e2e8f0',
+                  backgroundColor: '#f8fafc',
+                  color: '#64748b',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '13.5px', color: '#475569', lineHeight: 1.55 }}>
+              Are you sure you want to delete the record for <strong style={{ color: '#0f172a' }}>"{callToDelete.customerName || callToDelete.CustomerName}"</strong>? This will permanently remove this entry from your CRM.
+            </p>
+
+            {deleteError && (
+              <div style={{
+                padding: '9px 12px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '10px',
+                color: '#b91c1c',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <AlertCircle size={15} style={{ flexShrink: 0, color: '#dc2626' }} />
+                <span>{deleteError}</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setCallToDelete(null)}
+                disabled={deleting}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid #cbd5e1',
+                  backgroundColor: '#ffffff',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                No, Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteCall}
+                disabled={deleting}
+                style={{
+                  padding: '9px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: '#dc2626',
+                  color: '#ffffff',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 4px rgba(220, 38, 38, 0.25)'
+                }}
+              >
+                <Trash2 size={14} />
+                {deleting ? 'Deleting...' : 'Yes, Delete'}
+              </button>
+            </div>
           </div>
         </div>,
         document.body

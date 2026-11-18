@@ -309,6 +309,18 @@
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
 }
 
+/* Hide native browser password reveal & clear icons (Microsoft Edge / IE) */
+.signin-input-wrap input[type="password"]::-ms-reveal,
+.signin-input-wrap input[type="password"]::-ms-clear,
+.signin-input-wrap input::-ms-reveal,
+.signin-input-wrap input::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
 .signin-eye-btn {
   position: absolute;
   right: 6px;
@@ -324,6 +336,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
+  z-index: 5;
   transition: all 0.15s ease;
 }
 

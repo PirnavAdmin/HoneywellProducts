@@ -91,6 +91,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         new MySqlServerVersion(new Version(10, 6, 0)),
         mysqlOptions =>
         {
+            mysqlOptions.CommandTimeout(180);
             mysqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
             mysqlOptions.EnableRetryOnFailure(
                 maxRetryCount: 3,

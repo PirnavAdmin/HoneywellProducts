@@ -184,7 +184,7 @@ namespace Honeywell.Controllers
             }
 
             var imageUrl = $"/uploads/banners/{fileName}";
-            return Ok(new { ImageUrl = imageUrl, imageUrl = imageUrl });
+            return Ok(new { imageUrl = imageUrl });
         }
     }
 }

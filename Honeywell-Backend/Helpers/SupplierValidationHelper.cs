@@ -66,13 +66,26 @@ namespace Honeywell.Helpers
                     }
                 }
 
-                if (lettersOnly.Length >= 5 && vowelCount == 0)
+                if (lettersOnly.Length >= 4 && vowelCount == 0)
                 {
                     return true;
                 }
 
-                // Check for excessive consecutive consonants without a vowel (6+ in a row)
-                if (Regex.IsMatch(lettersOnly, @"[bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXZ]{6,}", RegexOptions.IgnoreCase))
+                // Check for excessive consecutive consonants without a vowel (5+ in a row)
+                if (Regex.IsMatch(lettersOnly, @"[bcdfghjklmnpqrstvwxzBCDFGHJKLMNPQRSTVWXZ]{5,}", RegexOptions.IgnoreCase))
+                {
+                    return true;
+                }
+
+                // Rare consonant combinations (z, x, q, j) in clusters of 3+ consonants
+                if (Regex.IsMatch(lettersOnly, @"[bcdfghjklmnpqrstvwxz]*[zxqj][bcdfghjklmnpqrstvwxz]{2,}", RegexOptions.IgnoreCase) ||
+                    Regex.IsMatch(lettersOnly, @"[bcdfghjklmnpqrstvwxz]{2,}[zxqj][bcdfghjklmnpqrstvwxz]*", RegexOptions.IgnoreCase))
+                {
+                    return true;
+                }
+
+                // Unnatural consonant clusters at start of word (4+ consonants)
+                if (Regex.IsMatch(lettersOnly, @"^[bcdfghjklmnpqrstvwxz]{4,}", RegexOptions.IgnoreCase))
                 {
                     return true;
                 }
@@ -99,13 +112,13 @@ namespace Honeywell.Helpers
                         if (val > maxConsonantFreq) maxConsonantFreq = val;
                     }
 
-                    // A single consonant accounts for 40%+ of the word
-                    if ((double)maxConsonantFreq / lettersOnly.Length >= 0.40)
+                    // A single consonant accounts for 35%+ of the word
+                    if ((double)maxConsonantFreq / lettersOnly.Length >= 0.35)
                     {
                         return true;
                     }
 
-                    if (charCounts.Count <= 3)
+                    if (charCounts.Count <= 4 && lettersOnly.Length >= 10)
                     {
                         return true;
                     }

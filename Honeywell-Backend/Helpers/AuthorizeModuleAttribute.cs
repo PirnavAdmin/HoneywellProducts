@@ -640,6 +640,18 @@ namespace Honeywell.Helpers
                 case "bulk quotes":
                     set.Add("enquiries");
                     break;
+
+                case "call history":
+                    set.Add("crm");
+                    set.Add("call logs");
+                    set.Add("customers");
+                    set.Add("support");
+                    break;
+                case "crm":
+                case "call logs":
+                    set.Add("call history");
+                    set.Add("customers");
+                    break;
             }
 
             return set;

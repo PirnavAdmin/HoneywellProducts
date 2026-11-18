@@ -199,6 +199,8 @@ namespace Honeywell.Controllers
             [FromQuery] int? subcategoryId = null,
             [FromQuery] bool? includeInactive = false)
         {
+            _context.Database.SetCommandTimeout(180);
+
             var query = _context.Products
                 .AsNoTracking()
                 .AsSplitQuery()

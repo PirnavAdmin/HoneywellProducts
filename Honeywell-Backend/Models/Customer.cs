@@ -10,12 +10,12 @@ namespace Honeywell.Models
         public int? UserId { get; set; }
         public GrowerUser? User { get; set; }
 
-        public string? Name { get; set; }
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
-        public string? Phone { get; set; }
-        public string? Email { get; set; }
-        public string? Password { get; set; }
+        public string? Name { get; set; } = string.Empty;
+        public string? FirstName { get; set; } = string.Empty;
+        public string? LastName { get; set; } = string.Empty;
+        public string? Phone { get; set; } = string.Empty;
+        public string? Email { get; set; } = string.Empty;
+        public string? Password { get; set; } = string.Empty;
         public string? Role { get; set; } = "CUSTOMER ACCOUNT";
 
         [NotMapped]
@@ -39,10 +39,10 @@ namespace Honeywell.Models
         public string? Gender { get; set; } = "Male";
         public string? CompanyOrganization { get; set; } = "Individual Account";
 
-        public string? Address { get; set; }
-        public string? District { get; set; }
-        public string? State { get; set; }
-        public string? ProfilePicture { get; set; }
+        public string? Address { get; set; } = string.Empty;
+        public string? District { get; set; } = string.Empty;
+        public string? State { get; set; } = string.Empty;
+        public string? ProfilePicture { get; set; } = string.Empty;
 
         // Bank Account Information
         public string? AccountHolderName { get; set; }

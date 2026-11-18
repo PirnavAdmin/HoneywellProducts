@@ -22,6 +22,55 @@ namespace Honeywell.Controllers
             _context = context;
         }
 
+        private static readonly TimeZoneInfo IstZone = ResolveIstTimeZone();
+
+        private static TimeZoneInfo ResolveIstTimeZone()
+        {
+            try { return TimeZoneInfo.FindSystemTimeZoneById("India Standard Time"); }
+            catch
+            {
+                try { return TimeZoneInfo.FindSystemTimeZoneById("Asia/Kolkata"); }
+                catch
+                {
+                    return TimeZoneInfo.CreateCustomTimeZone("IST", TimeSpan.FromHours(5.5), "India Standard Time", "India Standard Time");
+                }
+            }
+        }
+
+        private static DateTime NormalizeToWallClock(DateTime dt)
+        {
+            // If the incoming DateTime has Kind == Utc (e.g. client sent a string with trailing 'Z'),
+            // convert it to Indian wall-clock time so that it is stored in MySQL as exact local time!
+            if (dt.Kind == DateTimeKind.Utc)
+            {
+                return TimeZoneInfo.ConvertTimeFromUtc(dt, IstZone);
+            }
+            // Otherwise, it was sent as local wall-clock time (e.g. "2026-11-18T15:00:00")
+            return DateTime.SpecifyKind(dt, DateTimeKind.Unspecified);
+        }
+
+        private static string? FormatWallClock(DateTime? dt)
+        {
+            if (!dt.HasValue) return null;
+            var val = dt.Value;
+            if (val.Kind == DateTimeKind.Utc)
+            {
+                val = TimeZoneInfo.ConvertTimeFromUtc(val, IstZone);
+            }
+            return val.ToString("dd MMM yyyy, hh:mm tt");
+        }
+
+        private static string? FormatWallClockIso(DateTime? dt)
+        {
+            if (!dt.HasValue) return null;
+            var val = dt.Value;
+            if (val.Kind == DateTimeKind.Utc)
+            {
+                val = TimeZoneInfo.ConvertTimeFromUtc(val, IstZone);
+            }
+            return val.ToString("yyyy-MM-ddTHH:mm:ss");
+        }
+
         // GET: api/CallHistory
         [AuthorizeModule(PermissionAction.View, "call history", "support", "tickets", "customers")]
         [HttpGet]
@@ -30,31 +79,26 @@ namespace Honeywell.Controllers
             [FromQuery] string? status,
             [FromQuery] string? priority)
         {
-            var query = _context.CallLogs.AsQueryable();
+            var todayLocal = DateTime.Today;
+            var tomorrowLocal = todayLocal.AddDays(1);
 
-            // Calculate card metrics across all logged calls
-            var allCalls = await _context.CallLogs.ToListAsync();
-            var todayUtc = DateTime.UtcNow.Date;
-
-            int totalCalls = allCalls.Count;
-            
-            // Due callback today
-            int todayFollowUps = allCalls.Count(c => 
-                c.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase) && 
+            // Fast aggregate counts executed directly in MySQL
+            int totalCalls = await _context.CallLogs.CountAsync();
+            int todayFollowUps = await _context.CallLogs.CountAsync(c => 
+                c.Status.ToLower().Contains("follow") && 
                 c.CallbackTime.HasValue && 
-                c.CallbackTime.Value.Date == todayUtc
+                c.CallbackTime.Value >= todayLocal && 
+                c.CallbackTime.Value < tomorrowLocal
             );
+            int totalFollowUps = await _context.CallLogs.CountAsync(c => c.Status.ToLower().Contains("follow"));
+            int qualifiedLeads = await _context.CallLogs.CountAsync(c => c.IsQualifiedLead);
 
-            // Total follow-ups
-            int totalFollowUps = allCalls.Count(c => c.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase));
-            
-            // Qualified leads count
-            int qualifiedLeads = allCalls.Count(c => c.IsQualifiedLead);
+            var query = _context.CallLogs.AsNoTracking().AsQueryable();
 
             // Apply search keywords (Customer Name, Rep, Phone, Email, Notes)
-            if (!string.IsNullOrEmpty(search))
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                var s = search.ToLower();
+                var s = search.Trim().ToLower();
                 query = query.Where(c => 
                     c.CustomerName.ToLower().Contains(s) || 
                     c.CalledByRep.ToLower().Contains(s) || 
@@ -64,18 +108,37 @@ namespace Honeywell.Controllers
                 );
             }
 
-            // Apply status filters
-            if (!string.IsNullOrEmpty(status) && !status.Equals("All Statuses", StringComparison.OrdinalIgnoreCase))
+            // Apply status filters resiliently across variants
+            if (!string.IsNullOrWhiteSpace(status) && !status.Equals("All Statuses", StringComparison.OrdinalIgnoreCase))
             {
-                var stLower = status.ToLower();
-                query = query.Where(c => c.Status.ToLower() == stLower);
+                var st = status.Trim().ToLowerInvariant();
+                if (st.Contains("follow"))
+                {
+                    query = query.Where(c => c.Status.ToLower().Contains("follow"));
+                }
+                else if (st.Contains("complete"))
+                {
+                    query = query.Where(c => c.Status.ToLower().Contains("complete"));
+                }
+                else if (st.Contains("busy"))
+                {
+                    query = query.Where(c => c.Status.ToLower().Contains("busy"));
+                }
+                else if (st.Contains("answer"))
+                {
+                    query = query.Where(c => c.Status.ToLower().Contains("answer"));
+                }
+                else
+                {
+                    query = query.Where(c => c.Status.ToLower() == st);
+                }
             }
 
-            // Apply priority filters
-            if (!string.IsNullOrEmpty(priority) && !priority.Equals("All Priorities", StringComparison.OrdinalIgnoreCase))
+            // Apply priority filters resiliently
+            if (!string.IsNullOrWhiteSpace(priority) && !priority.Equals("All Priorities", StringComparison.OrdinalIgnoreCase))
             {
-                var prLower = priority.ToLower();
-                query = query.Where(c => c.Priority.ToLower() == prLower);
+                var pr = priority.Trim().ToLowerInvariant();
+                query = query.Where(c => c.Priority != null && c.Priority.ToLower() == pr);
             }
 
             var logs = await query.OrderByDescending(c => c.LastCallTime).ToListAsync();
@@ -83,16 +146,19 @@ namespace Honeywell.Controllers
             var formattedLogs = logs.Select(c => new
             {
                 c.Id,
+                id = c.Id,
                 CustomerName = c.CustomerName,
                 CalledByRep = c.CalledByRep,
                 CustomerPhone = c.CustomerPhone,
                 CustomerEmail = c.CustomerEmail,
-                Status = c.Status, // e.g. "Follow-Up", "Completed"
-                Priority = c.Priority.ToUpper(), // "HIGH", "MEDIUM", "LOW"
+                Status = c.Status,
+                Priority = (c.Priority ?? "LOW").ToUpper(),
                 NotesSummary = c.NotesSummary,
-                LastCall = c.LastCallTime.ToString("dd MMM yyyy, hh:mm tt"),
-                Callback = c.CallbackTime.HasValue ? c.CallbackTime.Value.ToString("dd MMM yyyy, hh:mm tt") : null,
-                IsTodayFollowUp = c.Status.Equals("Follow-Up", StringComparison.OrdinalIgnoreCase) && c.CallbackTime.HasValue && c.CallbackTime.Value.Date == todayUtc,
+                LastCall = FormatWallClock(c.LastCallTime),
+                LastCallIso = FormatWallClockIso(c.LastCallTime),
+                Callback = FormatWallClock(c.CallbackTime),
+                CallbackIso = FormatWallClockIso(c.CallbackTime),
+                IsTodayFollowUp = c.Status.ToLower().Contains("follow") && c.CallbackTime.HasValue && c.CallbackTime.Value >= todayLocal && c.CallbackTime.Value < tomorrowLocal,
                 IsQualifiedLead = c.IsQualifiedLead
             }).ToList();
 
@@ -131,20 +197,42 @@ namespace Honeywell.Controllers
                 Status = cleanStatus,
                 Priority = request.Priority ?? "Low",
                 NotesSummary = request.NotesSummary ?? "",
-                LastCallTime = request.LastCallTime ?? DateTime.UtcNow,
-                CallbackTime = request.CallbackTime,
+                LastCallTime = request.LastCallTime.HasValue ? NormalizeToWallClock(request.LastCallTime.Value) : DateTime.Now,
+                CallbackTime = request.CallbackTime.HasValue ? NormalizeToWallClock(request.CallbackTime.Value) : null,
                 IsQualifiedLead = request.IsQualifiedLead
             };
 
             _context.CallLogs.Add(log);
             await _context.SaveChangesAsync();
 
+            var todayLocal = DateTime.Today;
+            var tomorrowLocal = todayLocal.AddDays(1);
+
             return Ok(new
             {
                 Message = "Call log created successfully.",
                 Id = log.Id,
+                id = log.Id,
                 CustomerName = log.CustomerName,
-                Status = log.Status
+                Status = log.Status,
+                Log = new
+                {
+                    log.Id,
+                    id = log.Id,
+                    CustomerName = log.CustomerName,
+                    CalledByRep = log.CalledByRep,
+                    CustomerPhone = log.CustomerPhone,
+                    CustomerEmail = log.CustomerEmail,
+                    Status = log.Status,
+                    Priority = (log.Priority ?? "LOW").ToUpper(),
+                    NotesSummary = log.NotesSummary,
+                    LastCall = FormatWallClock(log.LastCallTime),
+                    LastCallIso = FormatWallClockIso(log.LastCallTime),
+                    Callback = FormatWallClock(log.CallbackTime),
+                    CallbackIso = FormatWallClockIso(log.CallbackTime),
+                    IsTodayFollowUp = log.Status.ToLower().Contains("follow") && log.CallbackTime.HasValue && log.CallbackTime.Value >= todayLocal && log.CallbackTime.Value < tomorrowLocal,
+                    IsQualifiedLead = log.IsQualifiedLead
+                }
             });
         }
 
@@ -163,7 +251,7 @@ namespace Honeywell.Controllers
             if (!string.IsNullOrEmpty(request.CustomerPhone)) log.CustomerPhone = request.CustomerPhone;
             if (!string.IsNullOrEmpty(request.CustomerEmail)) log.CustomerEmail = request.CustomerEmail;
             if (!string.IsNullOrEmpty(request.CalledByRep)) log.CalledByRep = request.CalledByRep;
-            if (request.LastCallTime.HasValue) log.LastCallTime = request.LastCallTime.Value;
+            if (request.LastCallTime.HasValue) log.LastCallTime = NormalizeToWallClock(request.LastCallTime.Value);
             
             if (!string.IsNullOrEmpty(request.Status))
             {
@@ -178,11 +266,42 @@ namespace Honeywell.Controllers
             if (!string.IsNullOrEmpty(request.Priority)) log.Priority = request.Priority;
             if (!string.IsNullOrEmpty(request.NotesSummary)) log.NotesSummary = request.NotesSummary;
             
-            if (request.CallbackTimeSpecified) log.CallbackTime = request.CallbackTime;
+            if (request.CallbackTimeSpecified)
+            {
+                log.CallbackTime = request.CallbackTime.HasValue ? NormalizeToWallClock(request.CallbackTime.Value) : null;
+            }
             if (request.IsQualifiedLead.HasValue) log.IsQualifiedLead = request.IsQualifiedLead.Value;
 
             await _context.SaveChangesAsync();
-            return NoContent();
+            var todayLocal = DateTime.Today;
+            var tomorrowLocal = todayLocal.AddDays(1);
+
+            return Ok(new
+            {
+                Message = "Call log updated successfully.",
+                Id = log.Id,
+                id = log.Id,
+                CustomerName = log.CustomerName,
+                Status = log.Status,
+                Log = new
+                {
+                    log.Id,
+                    id = log.Id,
+                    CustomerName = log.CustomerName,
+                    CalledByRep = log.CalledByRep,
+                    CustomerPhone = log.CustomerPhone,
+                    CustomerEmail = log.CustomerEmail,
+                    Status = log.Status,
+                    Priority = (log.Priority ?? "LOW").ToUpper(),
+                    NotesSummary = log.NotesSummary,
+                    LastCall = FormatWallClock(log.LastCallTime),
+                    LastCallIso = FormatWallClockIso(log.LastCallTime),
+                    Callback = FormatWallClock(log.CallbackTime),
+                    CallbackIso = FormatWallClockIso(log.CallbackTime),
+                    IsTodayFollowUp = log.Status.ToLower().Contains("follow") && log.CallbackTime.HasValue && log.CallbackTime.Value >= todayLocal && log.CallbackTime.Value < tomorrowLocal,
+                    IsQualifiedLead = log.IsQualifiedLead
+                }
+            });
         }
 
         // DELETE: api/CallHistory/5
@@ -193,12 +312,12 @@ namespace Honeywell.Controllers
             var log = await _context.CallLogs.FindAsync(id);
             if (log == null)
             {
-                return NotFound(new { Message = "Call log not found." });
+                return Ok(new { success = true, message = "Call log removed or already deleted." });
             }
 
             _context.CallLogs.Remove(log);
             await _context.SaveChangesAsync();
-            return NoContent();
+            return Ok(new { success = true, message = "Call log deleted successfully." });
         }
 
         public class CallLogCreateRequest
